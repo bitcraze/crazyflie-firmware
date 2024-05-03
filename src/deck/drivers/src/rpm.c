@@ -1,6 +1,6 @@
 /*
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -48,19 +48,17 @@
 
 #define ER_NBR_PINS         4
 
-typedef struct _etGpio
-{
+typedef struct _etGpio {
   GPIO_TypeDef     *port;
   uint16_t          pin;
   char              name[6];
 } EtGpio;
 
-EtGpio erGpio[ER_NBR_PINS] =
-{
-    {ET_GPIO_PORT_TX2,  ET_GPIO_PIN_TX2, "TX2"},
-    {ET_GPIO_PORT_RX2,  ET_GPIO_PIN_RX2, "RX2"},
-    {ET_GPIO_PORT_IO2,  ET_GPIO_PIN_IO2, "IO2"},
-    {ET_GPIO_PORT_IO3,  ET_GPIO_PIN_IO3, "IO3"},
+EtGpio erGpio[ER_NBR_PINS] = {
+  {ET_GPIO_PORT_TX2,  ET_GPIO_PIN_TX2, "TX2"},
+  {ET_GPIO_PORT_RX2,  ET_GPIO_PIN_RX2, "RX2"},
+  {ET_GPIO_PORT_IO2,  ET_GPIO_PIN_IO2, "IO2"},
+  {ET_GPIO_PORT_IO3,  ET_GPIO_PIN_IO3, "IO3"},
 };
 
 static bool isInit;
@@ -97,8 +95,7 @@ static void rpmInit(DeckInfo *info)
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3 | RCC_APB1Periph_TIM5, ENABLE);
 
   // Configure optical switch input pins
-  for (i = 0; i < ER_NBR_PINS; i++)
-  {
+  for (i = 0; i < ER_NBR_PINS; i++) {
     GPIO_InitStructure.GPIO_Pin = erGpio[i].pin;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
@@ -107,7 +104,7 @@ static void rpmInit(DeckInfo *info)
     GPIO_Init(erGpio[i].port, &GPIO_InitStructure);
   }
 
-   // Map timer to alternate functions
+  // Map timer to alternate functions
   GPIO_PinAFConfig(GPIOA, GPIO_PinSource2, GPIO_AF_TIM5);
   GPIO_PinAFConfig(GPIOA, GPIO_PinSource3, GPIO_AF_TIM5);
   GPIO_PinAFConfig(GPIOB, GPIO_PinSource5, GPIO_AF_TIM3);
@@ -171,22 +168,21 @@ void __attribute__((used)) TIM5_IRQHandler(void)
   uint16_t ccVal;
 
   //Motor1
-  if(TIM_GetITStatus(TIM5, TIM_IT_CC3) == SET)
-  {
+  if (TIM_GetITStatus(TIM5, TIM_IT_CC3) == SET) {
     /* Clear TIM5 Capture compare interrupt pending bit */
     TIM_ClearITPendingBit(TIM5, TIM_IT_CC3);
     ccVal = TIM_GetCapture3(TIM5);
 
-    if (TIM_GetFlagStatus(TIM5, TIM_FLAG_CC3OF))
-    {
+    if (TIM_GetFlagStatus(TIM5, TIM_FLAG_CC3OF)) {
       // Overflow
       lastcc3Val = ccVal;
     }
 
-    if (ccVal > lastcc3Val)
+    if (ccVal > lastcc3Val) {
       m1Time[m1cnt & 0x01] = ccVal - lastcc3Val;
-    else
+    } else {
       m1Time[m1cnt & 0x01] = (uint16_t)((0xFFFF + (uint32_t)ccVal) - lastcc3Val);
+    }
 
     lastcc3Val = ccVal;
     m1cnt++;
@@ -195,22 +191,21 @@ void __attribute__((used)) TIM5_IRQHandler(void)
   }
 
   //Motor4
-  if(TIM_GetITStatus(TIM5, TIM_IT_CC4) == SET)
-  {
+  if (TIM_GetITStatus(TIM5, TIM_IT_CC4) == SET) {
     /* Clear TIM5 Capture compare interrupt pending bit */
     TIM_ClearITPendingBit(TIM5, TIM_IT_CC4);
     ccVal = TIM_GetCapture4(TIM5);
 
-    if (TIM_GetFlagStatus(TIM5, TIM_FLAG_CC4OF))
-    {
+    if (TIM_GetFlagStatus(TIM5, TIM_FLAG_CC4OF)) {
       // Overflow
       lastcc4Val = ccVal;
     }
 
-    if (ccVal > lastcc4Val)
+    if (ccVal > lastcc4Val) {
       m4Time[m4cnt & 0x01] = ccVal - lastcc4Val;
-    else
+    } else {
       m4Time[m4cnt & 0x01] = (uint16_t)((0xFFFF + (uint32_t)ccVal) - lastcc4Val);
+    }
 
     lastcc4Val = ccVal;
     m4cnt++;
@@ -218,15 +213,12 @@ void __attribute__((used)) TIM5_IRQHandler(void)
     updateM4Cnt = 2;
   }
 
-  if(TIM_GetITStatus(TIM5, TIM_IT_Update) == SET)
-  {
+  if (TIM_GetITStatus(TIM5, TIM_IT_Update) == SET) {
     TIM_ClearITPendingBit(TIM5, TIM_IT_Update);
-    if (--updateM1Cnt < 0)
-    {
+    if (--updateM1Cnt < 0) {
       m1rpm = 0;
     }
-    if (--updateM4Cnt < 0)
-    {
+    if (--updateM4Cnt < 0) {
       m4rpm = 0;
     }
   }
@@ -239,22 +231,21 @@ void __attribute__((used)) TIM3_IRQHandler(void)
   uint16_t ccVal;
 
   //Motor2
-  if(TIM_GetITStatus(TIM3, TIM_IT_CC1) == SET)
-  {
+  if (TIM_GetITStatus(TIM3, TIM_IT_CC1) == SET) {
     /* Clear TIM3 Capture compare interrupt pending bit */
     TIM_ClearITPendingBit(TIM3, TIM_IT_CC1);
     ccVal = TIM_GetCapture1(TIM3);
 
-    if (TIM_GetFlagStatus(TIM3, TIM_FLAG_CC1OF))
-    {
+    if (TIM_GetFlagStatus(TIM3, TIM_FLAG_CC1OF)) {
       // Overflow
       lastcc1Val = ccVal;
     }
 
-    if (ccVal > lastcc1Val)
+    if (ccVal > lastcc1Val) {
       m2Time[m2cnt & 0x01] = ccVal - lastcc1Val;
-    else
+    } else {
       m2Time[m2cnt & 0x01] = (uint16_t)((0xFFFF + (uint32_t)ccVal) - lastcc1Val);
+    }
 
     lastcc1Val = ccVal;
     m2cnt++;
@@ -266,22 +257,21 @@ void __attribute__((used)) TIM3_IRQHandler(void)
   }
 
   //Motor3
-  if(TIM_GetITStatus(TIM3, TIM_IT_CC2) == SET)
-  {
+  if (TIM_GetITStatus(TIM3, TIM_IT_CC2) == SET) {
     /* Clear TIM3 Capture compare interrupt pending bit */
     TIM_ClearITPendingBit(TIM3, TIM_IT_CC2);
     ccVal = TIM_GetCapture2(TIM3);
 
-    if (TIM_GetFlagStatus(TIM3, TIM_FLAG_CC2OF))
-    {
+    if (TIM_GetFlagStatus(TIM3, TIM_FLAG_CC2OF)) {
       // Overflow
       lastcc2Val = ccVal;
     }
 
-    if (ccVal > lastcc2Val)
+    if (ccVal > lastcc2Val) {
       m3Time[m3cnt & 0x01] = ccVal - lastcc2Val;
-    else
+    } else {
       m3Time[m3cnt & 0x01] = (uint16_t)((0xFFFF + (uint32_t)ccVal) - lastcc2Val);
+    }
 
     lastcc2Val = ccVal;
     m3cnt++;
@@ -292,15 +282,12 @@ void __attribute__((used)) TIM3_IRQHandler(void)
 //    rpmPutchar(m3rpm & 0x00FF);
   }
 
-  if(TIM_GetITStatus(TIM3, TIM_IT_Update) == SET)
-  {
+  if (TIM_GetITStatus(TIM3, TIM_IT_Update) == SET) {
     TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
-    if (--updateM2Cnt < 0)
-    {
+    if (--updateM2Cnt < 0) {
       m2rpm = 0;
     }
-    if (--updateM3Cnt < 0)
-    {
+    if (--updateM3Cnt < 0) {
       m3rpm = 0;
     }
   }

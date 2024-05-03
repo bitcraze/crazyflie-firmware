@@ -44,10 +44,9 @@
 static const uint8_t control_points_by_type[] = { 0, 1, 3, 7 };
 
 typedef int16_t compressed_piece_coordinate;
-typedef const uint8_t* compressed_piece_ptr;
+typedef const uint8_t *compressed_piece_ptr;
 
-struct compressed_piece_parsed_header
-{
+struct compressed_piece_parsed_header {
   uint16_t duration_in_msec;
 
   enum piecewise_traj_storage_type x_type;
@@ -59,15 +58,17 @@ struct compressed_piece_parsed_header
 };
 
 static float calculate_total_duration(compressed_piece_ptr ptr);
-static compressed_piece_ptr next_coordinate(compressed_piece_ptr ptr, compressed_piece_coordinate* coord);
-static compressed_piece_ptr next_duration(compressed_piece_ptr ptr, uint16_t* coord);
+static compressed_piece_ptr next_coordinate(compressed_piece_ptr ptr,
+    compressed_piece_coordinate *coord);
+static compressed_piece_ptr next_duration(compressed_piece_ptr ptr, uint16_t *coord);
 static compressed_piece_ptr next_piece(compressed_piece_ptr ptr);
 static compressed_piece_ptr parse_header_of_current_piece(
-  struct compressed_piece_parsed_header* result, compressed_piece_ptr ptr);
+  struct compressed_piece_parsed_header *result, compressed_piece_ptr ptr);
 
 static inline float end_time_of_current_piece(const struct piecewise_traj_compressed *traj);
 static inline float start_time_of_current_piece(const struct piecewise_traj_compressed *traj);
-static inline float time_relative_to_start_of_current_piece(const struct piecewise_traj_compressed *traj, float t);
+static inline float time_relative_to_start_of_current_piece(const struct piecewise_traj_compressed
+    *traj, float t);
 
 static void piecewise_compressed_advance_playhead(struct piecewise_traj_compressed *traj);
 static void piecewise_compressed_rewind(struct piecewise_traj_compressed *traj);
@@ -117,14 +118,17 @@ static float calculate_total_duration(compressed_piece_ptr ptr)
 }
 
 // Returns the end time of the current piece being executed
-static inline float end_time_of_current_piece(const struct piecewise_traj_compressed *traj) {
+static inline float end_time_of_current_piece(const struct piecewise_traj_compressed *traj)
+{
   return start_time_of_current_piece(traj) + traj->current_piece.poly4d.duration;
 }
 
 // Parses the two bytes pointed to by the given pointer as a signed 16-bit
 // integer, in little endian order, and returns the pointer advanced by two
 // bytes
-static compressed_piece_ptr next_coordinate(compressed_piece_ptr ptr, compressed_piece_coordinate* coord) {
+static compressed_piece_ptr next_coordinate(compressed_piece_ptr ptr,
+    compressed_piece_coordinate *coord)
+{
   *coord = ptr[0] + (ptr[1] << 8);
   return ptr + 2;
 }
@@ -132,7 +136,8 @@ static compressed_piece_ptr next_coordinate(compressed_piece_ptr ptr, compressed
 // Parses the two bytes pointed to by the given pointer as an unsigned 16-bit
 // integer, in little endian order, and returns the pointer advanced by two
 // bytes
-static compressed_piece_ptr next_duration(compressed_piece_ptr ptr, uint16_t* coord) {
+static compressed_piece_ptr next_duration(compressed_piece_ptr ptr, uint16_t *coord)
+{
   *coord = ptr[0] + (ptr[1] << 8);
   return ptr + 2;
 }
@@ -152,7 +157,7 @@ static compressed_piece_ptr next_piece(compressed_piece_ptr ptr)
 // yaw coordinates. Returns a pointer that points to the next piece or 0 if
 // this was the last piece.
 static compressed_piece_ptr parse_header_of_current_piece(
-  struct compressed_piece_parsed_header* result, compressed_piece_ptr ptr)
+  struct compressed_piece_parsed_header *result, compressed_piece_ptr ptr)
 {
   uint8_t header;
   int length;
@@ -166,21 +171,21 @@ static compressed_piece_ptr parse_header_of_current_piece(
 
   header = *ptr;
 
-  result->x_type   = (enum piecewise_traj_storage_type) (header & 0x03);
-  result->y_type   = (enum piecewise_traj_storage_type) ((header >> 2) & 0x03);
-  result->z_type   = (enum piecewise_traj_storage_type) ((header >> 4) & 0x03);
-  result->yaw_type = (enum piecewise_traj_storage_type) ((header >> 6) & 0x03);
+  result->x_type   = (enum piecewise_traj_storage_type)(header & 0x03);
+  result->y_type   = (enum piecewise_traj_storage_type)((header >> 2) & 0x03);
+  result->z_type   = (enum piecewise_traj_storage_type)((header >> 4) & 0x03);
+  result->yaw_type = (enum piecewise_traj_storage_type)((header >> 6) & 0x03);
   ptr++;
 
   result->body = ptr = next_duration(ptr, &result->duration_in_msec);
 
   if (result->duration_in_msec > 0) {
     length = (
-      control_points_by_type[result->x_type] +
-      control_points_by_type[result->y_type] +
-      control_points_by_type[result->z_type] +
-      control_points_by_type[result->yaw_type]
-    ) * sizeof(compressed_piece_coordinate);
+               control_points_by_type[result->x_type] +
+               control_points_by_type[result->y_type] +
+               control_points_by_type[result->z_type] +
+               control_points_by_type[result->yaw_type]
+             ) * sizeof(compressed_piece_coordinate);
     return ptr + length;
   } else {
     return 0;
@@ -188,13 +193,16 @@ static compressed_piece_ptr parse_header_of_current_piece(
 }
 
 // Returns the start time of the current piece being executed
-static inline float start_time_of_current_piece(const struct piecewise_traj_compressed *traj) {
+static inline float start_time_of_current_piece(const struct piecewise_traj_compressed *traj)
+{
   return traj->t_begin + traj->current_piece.t_begin_relative;
 }
 
 // Returns the number of seconds elapsed since the start time of the current
 // piece being executed
-static inline float time_relative_to_start_of_current_piece(const struct piecewise_traj_compressed *traj, float t) {
+static inline float time_relative_to_start_of_current_piece(const struct piecewise_traj_compressed
+    *traj, float t)
+{
   return t - start_time_of_current_piece(traj);
 }
 
@@ -228,7 +236,7 @@ struct traj_eval piecewise_compressed_eval(
   return eval;
 }
 
-void piecewise_compressed_load(struct piecewise_traj_compressed *traj, const void* data)
+void piecewise_compressed_load(struct piecewise_traj_compressed *traj, const void *data)
 {
   traj->t_begin = 0;
   traj->timescale = 1;
@@ -249,10 +257,14 @@ static void piecewise_compressed_rewind(struct piecewise_traj_compressed *traj)
   /* Parse header that stores the start coordinates */
   bzero(&stopped, sizeof(stopped));
   ptr = traj->data;
-  ptr = next_coordinate(ptr, &value); stopped.pos.x = value / STORED_DISTANCE_SCALE;
-  ptr = next_coordinate(ptr, &value); stopped.pos.y = value / STORED_DISTANCE_SCALE;
-  ptr = next_coordinate(ptr, &value); stopped.pos.z = value / STORED_DISTANCE_SCALE;
-  ptr = next_coordinate(ptr, &value); stopped.yaw = value / STORED_ANGLE_SCALE;
+  ptr = next_coordinate(ptr, &value);
+  stopped.pos.x = value / STORED_DISTANCE_SCALE;
+  ptr = next_coordinate(ptr, &value);
+  stopped.pos.y = value / STORED_DISTANCE_SCALE;
+  ptr = next_coordinate(ptr, &value);
+  stopped.pos.z = value / STORED_DISTANCE_SCALE;
+  ptr = next_coordinate(ptr, &value);
+  stopped.yaw = value / STORED_ANGLE_SCALE;
   traj->current_piece.t_begin_relative = 0;
   traj->current_piece.data = ptr;
 
@@ -262,7 +274,7 @@ static void piecewise_compressed_rewind(struct piecewise_traj_compressed *traj)
 static void piecewise_compressed_update_current_poly4d(
   struct piecewise_traj_compressed *traj, const struct traj_eval *prev_end)
 {
-  struct poly4d* poly4d = &traj->current_piece.poly4d;
+  struct poly4d *poly4d = &traj->current_piece.poly4d;
   compressed_piece_ptr ptr;
   struct compressed_piece_parsed_header header;
 
@@ -277,11 +289,11 @@ static void piecewise_compressed_update_current_poly4d(
   /* Process the body */
   ptr = header.body;
   ptr = calculate_polynomial_coefficients(
-    poly4d->p[0], ptr, header.x_type, prev_end->pos.x, poly4d->duration, STORED_DISTANCE_SCALE);
+          poly4d->p[0], ptr, header.x_type, prev_end->pos.x, poly4d->duration, STORED_DISTANCE_SCALE);
   ptr = calculate_polynomial_coefficients(
-    poly4d->p[1], ptr, header.y_type, prev_end->pos.y, poly4d->duration, STORED_DISTANCE_SCALE);
+          poly4d->p[1], ptr, header.y_type, prev_end->pos.y, poly4d->duration, STORED_DISTANCE_SCALE);
   ptr = calculate_polynomial_coefficients(
-    poly4d->p[2], ptr, header.z_type, prev_end->pos.z, poly4d->duration, STORED_DISTANCE_SCALE);
+          poly4d->p[2], ptr, header.z_type, prev_end->pos.z, poly4d->duration, STORED_DISTANCE_SCALE);
   calculate_polynomial_coefficients(
     poly4d->p[3], ptr, header.yaw_type, prev_end->yaw, poly4d->duration, STORED_ANGLE_SCALE);
 }

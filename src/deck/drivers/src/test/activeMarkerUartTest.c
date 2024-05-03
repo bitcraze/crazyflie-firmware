@@ -47,7 +47,7 @@ static bool passed = false;
 
 static void task(void *param)
 {
-  while(1) {
+  while (1) {
     if (trigger) {
       trigger = false;
 
@@ -89,7 +89,7 @@ static void init(DeckInfo *info)
 }
 
 static const DeckDriver deckDriver = {
-  .name="activeMarkerUartTest",
+  .name = "activeMarkerUartTest",
 
   .init = init,
 };

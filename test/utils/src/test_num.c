@@ -2,7 +2,8 @@
 #include "num.h"
 
 
-void testThatLimitUint16NotLimitInRange() {
+void testThatLimitUint16NotLimitInRange()
+{
   // Fixture
   int32_t value = 4711;
   uint16_t expected = 4711;
@@ -15,7 +16,8 @@ void testThatLimitUint16NotLimitInRange() {
 }
 
 
-void testThatLimitUint16LimitZero() {
+void testThatLimitUint16LimitZero()
+{
   // Fixture
   int32_t value = -100;
   uint16_t expected = 0;
@@ -28,7 +30,8 @@ void testThatLimitUint16LimitZero() {
 }
 
 
-void testThatLimitUint16LimitMax() {
+void testThatLimitUint16LimitMax()
+{
   // Fixture
   int32_t value = UINT16_MAX + 100;
   uint16_t expected = UINT16_MAX;
@@ -41,7 +44,8 @@ void testThatLimitUint16LimitMax() {
 }
 
 
-void testThatConstrainDoesNotLimitInRange() {
+void testThatConstrainDoesNotLimitInRange()
+{
   // Fixture
   float value = 3.45;
   float expected = value;
@@ -54,7 +58,8 @@ void testThatConstrainDoesNotLimitInRange() {
 }
 
 
-void testThatConstrainLimitsMin() {
+void testThatConstrainLimitsMin()
+{
   // Fixture
   float value = -10.0;
   float min = 3.45;
@@ -68,7 +73,8 @@ void testThatConstrainLimitsMin() {
 }
 
 
-void testThatConstrainLimitsMax() {
+void testThatConstrainLimitsMax()
+{
   // Fixture
   float value = 10.0;
   float max = 3.45;
@@ -82,7 +88,8 @@ void testThatConstrainLimitsMax() {
 }
 
 
-void testThatDeadbandInDeadbandPositive() {
+void testThatDeadbandInDeadbandPositive()
+{
   // Fixture
   float value = 0.5;
   float threshold = 1.0;
@@ -96,7 +103,8 @@ void testThatDeadbandInDeadbandPositive() {
 }
 
 
-void testThatDeadbandInDeadbandNegative() {
+void testThatDeadbandInDeadbandNegative()
+{
   // Fixture
   float value = -0.5;
   float threshold = 1.0;
@@ -110,7 +118,8 @@ void testThatDeadbandInDeadbandNegative() {
 }
 
 
-void testThatDeadbandOutsideDeadbandPositive() {
+void testThatDeadbandOutsideDeadbandPositive()
+{
   // Fixture
   float value = 2.5;
   float threshold = 1.0;
@@ -124,7 +133,8 @@ void testThatDeadbandOutsideDeadbandPositive() {
 }
 
 
-void testThatDeadbandOutsideDeadbandNegative() {
+void testThatDeadbandOutsideDeadbandNegative()
+{
   // Fixture
   float value = -2.5;
   float threshold = 1.0;

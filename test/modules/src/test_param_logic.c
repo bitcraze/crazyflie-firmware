@@ -36,9 +36,9 @@ static int8_t myShortPersistent = 0;
 static float myFloat = 0.0f;
 
 // Storage fetch mock
-static int32_t* fetchMockBuffer = 0;
+static int32_t *fetchMockBuffer = 0;
 static size_t fetchMockBufferLength = 0;
-static char* fetchMockExpectedKey = "";
+static char *fetchMockExpectedKey = "";
 
 
 PARAM_GROUP_START(myGroup)
@@ -56,14 +56,15 @@ PARAM_GROUP_STOP(myGroup)
 
 CRTPPacket replyPk;
 
-static int crtpReply(CRTPPacket* p, int cmock_num_calls)
+static int crtpReply(CRTPPacket *p, int cmock_num_calls)
 {
   memcpy(&replyPk, p, sizeof(CRTPPacket));
 
   return 0;
 }
 
-void setUp(void) {
+void setUp(void)
+{
   _param_start = __params_myGroup;
   _param_stop = _param_start + (sizeof(__params_myGroup) / sizeof(struct param_s));
 
@@ -75,11 +76,13 @@ void setUp(void) {
   paramLogicInit();
 }
 
-void tearDown(void) {
+void tearDown(void)
+{
   // Empty
 }
 
-void testSetUint8(void) {
+void testSetUint8(void)
+{
   // Fixture
   uint8_t expected = UINT8_MAX - 1;
 
@@ -94,7 +97,8 @@ void testSetUint8(void) {
   TEST_ASSERT_EQUAL_UINT8(expected, myUint8);
 }
 
-void testSetUint16(void) {
+void testSetUint16(void)
+{
   // Fixture
   uint16_t expected = UINT16_MAX - 1;
 
@@ -109,7 +113,8 @@ void testSetUint16(void) {
   TEST_ASSERT_EQUAL_UINT8(expected, myUint16);
 }
 
-void testSetUint32(void) {
+void testSetUint32(void)
+{
   // Fixture
   uint32_t expected = UINT32_MAX - 1;
 
@@ -124,7 +129,8 @@ void testSetUint32(void) {
   TEST_ASSERT_EQUAL_UINT8(expected, myUint32);
 }
 
-void testSetInt8(void) {
+void testSetInt8(void)
+{
   // Fixture
   uint8_t expected = INT8_MAX - 1;
 
@@ -139,9 +145,10 @@ void testSetInt8(void) {
   TEST_ASSERT_EQUAL_UINT8(expected, myInt8);
 }
 
-void testSetInt16(void) {
+void testSetInt16(void)
+{
   // Fixture
-  uint16_t expected =UINT16_MAX - 1;
+  uint16_t expected = UINT16_MAX - 1;
 
   crtpIsConnected_IgnoreAndReturn(0);
   crtpSendPacket_StubWithCallback(crtpReply);
@@ -154,7 +161,8 @@ void testSetInt16(void) {
   TEST_ASSERT_EQUAL_UINT8(expected, myInt16);
 }
 
-void testSetInt32(void) {
+void testSetInt32(void)
+{
   // Fixture
   uint32_t expected = INT32_MAX - 1;
 
@@ -170,7 +178,8 @@ void testSetInt32(void) {
 }
 
 
-void testGetUint8(void) {
+void testGetUint8(void)
+{
   // Fixture
   uint8_t expected = UINT8_MAX;
 
@@ -184,7 +193,8 @@ void testGetUint8(void) {
   TEST_ASSERT_EQUAL_UINT8(expected, actual);
 }
 
-void testGetUint16(void) {
+void testGetUint16(void)
+{
   // Fixture
   uint16_t expected = UINT16_MAX;
 
@@ -198,7 +208,8 @@ void testGetUint16(void) {
   TEST_ASSERT_EQUAL_UINT16(expected, actual);
 }
 
-void testGetUint32(void) {
+void testGetUint32(void)
+{
   // Fixture
   uint32_t expected = UINT32_MAX;
 
@@ -212,7 +223,8 @@ void testGetUint32(void) {
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 }
 
-void testGetInt8(void) {
+void testGetInt8(void)
+{
   // Fixture
   int8_t expected = INT8_MIN;
 
@@ -226,7 +238,8 @@ void testGetInt8(void) {
   TEST_ASSERT_EQUAL_INT8(expected, actual);
 }
 
-void testGetInt16(void) {
+void testGetInt16(void)
+{
   // Fixture
   int16_t expected = INT16_MIN;
 
@@ -240,7 +253,8 @@ void testGetInt16(void) {
   TEST_ASSERT_EQUAL_INT16(expected, actual);
 }
 
-void testGetInt32(void) {
+void testGetInt32(void)
+{
   // Fixture
   int32_t expected = INT32_MIN;
 
@@ -254,7 +268,8 @@ void testGetInt32(void) {
   TEST_ASSERT_EQUAL_INT32(expected, actual);
 }
 
-void testGetFloat(void) {
+void testGetFloat(void)
+{
   // Fixture
   float expected = 47.11;
   myFloat = expected;
@@ -267,7 +282,8 @@ void testGetFloat(void) {
   TEST_ASSERT_EQUAL_FLOAT(expected, actual);
 }
 
-void testPersistentSetGetFloat(void) {
+void testPersistentSetGetFloat(void)
+{
   // Fixture
   float expected = 10.88f;
   float actual;
@@ -285,7 +301,8 @@ void testPersistentSetGetFloat(void) {
   TEST_ASSERT_EQUAL_FLOAT(expected, actual);
 }
 
-void testReadProcessUint8(void) {
+void testReadProcessUint8(void)
+{
   // Fixture
   CRTPPacket testPk;
   myUint8 = UINT8_MAX;
@@ -304,7 +321,8 @@ void testReadProcessUint8(void) {
   TEST_ASSERT_EQUAL_UINT8_ARRAY(&testPk.data[0], &replyPk.data[0], 3);
 }
 
-void testWriteProcessUint8(void) {
+void testWriteProcessUint8(void)
+{
   // Fixture
   CRTPPacket testPk;
   uint8_t expected = UINT8_MAX - 1;
@@ -322,7 +340,7 @@ void testWriteProcessUint8(void) {
   TEST_ASSERT_EQUAL_UINT8(expected, myUint8);
 }
 
-static size_t storageFetchMockFunc(const char *key, void* buffer, size_t length)
+static size_t storageFetchMockFunc(const char *key, void *buffer, size_t length)
 {
   TEST_ASSERT_EQUAL_STRING(fetchMockExpectedKey, key);
   size_t cpyLen = length;
@@ -335,7 +353,8 @@ static size_t storageFetchMockFunc(const char *key, void* buffer, size_t length)
   return cpyLen;
 }
 
-void testPersistentGetStateWithStoredParameter(void) {
+void testPersistentGetStateWithStoredParameter(void)
+{
   // Fixture
   CRTPPacket testPk;
 
@@ -375,7 +394,8 @@ void testPersistentGetStateWithStoredParameter(void) {
   TEST_ASSERT_EQUAL_UINT8_ARRAY(&testPk.data[0], &replyPk.data[0], replyPk.size);
 }
 
-void testPersistentGetStateWithShortStoredParameter(void) {
+void testPersistentGetStateWithShortStoredParameter(void)
+{
   // Fixture
   CRTPPacket testPk;
 
@@ -409,7 +429,8 @@ void testPersistentGetStateWithShortStoredParameter(void) {
   TEST_ASSERT_EQUAL_UINT8_ARRAY(&testPk.data[0], &replyPk.data[0], replyPk.size);
 }
 
-void testPersistentGetStateWithoutStoredParameter(void) {
+void testPersistentGetStateWithoutStoredParameter(void)
+{
   // Fixture
   CRTPPacket testPk;
 
@@ -443,7 +464,8 @@ void testPersistentGetStateWithoutStoredParameter(void) {
 }
 
 
-void testPersistentGetStateWithNonExistingParameter(void) {
+void testPersistentGetStateWithNonExistingParameter(void)
+{
   // Fixture
   CRTPPacket testPk;
 

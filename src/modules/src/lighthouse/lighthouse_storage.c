@@ -52,7 +52,8 @@ static baseStationGeometry_t geoBuffer;
 static lighthouseCalibration_t calibBuffer;
 
 
-static void generateStorageKey(char* buf, const char* base, const uint8_t baseStation) {
+static void generateStorageKey(char *buf, const char *base, const uint8_t baseStation)
+{
   // TOOD make an implementation that supports baseStations with 2 digits
   ASSERT(baseStation <= 9);
 
@@ -62,25 +63,32 @@ static void generateStorageKey(char* buf, const char* base, const uint8_t baseSt
   buf[baseLen + 1] = '\0';
 }
 
-bool lighthouseStoragePersistData(const uint8_t baseStation, const bool geoData, const bool calibData) {
+bool lighthouseStoragePersistData(const uint8_t baseStation, const bool geoData,
+                                  const bool calibData)
+{
   bool result = true;
   char key[KEY_LEN];
 
   if (baseStation < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS) {
     if (geoData) {
       generateStorageKey(key, STORAGE_KEY_GEO, baseStation);
-      result = result && storageStore(key, &lighthouseCoreState.bsGeometry[baseStation], sizeof(lighthouseCoreState.bsGeometry[baseStation]));
+      result = result &&
+               storageStore(key, &lighthouseCoreState.bsGeometry[baseStation],
+                            sizeof(lighthouseCoreState.bsGeometry[baseStation]));
     }
     if (calibData) {
       generateStorageKey(key, STORAGE_KEY_CALIB, baseStation);
-      result = result && storageStore(key, &lighthouseCoreState.bsCalibration[baseStation], sizeof(lighthouseCoreState.bsCalibration[baseStation]));
+      result = result &&
+               storageStore(key, &lighthouseCoreState.bsCalibration[baseStation],
+                            sizeof(lighthouseCoreState.bsCalibration[baseStation]));
     }
   }
 
   return result;
 }
 
-static void lhPersistDataWorker(void* arg) {
+static void lhPersistDataWorker(void *arg)
+{
   uint8_t baseStation = (uint32_t)arg;
 
   const bool storeGeo = false;
@@ -90,17 +98,20 @@ static void lhPersistDataWorker(void* arg) {
   }
 }
 
-void lighthouseStoragePersistCalibDataBackground(const uint8_t baseStation) {
+void lighthouseStoragePersistCalibDataBackground(const uint8_t baseStation)
+{
   if (baseStation < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS) {
-    workerSchedule(lhPersistDataWorker, (void*)(uint32_t)baseStation);
+    workerSchedule(lhPersistDataWorker, (void *)(uint32_t)baseStation);
   }
 }
 
-void lighthouseStoragePersistSystemType(lighthouseBaseStationType_t type) {
+void lighthouseStoragePersistSystemType(lighthouseBaseStationType_t type)
+{
   storageStore(STORAGE_KEY_SYSTEM_TYPE, &type, sizeof(type));
 }
 
-void lighthouseStorageVerifySetStorageVersion() {
+void lighthouseStorageVerifySetStorageVersion()
+{
   const int bufLen = 5;
   char buffer[bufLen];
 
@@ -116,14 +127,15 @@ void lighthouseStorageVerifySetStorageVersion() {
   }
 }
 
-void lighthouseStorageInitializeGeoDataFromStorage() {
+void lighthouseStorageInitializeGeoDataFromStorage()
+{
   char key[KEY_LEN];
 
   for (int baseStation = 0; baseStation < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; baseStation++) {
     if (!lighthouseCoreState.bsGeometry[baseStation].valid) {
       generateStorageKey(key, STORAGE_KEY_GEO, baseStation);
       const size_t geoSize = sizeof(geoBuffer);
-      const size_t fetched = storageFetch(key, (void*)&geoBuffer, geoSize);
+      const size_t fetched = storageFetch(key, (void *)&geoBuffer, geoSize);
       if (fetched == geoSize) {
         lighthousePositionSetGeometryData(baseStation, &geoBuffer);
       }
@@ -131,14 +143,15 @@ void lighthouseStorageInitializeGeoDataFromStorage() {
   }
 }
 
-void lighthouseStorageInitializeCalibDataFromStorage() {
+void lighthouseStorageInitializeCalibDataFromStorage()
+{
   char key[KEY_LEN];
 
   for (int baseStation = 0; baseStation < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; baseStation++) {
     if (!lighthouseCoreState.bsCalibration[baseStation].valid) {
       generateStorageKey(key, STORAGE_KEY_CALIB, baseStation);
       const size_t calibSize = sizeof(calibBuffer);
-      const size_t fetched = storageFetch(key, (void*)&calibBuffer, calibSize);
+      const size_t fetched = storageFetch(key, (void *)&calibBuffer, calibSize);
       if (fetched == calibSize) {
         lighthouseCoreSetCalibrationData(baseStation, &calibBuffer);
       }
@@ -146,12 +159,13 @@ void lighthouseStorageInitializeCalibDataFromStorage() {
   }
 }
 
-void lighthouseStorageInitializeSystemTypeFromStorage() {
+void lighthouseStorageInitializeSystemTypeFromStorage()
+{
   lighthouseBaseStationType_t type;
   const size_t typeSize = sizeof(lighthouseBaseStationType_t);
   const size_t fetched = storageFetch(STORAGE_KEY_SYSTEM_TYPE, &type, sizeof(type));
 
   if (fetched == typeSize) {
     lighthouseCoreSetSystemType(type);
-  } 
+  }
 }

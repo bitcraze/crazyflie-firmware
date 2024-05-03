@@ -44,16 +44,17 @@ typedef enum {
 } LinkNbr;
 
 
-static bool isInit=false;
-static uint16_t echoDelay=0;
+static bool isInit = false;
+static uint16_t echoDelay = 0;
 STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(crtpSrvTask, CRTP_SRV_TASK_STACKSIZE);
 
-static void crtpSrvTask(void*);
+static void crtpSrvTask(void *);
 
 void crtpserviceInit(void)
 {
-  if (isInit)
+  if (isInit) {
     return;
+  }
 
   //Start the task
   STATIC_MEM_TASK_CREATE(crtpSrvTask, crtpSrvTask, CRTP_SRV_TASK_NAME, NULL, CRTP_SRV_TASK_PRI);
@@ -66,17 +67,16 @@ bool crtpserviceTest(void)
   return isInit;
 }
 
-static void crtpSrvTask(void* prm)
+static void crtpSrvTask(void *prm)
 {
   static CRTPPacket p;
 
   crtpInitTaskQueue(CRTP_PORT_LINK);
 
-  while(1) {
+  while (1) {
     crtpReceivePacketBlock(CRTP_PORT_LINK, &p);
 
-    switch (p.channel)
-    {
+    switch (p.channel) {
       case linkEcho:
         if (echoDelay > 0) {
           vTaskDelay(M2T(echoDelay));
@@ -86,7 +86,7 @@ static void crtpSrvTask(void* prm)
       case linkSource:
         p.size = CRTP_MAX_DATA_SIZE;
         bzero(p.data, CRTP_MAX_DATA_SIZE);
-        strcpy((char*)p.data, "Bitcraze Crazyflie");
+        strcpy((char *)p.data, "Bitcraze Crazyflie");
         crtpSendPacketBlock(&p);
         break;
       case linkSink:

@@ -63,23 +63,23 @@
 
 // LOCO deck alternative IRQ and RESET pins(IO_2, IO_3) instead of default (RX1, TX1), leaving UART1 free for use
 #ifdef CONFIG_DECK_LOCODECK_USE_ALT_PINS
-  #define GPIO_PIN_IRQ    DECK_GPIO_IO2
+#define GPIO_PIN_IRQ    DECK_GPIO_IO2
 
-  #ifndef CONFIG_LOCODECK_ALT_PIN_RESET
-  #define GPIO_PIN_RESET  DECK_GPIO_IO3
-  #else
-  #define GPIO_PIN_RESET  DECK_GPIO_IO4
-  #endif
-
-  #define EXTI_PortSource EXTI_PortSourceGPIOB
-  #define EXTI_PinSource  EXTI_PinSource5
-  #define EXTI_LineN      EXTI_Line5
+#ifndef CONFIG_LOCODECK_ALT_PIN_RESET
+#define GPIO_PIN_RESET  DECK_GPIO_IO3
 #else
-  #define GPIO_PIN_IRQ    DECK_GPIO_RX1
-  #define GPIO_PIN_RESET  DECK_GPIO_TX1
-  #define EXTI_PortSource EXTI_PortSourceGPIOC
-  #define EXTI_PinSource  EXTI_PinSource11
-  #define EXTI_LineN      EXTI_Line11
+#define GPIO_PIN_RESET  DECK_GPIO_IO4
+#endif
+
+#define EXTI_PortSource EXTI_PortSourceGPIOB
+#define EXTI_PinSource  EXTI_PinSource5
+#define EXTI_LineN      EXTI_Line5
+#else
+#define GPIO_PIN_IRQ    DECK_GPIO_RX1
+#define GPIO_PIN_RESET  DECK_GPIO_TX1
+#define EXTI_PortSource EXTI_PortSourceGPIOC
+#define EXTI_PinSource  EXTI_PinSource11
+#define EXTI_LineN      EXTI_Line11
 #endif
 
 
@@ -112,9 +112,9 @@ struct {
   uwbAlgorithm_t *algorithm;
   char *name;
 } algorithmsList[LPS_NUMBER_OF_ALGORITHMS + 1] = {
-  [lpsMode_TWR] = {.algorithm = &uwbTwrTagAlgorithm, .name="TWR"},
-  [lpsMode_TDoA2] = {.algorithm = &uwbTdoa2TagAlgorithm, .name="TDoA2"},
-  [lpsMode_TDoA3] = {.algorithm = &uwbTdoa3TagAlgorithm, .name="TDoA3"},
+  [lpsMode_TWR] = {.algorithm = &uwbTwrTagAlgorithm, .name = "TWR"},
+  [lpsMode_TDoA2] = {.algorithm = &uwbTdoa2TagAlgorithm, .name = "TDoA2"},
+  [lpsMode_TDoA3] = {.algorithm = &uwbTdoa3TagAlgorithm, .name = "TDoA3"},
 };
 
 #if defined(CONFIG_DECK_LOCO_ALGORITHM_TDOA2)
@@ -152,15 +152,19 @@ static STATS_CNT_RATE_DEFINE(spiReadCount, 1000);
 #define MEM_LOCO2_ANCHOR_PAGE_SIZE 0x0100
 #define MEM_LOCO2_PAGE_LEN         (3 * sizeof(float) + 1)
 
-static uint32_t handleMemGetSize(void) { return MEM_LOCO_ANCHOR_BASE + MEM_LOCO_ANCHOR_PAGE_SIZE * 256; }
-static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* dest);
+static uint32_t handleMemGetSize(void)
+{
+  return MEM_LOCO_ANCHOR_BASE + MEM_LOCO_ANCHOR_PAGE_SIZE * 256;
+}
+static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t *dest);
 static const MemoryHandlerDef_t memDef = {
   .type = MEM_TYPE_LOCO2,
   .getSize = handleMemGetSize,
   .read = handleMemRead,
   .write = 0, // Write is not supported
 };
-static void buildAnchorMemList(const uint32_t memAddr, const uint8_t readLen, uint8_t* dest, const uint32_t pageBase_address, const uint8_t anchorCount, const uint8_t unsortedAnchorList[]);
+static void buildAnchorMemList(const uint32_t memAddr, const uint8_t readLen, uint8_t *dest,
+                               const uint32_t pageBase_address, const uint8_t anchorCount, const uint8_t unsortedAnchorList[]);
 
 static void txCallback(dwDevice_t *dev)
 {
@@ -172,15 +176,18 @@ static void rxCallback(dwDevice_t *dev)
   timeout = algorithm->onEvent(dev, eventPacketReceived);
 }
 
-static void rxTimeoutCallback(dwDevice_t * dev) {
+static void rxTimeoutCallback(dwDevice_t *dev)
+{
   timeout = algorithm->onEvent(dev, eventReceiveTimeout);
 }
 
-static void rxFailedCallback(dwDevice_t * dev) {
+static void rxFailedCallback(dwDevice_t *dev)
+{
   timeout = algorithm->onEvent(dev, eventReceiveFailed);
 }
 
-static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* dest) {
+static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t *dest)
+{
   bool result = false;
 
   static uint8_t unsortedAnchorList[MEM_ANCHOR_ID_LIST_LENGTH];
@@ -203,7 +210,7 @@ static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t
         memset(&position, 0, sizeof(position));
         locoDeckGetAnchorPosition(anchorId, &position);
 
-        float* destAsFloat = (float*)dest;
+        float *destAsFloat = (float *)dest;
         destAsFloat[0] = position.x;
         destAsFloat[1] = position.y;
         destAsFloat[2] = position.z;
@@ -219,7 +226,9 @@ static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t
   return result;
 }
 
-static void buildAnchorMemList(const uint32_t memAddr, const uint8_t readLen, uint8_t* dest, const uint32_t pageBase_address, const uint8_t anchorCount, const uint8_t unsortedAnchorList[]) {
+static void buildAnchorMemList(const uint32_t memAddr, const uint8_t readLen, uint8_t *dest,
+                               const uint32_t pageBase_address, const uint8_t anchorCount, const uint8_t unsortedAnchorList[])
+{
   for (int i = 0; i < readLen; i++) {
     int address = memAddr + i;
     int addressInPage = address - pageBase_address;
@@ -240,7 +249,7 @@ static void buildAnchorMemList(const uint32_t memAddr, const uint8_t readLen, ui
 
 // This function is called from the memory sub system that runs in a different
 // task, protect it from concurrent calls from this task
-bool locoDeckGetAnchorPosition(const uint8_t anchorId, point_t* position)
+bool locoDeckGetAnchorPosition(const uint8_t anchorId, point_t *position)
 {
   if (!isInit) {
     return false;
@@ -254,7 +263,8 @@ bool locoDeckGetAnchorPosition(const uint8_t anchorId, point_t* position)
 
 // This function is called from the memory sub system that runs in a different
 // task, protect it from concurrent calls from this task
-uint8_t locoDeckGetAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize) {
+uint8_t locoDeckGetAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize)
+{
   if (!isInit) {
     return 0;
   }
@@ -267,7 +277,8 @@ uint8_t locoDeckGetAnchorIdList(uint8_t unorderedAnchorList[], const int maxList
 
 // This function is called from the memory sub system that runs in a different
 // task, protect it from concurrent calls from this task
-uint8_t locoDeckGetActiveAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize) {
+uint8_t locoDeckGetActiveAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize)
+{
   if (!isInit) {
     return 0;
   }
@@ -278,7 +289,8 @@ uint8_t locoDeckGetActiveAnchorIdList(uint8_t unorderedAnchorList[], const int m
   return result;
 }
 
-static bool switchToMode(const lpsMode_t newMode) {
+static bool switchToMode(const lpsMode_t newMode)
+{
   bool result = false;
 
   if (lpsMode_auto != newMode && newMode <= LPS_NUMBER_OF_ALGORITHMS) {
@@ -294,13 +306,15 @@ static bool switchToMode(const lpsMode_t newMode) {
   return result;
 }
 
-static void autoModeSearchTryMode(const lpsMode_t newMode, const uint32_t now) {
+static void autoModeSearchTryMode(const lpsMode_t newMode, const uint32_t now)
+{
   // Set up next time to check
   algoOptions.nextSwitchTick = now + LPS_AUTO_MODE_SWITCH_PERIOD;
   switchToMode(newMode);
 }
 
-static lpsMode_t autoModeSearchGetNextMode() {
+static lpsMode_t autoModeSearchGetNextMode()
+{
   lpsMode_t newMode = algoOptions.currentRangingMode + 1;
   if (newMode > LPS_NUMBER_OF_ALGORITHMS) {
     newMode = lpsMode_TWR;
@@ -309,7 +323,8 @@ static lpsMode_t autoModeSearchGetNextMode() {
   return newMode;
 }
 
-static void processAutoModeSwitching() {
+static void processAutoModeSwitching()
+{
   uint32_t now = xTaskGetTickCount();
 
   if (algoOptions.modeAutoSearchActive) {
@@ -331,12 +346,14 @@ static void processAutoModeSwitching() {
   }
 }
 
-static void resetAutoSearchMode() {
+static void resetAutoSearchMode()
+{
   algoOptions.modeAutoSearchActive = true;
   algoOptions.modeAutoSearchDoInitialize = true;
 }
 
-static void handleModeSwitch() {
+static void handleModeSwitch()
+{
   if (algoOptions.userRequestedMode == lpsMode_auto) {
     processAutoModeSwitching();
   } else {
@@ -349,24 +366,25 @@ static void handleModeSwitch() {
   }
 }
 
-static void uwbTask(void* parameters) {
+static void uwbTask(void *parameters)
+{
   lppShortQueue = xQueueCreate(10, sizeof(lpsLppShortPacket_t));
 
   algoOptions.currentRangingMode = lpsMode_auto;
 
   systemWaitStart();
 
-  while(1) {
+  while (1) {
     xSemaphoreTake(algoSemaphore, portMAX_DELAY);
     handleModeSwitch();
     xSemaphoreGive(algoSemaphore);
 
     if (ulTaskNotifyTake(pdTRUE, timeout / portTICK_PERIOD_MS) > 0) {
-      do{
+      do {
         xSemaphoreTake(algoSemaphore, portMAX_DELAY);
         dwHandleInterrupt(dwm);
         xSemaphoreGive(algoSemaphore);
-      } while(digitalRead(GPIO_PIN_IRQ) != 0);
+      } while (digitalRead(GPIO_PIN_IRQ) != 0);
     } else {
       xSemaphoreTake(algoSemaphore, portMAX_DELAY);
       timeout = algorithm->onEvent(dwm, eventTimeout);
@@ -377,22 +395,21 @@ static void uwbTask(void* parameters) {
 
 static lpsLppShortPacket_t lppShortPacket;
 
-bool lpsSendLppShort(uint8_t destId, void* data, size_t length)
+bool lpsSendLppShort(uint8_t destId, void *data, size_t length)
 {
   bool result = false;
 
-  if (isInit)
-  {
+  if (isInit) {
     lppShortPacket.dest = destId;
     lppShortPacket.length = length;
     memcpy(lppShortPacket.data, data, length);
-    result = xQueueSend(lppShortQueue, &lppShortPacket,0) == pdPASS;
+    result = xQueueSend(lppShortQueue, &lppShortPacket, 0) == pdPASS;
   }
 
   return result;
 }
 
-bool lpsGetLppShort(lpsLppShortPacket_t* shortPacket)
+bool lpsGetLppShort(lpsLppShortPacket_t *shortPacket)
 {
   return xQueueReceive(lppShortQueue, shortPacket, 0) == pdPASS;
 }
@@ -402,62 +419,59 @@ static uint8_t spiRxBuffer[196];
 static uint16_t spiSpeed = SPI_BAUDRATE_2MHZ;
 
 /************ Low level ops for libdw **********/
-static void spiWrite(dwDevice_t* dev, const void *header, size_t headerLength,
-                                      const void* data, size_t dataLength)
+static void spiWrite(dwDevice_t *dev, const void *header, size_t headerLength,
+                     const void *data, size_t dataLength)
 {
   spiBeginTransaction(spiSpeed);
   digitalWrite(CS_PIN, LOW);
   memcpy(spiTxBuffer, header, headerLength);
-  memcpy(spiTxBuffer+headerLength, data, dataLength);
-  spiExchange(headerLength+dataLength, spiTxBuffer, spiRxBuffer);
+  memcpy(spiTxBuffer + headerLength, data, dataLength);
+  spiExchange(headerLength + dataLength, spiTxBuffer, spiRxBuffer);
   digitalWrite(CS_PIN, HIGH);
   spiEndTransaction();
   STATS_CNT_RATE_EVENT(&spiWriteCount);
 }
 
-static void spiRead(dwDevice_t* dev, const void *header, size_t headerLength,
-                                     void* data, size_t dataLength)
+static void spiRead(dwDevice_t *dev, const void *header, size_t headerLength,
+                    void *data, size_t dataLength)
 {
   spiBeginTransaction(spiSpeed);
   digitalWrite(CS_PIN, LOW);
   memcpy(spiTxBuffer, header, headerLength);
-  memset(spiTxBuffer+headerLength, 0, dataLength);
-  spiExchange(headerLength+dataLength, spiTxBuffer, spiRxBuffer);
-  memcpy(data, spiRxBuffer+headerLength, dataLength);
+  memset(spiTxBuffer + headerLength, 0, dataLength);
+  spiExchange(headerLength + dataLength, spiTxBuffer, spiRxBuffer);
+  memcpy(data, spiRxBuffer + headerLength, dataLength);
   digitalWrite(CS_PIN, HIGH);
   spiEndTransaction();
   STATS_CNT_RATE_EVENT(&spiReadCount);
 }
 
 #if CONFIG_DECK_LOCODECK_USE_ALT_PINS
-  void __attribute__((used)) EXTI5_Callback(void)
+void __attribute__((used)) EXTI5_Callback(void)
 #else
-  void __attribute__((used)) EXTI11_Callback(void)
+void __attribute__((used)) EXTI11_Callback(void)
 #endif
-  {
-    portBASE_TYPE  xHigherPriorityTaskWoken = pdFALSE;
-
-    // Unlock interrupt handling task
-    vTaskNotifyGiveFromISR(uwbTaskHandle, &xHigherPriorityTaskWoken);
-
-    if(xHigherPriorityTaskWoken) {
-      portYIELD();
-    }
-  }
-
-static void spiSetSpeed(dwDevice_t* dev, dwSpiSpeed_t speed)
 {
-  if (speed == dwSpiSpeedLow)
-  {
-    spiSpeed = SPI_BAUDRATE_2MHZ;
+  portBASE_TYPE  xHigherPriorityTaskWoken = pdFALSE;
+
+  // Unlock interrupt handling task
+  vTaskNotifyGiveFromISR(uwbTaskHandle, &xHigherPriorityTaskWoken);
+
+  if (xHigherPriorityTaskWoken) {
+    portYIELD();
   }
-  else if (speed == dwSpiSpeedHigh)
-  {
+}
+
+static void spiSetSpeed(dwDevice_t *dev, dwSpiSpeed_t speed)
+{
+  if (speed == dwSpiSpeedLow) {
+    spiSpeed = SPI_BAUDRATE_2MHZ;
+  } else if (speed == dwSpiSpeedHigh) {
     spiSpeed = SPI_BAUDRATE_21MHZ;
   }
 }
 
-static void delayms(dwDevice_t* dev, unsigned int delay)
+static void delayms(dwDevice_t *dev, unsigned int delay)
 {
   vTaskDelay(M2T(delay));
 }
@@ -521,21 +535,21 @@ static void dwm1000Init(DeckInfo *info)
   dwSetDefaults(dwm);
 
 
-  #ifdef CONFIG_DECK_LOCO_LONGER_RANGE
+#ifdef CONFIG_DECK_LOCO_LONGER_RANGE
   dwEnableMode(dwm, MODE_SHORTDATA_MID_ACCURACY);
-  #else
+#else
   dwEnableMode(dwm, MODE_SHORTDATA_FAST_ACCURACY);
-  #endif
+#endif
 
   dwSetChannel(dwm, CHANNEL_2);
   dwSetPreambleCode(dwm, PREAMBLE_CODE_64MHZ_9);
 
-  #ifdef CONFIG_DECK_LOCO_FULL_TX_POWER
+#ifdef CONFIG_DECK_LOCO_FULL_TX_POWER
   dwUseSmartPower(dwm, false);
   dwSetTxPower(dwm, 0x1F1F1F1Ful);
-  #else
+#else
   dwUseSmartPower(dwm, true);
-  #endif
+#endif
 
   dwSetReceiveWaitTimeout(dwm, DEFAULT_RX_TIMEOUT);
 
@@ -543,19 +557,21 @@ static void dwm1000Init(DeckInfo *info)
 
   memoryRegisterHandler(&memDef);
 
-  algoSemaphore= xSemaphoreCreateMutex();
+  algoSemaphore = xSemaphoreCreateMutex();
 
   xTaskCreate(uwbTask, LPS_DECK_TASK_NAME, LPS_DECK_STACKSIZE, NULL,
-                    LPS_DECK_TASK_PRI, &uwbTaskHandle);
+              LPS_DECK_TASK_PRI, &uwbTaskHandle);
 
   isInit = true;
 }
 
-uint16_t locoDeckGetRangingState() {
+uint16_t locoDeckGetRangingState()
+{
   return algoOptions.rangingState;
 }
 
-void locoDeckSetRangingState(const uint16_t newState) {
+void locoDeckSetRangingState(const uint16_t newState)
+{
   algoOptions.rangingState = newState;
 }
 
@@ -575,22 +591,22 @@ static const DeckDriver dwm1000_deck = {
   .name = "bcLoco",
 
 #ifdef CONFIG_DECK_LOCODECK_USE_ALT_PINS
-  #ifndef CONFIG_LOCODECK_ALT_PIN_RESET
+#ifndef CONFIG_LOCODECK_ALT_PIN_RESET
   .usedGpio = DECK_USING_IO_1 | DECK_USING_IO_2 | DECK_USING_IO_3,
-  #else
-  .usedGpio = DECK_USING_IO_1 | DECK_USING_IO_2 | DECK_USING_IO_4,
-  #endif
 #else
-   // (PC10/PC11 is UART1 TX/RX)
+  .usedGpio = DECK_USING_IO_1 | DECK_USING_IO_2 | DECK_USING_IO_4,
+#endif
+#else
+  // (PC10/PC11 is UART1 TX/RX)
   .usedGpio = DECK_USING_IO_1 | DECK_USING_PC10 | DECK_USING_PC11,
 #endif
   .usedPeriph = DECK_USING_SPI,
   .requiredEstimator = StateEstimatorTypeKalman,
-  #ifdef LOCODECK_NO_LOW_INTERFERENCE
+#ifdef LOCODECK_NO_LOW_INTERFERENCE
   .requiredLowInterferenceRadioMode = false,
-  #else
+#else
   .requiredLowInterferenceRadioMode = true,
-  #endif
+#endif
 
   .init = dwm1000Init,
   .test = dwm1000Test,

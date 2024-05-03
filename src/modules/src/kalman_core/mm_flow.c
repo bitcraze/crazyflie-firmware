@@ -34,7 +34,8 @@ static float predictedNY;
 static float measuredNX;
 static float measuredNY;
 
-void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *flow, const Axis3f *gyro)
+void kalmanCoreUpdateWithFlow(kalmanCoreData_t *this, const flowMeasurement_t *flow,
+                              const Axis3f *gyro)
 {
   // Inclusion of flow measurements in the EKF done by two scalar updates
 
@@ -42,7 +43,8 @@ void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *f
   // The angle of aperture is guessed from the raw data register and thankfully look to be symmetric
   float Npix = 35.0;                      // [pixels] (same in x and y)
   //float thetapix = DEG_TO_RAD * 4.0f;     // [rad]    (same in x and y)
-  float thetapix = 0.71674f;// 2*sin(42/2); 42degree is the agnle of aperture, here we computed the corresponding ground length
+  float thetapix =
+    0.71674f;// 2*sin(42/2); 42degree is the agnle of aperture, here we computed the corresponding ground length
   //~~~ Body rates ~~~
   // TODO check if this is feasible or if some filtering has to be done
   float omegax_b = gyro->x * DEG_TO_RAD;
@@ -66,38 +68,38 @@ void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *f
   float dy_g = this->S[KC_STATE_PY];
   float z_g = 0.0;
   // Saturate elevation in prediction and correction to avoid singularities
-  if ( this->S[KC_STATE_Z] < 0.1f ) {
-      z_g = 0.1;
+  if (this->S[KC_STATE_Z] < 0.1f) {
+    z_g = 0.1;
   } else {
-      z_g = this->S[KC_STATE_Z];
+    z_g = this->S[KC_STATE_Z];
   }
 
   // ~~~ X velocity prediction and update ~~~
   // predicts the number of accumulated pixels in the x-direction
   float hx[KC_STATE_DIM] = {0};
   arm_matrix_instance_f32 Hx = {1, KC_STATE_DIM, hx};
-  predictedNX = (flow->dt * Npix / thetapix ) * ((dx_g * this->R[2][2] / z_g) - omegay_b);
-  measuredNX = flow->dpixelx*FLOW_RESOLUTION;
+  predictedNX = (flow->dt * Npix / thetapix) * ((dx_g * this->R[2][2] / z_g) - omegay_b);
+  measuredNX = flow->dpixelx * FLOW_RESOLUTION;
 
   // derive measurement equation with respect to dx (and z?)
   hx[KC_STATE_Z] = (Npix * flow->dt / thetapix) * ((this->R[2][2] * dx_g) / (-z_g * z_g));
   hx[KC_STATE_PX] = (Npix * flow->dt / thetapix) * (this->R[2][2] / z_g);
 
   //First update
-  kalmanCoreScalarUpdate(this, &Hx, (measuredNX-predictedNX), flow->stdDevX*FLOW_RESOLUTION);
+  kalmanCoreScalarUpdate(this, &Hx, (measuredNX - predictedNX), flow->stdDevX * FLOW_RESOLUTION);
 
   // ~~~ Y velocity prediction and update ~~~
   float hy[KC_STATE_DIM] = {0};
   arm_matrix_instance_f32 Hy = {1, KC_STATE_DIM, hy};
-  predictedNY = (flow->dt * Npix / thetapix ) * ((dy_g * this->R[2][2] / z_g) + omegax_b);
-  measuredNY = flow->dpixely*FLOW_RESOLUTION;
+  predictedNY = (flow->dt * Npix / thetapix) * ((dy_g * this->R[2][2] / z_g) + omegax_b);
+  measuredNY = flow->dpixely * FLOW_RESOLUTION;
 
   // derive measurement equation with respect to dy (and z?)
   hy[KC_STATE_Z] = (Npix * flow->dt / thetapix) * ((this->R[2][2] * dy_g) / (-z_g * z_g));
   hy[KC_STATE_PY] = (Npix * flow->dt / thetapix) * (this->R[2][2] / z_g);
 
   // Second update
-  kalmanCoreScalarUpdate(this, &Hy, (measuredNY-predictedNY), flow->stdDevY*FLOW_RESOLUTION);
+  kalmanCoreScalarUpdate(this, &Hy, (measuredNY - predictedNY), flow->stdDevY * FLOW_RESOLUTION);
 }
 
 /**
@@ -107,26 +109,26 @@ LOG_GROUP_START(kalman_pred)
 
 /**
  * @brief Flow sensor predicted dx  [pixels/frame]
- * 
+ *
  *  note: rename to kalmanMM.flowX?
  */
-  LOG_ADD(LOG_FLOAT, predNX, &predictedNX)
+LOG_ADD(LOG_FLOAT, predNX, &predictedNX)
 /**
  * @brief Flow sensor predicted dy  [pixels/frame]
- * 
+ *
  *  note: rename to kalmanMM.flowY?
  */
-  LOG_ADD(LOG_FLOAT, predNY, &predictedNY)
+LOG_ADD(LOG_FLOAT, predNY, &predictedNY)
 /**
  * @brief Flow sensor measured dx  [pixels/frame]
- * 
+ *
  *  note: This is the same as motion.deltaX, so perhaps remove this?
  */
-  LOG_ADD(LOG_FLOAT, measNX, &measuredNX)
+LOG_ADD(LOG_FLOAT, measNX, &measuredNX)
 /**
  * @brief Flow sensor measured dy  [pixels/frame]
- * 
+ *
  *  note: This is the same as motion.deltaY, so perhaps remove this?
  */
-  LOG_ADD(LOG_FLOAT, measNY, &measuredNY)
+LOG_ADD(LOG_FLOAT, measNY, &measuredNY)
 LOG_GROUP_STOP(kalman_pred)

@@ -1,6 +1,6 @@
 /*
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -45,8 +45,9 @@ static bool isInit;
 
 void commInit(void)
 {
-  if (isInit)
+  if (isInit) {
     return;
+  }
 
   uartslkInit();
   radiolinkInit();
@@ -70,21 +71,21 @@ void commInit(void)
   //  crtpSetLink(usbGetLink);
   //else if(radiolinkTest())
   //  crtpSetLink(radiolinkGetLink());
-  
+
   isInit = true;
 }
 
 bool commTest(void)
 {
-  bool pass=isInit;
-  
+  bool pass = isInit;
+
   pass &= radiolinkTest();
   pass &= crtpTest();
   pass &= crtpserviceTest();
   pass &= platformserviceTest();
   pass &= consoleTest();
   pass &= paramTest();
-  
+
   return pass;
 }
 

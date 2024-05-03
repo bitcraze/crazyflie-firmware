@@ -40,9 +40,9 @@
 #include "autoconf.h"
 
 #ifdef CONFIG_DEBUG
-  #define DECK_INFO_DBG_PRINT(fmt, ...)  DEBUG_PRINT(fmt, ## __VA_ARGS__)
+#define DECK_INFO_DBG_PRINT(fmt, ...)  DEBUG_PRINT(fmt, ## __VA_ARGS__)
 #else
-  #define DECK_INFO_DBG_PRINT(...)
+#define DECK_INFO_DBG_PRINT(...)
 #endif
 
 static int count = 0;
@@ -56,13 +56,15 @@ static StateEstimatorType requiredEstimator = StateEstimatorTypeAutoSelect;
 static bool registerRequiredEstimator(StateEstimatorType estimator);
 static bool requiredLowInterferenceRadioMode = false;
 
-static char* deck_force = CONFIG_DECK_FORCE;
+static char *deck_force = CONFIG_DECK_FORCE;
 
 void deckInfoInit()
 {
   static bool isInit = false;
 
-  if (isInit) return;
+  if (isInit) {
+    return;
+  }
 
   enumerateDecks();
   checkPeriphAndGpioConflicts();
@@ -76,9 +78,9 @@ int deckCount(void)
   return count;
 }
 
-DeckInfo * deckInfo(int i)
+DeckInfo *deckInfo(int i)
 {
-  if (i<count) {
+  if (i < count) {
     return &deckInfos[i];
   }
 
@@ -89,7 +91,7 @@ DeckInfo * deckInfo(int i)
 static const DeckDriver dummyDriver;
 
 #ifndef CONFIG_DEBUG_DECK_IGNORE_OWS
-static const DeckDriver * findDriver(DeckInfo *deck)
+static const DeckDriver *findDriver(DeckInfo *deck)
 {
   char name[30];
   const DeckDriver *driver = &dummyDriver;
@@ -98,12 +100,13 @@ static const DeckDriver * findDriver(DeckInfo *deck)
 
   if (deck->vid) {
     driver = deckFindDriverByVidPid(deck->vid, deck->pid);
-  } else if (strlen(name)>0) {
+  } else if (strlen(name) > 0) {
     driver = deckFindDriverByName(name);
   }
 
-  if (driver == NULL)
+  if (driver == NULL) {
     driver = &dummyDriver;
+  }
 
   return driver;
 }
@@ -129,12 +132,12 @@ void printDeckInfo(DeckInfo *info)
     DEBUG_PRINT("Warning! No driver found for deck.\n");
   } else {
     DECK_INFO_DBG_PRINT("Driver implements: [ %s%s]\n",
-                        info->driver->init?"init ":"", info->driver->test?"test ":"");
+                        info->driver->init ? "init " : "", info->driver->test ? "test " : "");
   }
 }
 
 #ifndef CONFIG_DEBUG_DECK_IGNORE_OWS
-static bool infoDecode(DeckInfo * info)
+static bool infoDecode(DeckInfo *info)
 {
   uint8_t crcHeader;
   uint8_t crcTlv;
@@ -145,18 +148,19 @@ static bool infoDecode(DeckInfo * info)
   }
 
   crcHeader = crc32CalculateBuffer(info->raw, DECK_INFO_HEADER_SIZE);
-  if(info->crc != crcHeader) {
+  if (info->crc != crcHeader) {
     DEBUG_PRINT("Memory error: incorrect header CRC\n");
     return false;
   }
 
-  if(info->raw[DECK_INFO_TLV_VERSION_POS] != DECK_INFO_TLV_VERSION) {
+  if (info->raw[DECK_INFO_TLV_VERSION_POS] != DECK_INFO_TLV_VERSION) {
     DEBUG_PRINT("Memory error: incorrect TLV version\n");
     return false;
   }
 
-  crcTlv = crc32CalculateBuffer(&info->raw[DECK_INFO_TLV_VERSION_POS], info->raw[DECK_INFO_TLV_LENGTH_POS]+2);
-  if(crcTlv != info->raw[DECK_INFO_TLV_DATA_POS + info->raw[DECK_INFO_TLV_LENGTH_POS]]) {
+  crcTlv = crc32CalculateBuffer(&info->raw[DECK_INFO_TLV_VERSION_POS],
+                                info->raw[DECK_INFO_TLV_LENGTH_POS] + 2);
+  if (crcTlv != info->raw[DECK_INFO_TLV_DATA_POS + info->raw[DECK_INFO_TLV_LENGTH_POS]]) {
     DEBUG_PRINT("Memory error: incorrect TLV CRC %x!=%x\n", (unsigned int)crcTlv,
                 info->raw[DECK_INFO_TLV_DATA_POS + info->raw[DECK_INFO_TLV_LENGTH_POS]]);
     return false;
@@ -176,9 +180,8 @@ static void enumerateDecks(void)
 
   owInit();
 
-  if (owScan(&nDecks))
-  {
-    DECK_INFO_DBG_PRINT("Found %d deck memor%s.\n", nDecks, nDecks>1?"ies":"y");
+  if (owScan(&nDecks)) {
+    DECK_INFO_DBG_PRINT("Found %d deck memor%s.\n", nDecks, nDecks > 1 ? "ies" : "y");
   } else {
     DEBUG_PRINT("Error scanning for deck memories, "
                 "no deck drivers will be initialised\n");
@@ -186,13 +189,10 @@ static void enumerateDecks(void)
   }
 
 #ifndef CONFIG_DEBUG_DECK_IGNORE_OWS
-  for (int i = 0; i < nDecks; i++)
-  {
+  for (int i = 0; i < nDecks; i++) {
     DECK_INFO_DBG_PRINT("Enumerating deck %i\n", i);
-    if (owRead(i, 0, sizeof(deckInfos[0].raw), (uint8_t *)&deckInfos[i]))
-    {
-      if (infoDecode(&deckInfos[i]))
-      {
+    if (owRead(i, 0, sizeof(deckInfos[0].raw), (uint8_t *)&deckInfos[i])) {
+      if (infoDecode(&deckInfos[i])) {
         deckInfos[i].driver = findDriver(&deckInfos[i]);
         printDeckInfo(&deckInfos[i]);
       } else {
@@ -206,9 +206,7 @@ static void enumerateDecks(void)
         noError = false;
 #endif
       }
-    }
-    else
-    {
+    } else {
       DEBUG_PRINT("Reading deck nr:%d [FAILED]. "
                   "No driver will be initialized!\n", i);
       noError = false;
@@ -222,12 +220,12 @@ static void enumerateDecks(void)
   // Add build-forced driver
   if (strlen(deck_force) > 0 && strncmp(deck_force, "none", 4) != 0) {
     DEBUG_PRINT("CONFIG_DECK_FORCE=%s found\n", deck_force);
-  	//split deck_force into multiple, separated by colons, if available
+    //split deck_force into multiple, separated by colons, if available
     char delim[] = ":";
 
     char temp_deck_force[strlen(deck_force) + 1];
     strcpy(temp_deck_force, deck_force);
-    char * token = strtok(temp_deck_force, delim);
+    char *token = strtok(temp_deck_force, delim);
 
     while (token) {
       deck_force = token;
@@ -236,8 +234,7 @@ static void enumerateDecks(void)
       if (!driver) {
         DEBUG_PRINT("WARNING: compile-time forced driver %s not found\n", deck_force);
       } else if (driver->init || driver->test) {
-        if (nDecks <= DECK_MAX_COUNT)
-        {
+        if (nDecks <= DECK_MAX_COUNT) {
           nDecks++;
           deckInfos[nDecks - 1].driver = driver;
           DEBUG_PRINT("compile-time forced driver %s added\n", deck_force);
@@ -262,8 +259,7 @@ static void checkPeriphAndGpioConflicts(void)
   uint32_t usedPeriph = 0;
   uint32_t usedGpio = 0;
 
-  for (int i = 0; i < count; i++)
-  {
+  for (int i = 0; i < count; i++) {
     uint32_t matchPeriph = usedPeriph & deckInfos[i].driver->usedPeriph;
     if (matchPeriph != 0) {
       //
@@ -297,35 +293,38 @@ static void checkPeriphAndGpioConflicts(void)
 }
 
 /****** Key/value area handling ********/
-static int findType(TlvArea *tlv, int type) {
+static int findType(TlvArea *tlv, int type)
+{
   int pos = 0;
 
   while (pos < tlv->length) {
     if (tlv->data[pos] == type) {
       return pos;
     } else {
-      pos += tlv->data[pos+1]+2;
+      pos += tlv->data[pos + 1] + 2;
     }
   }
   return -1;
 }
 
-bool deckTlvHasElement(TlvArea *tlv, int type) {
+bool deckTlvHasElement(TlvArea *tlv, int type)
+{
   return findType(tlv, type) >= 0;
 }
 
-int deckTlvGetString(TlvArea *tlv, int type, char *string, int length) {
+int deckTlvGetString(TlvArea *tlv, int type, char *string, int length)
+{
   int pos = findType(tlv, type);
   int strlength = 0;
 
   if (pos >= 0) {
-    strlength = tlv->data[pos+1];
+    strlength = tlv->data[pos + 1];
 
-    if (strlength > (length-1)) {
-      strlength = length-1;
+    if (strlength > (length - 1)) {
+      strlength = length - 1;
     }
 
-    memcpy(string, &tlv->data[pos+2], strlength);
+    memcpy(string, &tlv->data[pos + 2], strlength);
     string[strlength] = '\0';
 
     return strlength;
@@ -336,17 +335,19 @@ int deckTlvGetString(TlvArea *tlv, int type, char *string, int length) {
   }
 }
 
-char* deckTlvGetBuffer(TlvArea *tlv, int type, int *length) {
+char *deckTlvGetBuffer(TlvArea *tlv, int type, int *length)
+{
   int pos = findType(tlv, type);
   if (pos >= 0) {
-    *length = tlv->data[pos+1];
-    return (char*) &tlv->data[pos+2];
+    *length = tlv->data[pos + 1];
+    return (char *) &tlv->data[pos + 2];
   }
 
   return NULL;
 }
 
-void deckTlvGetTlv(TlvArea *tlv, int type, TlvArea *output) {
+void deckTlvGetTlv(TlvArea *tlv, int type, TlvArea *output)
+{
   output->length = 0;
   output->data = (uint8_t *)deckTlvGetBuffer(tlv, type, &output->length);
 }
@@ -355,8 +356,7 @@ static void scanRequiredSystemProperties(void)
 {
   bool isError = false;
 
-  for (int i = 0; i < count; i++)
-  {
+  for (int i = 0; i < count; i++) {
     isError = isError || registerRequiredEstimator(deckInfos[i].driver->requiredEstimator);
     requiredLowInterferenceRadioMode |= deckInfos[i].driver->requiredLowInterferenceRadioMode;
   }
@@ -370,14 +370,10 @@ static bool registerRequiredEstimator(StateEstimatorType estimator)
 {
   bool isError = false;
 
-  if (StateEstimatorTypeAutoSelect != estimator)
-  {
-    if (StateEstimatorTypeAutoSelect == requiredEstimator)
-    {
+  if (StateEstimatorTypeAutoSelect != estimator) {
+    if (StateEstimatorTypeAutoSelect == requiredEstimator) {
       requiredEstimator = estimator;
-    }
-    else
-    {
+    } else {
       if (requiredEstimator != estimator) {
         isError = true;
         DEBUG_PRINT("WARNING: Two decks require different estimators\n");

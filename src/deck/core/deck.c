@@ -33,9 +33,9 @@
 #include "debug.h"
 
 #ifdef CONFIG_DEBUG
-  #define DECK_CORE_DBG_PRINT(fmt, ...)  DEBUG_PRINT(fmt, ## __VA_ARGS__)
+#define DECK_CORE_DBG_PRINT(fmt, ...)  DEBUG_PRINT(fmt, ## __VA_ARGS__)
 #else
-  #define DECK_CORE_DBG_PRINT(...)
+#define DECK_CORE_DBG_PRINT(...)
 #endif
 
 extern void deckInfoInit();
@@ -53,7 +53,7 @@ void deckInit()
 
   DEBUG_PRINT("%d deck(s) found\n", nDecks);
 
-  for (i=0; i<nDecks; i++) {
+  for (i = 0; i < nDecks; i++) {
     DeckInfo *deck = deckInfo(i);
 
     if (deck->driver->init) {
@@ -76,7 +76,7 @@ bool deckTest()
 
   nDecks = deckCount();
 
-  for (i=0; i<nDecks; i++) {
+  for (i = 0; i < nDecks; i++) {
     DeckInfo *deck = deckInfo(i);
 
     if (deck->driver->test) {

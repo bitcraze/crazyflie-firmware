@@ -39,7 +39,8 @@ bool controllerPidTest(void)
   return pass;
 }
 
-static float capAngle(float angle) {
+static float capAngle(float angle)
+{
   float result = angle;
 
   while (result > 180.0f) {
@@ -54,35 +55,33 @@ static float capAngle(float angle) {
 }
 
 void controllerPid(control_t *control, const setpoint_t *setpoint,
-                                         const sensorData_t *sensors,
-                                         const state_t *state,
-                                         const stabilizerStep_t stabilizerStep)
+                   const sensorData_t *sensors,
+                   const state_t *state,
+                   const stabilizerStep_t stabilizerStep)
 {
   control->controlMode = controlModeLegacy;
 
   if (RATE_DO_EXECUTE(ATTITUDE_RATE, stabilizerStep)) {
     // Rate-controled YAW is moving YAW angle setpoint
     if (setpoint->mode.yaw == modeVelocity) {
-      attitudeDesired.yaw = capAngle(attitudeDesired.yaw + setpoint->attitudeRate.yaw * ATTITUDE_UPDATE_DT);
+      attitudeDesired.yaw = capAngle(attitudeDesired.yaw + setpoint->attitudeRate.yaw *
+                                     ATTITUDE_UPDATE_DT);
 
       float yawMaxDelta = attitudeControllerGetYawMaxDelta();
-      if (yawMaxDelta != 0.0f)
-      {
-      float delta = capAngle(attitudeDesired.yaw-state->attitude.yaw);
-      // keep the yaw setpoint within +/- yawMaxDelta from the current yaw
-        if (delta > yawMaxDelta)
-        {
+      if (yawMaxDelta != 0.0f) {
+        float delta = capAngle(attitudeDesired.yaw - state->attitude.yaw);
+        // keep the yaw setpoint within +/- yawMaxDelta from the current yaw
+        if (delta > yawMaxDelta) {
           attitudeDesired.yaw = state->attitude.yaw + yawMaxDelta;
-        }
-        else if (delta < -yawMaxDelta)
-        {
+        } else if (delta < -yawMaxDelta) {
           attitudeDesired.yaw = state->attitude.yaw - yawMaxDelta;
         }
       }
     } else if (setpoint->mode.yaw == modeAbs) {
       attitudeDesired.yaw = setpoint->attitude.yaw;
     } else if (setpoint->mode.quat == modeAbs) {
-      struct quat setpoint_quat = mkquat(setpoint->attitudeQuaternion.x, setpoint->attitudeQuaternion.y, setpoint->attitudeQuaternion.z, setpoint->attitudeQuaternion.w);
+      struct quat setpoint_quat = mkquat(setpoint->attitudeQuaternion.x, setpoint->attitudeQuaternion.y,
+                                         setpoint->attitudeQuaternion.z, setpoint->attitudeQuaternion.w);
       struct vec rpy = quat2rpy(setpoint_quat);
       attitudeDesired.yaw = degrees(rpy.z);
     }
@@ -104,9 +103,10 @@ void controllerPid(control_t *control, const setpoint_t *setpoint,
       attitudeDesired.pitch = setpoint->attitude.pitch;
     }
 
-    attitudeControllerCorrectAttitudePID(state->attitude.roll, state->attitude.pitch, state->attitude.yaw,
-                                attitudeDesired.roll, attitudeDesired.pitch, attitudeDesired.yaw,
-                                &rateDesired.roll, &rateDesired.pitch, &rateDesired.yaw);
+    attitudeControllerCorrectAttitudePID(state->attitude.roll, state->attitude.pitch,
+                                         state->attitude.yaw,
+                                         attitudeDesired.roll, attitudeDesired.pitch, attitudeDesired.yaw,
+                                         &rateDesired.roll, &rateDesired.pitch, &rateDesired.yaw);
 
     // For roll and pitch, if velocity mode, overwrite rateDesired with the setpoint
     // value. Also reset the PID to avoid error buildup, which can lead to unstable
@@ -122,7 +122,7 @@ void controllerPid(control_t *control, const setpoint_t *setpoint,
 
     // TODO: Investigate possibility to subtract gyro drift.
     attitudeControllerCorrectRatePID(sensors->gyro.x, -sensors->gyro.y, sensors->gyro.z,
-                             rateDesired.roll, rateDesired.pitch, rateDesired.yaw);
+                                     rateDesired.roll, rateDesired.pitch, rateDesired.yaw);
 
     attitudeControllerGetActuatorOutput(&control->roll,
                                         &control->pitch,
@@ -142,8 +142,7 @@ void controllerPid(control_t *control, const setpoint_t *setpoint,
 
   control->thrust = actuatorThrust;
 
-  if (control->thrust == 0)
-  {
+  if (control->thrust == 0) {
     control->thrust = 0;
     control->roll = 0;
     control->pitch = 0;

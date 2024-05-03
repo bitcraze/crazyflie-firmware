@@ -12,19 +12,22 @@
 
 #include <stdbool.h>
 
-const DeckMemDef_t* noMemDef = 0;
+const DeckMemDef_t *noMemDef = 0;
 
 
-void setUp(void) {
+void setUp(void)
+{
   // Empty
 }
 
-void tearDown(void) {
+void tearDown(void)
+{
   // Empty
 }
 
 
-void testThaEraseFwIsCalledWhenWritingTheFirstBlock() {
+void testThaEraseFwIsCalledWhenWritingTheFirstBlock()
+{
   // Fixture
   lhblFlashEraseFirmware_ExpectAndReturn(true);
   uint8_t buffer[] = {1, 2, 3, 4};
@@ -38,7 +41,8 @@ void testThaEraseFwIsCalledWhenWritingTheFirstBlock() {
 }
 
 
-void testThaEraseFwSplitsWriteBetweenTwoPages() {
+void testThaEraseFwSplitsWriteBetweenTwoPages()
+{
   // Fixture
   uint8_t buffer[] = {1, 2, 3, 4};
   lhblFlashWritePage_ExpectWithArrayAndReturn(LH_FW_ADDR + 254, 2, buffer, 2, true);

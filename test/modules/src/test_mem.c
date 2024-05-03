@@ -6,9 +6,12 @@
 
 // Memory handler ------------------------------------
 
-static uint32_t handleMemGetSize(void) { return 17; }
-static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
-static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
+static uint32_t handleMemGetSize(void)
+{
+  return 17;
+}
+static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t *buffer);
+static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t *buffer);
 
 static const MemoryHandlerDef_t memoryDef = {
   .type = MEM_TYPE_APP,
@@ -25,9 +28,11 @@ static const uint32_t WRITE_LEN = 65;
 
 // One Wire mem handler -------------------------------
 
-static bool handleOwMemGetSerialNr(const uint8_t selectedMem, uint8_t* serialNr);
-static bool handleOwMemRead(const uint8_t selectedMem, const uint32_t memAddr, const uint8_t readLen, uint8_t* startOfData);
-static bool handleOwMemWrite(const uint8_t selectedMem, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* startOfData);
+static bool handleOwMemGetSerialNr(const uint8_t selectedMem, uint8_t *serialNr);
+static bool handleOwMemRead(const uint8_t selectedMem, const uint32_t memAddr,
+                            const uint8_t readLen, uint8_t *startOfData);
+static bool handleOwMemWrite(const uint8_t selectedMem, const uint32_t memAddr,
+                             const uint8_t writeLen, const uint8_t *startOfData);
 
 static MemoryOwHandlerDef_t memoryOwDef = {
   .nrOfMems = 10,
@@ -49,19 +54,22 @@ static const uint8_t SN_OW_ID = 88;
 
 
 
-void setUp(void) {
+void setUp(void)
+{
   memReset();
   memInit();
 }
 
-void tearDown(void) {
+void tearDown(void)
+{
   // Empty
 }
 
 // The tester is id 0 by default
 const uint16_t memTesterId = 0;
 
-void testThatTheTestHandlerTypeIsRegistered() {
+void testThatTheTestHandlerTypeIsRegistered()
+{
   // Fixture
   // Test
   MemoryType_t actual = memGetType(memTesterId);
@@ -70,7 +78,8 @@ void testThatTheTestHandlerTypeIsRegistered() {
   TEST_ASSERT_EQUAL(MEM_TYPE_TESTER, actual);
 }
 
-void testTheNumberOfRegisteredHandlersForTheTestHandler() {
+void testTheNumberOfRegisteredHandlersForTheTestHandler()
+{
   // Fixture
   // Only the test handler is registered by default
   uint16_t expected = 1;
@@ -82,7 +91,8 @@ void testTheNumberOfRegisteredHandlersForTheTestHandler() {
   TEST_ASSERT_EQUAL(expected, actual);
 }
 
-void testThatTheTestHandlerReturnsExpectedData() {
+void testThatTheTestHandlerReturnsExpectedData()
+{
   // Fixture
   uint8_t buffer[3];
 
@@ -95,7 +105,8 @@ void testThatTheTestHandlerReturnsExpectedData() {
   TEST_ASSERT_EQUAL(19, buffer[2]);
 }
 
-void testThatAHandlerCanBeRegistered() {
+void testThatAHandlerCanBeRegistered()
+{
   // Fixture
   uint16_t index = 1;
 
@@ -109,7 +120,8 @@ void testThatAHandlerCanBeRegistered() {
   TEST_ASSERT_EQUAL(MEM_TYPE_APP, memGetType(index));
 }
 
-void testRead() {
+void testRead()
+{
   // Fixture
   uint16_t index = 1;
   memoryRegisterHandler(&memoryDef);
@@ -123,7 +135,8 @@ void testRead() {
   TEST_ASSERT_TRUE(actual);
 }
 
-void testWrite() {
+void testWrite()
+{
   // Fixture
   uint16_t index = 1;
   memoryRegisterHandler(&memoryDef);
@@ -137,7 +150,8 @@ void testWrite() {
   TEST_ASSERT_TRUE(actual);
 }
 
-void testThatAOwHandlerCanBeRegistered() {
+void testThatAOwHandlerCanBeRegistered()
+{
   // Fixture
   // Test
   memoryRegisterOwHandler(&memoryOwDef);
@@ -147,7 +161,8 @@ void testThatAOwHandlerCanBeRegistered() {
   TEST_ASSERT_EQUAL(47, memGetOwSize());
 }
 
-void testOwRead() {
+void testOwRead()
+{
   // Fixture
   memoryRegisterOwHandler(&memoryOwDef);
   uint8_t buffer[10];
@@ -160,7 +175,8 @@ void testOwRead() {
   TEST_ASSERT_TRUE(actual);
 }
 
-void testOwWrite() {
+void testOwWrite()
+{
   // Fixture
   memoryRegisterOwHandler(&memoryOwDef);
   uint8_t buffer[10];
@@ -173,7 +189,8 @@ void testOwWrite() {
   TEST_ASSERT_TRUE(actual);
 }
 
-void testOwSerialNr() {
+void testOwSerialNr()
+{
   // Fixture
   memoryRegisterOwHandler(&memoryOwDef);
   uint8_t buffer[10];
@@ -188,31 +205,38 @@ void testOwSerialNr() {
 
 // --------------------------------
 
-static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t *buffer)
+{
   TEST_ASSERT_EQUAL(READ_ADDRESS, memAddr);
   TEST_ASSERT_EQUAL(READ_LEN, readLen);
   return true;
 }
 
-static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
+static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t *buffer)
+{
   TEST_ASSERT_EQUAL(WRITE_ADDRESS, memAddr);
   TEST_ASSERT_EQUAL(WRITE_LEN, writeLen);
   return true;
 }
 
-static bool handleOwMemGetSerialNr(const uint8_t selectedMem, uint8_t* serialNr) {
+static bool handleOwMemGetSerialNr(const uint8_t selectedMem, uint8_t *serialNr)
+{
   TEST_ASSERT_EQUAL(SN_OW_ID, selectedMem);
   return true;
 }
 
-static bool handleOwMemRead(const uint8_t selectedMem, const uint32_t memAddr, const uint8_t readLen, uint8_t* startOfData) {
+static bool handleOwMemRead(const uint8_t selectedMem, const uint32_t memAddr,
+                            const uint8_t readLen, uint8_t *startOfData)
+{
   TEST_ASSERT_EQUAL(READ_OW_ID, selectedMem);
   TEST_ASSERT_EQUAL(READ_OW_ADDRESS, memAddr);
   TEST_ASSERT_EQUAL(READ_OW_LEN, readLen);
   return true;
 }
 
-static bool handleOwMemWrite(const uint8_t selectedMem, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* startOfData) {
+static bool handleOwMemWrite(const uint8_t selectedMem, const uint32_t memAddr,
+                             const uint8_t writeLen, const uint8_t *startOfData)
+{
   TEST_ASSERT_EQUAL(WRITE_OW_ID, selectedMem);
   TEST_ASSERT_EQUAL(WRITE_OW_ADDRESS, memAddr);
   TEST_ASSERT_EQUAL(WRITE_OW_LEN, writeLen);

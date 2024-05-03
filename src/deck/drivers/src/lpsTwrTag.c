@@ -46,43 +46,43 @@
 
 // Config
 static lpsTwrAlgoOptions_t defaultOptions = {
-   .tagAddress = 0xbccf000000000008,
-   .anchorAddress = {
-     0xbccf000000000000,
-     0xbccf000000000001,
-     0xbccf000000000002,
-     0xbccf000000000003,
-     0xbccf000000000004,
-     0xbccf000000000005,
- #if LOCODECK_NR_OF_TWR_ANCHORS > 6
-     0xbccf000000000006,
- #endif
- #if LOCODECK_NR_OF_TWR_ANCHORS > 7
-     0xbccf000000000007,
- #endif
-   },
-   .antennaDelay = LOCODECK_ANTENNA_DELAY,
-   .rangingFailedThreshold = 6,
+  .tagAddress = 0xbccf000000000008,
+  .anchorAddress = {
+    0xbccf000000000000,
+    0xbccf000000000001,
+    0xbccf000000000002,
+    0xbccf000000000003,
+    0xbccf000000000004,
+    0xbccf000000000005,
+#if LOCODECK_NR_OF_TWR_ANCHORS > 6
+    0xbccf000000000006,
+#endif
+#if LOCODECK_NR_OF_TWR_ANCHORS > 7
+    0xbccf000000000007,
+#endif
+  },
+  .antennaDelay = LOCODECK_ANTENNA_DELAY,
+  .rangingFailedThreshold = 6,
 
-   .combinedAnchorPositionOk = false,
+  .combinedAnchorPositionOk = false,
 
- #ifdef LPS_TDMA_ENABLE
-   .useTdma = true,
-   .tdmaSlot = TDMA_SLOT,
- #endif
+#ifdef LPS_TDMA_ENABLE
+  .useTdma = true,
+  .tdmaSlot = TDMA_SLOT,
+#endif
 
-   // To set a static anchor position from startup, uncomment and modify the
-   // following code:
- //   .anchorPosition = {
- //     {timestamp: 1, x: 0.99, y: 1.49, z: 1.80},
- //     {timestamp: 1, x: 0.99, y: 3.29, z: 1.80},
- //     {timestamp: 1, x: 4.67, y: 2.54, z: 1.80},
- //     {timestamp: 1, x: 0.59, y: 2.27, z: 0.20},
- //     {timestamp: 1, x: 4.70, y: 3.38, z: 0.20},
- //     {timestamp: 1, x: 4.70, y: 1.14, z: 0.20},
- //   },
- //
- //   .combinedAnchorPositionOk = true,
+  // To set a static anchor position from startup, uncomment and modify the
+  // following code:
+//   .anchorPosition = {
+//     {timestamp: 1, x: 0.99, y: 1.49, z: 1.80},
+//     {timestamp: 1, x: 0.99, y: 3.29, z: 1.80},
+//     {timestamp: 1, x: 4.67, y: 2.54, z: 1.80},
+//     {timestamp: 1, x: 0.59, y: 2.27, z: 0.20},
+//     {timestamp: 1, x: 4.70, y: 3.38, z: 0.20},
+//     {timestamp: 1, x: 4.70, y: 1.14, z: 0.20},
+//   },
+//
+//   .combinedAnchorPositionOk = true,
 };
 
 typedef struct {
@@ -92,7 +92,7 @@ typedef struct {
 } twrState_t;
 
 static twrState_t state;
-static lpsTwrAlgoOptions_t* options = &defaultOptions;
+static lpsTwrAlgoOptions_t *options = &defaultOptions;
 
 // Outlier rejection
 #define RANGING_HISTORY_LENGTH 32
@@ -151,16 +151,19 @@ static void txcallback(dwDevice_t *dev)
 }
 
 
-static uint32_t rxcallback(dwDevice_t *dev) {
-  dwTime_t arival = { .full=0 };
+static uint32_t rxcallback(dwDevice_t *dev)
+{
+  dwTime_t arival = { .full = 0 };
   int dataLength = dwGetDataLength(dev);
 
-  if (dataLength == 0) return 0;
+  if (dataLength == 0) {
+    return 0;
+  }
 
   packet_t rxPacket;
   memset(&rxPacket, 0, MAC802154_HEADER_LENGTH);
 
-  dwGetData(dev, (uint8_t*)&rxPacket, dataLength);
+  dwGetData(dev, (uint8_t *)&rxPacket, dataLength);
 
   if (rxPacket.destAddress != options->tagAddress) {
     dwNewReceive(dev);
@@ -172,7 +175,7 @@ static uint32_t rxcallback(dwDevice_t *dev) {
   txPacket.destAddress = rxPacket.sourceAddress;
   txPacket.sourceAddress = rxPacket.destAddress;
 
-  switch(rxPacket.payload[LPS_TWR_TYPE]) {
+  switch (rxPacket.payload[LPS_TWR_TYPE]) {
     // Tag received messages
     case LPS_TWR_ANSWER:
       if (rxPacket.payload[LPS_TWR_SEQ] != curr_seq) {
@@ -183,7 +186,7 @@ static uint32_t rxcallback(dwDevice_t *dev) {
         if (rxPacket.payload[LPS_TWR_LPP_HEADER] == LPP_HEADER_SHORT_PACKET) {
           int srcId = -1;
 
-          for (int i=0; i<LOCODECK_NR_OF_TWR_ANCHORS; i++) {
+          for (int i = 0; i < LOCODECK_NR_OF_TWR_ANCHORS; i++) {
             if (rxPacket.sourceAddress == options->anchorAddress[i]) {
               srcId = i;
               break;
@@ -204,15 +207,14 @@ static uint32_t rxcallback(dwDevice_t *dev) {
       answer_rx = arival;
 
       dwNewTransmit(dev);
-      dwSetData(dev, (uint8_t*)&txPacket, MAC802154_HEADER_LENGTH+2);
+      dwSetData(dev, (uint8_t *)&txPacket, MAC802154_HEADER_LENGTH + 2);
 
       dwWaitForResponse(dev, true);
       dwStartTransmit(dev);
 
       break;
-    case LPS_TWR_REPORT:
-    {
-      lpsTwrTagReportPayload_t *report = (lpsTwrTagReportPayload_t *)(rxPacket.payload+2);
+    case LPS_TWR_REPORT: {
+      lpsTwrTagReportPayload_t *report = (lpsTwrTagReportPayload_t *)(rxPacket.payload + 2);
       double tround1, treply1, treply2, tround2, tprop_ctn, tprop;
 
       if (rxPacket.payload[LPS_TWR_SEQ] != curr_seq) {
@@ -228,7 +230,7 @@ static uint32_t rxcallback(dwDevice_t *dev) {
       tround2 = final_rx.low32 - answer_tx.low32;
       treply2 = final_tx.low32 - answer_rx.low32;
 
-      tprop_ctn = ((tround1*tround2) - (treply1*treply2)) / (tround1 + tround2 + treply1 + treply2);
+      tprop_ctn = ((tround1 * tround2) - (treply1 * treply2)) / (tround1 + tround2 + treply1 + treply2);
 
       tprop = tprop_ctn / LOCODECK_TS_FREQ;
       state.distance[current_anchor] = SPEED_OF_LIGHT * tprop;
@@ -243,12 +245,13 @@ static uint32_t rxcallback(dwDevice_t *dev) {
       arm_mean_f32(rangingStats[current_anchor].history, RANGING_HISTORY_LENGTH, &mean);
       float32_t diff = fabsf(mean - state.distance[current_anchor]);
 
-      rangingStats[current_anchor].history[rangingStats[current_anchor].ptr] = state.distance[current_anchor];
+      rangingStats[current_anchor].history[rangingStats[current_anchor].ptr] =
+        state.distance[current_anchor];
 
       rangingOk = true;
 
       if ((options->combinedAnchorPositionOk || options->anchorPosition[current_anchor].timestamp) &&
-          (diff < (OUTLIER_TH*stddev))) {
+          (diff < (OUTLIER_TH * stddev))) {
         distanceMeasurement_t dist;
         dist.distance = state.distance[current_anchor];
         dist.x = options->anchorPosition[current_anchor].x;
@@ -262,7 +265,7 @@ static uint32_t rxcallback(dwDevice_t *dev) {
       if (options->useTdma && current_anchor == 0) {
         // Final packet is sent by us and received by the anchor
         // We use it as synchonisation time for TDMA
-        dwTime_t offset = { .full =final_tx.full - final_rx.full };
+        dwTime_t offset = { .full = final_tx.full - final_rx.full };
         frameStart.full = TDMA_LAST_FRAME(final_rx.full) + offset.full;
         tdmaSynchronized = true;
       }
@@ -279,8 +282,8 @@ static uint32_t rxcallback(dwDevice_t *dev) {
 /* Adjust time for schedule transfer by DW1000 radio. Set 9 LSB to 0 */
 static uint32_t adjustTxRxTime(dwTime_t *time)
 {
-  uint32_t added = (1<<9) - (time->low32 & ((1<<9)-1));
-  time->low32 = (time->low32 & ~((1<<9)-1)) + (1<<9);
+  uint32_t added = (1 << 9) - (time->low32 & ((1 << 9) - 1));
+  time->low32 = (time->low32 & ~((1 << 9) - 1)) + (1 << 9);
   return added;
 }
 
@@ -289,7 +292,7 @@ static dwTime_t transmitTimeForSlot(int slot)
 {
   dwTime_t transmitTime = { .full = 0 };
   // Calculate start of the slot
-  transmitTime.full = frameStart.full + slot*TDMA_SLOT_LEN;
+  transmitTime.full = frameStart.full + slot * TDMA_SLOT_LEN;
 
   // DW1000 can only schedule time with 9 LSB at 0, adjust for it
   adjustTxRxTime(&transmitTime);
@@ -322,7 +325,7 @@ static void initiateRanging(dwDevice_t *dev)
 
   dwNewTransmit(dev);
   dwSetDefaults(dev);
-  dwSetData(dev, (uint8_t*)&txPacket, MAC802154_HEADER_LENGTH+2);
+  dwSetData(dev, (uint8_t *)&txPacket, MAC802154_HEADER_LENGTH + 2);
 
   if (options->useTdma && tdmaSynchronized) {
     dwTime_t txTime = transmitTimeForSlot(options->tdmaSlot);
@@ -345,7 +348,7 @@ static void sendLppShort(dwDevice_t *dev, lpsLppShortPacket_t *packet)
 
   dwNewTransmit(dev);
   dwSetDefaults(dev);
-  dwSetData(dev, (uint8_t*)&txPacket, MAC802154_HEADER_LENGTH+1+packet->length);
+  dwSetData(dev, (uint8_t *)&txPacket, MAC802154_HEADER_LENGTH + 1 + packet->length);
 
   dwWaitForResponse(dev, false);
   dwStartTransmit(dev);
@@ -359,7 +362,7 @@ static uint32_t twrTagOnEvent(dwDevice_t *dev, uwbEvent_t event)
     statisticStartTick = xTaskGetTickCount();
   }
 
-  switch(event) {
+  switch (event) {
     case eventPacketReceived:
       return rxcallback(dev);
       break;
@@ -371,56 +374,55 @@ static uint32_t twrTagOnEvent(dwDevice_t *dev, uwbEvent_t event)
       }
       return MAX_TIMEOUT;
       break;
-    case eventTimeout:  // Comes back to timeout after each ranging attempt
-      {
-        uint16_t rangingState = locoDeckGetRangingState();
-        if (!ranging_complete && !lpp_transaction) {
-          rangingState &= ~(1<<current_anchor);
-          if (state.failedRanging[current_anchor] < options->rangingFailedThreshold) {
-            state.failedRanging[current_anchor] ++;
-            rangingState |= (1<<current_anchor);
-          }
-
-          locSrvSendRangeFloat(current_anchor, NAN);
-          failedRanging[current_anchor]++;
-        } else {
-          rangingState |= (1<<current_anchor);
-          state.failedRanging[current_anchor] = 0;
-
-          locSrvSendRangeFloat(current_anchor, state.distance[current_anchor]);
-          succededRanging[current_anchor]++;
+    case eventTimeout: { // Comes back to timeout after each ranging attempt
+      uint16_t rangingState = locoDeckGetRangingState();
+      if (!ranging_complete && !lpp_transaction) {
+        rangingState &= ~(1 << current_anchor);
+        if (state.failedRanging[current_anchor] < options->rangingFailedThreshold) {
+          state.failedRanging[current_anchor] ++;
+          rangingState |= (1 << current_anchor);
         }
-        locoDeckSetRangingState(rangingState);
+
+        locSrvSendRangeFloat(current_anchor, NAN);
+        failedRanging[current_anchor]++;
+      } else {
+        rangingState |= (1 << current_anchor);
+        state.failedRanging[current_anchor] = 0;
+
+        locSrvSendRangeFloat(current_anchor, state.distance[current_anchor]);
+        succededRanging[current_anchor]++;
       }
+      locoDeckSetRangingState(rangingState);
+    }
 
       // Handle ranging statistic
-      if (xTaskGetTickCount() > (statisticStartTick+1000)) {
-        statisticStartTick = xTaskGetTickCount();
+    if (xTaskGetTickCount() > (statisticStartTick + 1000)) {
+      statisticStartTick = xTaskGetTickCount();
 
-        for (int i=0; i<LOCODECK_NR_OF_TWR_ANCHORS; i++) {
-          rangingPerSec[i] = failedRanging[i] + succededRanging[i];
-          if (rangingPerSec[i] > 0) {
-            rangingSuccessRate[i] = 100.0f*(float)succededRanging[i] / (float)rangingPerSec[i];
-          } else {
-            rangingSuccessRate[i] = 0.0f;
-          }
-
-          failedRanging[i] = 0;
-          succededRanging[i] = 0;
+      for (int i = 0; i < LOCODECK_NR_OF_TWR_ANCHORS; i++) {
+        rangingPerSec[i] = failedRanging[i] + succededRanging[i];
+        if (rangingPerSec[i] > 0) {
+          rangingSuccessRate[i] = 100.0f * (float)succededRanging[i] / (float)rangingPerSec[i];
+        } else {
+          rangingSuccessRate[i] = 0.0f;
         }
+
+        failedRanging[i] = 0;
+        succededRanging[i] = 0;
       }
+    }
 
 
-      if (lpsGetLppShort(&lppShortPacket)) {
-        lpp_transaction = true;
-        sendLppShort(dev, &lppShortPacket);
-      } else {
-        lpp_transaction = false;
-        ranging_complete = false;
-        initiateRanging(dev);
-      }
-      return MAX_TIMEOUT;
-      break;
+    if (lpsGetLppShort(&lppShortPacket)) {
+      lpp_transaction = true;
+      sendLppShort(dev, &lppShortPacket);
+    } else {
+      lpp_transaction = false;
+      ranging_complete = false;
+      initiateRanging(dev);
+    }
+    return MAX_TIMEOUT;
+    break;
     case eventReceiveTimeout:
     case eventReceiveFailed:
       return 0;
@@ -439,7 +441,7 @@ static void lpsHandleLppShortPacket(const uint8_t srcId, const uint8_t *data)
 
   if (type == LPP_SHORT_ANCHORPOS) {
     if (srcId < LOCODECK_NR_OF_TWR_ANCHORS) {
-      struct lppShortAnchorPos_s *newpos = (struct lppShortAnchorPos_s*)&data[1];
+      struct lppShortAnchorPos_s *newpos = (struct lppShortAnchorPos_s *)&data[1];
       options->anchorPosition[srcId].timestamp = xTaskGetTickCount();
       options->anchorPosition[srcId].x = newpos->x;
       options->anchorPosition[srcId].y = newpos->y;
@@ -448,12 +450,12 @@ static void lpsHandleLppShortPacket(const uint8_t srcId, const uint8_t *data)
   }
 }
 
-static void updateTagTdmaSlot(lpsTwrAlgoOptions_t * options)
+static void updateTagTdmaSlot(lpsTwrAlgoOptions_t *options)
 {
   if (options->tdmaSlot < 0) {
     uint64_t radioAddress = configblockGetRadioAddress();
     int nslot = 1;
-    for (int i=0; i<CONFIG_DECK_LOCO_TDMA_SLOTS; i++) {
+    for (int i = 0; i < CONFIG_DECK_LOCO_TDMA_SLOTS; i++) {
       nslot *= 2;
     }
     options->tdmaSlot = radioAddress % nslot;
@@ -502,15 +504,18 @@ static bool isRangingOk()
   return rangingOk;
 }
 
-void uwbTwrTagSetOptions(lpsTwrAlgoOptions_t* newOptions) {
+void uwbTwrTagSetOptions(lpsTwrAlgoOptions_t *newOptions)
+{
   options = newOptions;
 }
 
-float lpsTwrTagGetDistance(const uint8_t anchorId) {
+float lpsTwrTagGetDistance(const uint8_t anchorId)
+{
   return state.distance[anchorId];
 }
 
-static bool getAnchorPosition(const uint8_t anchorId, point_t* position) {
+static bool getAnchorPosition(const uint8_t anchorId, point_t *position)
+{
   if (anchorId < LOCODECK_NR_OF_TWR_ANCHORS) {
     *position = options->anchorPosition[anchorId];
     return true;
@@ -519,7 +524,8 @@ static bool getAnchorPosition(const uint8_t anchorId, point_t* position) {
   return false;
 }
 
-static uint8_t getAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize) {
+static uint8_t getAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize)
+{
   for (int i = 0; i < LOCODECK_NR_OF_TWR_ANCHORS; i++) {
     unorderedAnchorList[i] = i;
   }
@@ -527,7 +533,8 @@ static uint8_t getAnchorIdList(uint8_t unorderedAnchorList[], const int maxListS
   return LOCODECK_NR_OF_TWR_ANCHORS;
 }
 
-static uint8_t getActiveAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize) {
+static uint8_t getActiveAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize)
+{
   uint8_t count = 0;
 
   for (int i = 0; i < LOCODECK_NR_OF_TWR_ANCHORS; i++) {

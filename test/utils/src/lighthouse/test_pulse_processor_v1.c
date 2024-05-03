@@ -28,7 +28,8 @@
 #define LONG_SWEEP 750
 
 // Helpers
-static void assertSyncTimeIsMultipleOfFrameLength(uint32_t expectedSyncTime, uint32_t actualSyncTime);
+static void assertSyncTimeIsMultipleOfFrameLength(uint32_t expectedSyncTime,
+    uint32_t actualSyncTime);
 static void limitTimestamps(pulseProcessorPulse_t history[]);
 
 // Functions under test
@@ -38,7 +39,8 @@ int getBaseStationId(pulseProcessorV1_t *stateV1, unsigned int timestamp);
 bool isSweepActiveThisFrame(int width);
 bool isSync(pulseProcessorV1_t *stateV1, unsigned int timestamp);
 
-void setUp(void) {
+void setUp(void)
+{
 }
 
 void testThatFindSyncCanDetectSync0FromTwoBasestations()
@@ -47,14 +49,14 @@ void testThatFindSyncCanDetectSync0FromTwoBasestations()
   uint32_t actualSyncTime = 0;
   uint32_t expectedSyncTime = FRAME_LENGTH;
   pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_HISTORY_LENGTH] =  {
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+0},
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+0},
-    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+0},
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+SYNC_SEPARATION},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + 0},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + 0},
+    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2 * FRAME_LENGTH) + 0},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2 * FRAME_LENGTH) + SYNC_SEPARATION},
   };
   limitTimestamps(pulseHistory);
 
@@ -70,16 +72,16 @@ void testThatFindSyncCanDetectSync0FromTwoBasestationsMissaligned()
 {
   // Fixture
   uint32_t actualSyncTime = 0;
-  uint32_t expectedSyncTime = 2*FRAME_LENGTH;
+  uint32_t expectedSyncTime = 2 * FRAME_LENGTH;
   pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_HISTORY_LENGTH] =  {
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (-1*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (-1*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_Y,      .timestamp = expectedSyncTime + ( 0*FRAME_LENGTH)+0},
-    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + ( 0*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + ( 0*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + ( 1*FRAME_LENGTH)+0},
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + ( 1*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + ( 1*FRAME_LENGTH)+SWEEP_CENTER},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (-1 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (-1 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + 0},
+    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + 0},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SWEEP_CENTER},
   };
   limitTimestamps(pulseHistory);
 
@@ -97,14 +99,14 @@ void testThatFindSyncCanDetectSync0FromOneBasestation()
   uint32_t actualSyncTime = 0;
   uint32_t expectedSyncTime = FRAME_LENGTH;
   pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_HISTORY_LENGTH] =  {
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+0},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+0},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+0},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (3*FRAME_LENGTH)+0},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (3*FRAME_LENGTH)+SWEEP_CENTER},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + 0},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + 0},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2 * FRAME_LENGTH) + 0},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (2 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (3 * FRAME_LENGTH) + 0},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (3 * FRAME_LENGTH) + SWEEP_CENTER},
   };
   limitTimestamps(pulseHistory);
 
@@ -122,14 +124,14 @@ void testThatFindSyncCanDetectSync0FromTwoBasestationsWithShortSpuriousSpike()
   uint32_t actualSyncTime = 0;
   uint32_t expectedSyncTime = FRAME_LENGTH;
   pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_HISTORY_LENGTH] =  {
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+0},
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SWEEP_CENTER+100},
-    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+0},
-    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+0},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + 0},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SWEEP_CENTER + 100},
+    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + 0},
+    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2 * FRAME_LENGTH) + 0},
   };
   limitTimestamps(pulseHistory);
 
@@ -147,14 +149,14 @@ void testThatFindSyncFailsWhenReceivingFromTwoBasestationsWithShortSpuriousSpike
   uint32_t actualSyncTime = 0;
   uint32_t expectedSyncTime = FRAME_LENGTH;
   pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_HISTORY_LENGTH] =  {
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+0},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+(SYNC_SEPARATION/2)},
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+0},
-    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+0},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + 0},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + (SYNC_SEPARATION / 2)},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + 0},
+    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2 * FRAME_LENGTH) + 0},
   };
   limitTimestamps(pulseHistory);
 
@@ -171,14 +173,14 @@ void testThatFindSyncCanDetectSync0FromTwoBasestationsWithNoisyPulseLength()
   uint32_t actualSyncTime = 0;
   uint32_t expectedSyncTime = FRAME_LENGTH;
   pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_HISTORY_LENGTH] =  {
-    {.width = SYNC_X + 10,      .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+0},
-    {.width = SYNC_X_SKIP - 10, .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP - 10,       .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_Y +  7,      .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+0},
-    {.width = SYNC_Y_SKIP - 10, .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP + 10,       .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_X_SKIP -  8, .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+0},
-    {.width = SYNC_X +  4,      .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+SYNC_SEPARATION},
+    {.width = SYNC_X + 10,      .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + 0},
+    {.width = SYNC_X_SKIP - 10, .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP - 10,       .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_Y +  7,      .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + 0},
+    {.width = SYNC_Y_SKIP - 10, .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP + 10,       .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_X_SKIP -  8, .timestamp = expectedSyncTime + (2 * FRAME_LENGTH) + 0},
+    {.width = SYNC_X +  4,      .timestamp = expectedSyncTime + (2 * FRAME_LENGTH) + SYNC_SEPARATION},
   };
   limitTimestamps(pulseHistory);
 
@@ -196,14 +198,14 @@ void testThatFindSyncFailsWhenReceivingFromTwoBasestationsWithLongSweep()
   uint32_t actualSyncTime = 0;
   uint32_t expectedSyncTime = FRAME_LENGTH;
   pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_HISTORY_LENGTH] =  {
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+0},
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = LONG_SWEEP,  .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+0},
-    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = LONG_SWEEP,  .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+0},
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+SYNC_SEPARATION},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + 0},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = LONG_SWEEP,  .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + 0},
+    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = LONG_SWEEP,  .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2 * FRAME_LENGTH) + 0},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2 * FRAME_LENGTH) + SYNC_SEPARATION},
   };
   limitTimestamps(pulseHistory);
 
@@ -220,14 +222,14 @@ void testThatFindSyncFailsWhenReceivingFromTwoBasestationsWithOneMissingMasterSy
   uint32_t actualSyncTime = 0;
   uint32_t expectedSyncTime = FRAME_LENGTH;
   pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_HISTORY_LENGTH] =  {
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+0},
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+0},
-    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (3*FRAME_LENGTH)+SWEEP_CENTER},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + 0},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + 0},
+    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (3 * FRAME_LENGTH) + SWEEP_CENTER},
   };
   limitTimestamps(pulseHistory);
 
@@ -244,14 +246,14 @@ void testThatFindSyncFailsWhenReceivingFromTwoBasestationsWithInvalidSyncSeparat
   uint32_t actualSyncTime = 0;
   uint32_t expectedSyncTime = FRAME_LENGTH;
   pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_HISTORY_LENGTH] =  {
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+0},
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+0},
-    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+(SYNC_SEPARATION*2)},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+0},
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+SYNC_SEPARATION},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + 0},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + 0},
+    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + (SYNC_SEPARATION * 2)},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2 * FRAME_LENGTH) + 0},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2 * FRAME_LENGTH) + SYNC_SEPARATION},
   };
   limitTimestamps(pulseHistory);
 
@@ -268,14 +270,14 @@ void testThatFindSyncCanDetectSync0FromTwoBasestationsWithTimingNoise()
   uint32_t actualSyncTime = 0;
   uint32_t expectedSyncTime = FRAME_LENGTH;
   pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_HISTORY_LENGTH] =  {
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + 10 + (0*FRAME_LENGTH)+0},
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime -  3 + (0*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime +  4 + (0*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_Y,      .timestamp = expectedSyncTime +  7 + (1*FRAME_LENGTH)+0},
-    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime -  9 + (1*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + 10 + (1*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime - 10 + (2*FRAME_LENGTH)+0},
-    {.width = SYNC_X,      .timestamp = expectedSyncTime +  3 + (2*FRAME_LENGTH)+SYNC_SEPARATION},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + 10 + (0 * FRAME_LENGTH) + 0},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime -  3 + (0 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime +  4 + (0 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_Y,      .timestamp = expectedSyncTime +  7 + (1 * FRAME_LENGTH) + 0},
+    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime -  9 + (1 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + 10 + (1 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime - 10 + (2 * FRAME_LENGTH) + 0},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime +  3 + (2 * FRAME_LENGTH) + SYNC_SEPARATION},
   };
   limitTimestamps(pulseHistory);
 
@@ -291,18 +293,19 @@ void testThatFindSyncCanDetectSync0FromTwoBasestationsWithTimestampWrapping()
 {
   // Fixture
   uint32_t actualSyncTime = 0;
-  uint32_t expectedSyncTime = (1<<PULSE_PROCESSOR_TIMESTAMP_BITWIDTH) - ((1*FRAME_LENGTH)+SYNC_SEPARATION);
+  uint32_t expectedSyncTime = (1 << PULSE_PROCESSOR_TIMESTAMP_BITWIDTH) - ((
+                                1 * FRAME_LENGTH) + SYNC_SEPARATION);
   pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_HISTORY_LENGTH] =  {
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+0},
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SWEEP_CENTER},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + 0},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SWEEP_CENTER},
 
-    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+0},
-    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SWEEP_CENTER},
+    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + 0},
+    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SWEEP_CENTER},
 
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+0},
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+SYNC_SEPARATION},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2 * FRAME_LENGTH) + 0},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2 * FRAME_LENGTH) + SYNC_SEPARATION},
   };
   limitTimestamps(pulseHistory);
 
@@ -320,14 +323,14 @@ void testThatFindSyncFailesWhenReceivingAnUnidentifiedPulse()
   uint32_t actualSyncTime = 0;
   uint32_t expectedSyncTime = FRAME_LENGTH;
   pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_HISTORY_LENGTH] =  {
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+0},
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = UN_IDENTFD,  .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+0},
-    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+0},
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+SYNC_SEPARATION},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + 0},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = UN_IDENTFD,  .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + 0},
+    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2 * FRAME_LENGTH) + 0},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2 * FRAME_LENGTH) + SYNC_SEPARATION},
   };
   limitTimestamps(pulseHistory);
 
@@ -344,14 +347,14 @@ void testThatFindSyncFailesWhenReceivingAnUnidentifiedPulseFirstInHistory()
   uint32_t actualSyncTime = 0;
   uint32_t expectedSyncTime = FRAME_LENGTH;
   pulseProcessorPulse_t pulseHistory[PULSE_PROCESSOR_HISTORY_LENGTH] =  {
-    {.width = UN_IDENTFD,  .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+0},
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (0*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+0},
-    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SYNC_SEPARATION},
-    {.width = SWEEP,       .timestamp = expectedSyncTime + (1*FRAME_LENGTH)+SWEEP_CENTER},
-    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+0},
-    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2*FRAME_LENGTH)+SYNC_SEPARATION},
+    {.width = UN_IDENTFD,  .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + 0},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (0 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_Y,      .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + 0},
+    {.width = SYNC_Y_SKIP, .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SYNC_SEPARATION},
+    {.width = SWEEP,       .timestamp = expectedSyncTime + (1 * FRAME_LENGTH) + SWEEP_CENTER},
+    {.width = SYNC_X_SKIP, .timestamp = expectedSyncTime + (2 * FRAME_LENGTH) + 0},
+    {.width = SYNC_X,      .timestamp = expectedSyncTime + (2 * FRAME_LENGTH) + SYNC_SEPARATION},
   };
   limitTimestamps(pulseHistory);
 
@@ -387,7 +390,7 @@ void testThatGetSystemSyncTimeHandlesTimestampsFromMultipleFrames()
   // Fixture
   uint32_t actualSyncTime = 0;
   uint32_t expectedSyncTime = 2;
-  uint32_t syncTimes[8] = {1 + FRAME_LENGTH, 2 + (2*FRAME_LENGTH), 3, 2 + (2*FRAME_LENGTH)};
+  uint32_t syncTimes[8] = {1 + FRAME_LENGTH, 2 + (2 * FRAME_LENGTH), 3, 2 + (2 * FRAME_LENGTH)};
   size_t nSyncTimes = 4;
 
   // Test
@@ -475,7 +478,7 @@ void testThatIsSyncFindsDistantSync1()
   // Fixture
   pulseProcessorV1_t state = {0};
   state.currentSync0 = 0;
-  uint32_t timestamp = state.currentSync0 + (10*FRAME_LENGTH) + SYNC_SEPARATION;
+  uint32_t timestamp = state.currentSync0 + (10 * FRAME_LENGTH) + SYNC_SEPARATION;
 
   // Test
   bool result = isSync(&state, timestamp);
@@ -531,7 +534,7 @@ void testThatIsSyncFindsSync0WithWrapping()
 {
   // Fixture
   pulseProcessorV1_t state = {0};
-  state.currentSync0 = PULSE_PROCESSOR_TIMESTAMP_MAX - (FRAME_LENGTH/2);
+  state.currentSync0 = PULSE_PROCESSOR_TIMESTAMP_MAX - (FRAME_LENGTH / 2);
   uint32_t timestamp = (state.currentSync0 + FRAME_LENGTH) & PULSE_PROCESSOR_TIMESTAMP_MAX;
 
   // Test
@@ -545,8 +548,9 @@ void testThatIsSyncFindsSync1WithWrapping()
 {
   // Fixture
   pulseProcessorV1_t state = {0};
-  state.currentSync0 = PULSE_PROCESSOR_TIMESTAMP_MAX - (FRAME_LENGTH/2);;
-  uint32_t timestamp = (state.currentSync0 + FRAME_LENGTH + SYNC_SEPARATION) & PULSE_PROCESSOR_TIMESTAMP_MAX;;
+  state.currentSync0 = PULSE_PROCESSOR_TIMESTAMP_MAX - (FRAME_LENGTH / 2);;
+  uint32_t timestamp = (state.currentSync0 + FRAME_LENGTH + SYNC_SEPARATION) &
+                       PULSE_PROCESSOR_TIMESTAMP_MAX;;
 
   // Test
   bool result = isSync(&state, timestamp);
@@ -571,7 +575,8 @@ void testThatIsSyncReturnsFalseIfSync1WasSync0AndTheRealSync0IsReceived()
 
 bool isNewSync(uint32_t timestamp, uint32_t lastSync);
 
-void testThatIsNewSyncMatchesTimestampCloseAfter() {
+void testThatIsNewSyncMatchesTimestampCloseAfter()
+{
   // Fixture
   uint32_t lastSync = 4711;
   uint32_t timestamp = lastSync + 3;
@@ -583,7 +588,8 @@ void testThatIsNewSyncMatchesTimestampCloseAfter() {
   TEST_ASSERT_FALSE(actual);
 }
 
-void testThatIsNewSyncMatchesTimestampCloseBefore() {
+void testThatIsNewSyncMatchesTimestampCloseBefore()
+{
   // Fixture
   uint32_t lastSync = 4711;
   uint32_t timestamp = lastSync - 3;
@@ -595,7 +601,8 @@ void testThatIsNewSyncMatchesTimestampCloseBefore() {
   TEST_ASSERT_FALSE(actual);
 }
 
-void testThatIsNewSyncMatchesTimestampCloseBeforeWhenWrapping() {
+void testThatIsNewSyncMatchesTimestampCloseBeforeWhenWrapping()
+{
   // Fixture
   uint32_t lastSync = 1;
   uint32_t timestamp = (1 << PULSE_PROCESSOR_TIMESTAMP_BITWIDTH) - 1;
@@ -607,7 +614,8 @@ void testThatIsNewSyncMatchesTimestampCloseBeforeWhenWrapping() {
   TEST_ASSERT_FALSE(actual);
 }
 
-void testThatIsNewSyncDoesNotMatchTimestampTooFarAway() {
+void testThatIsNewSyncDoesNotMatchTimestampTooFarAway()
+{
   // Fixture
   uint32_t lastSync = 4711;
   uint32_t timestamp = lastSync + 30;
@@ -619,7 +627,8 @@ void testThatIsNewSyncDoesNotMatchTimestampTooFarAway() {
   TEST_ASSERT_TRUE(actual);
 }
 
-void testThatBs0IsReturnedWhenTimeStampIsOneFrameFromPreviousSync0() {
+void testThatBs0IsReturnedWhenTimeStampIsOneFrameFromPreviousSync0()
+{
   // Fixture
   unsigned int baseTime = 100000;
   unsigned int timeStamp = baseTime + FRAME_LENGTH;
@@ -633,7 +642,8 @@ void testThatBs0IsReturnedWhenTimeStampIsOneFrameFromPreviousSync0() {
   TEST_ASSERT_EQUAL_INT(expected, actual);
 }
 
-void testThatBs0IsReturnedWhenTimeStampIsSlightlyLessThanOneFrameFromPreviousSync0() {
+void testThatBs0IsReturnedWhenTimeStampIsSlightlyLessThanOneFrameFromPreviousSync0()
+{
   // Fixture
   unsigned int baseTime = 100000;
   unsigned int timeStamp = baseTime + FRAME_LENGTH - 10;
@@ -647,7 +657,8 @@ void testThatBs0IsReturnedWhenTimeStampIsSlightlyLessThanOneFrameFromPreviousSyn
   TEST_ASSERT_EQUAL_INT(expected, actual);
 }
 
-void testThatBs0IsReturnedWhenTimeStampIsSlightlyMoreThanOneFrameFromPreviousSync0() {
+void testThatBs0IsReturnedWhenTimeStampIsSlightlyMoreThanOneFrameFromPreviousSync0()
+{
   // Fixture
   unsigned int baseTime = 100000;
   unsigned int timeStamp = baseTime + FRAME_LENGTH + 10;
@@ -661,7 +672,8 @@ void testThatBs0IsReturnedWhenTimeStampIsSlightlyMoreThanOneFrameFromPreviousSyn
   TEST_ASSERT_EQUAL_INT(expected, actual);
 }
 
-void testThatBs1IsReturnedWhenTimeStampIsOneFrameAndSyncSeparationFromPreviousSync0() {
+void testThatBs1IsReturnedWhenTimeStampIsOneFrameAndSyncSeparationFromPreviousSync0()
+{
   // Fixture
   unsigned int baseTime = 100000;
   unsigned int timeStamp = baseTime + FRAME_LENGTH + SYNC_SEPARATION;
@@ -675,7 +687,8 @@ void testThatBs1IsReturnedWhenTimeStampIsOneFrameAndSyncSeparationFromPreviousSy
   TEST_ASSERT_EQUAL_INT(expected, actual);
 }
 
-void testThatBs1IsReturnedWhenTimeStampIsOneFrameAndSlighlyLessThanSyncSeparationFromPreviousSync0() {
+void testThatBs1IsReturnedWhenTimeStampIsOneFrameAndSlighlyLessThanSyncSeparationFromPreviousSync0()
+{
   // Fixture
   unsigned int baseTime = 100000;
   unsigned int timeStamp = baseTime + FRAME_LENGTH + SYNC_SEPARATION - 10;
@@ -689,7 +702,8 @@ void testThatBs1IsReturnedWhenTimeStampIsOneFrameAndSlighlyLessThanSyncSeparatio
   TEST_ASSERT_EQUAL_INT(expected, actual);
 }
 
-void testThatBs1IsReturnedWhenTimeStampIsOneFrameAndSlighlyMoreThanSyncSeparationFromPreviousSync0() {
+void testThatBs1IsReturnedWhenTimeStampIsOneFrameAndSlighlyMoreThanSyncSeparationFromPreviousSync0()
+{
   // Fixture
   unsigned int baseTime = 100000;
   unsigned int timeStamp = baseTime + FRAME_LENGTH + SYNC_SEPARATION + 10;
@@ -703,7 +717,8 @@ void testThatBs1IsReturnedWhenTimeStampIsOneFrameAndSlighlyMoreThanSyncSeparatio
   TEST_ASSERT_EQUAL_INT(expected, actual);
 }
 
-void testThatBs0IsReturnedWhenTimeStampWraps() {
+void testThatBs0IsReturnedWhenTimeStampWraps()
+{
   // Fixture
   unsigned int baseTime = -1;
   unsigned int timeStamp = baseTime + FRAME_LENGTH;
@@ -717,7 +732,8 @@ void testThatBs0IsReturnedWhenTimeStampWraps() {
   TEST_ASSERT_EQUAL_INT(expected, actual);
 }
 
-void testThatSweepIsActive() {
+void testThatSweepIsActive()
+{
   // Fixture
   unsigned int width = SYNC_BASE_WIDTH;
 
@@ -728,7 +744,8 @@ void testThatSweepIsActive() {
   TEST_ASSERT_TRUE(actual);
 }
 
-void testThatSweepIsNotActive() {
+void testThatSweepIsNotActive()
+{
   // Fixture
   unsigned int width = SYNC_BASE_WIDTH + SYNC_DIVIDER * 4;
 
@@ -741,16 +758,18 @@ void testThatSweepIsNotActive() {
 
 // Helpers
 
-static void assertSyncTimeIsMultipleOfFrameLength(uint32_t expectedSyncTime, uint32_t actualSyncTime)
+static void assertSyncTimeIsMultipleOfFrameLength(uint32_t expectedSyncTime,
+    uint32_t actualSyncTime)
 {
   uint32_t diff = actualSyncTime - expectedSyncTime;
 
-  TEST_ASSERT_LESS_THAN_MESSAGE(MAX_FRAME_LENGTH_NOISE, diff % FRAME_LENGTH, "Sync time out of bound");
+  TEST_ASSERT_LESS_THAN_MESSAGE(MAX_FRAME_LENGTH_NOISE, diff % FRAME_LENGTH,
+                                "Sync time out of bound");
 }
 
 static void limitTimestamps(pulseProcessorPulse_t history[])
 {
-  for (int i=0; i<PULSE_PROCESSOR_HISTORY_LENGTH; i++) {
-    history[i].timestamp &= ((1<<PULSE_PROCESSOR_TIMESTAMP_BITWIDTH)-1);
+  for (int i = 0; i < PULSE_PROCESSOR_HISTORY_LENGTH; i++) {
+    history[i].timestamp &= ((1 << PULSE_PROCESSOR_TIMESTAMP_BITWIDTH) - 1);
   }
 }

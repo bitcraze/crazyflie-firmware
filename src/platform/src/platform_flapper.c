@@ -63,12 +63,14 @@ static platformConfig_t configs[] = {
 #endif
 };
 
-const platformConfig_t* platformGetListOfConfigurations(int* nrOfConfigs) {
+const platformConfig_t *platformGetListOfConfigurations(int *nrOfConfigs)
+{
   *nrOfConfigs = sizeof(configs) / sizeof(platformConfig_t);
   return configs;
 }
 
-void platformInitHardware() {
+void platformInitHardware()
+{
   //Low level init: Clock and Interrupt controller
   nvicInit();
 
@@ -79,6 +81,7 @@ void platformInitHardware() {
 
 // Config functions ------------------------
 
-const char* platformConfigGetPlatformName() {
+const char *platformConfigGetPlatformName()
+{
   return "flapper";
 }

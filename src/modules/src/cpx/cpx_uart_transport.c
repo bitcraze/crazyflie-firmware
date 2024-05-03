@@ -69,19 +69,19 @@ static xQueueHandle uartRxQueue;
 #define CPX_ROUTING_PACKED_SIZE (sizeof(CPXRoutingPacked_t))
 
 typedef struct {
-    CPXRoutingPacked_t route;
-    uint8_t data[CPX_UART_TRANSPORT_MTU - CPX_ROUTING_PACKED_SIZE];
+  CPXRoutingPacked_t route;
+  uint8_t data[CPX_UART_TRANSPORT_MTU - CPX_ROUTING_PACKED_SIZE];
 } __attribute__((packed)) uartTransportPayload_t;
 
 typedef struct {
-    uint8_t start;
-    uint8_t payloadLength; // Excluding start and crc
-    union {
-        uartTransportPayload_t routablePayload;
-        uint8_t payload[CPX_UART_TRANSPORT_MTU];
-    };
+  uint8_t start;
+  uint8_t payloadLength; // Excluding start and crc
+  union {
+    uartTransportPayload_t routablePayload;
+    uint8_t payload[CPX_UART_TRANSPORT_MTU];
+  };
 
-    uint8_t crcPlaceHolder; // Not actual position. CRC is added after the last byte of payload
+  uint8_t crcPlaceHolder; // Not actual position. CRC is added after the last byte of payload
 } __attribute__((packed)) uart_transport_packet_t;
 
 // Used when sending/receiving data on the UART
@@ -108,19 +108,21 @@ static bool shutdownTransport = false;
 
 static bool isInit = false;
 
-static uint8_t calcCrc(const uart_transport_packet_t* packet) {
-  const uint8_t* start = (const uint8_t*) packet;
-  const uint8_t* end = &packet->payload[packet->payloadLength];
+static uint8_t calcCrc(const uart_transport_packet_t *packet)
+{
+  const uint8_t *start = (const uint8_t *) packet;
+  const uint8_t *end = &packet->payload[packet->payloadLength];
 
   uint8_t crc = 0;
-  for (const uint8_t* p = start; p < end; p++) {
+  for (const uint8_t *p = start; p < end; p++) {
     crc ^= *p;
   }
 
   return crc;
 }
 
-static void assemblePacket(const CPXPacket_t *packet, uart_transport_packet_t * txp) {
+static void assemblePacket(const CPXPacket_t *packet, uart_transport_packet_t *txp)
+{
   ASSERT((packet->route.destination >> 4) == 0);
   ASSERT((packet->route.source >> 4) == 0);
   ASSERT((packet->route.function >> 8) == 0);
@@ -139,25 +141,20 @@ static void CPX_UART_RX(void *param)
 {
   systemWaitStart();
 
-  while (shutdownTransport == false)
-  {
+  while (shutdownTransport == false) {
     // Wait for start!
     uartRxp.start = 0x00;
-    do
-    {
+    do {
       uart2GetDataWithTimeout(1, &uartRxp.start, M2T(200));
     } while (uartRxp.start != 0xFF && shutdownTransport == false);
 
     if (uartRxp.start == 0xFF) {
       uart2GetData(1, &uartRxp.payloadLength);
 
-      if (uartRxp.payloadLength == 0)
-      {
+      if (uartRxp.payloadLength == 0) {
         xEventGroupSetBits(evGroup, ESP_CTS_EVENT);
-      }
-      else
-      {
-        uart2GetData(uartRxp.payloadLength, (uint8_t*) &uartRxp.payload);
+      } else {
+        uart2GetData(uartRxp.payloadLength, (uint8_t *) &uartRxp.payload);
 
         uint8_t crc;
         uart2GetData(1, &crc);
@@ -188,45 +185,38 @@ static void CPX_UART_TX(void *param)
   vTaskDelay(100);
 
   // Sync with ESP32 so both are in CTS
-  do
-  {
+  do {
     uart2SendData(sizeof(ctr), (uint8_t *)&ctr);
     vTaskDelay(100);
     evBits = xEventGroupGetBits(evGroup);
   } while ((evBits & ESP_CTS_EVENT) != ESP_CTS_EVENT && shutdownTransport == false);
 
-  while (shutdownTransport == false)
-  {
+  while (shutdownTransport == false) {
     // If we have nothing to send then wait, either for something to be
     // queued or for a request to send CTR
-    if (uxQueueMessagesWaiting(uartTxQueue) == 0)
-    {
+    if (uxQueueMessagesWaiting(uartTxQueue) == 0) {
       evBits = xEventGroupWaitBits(evGroup,
                                    ESP_CTR_EVENT | ESP_TXQ_EVENT | DEINIT_EVENT,
                                    pdTRUE,  // Clear bits before returning
                                    pdFALSE, // Wait for any bit
                                    portMAX_DELAY);
-      if ((evBits & ESP_CTR_EVENT) == ESP_CTR_EVENT)
-      {
+      if ((evBits & ESP_CTR_EVENT) == ESP_CTR_EVENT) {
         uart2SendData(sizeof(ctr), (uint8_t *)&ctr);
       }
     }
 
-    if (uxQueueMessagesWaiting(uartTxQueue) > 0)
-    {
+    if (uxQueueMessagesWaiting(uartTxQueue) > 0) {
       // Dequeue and wait for either CTS or CTR
       xQueueReceive(uartTxQueue, &cpxTxp, 0);
       uartTxp.start = 0xFF;
       assemblePacket(&cpxTxp, &uartTxp);
-      do
-      {
+      do {
         evBits = xEventGroupWaitBits(evGroup,
                                      ESP_CTR_EVENT | ESP_CTS_EVENT,
                                      pdTRUE,  // Clear bits before returning
                                      pdFALSE, // Wait for any bit
                                      portMAX_DELAY);
-        if ((evBits & ESP_CTR_EVENT) == ESP_CTR_EVENT)
-        {
+        if ((evBits & ESP_CTR_EVENT) == ESP_CTR_EVENT) {
           uart2SendData(sizeof(ctr), (uint8_t *)&ctr);
         }
       } while ((evBits & ESP_CTS_EVENT) != ESP_CTS_EVENT);
@@ -238,7 +228,8 @@ static void CPX_UART_TX(void *param)
   vTaskDelete(NULL);
 }
 
-void cpxUARTTransportSend(const CPXRoutablePacket_t* packet) {
+void cpxUARTTransportSend(const CPXRoutablePacket_t *packet)
+{
   ASSERT(isInit == true && shutdownTransport == false);
   ASSERT(packet);
 
@@ -246,7 +237,8 @@ void cpxUARTTransportSend(const CPXRoutablePacket_t* packet) {
   xEventGroupSetBits(evGroup, ESP_TXQ_EVENT);
 }
 
-void cpxUARTTransportReceive(CPXRoutablePacket_t* packet) {
+void cpxUARTTransportReceive(CPXRoutablePacket_t *packet)
+{
   ASSERT(isInit == true && shutdownTransport == false);
   ASSERT(packet);
 
@@ -263,11 +255,12 @@ void cpxUARTTransportReceive(CPXRoutablePacket_t* packet) {
 
 }
 
-void cpxUARTTransportInit() {
+void cpxUARTTransportInit()
+{
   // There's no support for re-initializing the UART transport once it's
   // been de-initialized. This is not needed by the ESP bootloader use-case,
   // since the procedure will reset the Crazyflie after ESP has been bootloaded
-  ASSERT(shutdownTransport==false);
+  ASSERT(shutdownTransport == false);
 
   uartTxQueue = xQueueCreate(UART_TX_QUEUE_LENGTH, sizeof(CPXPacket_t));
   uartRxQueue = xQueueCreate(UART_RX_QUEUE_LENGTH, sizeof(uart_transport_packet_t));
@@ -285,7 +278,8 @@ void cpxUARTTransportInit() {
   isInit = true;
 }
 
-void cpxUARTTransportDeinit() {
+void cpxUARTTransportDeinit()
+{
   shutdownTransport = true;
   // Send event to unlock TX
   xEventGroupSetBits(evGroup, DEINIT_EVENT);

@@ -66,15 +66,17 @@ void passthroughTask(void *param);
 
 void passthroughInit()
 {
-  if(isInit)
+  if (isInit) {
     return;
+  }
 
   ptRxQueue = STATIC_MEM_QUEUE_CREATE(ptRxQueue);
   DEBUG_QUEUE_MONITOR_REGISTER(ptRxQueue);
   ptTxQueue = STATIC_MEM_QUEUE_CREATE(ptTxQueue);
   DEBUG_QUEUE_MONITOR_REGISTER(ptRxQueue);
 
-  passthroughTaskHandle = STATIC_MEM_TASK_CREATE(passthroughTask, passthroughTask, PASSTHROUGH_TASK_NAME, NULL, PASSTHROUGH_TASK_PRI);
+  passthroughTaskHandle = STATIC_MEM_TASK_CREATE(passthroughTask, passthroughTask,
+                          PASSTHROUGH_TASK_NAME, NULL, PASSTHROUGH_TASK_PRI);
 }
 
 void passthroughEnableFromISR()
@@ -95,13 +97,13 @@ void passthroughVcpRxSendBlock(uint8_t Ch)
   ASSERT(xQueueSend(ptRxQueue, &Ch, portMAX_DELAY) == pdTRUE);
 }
 
-int passthroughVcpRxReceive(uint8_t* receiveChPtr)
+int passthroughVcpRxReceive(uint8_t *receiveChPtr)
 {
   ASSERT(receiveChPtr);
   return xQueueReceive(ptRxQueue, receiveChPtr, 0);
 }
 
-int passthroughVcpRxReceiveBlock(uint8_t* receiveChPtr)
+int passthroughVcpRxReceiveBlock(uint8_t *receiveChPtr)
 {
   ASSERT(receiveChPtr);
   return xQueueReceive(ptRxQueue, receiveChPtr, portMAX_DELAY);
@@ -117,7 +119,7 @@ void passthroughVcpTxSendBlock(uint8_t Ch)
   ASSERT(xQueueSend(ptTxQueue, &Ch, portMAX_DELAY) == pdTRUE);
 }
 
-int passthroughVcpTxReceiveFromISR(uint8_t* receiveChPtr)
+int passthroughVcpTxReceiveFromISR(uint8_t *receiveChPtr)
 {
   BaseType_t xHigherPriorityTaskWoken;
   return xQueueReceiveFromISR(ptTxQueue, receiveChPtr, &xHigherPriorityTaskWoken);
@@ -127,8 +129,7 @@ void passthroughTask(void *param)
 {
   systemWaitStart();
 
-  while (true)
-  {
+  while (true) {
     // Wait for interface to be activated, typically when ACM or COM port control message is sent
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
@@ -162,16 +163,15 @@ void passthroughTask(void *param)
 
 static uint8_t readByteBlocking()
 {
-    uint8_t byte;
-    passthroughVcpRxReceiveBlock(&byte);
-    return byte;
+  uint8_t byte;
+  passthroughVcpRxReceiveBlock(&byte);
+  return byte;
 }
 
-static void mspCallback(uint8_t* pBuffer, uint32_t bufferLen)
+static void mspCallback(uint8_t *pBuffer, uint32_t bufferLen)
 {
   // Sent all data through serial
-  for (int i = 0; i < bufferLen; i++)
-  {
+  for (int i = 0; i < bufferLen; i++) {
     uint8_t byte = pBuffer[i];
     passthroughVcpTxSendBlock(byte);
   }
@@ -182,14 +182,12 @@ static void blHeliConfigHandshake()
   static bool isInit = false;
   static MspObject pMspObject;
 
-  if (!isInit)
-  {
+  if (!isInit) {
     isInit = true;
     mspInit(&pMspObject, mspCallback);
   }
 
-  while (!mspHasSet4WayIf())
-  {
+  while (!mspHasSet4WayIf()) {
     uint8_t byte = readByteBlocking();
     mspProcessByte(&pMspObject, byte);
   }

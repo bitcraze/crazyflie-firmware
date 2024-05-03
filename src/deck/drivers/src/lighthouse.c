@@ -64,13 +64,14 @@ static void lighthouseInit(DeckInfo *info)
 
   xTimerHandle timer;
   timer = xTimerCreateStatic("ledTimer", M2T(FIFTH_SECOND), pdTRUE,
-    NULL, ledTimerHandle, &timerBuffer);
+                             NULL, ledTimerHandle, &timerBuffer);
   xTimerStart(timer, M2T(0));
 
   isInit = true;
 }
 
-static void ledTimerHandle(xTimerHandle timer) {
+static void ledTimerHandle(xTimerHandle timer)
+{
   lighthouseCoreLedTimer();
 }
 

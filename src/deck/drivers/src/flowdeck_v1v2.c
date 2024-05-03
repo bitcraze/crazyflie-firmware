@@ -84,7 +84,7 @@ static void flowdeckTask(void *param)
   systemWaitStart();
 
   uint64_t lastTime  = usecTimestamp();
-  while(1) {
+  while (1) {
     vTaskDelay(10);
 
     pmw3901ReadMotion(NCS_PIN, &currentMotion);
@@ -97,32 +97,33 @@ static void flowdeckTask(void *param)
     // Outlier removal
     if (abs(accpx) < OULIER_LIMIT && abs(accpy) < OULIER_LIMIT) {
 
-    if (useAdaptiveStd)
-    {
-      // The standard deviation is fitted by measurements flying over low and high texture
-      //   and looking at the shutter time
-      float shutter_f = (float)currentMotion.shutter;
-      stdFlow=0.0007984f *shutter_f + 0.4335f;
+      if (useAdaptiveStd) {
+        // The standard deviation is fitted by measurements flying over low and high texture
+        //   and looking at the shutter time
+        float shutter_f = (float)currentMotion.shutter;
+        stdFlow = 0.0007984f * shutter_f + 0.4335f;
 
 
-      // The formula with the amount of features instead
-      /*float squal_f = (float)currentMotion.squal;
-      stdFlow =  -0.01257f * squal_f + 4.406f; */
-      if (stdFlow < 0.1f) stdFlow=0.1f;
-    } else {
-      stdFlow = flowStdFixed;
-    }
+        // The formula with the amount of features instead
+        /*float squal_f = (float)currentMotion.squal;
+        stdFlow =  -0.01257f * squal_f + 4.406f; */
+        if (stdFlow < 0.1f) {
+          stdFlow = 0.1f;
+        }
+      } else {
+        stdFlow = flowStdFixed;
+      }
 
 
-    // Form flow measurement struct and push into the EKF
-    flowMeasurement_t flowData;
-    flowData.stdDevX = stdFlow;
-    flowData.stdDevY = stdFlow;
-    flowData.dt = (float)(usecTimestamp()-lastTime)/1000000.0f;
-    // we do want to update dt every measurement and not only in the ones with detected motion,
-    // as we work with instantaneous gyro and velocity values in the update function
-    // (meaning assuming the current measurements over all of dt)
-    lastTime = usecTimestamp();
+      // Form flow measurement struct and push into the EKF
+      flowMeasurement_t flowData;
+      flowData.stdDevX = stdFlow;
+      flowData.stdDevY = stdFlow;
+      flowData.dt = (float)(usecTimestamp() - lastTime) / 1000000.0f;
+      // we do want to update dt every measurement and not only in the ones with detected motion,
+      // as we work with instantaneous gyro and velocity values in the update function
+      // (meaning assuming the current measurements over all of dt)
+      lastTime = usecTimestamp();
 
 
 
@@ -173,8 +174,7 @@ static void flowdeck1Init()
   const DeckDriver *zRanger = deckFindDriverByName("bcZRanger");
   zRanger->init(NULL);
 
-  if (pmw3901Init(NCS_PIN))
-  {
+  if (pmw3901Init(NCS_PIN)) {
     xTaskCreate(flowdeckTask, FLOW_TASK_NAME, FLOW_TASK_STACKSIZE, NULL,
                 FLOW_TASK_PRI, NULL);
 
@@ -219,8 +219,7 @@ static void flowdeck2Init()
   const DeckDriver *zRanger = deckFindDriverByName("bcZRanger2");
   zRanger->init(NULL);
 
-  if (pmw3901Init(NCS_PIN))
-  {
+  if (pmw3901Init(NCS_PIN)) {
     xTaskCreate(flowdeckTask, FLOW_TASK_NAME, FLOW_TASK_STACKSIZE, NULL,
                 FLOW_TASK_PRI, NULL);
 

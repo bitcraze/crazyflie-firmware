@@ -35,10 +35,16 @@ void pinMode(const deckPin_t pin, const uint32_t mode)
   GPIO_InitTypeDef GPIO_InitStructure = {0};
 
   GPIO_InitStructure.GPIO_Pin = deckGPIOMapping[pin.id].pin;
-  GPIO_InitStructure.GPIO_Mode = (mode == OUTPUT) ? GPIO_Mode_OUT:GPIO_Mode_IN;
-  if (mode == OUTPUT) GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  if (mode == INPUT_PULLUP) GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-  if (mode == INPUT_PULLDOWN) GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
+  GPIO_InitStructure.GPIO_Mode = (mode == OUTPUT) ? GPIO_Mode_OUT : GPIO_Mode_IN;
+  if (mode == OUTPUT) {
+    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  }
+  if (mode == INPUT_PULLUP) {
+    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+  }
+  if (mode == INPUT_PULLDOWN) {
+    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
+  }
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_25MHz;
   GPIO_Init(deckGPIOMapping[pin.id].port, &GPIO_InitStructure);
 }
@@ -56,5 +62,5 @@ void digitalWrite(const deckPin_t pin, const uint32_t val)
 int digitalRead(const deckPin_t pin)
 {
   int val = GPIO_ReadInputDataBit(deckGPIOMapping[pin.id].port, deckGPIOMapping[pin.id].pin);
-  return (val==Bit_SET)?HIGH:LOW;
+  return (val == Bit_SET) ? HIGH : LOW;
 }

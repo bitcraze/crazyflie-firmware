@@ -46,25 +46,27 @@ static float current = 0.0;
 static float vbat = 0.0;
 static float power = 0.0;
 
-static float ampsPerVolt = 2.5; 
+static float ampsPerVolt = 2.5;
 static float filter_alpha = 0.975;
 
 static bool isInit;
 
-void flapperDeckInit(DeckInfo* info)
+void flapperDeckInit(DeckInfo *info)
 {
-  if (isInit)
+  if (isInit) {
     return;
+  }
 
-  xTaskCreate(flapperDeckTask, FLAPPERDECK_TASK_NAME, FLAPPERDECK_TASK_STACKSIZE, NULL, FLAPPERDECK_TASK_PRI, NULL);
+  xTaskCreate(flapperDeckTask, FLAPPERDECK_TASK_NAME, FLAPPERDECK_TASK_STACKSIZE, NULL,
+              FLAPPERDECK_TASK_PRI, NULL);
 
-  #if CONFIG_DECK_FLAPPER_MEASURE_VBAT_ON_PA3
+#if CONFIG_DECK_FLAPPER_MEASURE_VBAT_ON_PA3
   pmEnableExtBatteryVoltMeasuring(DECK_GPIO_RX2, 11.0f);
-  #endif
+#endif
 
-  #if CONFIG_DECK_FLAPPER_EXTRX_ENABLE
+#if CONFIG_DECK_FLAPPER_EXTRX_ENABLE
   extRxInit();
-  #endif
+#endif
 
   isInit = true;
 }
@@ -74,13 +76,14 @@ bool flapperDeckTest(void)
   bool testStatus;
   testStatus = true;
 
-  if (!isInit)
+  if (!isInit) {
     return false;
+  }
 
   return testStatus;
 }
 
-void flapperDeckTask(void* arg)
+void flapperDeckTask(void *arg)
 {
   systemWaitStart();
   TickType_t xLastWakeTime;
@@ -91,17 +94,17 @@ void flapperDeckTask(void* arg)
     vTaskDelayUntil(&xLastWakeTime, M2T(1));
 
     reading_last = analogReadVoltage(DECK_GPIO_TX2);
-    current_last = reading_last*ampsPerVolt;
+    current_last = reading_last * ampsPerVolt;
 
     // simple low pass filter
-    current = filter_alpha*current + (1.0f - filter_alpha)*current_last;
+    current = filter_alpha * current + (1.0f - filter_alpha) * current_last;
 
-    #ifdef CONFIG_DECK_FLAPPER_MEASURE_VBAT_ON_PA3
-    vbat = filter_alpha*vbat + (1.0f - filter_alpha)*pmMeasureExtBatteryVoltage();
-    #else
+#ifdef CONFIG_DECK_FLAPPER_MEASURE_VBAT_ON_PA3
+    vbat = filter_alpha * vbat + (1.0f - filter_alpha) * pmMeasureExtBatteryVoltage();
+#else
     vbat = pmGetBatteryVoltage();
 
-    #endif
+#endif
     power = vbat * current;
   }
 }
@@ -111,14 +114,14 @@ static const DeckDriver flapper_deck = {
   .pid = 0x09,
   .name = "bcFlapperDeck",
 
-  #if CONFIG_DECK_FLAPPER_MEASURE_VBAT_ON_PA3 || CONFIG_DECK_FLAPPER_EXTRX_ENABLE
+#if CONFIG_DECK_FLAPPER_MEASURE_VBAT_ON_PA3 || CONFIG_DECK_FLAPPER_EXTRX_ENABLE
   .usedGpio = DECK_USING_PA2 | DECK_USING_PA3,
-  #else
+#else
   .usedGpio = DECK_USING_PA2,
-  #endif
-  #if CONFIG_DECK_FLAPPER_EXTRX_ENABLE
+#endif
+#if CONFIG_DECK_FLAPPER_EXTRX_ENABLE
   .usedPeriph = DECK_USING_TIMER9,
-  #endif
+#endif
   .init = flapperDeckInit,
   .test = flapperDeckTest,
 };
@@ -149,7 +152,7 @@ PARAM_GROUP_START(flapper)
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, ampsPerVolt, &ampsPerVolt)
 /**
- * @brief Current filter parameter <0; 1), set 0 to disable, 0.9999 for max effect 
+ * @brief Current filter parameter <0; 1), set 0 to disable, 0.9999 for max effect
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, filtAlpha, &filter_alpha)
 

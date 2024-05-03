@@ -54,14 +54,15 @@
 static bool inBootloaderMode = true;
 static bool hasStarted = false;
 
-bool lighthouseDeckFlasherCheckVersionAndBoot() {
+bool lighthouseDeckFlasherCheckVersionAndBoot()
+{
   lhblInit();
 
-  #ifdef LH_FLASH_BOOTLOADER
+#ifdef LH_FLASH_BOOTLOADER
   // Flash deck bootloader using SPI (factory and recovery flashing)
   lhflashInit();
   lhflashFlashBootloader();
-  #endif
+#endif
 
   uint8_t bootloaderVersion = 0;
   if (lhblGetVersion(&bootloaderVersion) == false) {
@@ -76,7 +77,7 @@ bool lighthouseDeckFlasherCheckVersionAndBoot() {
 
   // Decoding bitstream version for console
   static char deckBitstream[READ_BUFFER_LENGTH];
-  lhblFlashRead(LH_FW_ADDR, VERSION_STRING_MAX_LENGTH, (uint8_t*)deckBitstream);
+  lhblFlashRead(LH_FW_ADDR, VERSION_STRING_MAX_LENGTH, (uint8_t *)deckBitstream);
   deckBitstream[VERSION_STRING_MAX_LENGTH] = 0;
   int deckVersion = strtol(&deckBitstream[2], NULL, 10);
 
@@ -84,15 +85,16 @@ bool lighthouseDeckFlasherCheckVersionAndBoot() {
   crc32Context_t crcContext;
   crc32ContextInit(&crcContext);
 
-  for (int i=0; i<=LIGHTHOUSE_BITSTREAM_SIZE; i+=READ_BUFFER_LENGTH) {
-    int length = ((i + READ_BUFFER_LENGTH) < LIGHTHOUSE_BITSTREAM_SIZE)?READ_BUFFER_LENGTH:LIGHTHOUSE_BITSTREAM_SIZE-i;
-    lhblFlashRead(LH_FW_ADDR + i, length, (uint8_t*)deckBitstream);
+  for (int i = 0; i <= LIGHTHOUSE_BITSTREAM_SIZE; i += READ_BUFFER_LENGTH) {
+    int length = ((i + READ_BUFFER_LENGTH) < LIGHTHOUSE_BITSTREAM_SIZE) ? READ_BUFFER_LENGTH :
+                 LIGHTHOUSE_BITSTREAM_SIZE - i;
+    lhblFlashRead(LH_FW_ADDR + i, length, (uint8_t *)deckBitstream);
     crc32Update(&crcContext, deckBitstream, length);
   }
 
   uint32_t crc = crc32Out(&crcContext);
   bool pass = crc == LIGHTHOUSE_BITSTREAM_CRC;
-  DEBUG_PRINT("Bitstream CRC32: %x %s\n", (int)crc, pass?"[PASS]":"[FAIL]");
+  DEBUG_PRINT("Bitstream CRC32: %x %s\n", (int)crc, pass ? "[PASS]" : "[FAIL]");
 
   // Launch LH deck FW
   if (pass) {
@@ -101,7 +103,8 @@ bool lighthouseDeckFlasherCheckVersionAndBoot() {
     inBootloaderMode = false;
   } else {
     DEBUG_PRINT("The deck bitstream does not match the required bitstream.\n");
-    DEBUG_PRINT("We require lighthouse bitstream of size %d and CRC32 %x.\n", LIGHTHOUSE_BITSTREAM_SIZE, LIGHTHOUSE_BITSTREAM_CRC);
+    DEBUG_PRINT("We require lighthouse bitstream of size %d and CRC32 %x.\n", LIGHTHOUSE_BITSTREAM_SIZE,
+                LIGHTHOUSE_BITSTREAM_CRC);
     DEBUG_PRINT("Leaving the deck in bootloader mode ...\n");
   }
 
@@ -110,7 +113,7 @@ bool lighthouseDeckFlasherCheckVersionAndBoot() {
   return pass;
 }
 
-bool lighthouseDeckFlasherRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer)
+bool lighthouseDeckFlasherRead(const uint32_t memAddr, const uint8_t readLen, uint8_t *buffer)
 {
   if (inBootloaderMode) {
     return lhblFlashRead(LH_FW_ADDR + memAddr, readLen, buffer);
@@ -119,7 +122,8 @@ bool lighthouseDeckFlasherRead(const uint32_t memAddr, const uint8_t readLen, ui
   }
 }
 
-bool lighthouseDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer, const DeckMemDef_t* memDef)
+bool lighthouseDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen,
+                                const uint8_t *buffer, const DeckMemDef_t *memDef)
 {
   bool pass;
   if (memAddr == 0) {
@@ -135,7 +139,7 @@ bool lighthouseDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, 
   // This function can be called with a buffer spanning 2 pages
   // Try to find the first byte of the second page if this is the case
   int pageSplit = 0;
-  for (int i=0; i<writeLen; i++) {
+  for (int i = 0; i < writeLen; i++) {
     if (((address + i) & 0x0ff) == 0) {
       pageSplit = i;
       break;
@@ -152,14 +156,15 @@ bool lighthouseDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, 
   }
 
   // Flashing second page if necessary
-  if ((writeLen-pageSplit) > 0) {
-    pass = lhblFlashWritePage(address+pageSplit, writeLen-pageSplit, &buffer[pageSplit]);
+  if ((writeLen - pageSplit) > 0) {
+    pass = lhblFlashWritePage(address + pageSplit, writeLen - pageSplit, &buffer[pageSplit]);
   }
 
   return pass;
 }
 
-uint8_t lighthouseDeckFlasherPropertiesQuery() {
+uint8_t lighthouseDeckFlasherPropertiesQuery()
+{
   uint8_t result = 0;
 
   if (hasStarted) {

@@ -60,149 +60,139 @@ NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t devRight;
 
 static bool mrInitSensor(VL53L1_Dev_t *pdev, uint32_t pca95pin, char *name)
 {
-    bool status;
+  bool status;
 
-    // Bring up VL53 by releasing XSHUT
-    pca95x4SetOutput(PCA95X4_DEFAULT_ADDRESS, pca95pin);
-    // Let VL53 boot
-    vTaskDelay(M2T(2));
-    // Init VL53
-    if (vl53l1xInit(pdev, I2C1_DEV))
-    {
-        DEBUG_PRINT("Init %s sensor [OK]\n", name);
-        status = true;
-    }
-    else
-    {
-        DEBUG_PRINT("Init %s sensor [FAIL]\n", name);
-        status = false;
-    }
+  // Bring up VL53 by releasing XSHUT
+  pca95x4SetOutput(PCA95X4_DEFAULT_ADDRESS, pca95pin);
+  // Let VL53 boot
+  vTaskDelay(M2T(2));
+  // Init VL53
+  if (vl53l1xInit(pdev, I2C1_DEV)) {
+    DEBUG_PRINT("Init %s sensor [OK]\n", name);
+    status = true;
+  } else {
+    DEBUG_PRINT("Init %s sensor [FAIL]\n", name);
+    status = false;
+  }
 
-    return status;
+  return status;
 }
 
 static uint16_t mrGetMeasurementAndRestart(VL53L1_Dev_t *dev)
 {
-    VL53L1_Error status = VL53L1_ERROR_NONE;
-    VL53L1_RangingMeasurementData_t rangingData;
-    uint8_t dataReady = 0;
-    uint16_t range;
+  VL53L1_Error status = VL53L1_ERROR_NONE;
+  VL53L1_RangingMeasurementData_t rangingData;
+  uint8_t dataReady = 0;
+  uint16_t range;
 
-    while (dataReady == 0)
-    {
-        status = VL53L1_GetMeasurementDataReady(dev, &dataReady);
-        vTaskDelay(M2T(1));
-    }
+  while (dataReady == 0) {
+    status = VL53L1_GetMeasurementDataReady(dev, &dataReady);
+    vTaskDelay(M2T(1));
+  }
 
-    status = VL53L1_GetRangingMeasurementData(dev, &rangingData);
+  status = VL53L1_GetRangingMeasurementData(dev, &rangingData);
 
-    if (filterMask & (1 << rangingData.RangeStatus))
-    {
-        range = rangingData.RangeMilliMeter;
-    }
-    else
-    {
-        range = 32767;
-    }
+  if (filterMask & (1 << rangingData.RangeStatus)) {
+    range = rangingData.RangeMilliMeter;
+  } else {
+    range = 32767;
+  }
 
-    VL53L1_StopMeasurement(dev);
-    status = VL53L1_StartMeasurement(dev);
-    status = status;
+  VL53L1_StopMeasurement(dev);
+  status = VL53L1_StartMeasurement(dev);
+  status = status;
 
-    return range;
+  return range;
 }
 
 static void mrTask(void *param)
 {
-    VL53L1_Error status = VL53L1_ERROR_NONE;
+  VL53L1_Error status = VL53L1_ERROR_NONE;
 
-    systemWaitStart();
+  systemWaitStart();
 
-    // Restart all sensors
-    status = VL53L1_StopMeasurement(&devFront);
-    status = VL53L1_StartMeasurement(&devFront);
-    status = VL53L1_StopMeasurement(&devBack);
-    status = VL53L1_StartMeasurement(&devBack);
-    status = VL53L1_StopMeasurement(&devUp);
-    status = VL53L1_StartMeasurement(&devUp);
-    status = VL53L1_StopMeasurement(&devLeft);
-    status = VL53L1_StartMeasurement(&devLeft);
-    status = VL53L1_StopMeasurement(&devRight);
-    status = VL53L1_StartMeasurement(&devRight);
-    status = status;
+  // Restart all sensors
+  status = VL53L1_StopMeasurement(&devFront);
+  status = VL53L1_StartMeasurement(&devFront);
+  status = VL53L1_StopMeasurement(&devBack);
+  status = VL53L1_StartMeasurement(&devBack);
+  status = VL53L1_StopMeasurement(&devUp);
+  status = VL53L1_StartMeasurement(&devUp);
+  status = VL53L1_StopMeasurement(&devLeft);
+  status = VL53L1_StartMeasurement(&devLeft);
+  status = VL53L1_StopMeasurement(&devRight);
+  status = VL53L1_StartMeasurement(&devRight);
+  status = status;
 
-    TickType_t lastWakeTime = xTaskGetTickCount();
+  TickType_t lastWakeTime = xTaskGetTickCount();
 
-    while (1)
-    {
-        vTaskDelayUntil(&lastWakeTime, M2T(100));
-        rangeSet(rangeFront, mrGetMeasurementAndRestart(&devFront) / 1000.0f);
-        rangeSet(rangeBack, mrGetMeasurementAndRestart(&devBack) / 1000.0f);
-        rangeSet(rangeUp, mrGetMeasurementAndRestart(&devUp) / 1000.0f);
-        rangeSet(rangeLeft, mrGetMeasurementAndRestart(&devLeft) / 1000.0f);
-        rangeSet(rangeRight, mrGetMeasurementAndRestart(&devRight) / 1000.0f);
-    }
+  while (1) {
+    vTaskDelayUntil(&lastWakeTime, M2T(100));
+    rangeSet(rangeFront, mrGetMeasurementAndRestart(&devFront) / 1000.0f);
+    rangeSet(rangeBack, mrGetMeasurementAndRestart(&devBack) / 1000.0f);
+    rangeSet(rangeUp, mrGetMeasurementAndRestart(&devUp) / 1000.0f);
+    rangeSet(rangeLeft, mrGetMeasurementAndRestart(&devLeft) / 1000.0f);
+    rangeSet(rangeRight, mrGetMeasurementAndRestart(&devRight) / 1000.0f);
+  }
 }
 
 static void mrInit()
 {
-    if (isInit)
-    {
-        return;
-    }
+  if (isInit) {
+    return;
+  }
 
-    pca95x4Init();
+  pca95x4Init();
 
-    pca95x4ConfigOutput(PCA95X4_DEFAULT_ADDRESS,
-                        ~(MR_PIN_UP |
-                          MR_PIN_RIGHT |
-                          MR_PIN_LEFT |
-                          MR_PIN_FRONT |
-                          MR_PIN_BACK));
+  pca95x4ConfigOutput(PCA95X4_DEFAULT_ADDRESS,
+                      ~(MR_PIN_UP |
+                        MR_PIN_RIGHT |
+                        MR_PIN_LEFT |
+                        MR_PIN_FRONT |
+                        MR_PIN_BACK));
 
-    pca95x4ClearOutput(PCA95X4_DEFAULT_ADDRESS,
-                       MR_PIN_UP |
-                       MR_PIN_RIGHT |
-                       MR_PIN_LEFT |
-                       MR_PIN_FRONT |
-                       MR_PIN_BACK);
+  pca95x4ClearOutput(PCA95X4_DEFAULT_ADDRESS,
+                     MR_PIN_UP |
+                     MR_PIN_RIGHT |
+                     MR_PIN_LEFT |
+                     MR_PIN_FRONT |
+                     MR_PIN_BACK);
 
-    isInit = true;
+  isInit = true;
 
-    xTaskCreate(mrTask, MULTIRANGER_TASK_NAME, MULTIRANGER_TASK_STACKSIZE, NULL,
-                MULTIRANGER_TASK_PRI, NULL);
+  xTaskCreate(mrTask, MULTIRANGER_TASK_NAME, MULTIRANGER_TASK_STACKSIZE, NULL,
+              MULTIRANGER_TASK_PRI, NULL);
 }
 
 static bool mrTest()
 {
-    if (isTested)
-    {
-        return isPassed;
-    }
-
-    isPassed = isInit;
-
-    isPassed &= mrInitSensor(&devFront, MR_PIN_FRONT, "front");
-    isPassed &= mrInitSensor(&devBack, MR_PIN_BACK, "back");
-    isPassed &= mrInitSensor(&devUp, MR_PIN_UP, "up");
-    isPassed &= mrInitSensor(&devLeft, MR_PIN_LEFT, "left");
-    isPassed &= mrInitSensor(&devRight, MR_PIN_RIGHT, "right");
-
-    isTested = true;
-
+  if (isTested) {
     return isPassed;
+  }
+
+  isPassed = isInit;
+
+  isPassed &= mrInitSensor(&devFront, MR_PIN_FRONT, "front");
+  isPassed &= mrInitSensor(&devBack, MR_PIN_BACK, "back");
+  isPassed &= mrInitSensor(&devUp, MR_PIN_UP, "up");
+  isPassed &= mrInitSensor(&devLeft, MR_PIN_LEFT, "left");
+  isPassed &= mrInitSensor(&devRight, MR_PIN_RIGHT, "right");
+
+  isTested = true;
+
+  return isPassed;
 }
 
 static const DeckDriver multiranger_deck = {
-    .vid = 0xBC,
-    .pid = 0x0C,
-    .name = "bcMultiranger",
+  .vid = 0xBC,
+  .pid = 0x0C,
+  .name = "bcMultiranger",
 
-    .usedGpio = 0,
-    .usedPeriph = DECK_USING_I2C,
+  .usedGpio = 0,
+  .usedPeriph = DECK_USING_I2C,
 
-    .init = mrInit,
-    .test = mrTest,
+  .init = mrInit,
+  .test = mrTest,
 };
 
 DECK_DRIVER(multiranger_deck);

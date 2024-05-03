@@ -61,43 +61,41 @@ NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t dev;
 
 static uint16_t zRanger2GetMeasurementAndRestart(VL53L1_Dev_t *dev)
 {
-    VL53L1_Error status = VL53L1_ERROR_NONE;
-    VL53L1_RangingMeasurementData_t rangingData;
-    uint8_t dataReady = 0;
-    uint16_t range;
+  VL53L1_Error status = VL53L1_ERROR_NONE;
+  VL53L1_RangingMeasurementData_t rangingData;
+  uint8_t dataReady = 0;
+  uint16_t range;
 
-    while (dataReady == 0)
-    {
-        status = VL53L1_GetMeasurementDataReady(dev, &dataReady);
-        vTaskDelay(M2T(1));
-    }
+  while (dataReady == 0) {
+    status = VL53L1_GetMeasurementDataReady(dev, &dataReady);
+    vTaskDelay(M2T(1));
+  }
 
-    status = VL53L1_GetRangingMeasurementData(dev, &rangingData);
-    range = rangingData.RangeMilliMeter;
+  status = VL53L1_GetRangingMeasurementData(dev, &rangingData);
+  range = rangingData.RangeMilliMeter;
 
-    VL53L1_StopMeasurement(dev);
-    status = VL53L1_StartMeasurement(dev);
-    status = status;
+  VL53L1_StopMeasurement(dev);
+  status = VL53L1_StartMeasurement(dev);
+  status = status;
 
-    return range;
+  return range;
 }
 
-void zRanger2Init(DeckInfo* info)
+void zRanger2Init(DeckInfo *info)
 {
-  if (isInit)
+  if (isInit) {
     return;
-
-  if (vl53l1xInit(&dev, I2C1_DEV))
-  {
-      DEBUG_PRINT("Z-down sensor [OK]\n");
   }
-  else
-  {
+
+  if (vl53l1xInit(&dev, I2C1_DEV)) {
+    DEBUG_PRINT("Z-down sensor [OK]\n");
+  } else {
     DEBUG_PRINT("Z-down sensor [FAIL]\n");
     return;
   }
 
-  xTaskCreate(zRanger2Task, ZRANGER2_TASK_NAME, ZRANGER2_TASK_STACKSIZE, NULL, ZRANGER2_TASK_PRI, NULL);
+  xTaskCreate(zRanger2Task, ZRANGER2_TASK_NAME, ZRANGER2_TASK_STACKSIZE, NULL, ZRANGER2_TASK_PRI,
+              NULL);
 
   // pre-compute constant in the measurement noise model for kalman
   expCoeff = logf(expStdB / expStdA) / (expPointB - expPointA);
@@ -107,13 +105,14 @@ void zRanger2Init(DeckInfo* info)
 
 bool zRanger2Test(void)
 {
-  if (!isInit)
+  if (!isInit) {
     return false;
+  }
 
   return true;
 }
 
-void zRanger2Task(void* arg)
+void zRanger2Task(void *arg)
 {
   TickType_t lastWakeTime;
 
@@ -139,7 +138,7 @@ void zRanger2Task(void* arg)
     // occur as >8 [m] measurements
     if (range_last < RANGE_OUTLIER_LIMIT) {
       float distance = (float)range_last * 0.001f; // Scale from [mm] to [m]
-      float stdDev = expStdA * (1.0f  + expf( expCoeff * (distance - expPointA)));
+      float stdDev = expStdA * (1.0f  + expf(expCoeff * (distance - expPointA)));
       rangeEnqueueDownRangeInEstimator(distance, stdDev, xTaskGetTickCount());
     }
   }

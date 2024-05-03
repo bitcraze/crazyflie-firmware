@@ -36,19 +36,24 @@ static uint16_t ranges[RANGE_T_END] = {0,};
 
 void rangeSet(rangeDirection_t direction, float range_m)
 {
-  if (direction > (RANGE_T_END-1)) return;
+  if (direction > (RANGE_T_END - 1)) {
+    return;
+  }
 
   ranges[direction] = range_m * 1000;
 }
 
 float rangeGet(rangeDirection_t direction)
 {
-    if (direction > (RANGE_T_END-1)) return 0;
+  if (direction > (RANGE_T_END - 1)) {
+    return 0;
+  }
 
   return ranges[direction];
 }
 
-void rangeEnqueueDownRangeInEstimator(float distance, float stdDev, uint32_t timeStamp) {
+void rangeEnqueueDownRangeInEstimator(float distance, float stdDev, uint32_t timeStamp)
+{
   tofMeasurement_t tofData;
   tofData.timestamp = timeStamp;
   tofData.distance = distance;

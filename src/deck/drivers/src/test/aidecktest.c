@@ -56,8 +56,9 @@ static bool isInit;
 
 static void aitdecktestInit(DeckInfo *info)
 {
-  if (isInit)
+  if (isInit) {
     return;
+  }
 
   DEBUG_PRINT("Initialize AI-deck test\n");
 
@@ -76,11 +77,9 @@ static bool testOnNina(const uint8_t command, const uint8_t expected)
 
   uart2Putchar(command);
 
-  if (uart2GetCharWithDefaultTimeout(&byte) == true)
-  {
+  if (uart2GetCharWithDefaultTimeout(&byte) == true) {
     DEBUG_PRINT_COM("[NINA] Received: 0x%02X\r\n", byte);
-    if (byte == expected)
-    {
+    if (byte == expected) {
       return true;
     }
   }
@@ -93,8 +92,7 @@ static bool testOnNinaMask(const uint8_t command, uint8_t *byte)
 
   uart2Putchar(command);
 
-  if (uart2GetCharWithDefaultTimeout(byte) == true)
-  {
+  if (uart2GetCharWithDefaultTimeout(byte) == true) {
     DEBUG_PRINT_COM("Received mask: 0x%02X\r\n", *byte);
 
     return true;
@@ -110,13 +108,11 @@ static bool testOnGAP8(const uint8_t command, const uint8_t expected)
 
   uart1Putchar(command);
 
-  while(timeout_counter < 5){
-    if (uart1GetDataWithDefaultTimeout(&byte) == true)
-    {
+  while (timeout_counter < 5) {
+    if (uart1GetDataWithDefaultTimeout(&byte) == true) {
       DEBUG_PRINT_COM("[GAP8] Received: 0x%02X\r\n", byte);
 
-      if (byte == expected)
-      {
+      if (byte == expected) {
         return true;
       }
     }
@@ -241,11 +237,9 @@ static bool aitdecktestTest()
   while (uart1GetDataWithDefaultTimeout(&byte) == true)
     ;
 
-  while (!testHasBeenTriggered)
-  {
+  while (!testHasBeenTriggered) {
     // Send test for button low to NINA
-    if (testOnNina(NINA_BOOT_LOW, NINA_BOOT_LOW_EXPECTED) == true)
-    {
+    if (testOnNina(NINA_BOOT_LOW, NINA_BOOT_LOW_EXPECTED) == true) {
       testmask &= ~(1UL << NINA_BOOT_LOW_POS);
       testHasBeenTriggered = true;
     }
@@ -254,20 +248,16 @@ static bool aitdecktestTest()
   }
 
   // Send test for button high NINA
-  if (testOnNina(NINA_BOOT_HIGH, NINA_BOOT_HIGH_EXPECTED) == true)
-  {
+  if (testOnNina(NINA_BOOT_HIGH, NINA_BOOT_HIGH_EXPECTED) == true) {
     testmask &= ~(1UL << NINA_BOOT_HIGH_POS);
     DEBUG_PRINT("NINA button test [OK]\r\n");
-  }
-  else
-  {
+  } else {
     DEBUG_PRINT("NINA button test [FAILED]\r\n");
   }
 
 
 
-  if (testOnNina(NINA_BOOT_LOW_RESET, NINA_BOOT_LOW_RESET_EXPECTED) == true)
-  {
+  if (testOnNina(NINA_BOOT_LOW_RESET, NINA_BOOT_LOW_RESET_EXPECTED) == true) {
     // Pull boot and read out button low on NINA
 
     pinMode(DECK_GPIO_IO1, OUTPUT);
@@ -276,13 +266,10 @@ static bool aitdecktestTest()
     digitalWrite(DECK_GPIO_IO1, HIGH);
 
     // Send reset button status to NINA (not done on NINA yet)
-    if (testOnNina(NINA_BOOT_LOW, NINA_BOOT_LOW_EXPECTED) == true)
-    {
+    if (testOnNina(NINA_BOOT_LOW, NINA_BOOT_LOW_EXPECTED) == true) {
       testmask &= ~(1UL << NINA_BOOT_LOW_IO_POS);
       DEBUG_PRINT("NINA boot pin test [OK]\r\n");
-    }
-    else
-    {
+    } else {
       DEBUG_PRINT("NINA boot pin test [FAILED]\r\n");
     }
   }
@@ -294,27 +281,21 @@ static bool aitdecktestTest()
   //     In GAP8, the command (GAP8_GPIO_MASK 0x04) should be removed from the mask so that it is like
   //     GAP8_GPIO_MASK again
 
-  if (testOnGAP8(GAP8_GPIO_COMMAND|GAP8_GPIO_MASK, GAP8_GPIO_MASK_EXPECTED) == true)
-  {
+  if (testOnGAP8(GAP8_GPIO_COMMAND | GAP8_GPIO_MASK, GAP8_GPIO_MASK_EXPECTED) == true) {
 
     vTaskDelay(M2T(100));
     // Send test for GPIO mask to NINA
-    if (testOnNinaMask(NINA_GAP8_GPIO_COMMAND, &gpio_mask) == true)
-    {
+    if (testOnNinaMask(NINA_GAP8_GPIO_COMMAND, &gpio_mask) == true) {
 
       uint32_t gpio_mask_result = (uint32_t)0X3F << NINA_GAP8_GPIO_POS;
       gpio_mask_result ^= 0x01FFFFF;
       gpio_mask_result |= (uint32_t)(gpio_mask ^ GAP8_GPIO_MASK) << NINA_GAP8_GPIO_POS;
       testmask &= gpio_mask_result;
       DEBUG_PRINT("GAP8->NINA gpio test [OK]\r\n");
-    }
-    else
-    {
+    } else {
       DEBUG_PRINT("GAP8->NINA gpio test [FAILED]\r\n");
     }
-  }
-  else
-  {
+  } else {
     DEBUG_PRINT("Set GAP8 gpio mask [FAILED]\r\n");
   }
   vTaskDelay(M2T(100));
@@ -323,25 +304,19 @@ static bool aitdecktestTest()
   uint8_t not_mask = (~GAP8_GPIO_MASK) & 0X3F;
 
   // Send test for ~ GPIO mask to GAP8
-  if (testOnGAP8(GAP8_GPIO_COMMAND | not_mask, GAP8_GPIO_MASK_EXPECTED) == true)
-  {
+  if (testOnGAP8(GAP8_GPIO_COMMAND | not_mask, GAP8_GPIO_MASK_EXPECTED) == true) {
     vTaskDelay(M2T(100));
     // Send test for ~ GPIO mask to NINA
-    if (testOnNinaMask(NINA_GAP8_GPIO_COMMAND, &gpio_mask) == true)
-    {
+    if (testOnNinaMask(NINA_GAP8_GPIO_COMMAND, &gpio_mask) == true) {
       uint32_t gpio_mask_result = (uint32_t)0X3F << NINA_GAP8_GPIO_INV_POS;
       gpio_mask_result ^= 0x01FFFFF;
       gpio_mask_result |= (uint32_t)(gpio_mask ^ ((~GAP8_GPIO_MASK) & 0X3F)) << NINA_GAP8_GPIO_INV_POS;
       testmask &= gpio_mask_result;
       DEBUG_PRINT("GAP8->NINA gpio not-test [OK]\r\n");
-    }
-    else
-    {
+    } else {
       DEBUG_PRINT("GAP8->NINA gpio not-test [FAILED]\r\n");
     }
-  }
-  else
-  {
+  } else {
     DEBUG_PRINT("Set GAP8 gpio not-mask [FAILED]\r\n");
   }
 
@@ -349,24 +324,18 @@ static bool aitdecktestTest()
 
 
   // Send test for Hyper flash to GAP8
-  if (testOnGAP8(GAP8_HYPER_COMMAND, GAP8_HYPER_EXPECTED) == true)
-  {
+  if (testOnGAP8(GAP8_HYPER_COMMAND, GAP8_HYPER_EXPECTED) == true) {
     testmask &= ~(1UL << GAP8_HYPER_POS);
     DEBUG_PRINT("GAP8 Hyper test [OK]\r\n");
-  }
-  else
-  {
+  } else {
     DEBUG_PRINT("GAP8 Hyper test [FAILED]\r\n");
   }
 
   // Send test for Camera to GAP8
-  if (testOnGAP8(GAP8_CAMERA_COMMAND, GAP8_CAMERA_EXPECTED) == true)
-  {
+  if (testOnGAP8(GAP8_CAMERA_COMMAND, GAP8_CAMERA_EXPECTED) == true) {
     testmask &= ~(1UL << GAP8_CAMERA_POS);
     DEBUG_PRINT("GAP8 Camera test [OK]\r\n");
-  }
-  else
-  {
+  } else {
     DEBUG_PRINT("GAP8 Camera test [FAILED]\r\n");
   }
 
@@ -375,36 +344,27 @@ static bool aitdecktestTest()
   //       EEPROM_I2C_ADDR     0x50
   // NOTE: should be not be run at startup!
 
-  if (testOnGAP8(GAP8_I2C_COMMAND, GAP8_I2C_EXPECTED) == true)
-  {
+  if (testOnGAP8(GAP8_I2C_COMMAND, GAP8_I2C_EXPECTED) == true) {
     testmask &= ~(1UL << GAP8_I2C_POS);
     DEBUG_PRINT("GAP8 I2C test [OK]\r\n");
-  }
-  else
-  {
+  } else {
     DEBUG_PRINT("GAP8 I2C test [FAILED]\r\n");
   }
 
   // Test RST of GAP8 though NINA
   // (listen on GAP8 uart for hello)
-  if (testOnNina(NINA_GAP8_RST_COMMAND, NINA_GAP8_RST_EXPECTED) == true)
-  {
-    while (uart1GetDataWithDefaultTimeout(&byte) == true)
-    {
-      if (byte == GAP8_INIT_CHAR)
-      {
+  if (testOnNina(NINA_GAP8_RST_COMMAND, NINA_GAP8_RST_EXPECTED) == true) {
+    while (uart1GetDataWithDefaultTimeout(&byte) == true) {
+      if (byte == GAP8_INIT_CHAR) {
         testmask &= ~(1UL << NINA_GAP8_RST_POS);
         DEBUG_PRINT("NINA->GAP8 reset [OK]\r\n");
         break;
       }
     }
-    if (byte != GAP8_INIT_CHAR)
-    {
+    if (byte != GAP8_INIT_CHAR) {
       DEBUG_PRINT("NINA->GAP8 reset [FAILED]\r\n");
     }
-  }
-  else
-  {
+  } else {
     DEBUG_PRINT("NINA->GAP8 reset, NINA not responding. [FAILED]\r\n");
   }
 
@@ -416,31 +376,25 @@ static bool aitdecktestTest()
   pinMode(DECK_GPIO_IO4, INPUT);
 
   // (listen on GAP8 and NINA uart for 0xbc)
-  while (uart2GetCharWithDefaultTimeout(&byte) == true)
-  {
-    if (byte == NINA_INIT_CHAR)
-    {
+  while (uart2GetCharWithDefaultTimeout(&byte) == true) {
+    if (byte == NINA_INIT_CHAR) {
       testmask &= ~(1UL << CF2_NINA_RST_POS);
       DEBUG_PRINT("NINA reset [OK]\r\n");
       break;
     }
   }
-  if (byte != NINA_INIT_CHAR)
-  {
+  if (byte != NINA_INIT_CHAR) {
     DEBUG_PRINT("NINA reset [FAILED]\r\n");
   }
 
-  while (uart1GetDataWithDefaultTimeout(&byte) == true)
-  {
-    if (byte == GAP8_INIT_CHAR)
-    {
+  while (uart1GetDataWithDefaultTimeout(&byte) == true) {
+    if (byte == GAP8_INIT_CHAR) {
       DEBUG_PRINT("GAP8 reset [OK]\r\n");
       testmask &= ~(1UL << CF2_GAP8_RST_POS);
       break;
     }
   }
-  if (byte != GAP8_INIT_CHAR)
-  {
+  if (byte != GAP8_INIT_CHAR) {
     DEBUG_PRINT("GAP8 reset [FAILED]\r\n");
   }
 
@@ -454,13 +408,13 @@ static bool aitdecktestTest()
 }
 
 static const DeckDriver aitest_deck = {
-    .name = "bcAIDeckTest",
+  .name = "bcAIDeckTest",
 
-    .usedPeriph = DECK_USING_UART1,
-    .usedGpio = DECK_USING_IO_4,
+  .usedPeriph = DECK_USING_UART1,
+  .usedGpio = DECK_USING_IO_4,
 
-    .init = aitdecktestInit,
-    .test = aitdecktestTest,
+  .init = aitdecktestInit,
+  .test = aitdecktestTest,
 };
 
 DECK_DRIVER(aitest_deck);

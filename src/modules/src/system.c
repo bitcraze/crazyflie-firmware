@@ -74,7 +74,7 @@
 #include "autoconf.h"
 #include "vcp_esc_passthrough.h"
 #if CONFIG_ENABLE_CPX
-  #include "cpxlink.h"
+#include "cpxlink.h"
 #endif
 
 /* Private variable */
@@ -104,8 +104,9 @@ void systemLaunch(void)
 // This must be the first module to be initialized!
 void systemInit(void)
 {
-  if(isInit)
+  if (isInit) {
     return;
+  }
 
   canStartMutex = xSemaphoreCreateMutexStatic(&canStartMutexBuffer);
   xSemaphoreTake(canStartMutex, portMAX_DELAY);
@@ -128,11 +129,11 @@ void systemInit(void)
     DEBUG_PRINT("Production release %s\n", V_STAG);
   } else {
     DEBUG_PRINT("Build %s:%s (%s) %s\n", V_SLOCAL_REVISION,
-                V_SREVISION, V_STAG, (V_MODIFIED)?"MODIFIED":"CLEAN");
+                V_SREVISION, V_STAG, (V_MODIFIED) ? "MODIFIED" : "CLEAN");
   }
   DEBUG_PRINT("I am 0x%08X%08X%08X and I have %dKB of flash!\n",
-              *((int*)(MCU_ID_ADDRESS+8)), *((int*)(MCU_ID_ADDRESS+4)),
-              *((int*)(MCU_ID_ADDRESS+0)), *((short*)(MCU_FLASH_SIZE_ADDRESS)));
+              *((int *)(MCU_ID_ADDRESS + 8)), *((int *)(MCU_ID_ADDRESS + 4)),
+              *((int *)(MCU_ID_ADDRESS + 0)), *((short *)(MCU_FLASH_SIZE_ADDRESS)));
 
   configblockInit();
   storageInit();
@@ -152,7 +153,7 @@ void systemInit(void)
 
 bool systemTest()
 {
-  bool pass=isInit;
+  bool pass = isInit;
 
   pass &= ledseqTest();
   pass &= pmTest();
@@ -190,13 +191,13 @@ void systemTask(void *arg)
 
   StateEstimatorType estimator = StateEstimatorTypeAutoSelect;
 
-  #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
+#ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
   estimatorKalmanTaskInit();
-  #endif
+#endif
 
-  #ifdef CONFIG_ESTIMATOR_UKF_ENABLE
+#ifdef CONFIG_ESTIMATOR_UKF_ENABLE
   errorEstimatorUkfTaskInit();
-  #endif
+#endif
 
   // Enabling incoming syslink messages to be added to the queue.
   // This should probably be done later, but deckInit() takes a long time if this is done later.
@@ -206,8 +207,7 @@ void systemTask(void *arg)
   deckInit();
   estimator = deckGetRequiredEstimator();
   stabilizerInit(estimator);
-  if (deckGetRequiredLowInterferenceRadioMode() && platformConfigPhysicalLayoutAntennasAreClose())
-  {
+  if (deckGetRequiredLowInterferenceRadioMode() && platformConfigPhysicalLayoutAntennasAreClose()) {
     platformSetLowInterferenceRadioMode();
   }
   soundInit();
@@ -246,19 +246,19 @@ void systemTask(void *arg)
     DEBUG_PRINT("stabilizer [FAIL]\n");
   }
 
-  #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
+#ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
   if (estimatorKalmanTaskTest() == false) {
     pass = false;
     DEBUG_PRINT("estimatorKalmanTask [FAIL]\n");
   }
-  #endif
+#endif
 
-  #ifdef CONFIG_ESTIMATOR_UKF_ENABLE
+#ifdef CONFIG_ESTIMATOR_UKF_ENABLE
   if (errorEstimatorUkfTaskTest() == false) {
     pass = false;
     DEBUG_PRINT("estimatorUKFTask [FAIL]\n");
   }
-  #endif
+#endif
 
   if (deckTest() == false) {
     pass = false;
@@ -290,35 +290,27 @@ void systemTask(void *arg)
   }
 
   //Start the firmware
-  if(pass)
-  {
+  if (pass) {
     DEBUG_PRINT("Self test passed!\n");
     selftestPassed = 1;
     systemStart();
     soundSetEffect(SND_STARTUP);
     ledseqRun(&seq_alive);
     ledseqRun(&seq_testPassed);
-  }
-  else
-  {
+  } else {
     selftestPassed = 0;
-    if (systemTest())
-    {
-      while(1)
-      {
+    if (systemTest()) {
+      while (1) {
         ledseqRun(&seq_testFailed);
         vTaskDelay(M2T(2000));
         // System can be forced to start by setting the param to 1 from the cfclient
-        if (selftestPassed)
-        {
-	        DEBUG_PRINT("Start forced.\n");
+        if (selftestPassed) {
+          DEBUG_PRINT("Start forced.\n");
           systemStart();
           break;
         }
       }
-    }
-    else
-    {
+    } else {
       ledInit();
       ledSet(SYS_LED, true);
     }
@@ -328,8 +320,9 @@ void systemTask(void *arg)
   workerLoop();
 
   //Should never reach this point!
-  while(1)
+  while (1) {
     vTaskDelay(portMAX_DELAY);
+  }
 }
 
 
@@ -346,8 +339,9 @@ void systemWaitStart(void)
 {
   //This permits to guarantee that the system task is initialized before other
   //tasks waits for the start event.
-  while(!isInit)
+  while (!isInit) {
     vTaskDelay(2);
+  }
 
   xSemaphoreTake(canStartMutex, portMAX_DELAY);
   xSemaphoreGive(canStartMutex);
@@ -373,26 +367,24 @@ void systemRequestNRFVersion()
 
 void systemSyslinkReceive(SyslinkPacket *slp)
 {
-  if (slp->type == SYSLINK_SYS_NRF_VERSION)
-  {
+  if (slp->type == SYSLINK_SYS_NRF_VERSION) {
     size_t len = slp->length - 1;
 
     if (sizeof(nrf_version) - 1 <=  len) {
       len = sizeof(nrf_version) - 1;
     }
-    memcpy(&nrf_version, &slp->data[0], len );
+    memcpy(&nrf_version, &slp->data[0], len);
     DEBUG_PRINT("NRF51 version: %s\n", nrf_version);
   }
 }
 
-void vApplicationIdleHook( void )
+void vApplicationIdleHook(void)
 {
   static uint32_t tickOfLatestWatchdogReset = M2T(0);
 
   portTickType tickCount = xTaskGetTickCount();
 
-  if (tickCount - tickOfLatestWatchdogReset > M2T(WATCHDOG_RESET_PERIOD_MS))
-  {
+  if (tickCount - tickOfLatestWatchdogReset > M2T(WATCHDOG_RESET_PERIOD_MS)) {
     tickOfLatestWatchdogReset = tickCount;
     watchdogReset();
   }
@@ -405,11 +397,14 @@ void vApplicationIdleHook( void )
   // Enter sleep mode. Does not work when debugging chip with SWD.
   // Currently saves about 20mA STM32F405 current consumption (~30%).
 #ifndef DEBUG
-  { __asm volatile ("wfi"); }
+  {
+    __asm volatile("wfi");
+  }
 #endif
 }
 
-static void doAssertCallback(void) {
+static void doAssertCallback(void)
+{
   if (doAssert) {
     ASSERT_FAILED();
   }
@@ -431,17 +426,17 @@ PARAM_ADD_CORE(PARAM_UINT16 | PARAM_RONLY, flash, MCU_FLASH_SIZE_ADDRESS)
 /**
  * @brief Byte `0 - 3` of device unique id
  */
-PARAM_ADD_CORE(PARAM_UINT32 | PARAM_RONLY, id0, MCU_ID_ADDRESS+0)
+PARAM_ADD_CORE(PARAM_UINT32 | PARAM_RONLY, id0, MCU_ID_ADDRESS + 0)
 
 /**
  * @brief Byte `4 - 7` of device unique id
  */
-PARAM_ADD_CORE(PARAM_UINT32 | PARAM_RONLY, id1, MCU_ID_ADDRESS+4)
+PARAM_ADD_CORE(PARAM_UINT32 | PARAM_RONLY, id1, MCU_ID_ADDRESS + 4)
 
 /**
  * @brief Byte `8 - 11` of device unique id
  */
-PARAM_ADD_CORE(PARAM_UINT32 | PARAM_RONLY, id2, MCU_ID_ADDRESS+8)
+PARAM_ADD_CORE(PARAM_UINT32 | PARAM_RONLY, id2, MCU_ID_ADDRESS + 8)
 
 PARAM_GROUP_STOP(cpu)
 

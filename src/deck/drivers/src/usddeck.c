@@ -125,15 +125,15 @@ typedef struct usdLogStats_s {
 
 // Ring buffer
 typedef struct ringBuffer_s {
-  uint8_t* buffer;        // pointer to buffer
+  uint8_t *buffer;        // pointer to buffer
   uint16_t capacity;      // total capacity of buffer
   uint16_t size;          // used size of buffer
-  uint8_t* readPtr;       // pointer for read/pop
-  uint8_t* writePtr;      // pointer for write/push
+  uint8_t *readPtr;       // pointer for read/pop
+  uint8_t *writePtr;      // pointer for write/push
   uint16_t popSize;       // size for ongoing pop operation
 } ringBuffer_t;
 
-void ringBuffer_init(ringBuffer_t* b, uint8_t *buffer, uint16_t capacity)
+void ringBuffer_init(ringBuffer_t *b, uint8_t *buffer, uint16_t capacity)
 {
   b->buffer = buffer;
   b->capacity = capacity;
@@ -151,17 +151,17 @@ void ringBuffer_reset(ringBuffer_t *b)
   b->popSize = 0;
 }
 
-uint16_t ringBuffer_availableSpace(const ringBuffer_t* b)
+uint16_t ringBuffer_availableSpace(const ringBuffer_t *b)
 {
   return b->capacity - b->size;
 }
 
-bool ringBuffer_push(ringBuffer_t* b, const void* data, uint16_t size)
+bool ringBuffer_push(ringBuffer_t *b, const void *data, uint16_t size)
 {
   if (ringBuffer_availableSpace(b) < size) {
     return false;
   }
-  const uint8_t* dataTyped = (const uint8_t*)data;
+  const uint8_t *dataTyped = (const uint8_t *)data;
   for (uint16_t i = 0; i < size; ++i) {
     *(b->writePtr) = dataTyped[i];
     ++b->writePtr;
@@ -173,7 +173,7 @@ bool ringBuffer_push(ringBuffer_t* b, const void* data, uint16_t size)
   return true;
 }
 
-bool ringBuffer_pop_start(ringBuffer_t* b, const uint8_t** buf, uint16_t* size)
+bool ringBuffer_pop_start(ringBuffer_t *b, const uint8_t **buf, uint16_t *size)
 {
   if (b->size == 0) {
     return false;
@@ -210,8 +210,8 @@ static void csHigh(BYTE doDummyClock);
 static void csLow(void);
 static void delayMs(UINT ms);
 
-static void usdLogTask(void* prm);
-static void usdWriteTask(void* prm);
+static void usdLogTask(void *prm);
+static void usdWriteTask(void *prm);
 
 static STATS_CNT_RATE_DEFINE(spiWriteRate, 1000);
 static STATS_CNT_RATE_DEFINE(spiReadRate, 1000);
@@ -247,8 +247,11 @@ static void usdTimer(xTimerHandle timer);
 static SemaphoreHandle_t shutdownMutex;
 
 // Handling from the memory module
-static uint32_t handleMemGetSize(void) { return usddeckFileSize(); }
-static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
+static uint32_t handleMemGetSize(void)
+{
+  return usddeckFileSize();
+}
+static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t *buffer);
 static const MemoryHandlerDef_t memDef = {
   .type = MEM_TYPE_USD,
   .getSize = handleMemGetSize,
@@ -258,22 +261,21 @@ static const MemoryHandlerDef_t memDef = {
 
 
 // Low lever driver functions
-static sdSpiContext_t sdSpiContext =
-    {
-        .initSpi = initSpi,
-        .setSlowSpiMode = setSlowSpiMode,
-        .setFastSpiMode = setFastSpiMode,
-        .xchgSpi = xchgSpi,
-        .rcvrSpiMulti = rcvrSpiMulti,
-        .xmitSpiMulti = xmitSpiMulti,
-        .csLow = csLow,
-        .csHigh = csHigh,
-        .delayMs = delayMs,
+static sdSpiContext_t sdSpiContext = {
+  .initSpi = initSpi,
+  .setSlowSpiMode = setSlowSpiMode,
+  .setFastSpiMode = setFastSpiMode,
+  .xchgSpi = xchgSpi,
+  .rcvrSpiMulti = rcvrSpiMulti,
+  .xmitSpiMulti = xmitSpiMulti,
+  .csLow = csLow,
+  .csHigh = csHigh,
+  .delayMs = delayMs,
 
-        .stat = STA_NOINIT,
-        .timer1 = 0,
-        .timer2 = 0
-    };
+  .stat = STA_NOINIT,
+  .timer1 = 0,
+  .timer2 = 0
+};
 
 
 /*-----------------------------------------------------------------------*/
@@ -358,7 +360,7 @@ static void delayMs(UINT ms)
 /* FatFS Disk Interface */
 DSTATUS disk_initialize(BYTE pdrv)
 {
-    return SD_disk_initialize(&sdSpiContext);
+  return SD_disk_initialize(&sdSpiContext);
 }
 
 DSTATUS disk_status(BYTE pdrv)
@@ -401,10 +403,10 @@ __attribute__((weak)) DWORD get_fattime(void)
 //  * comments are indicated by #
 //  * a line ending is marked by \n
 //  * only up to "len" will be read
-TCHAR* f_gets_without_comments (
-  TCHAR* buff,  /* Pointer to the string buffer to read */
+TCHAR *f_gets_without_comments(
+  TCHAR *buff,  /* Pointer to the string buffer to read */
   int len,    /* Size of string buffer (characters) */
-  FIL* fp     /* Pointer to the file object */
+  FIL *fp     /* Pointer to the file object */
 )
 {
   int n = 0;
@@ -420,11 +422,11 @@ TCHAR* f_gets_without_comments (
       return 0; /* When no data read (eof or error), return with error. */
     }
     if (c == '\n') {
-      if (isPureComment){
+      if (isPureComment) {
         isComment = false;
         isPureComment = false;
         continue;
-      }      
+      }
       break;   /* Break on EOL */
     }
     if (isspace((int)c)) {
@@ -432,7 +434,7 @@ TCHAR* f_gets_without_comments (
     }
     if (c == '#') {
       isComment = true; /* keep reading until end of line */
-      if (n==0){
+      if (n == 0) {
         isPureComment = true;
       }
     }
@@ -475,7 +477,8 @@ static void usdInit(DeckInfo *info)
   isInit = true;
 }
 
-static void usddeckWriteEventData(const usdLogEventConfig_t* cfg, const uint8_t* payload, uint8_t payloadSize)
+static void usddeckWriteEventData(const usdLogEventConfig_t *cfg, const uint8_t *payload,
+                                  uint8_t payloadSize)
 {
   uint64_t ticks = usecTimestamp();
 
@@ -507,22 +510,22 @@ static void usddeckWriteEventData(const usdLogEventConfig_t* cfg, const uint8_t*
     for (int i = 0; i < cfg->numVars; ++i) {
       logVarId_t varid = cfg->varIds[i];
       switch (logGetType(varid)) {
-      case LOG_UINT8:
-      case LOG_INT8:
-        ringBuffer_push(&logBuffer, logGetAddress(varid), sizeof(uint8_t));
-        break;
-      case LOG_UINT16:
-      case LOG_INT16:
-        ringBuffer_push(&logBuffer, logGetAddress(varid), sizeof(uint16_t));
-        break;
-      case LOG_UINT32:
-      case LOG_INT32:
-      case LOG_FLOAT:
-        ringBuffer_push(&logBuffer, logGetAddress(varid), sizeof(uint32_t));
-        break;
-      default:
-        ASSERT(false);
-        break;
+        case LOG_UINT8:
+        case LOG_INT8:
+          ringBuffer_push(&logBuffer, logGetAddress(varid), sizeof(uint8_t));
+          break;
+        case LOG_UINT16:
+        case LOG_INT16:
+          ringBuffer_push(&logBuffer, logGetAddress(varid), sizeof(uint16_t));
+          break;
+        case LOG_UINT32:
+        case LOG_INT32:
+        case LOG_FLOAT:
+          ringBuffer_push(&logBuffer, logGetAddress(varid), sizeof(uint32_t));
+          break;
+        default:
+          ASSERT(false);
+          break;
       }
     }
     ++usdLogStats.eventsWritten;
@@ -549,7 +552,7 @@ static void usdGracefulShutdownCallback()
   xSemaphoreTake(shutdownMutex, M2T(timeout));
 }
 
-static void usdLogTask(void* prm)
+static void usdLogTask(void *prm)
 {
   TickType_t lastWakeTime = xTaskGetTickCount();
 
@@ -558,7 +561,7 @@ static void usdLogTask(void* prm)
   systemWaitStart();
   /* wait until sensor calibration is done
    * (memory of bias calculation buffer is free again) */
-  while(!sensorsAreCalibrated()) {
+  while (!sensorsAreCalibrated()) {
     vTaskDelayUntil(&lastWakeTime, F2T(10));
   }
 
@@ -569,32 +572,42 @@ static void usdLogTask(void* prm)
     while (f_open(&logFile, "config.txt", FA_READ) == FR_OK) {
       /* try to read configuration */
       char readBuffer[32];
-      char* endptr;
+      char *endptr;
 
       // version
-      TCHAR* line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
-      if (!line) break;
+      TCHAR *line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
+      if (!line) {
+        break;
+      }
       int version = strtol(line, &endptr, 10);
-      if (version != 1) break;
+      if (version != 1) {
+        break;
+      }
       // buffer size
       line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
-      if (!line) break;
+      if (!line) {
+        break;
+      }
       usdLogConfig.bufferSize = strtol(line, &endptr, 10);
       // file name
       line = f_gets_without_comments(usdLogConfig.filename, sizeof(usdLogConfig.filename), &logFile);
-      if (!line) break;
+      if (!line) {
+        break;
+      }
 
       int l = strlen(usdLogConfig.filename);
       if (l > sizeof(usdLogConfig.filename) - 3) {
         l = sizeof(usdLogConfig.filename) - 3;
       }
       usdLogConfig.filename[l] = '0';
-      usdLogConfig.filename[l+1] = '0';
-      usdLogConfig.filename[l+2] = 0;
+      usdLogConfig.filename[l + 1] = '0';
+      usdLogConfig.filename[l + 2] = 0;
 
       // enable on startup
       line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
-      if (!line) break;
+      if (!line) {
+        break;
+      }
       usdLogConfig.enableOnStartup = strtol(line, &endptr, 10);
 
       // loop over event triggers "on:<name>"
@@ -602,7 +615,7 @@ static void usdLogTask(void* prm)
       usdLogConfig.fixedFrequencyEventIdx = MAX_USD_LOG_EVENTS;
       usdLogConfig.frequency = 10; // use non-zero default value for task loop below
       usdLogEventConfig_t *cfg = &usdLogConfig.eventConfigs[0];
-      const char* eventName = 0;
+      const char *eventName = 0;
       line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
       while (line) {
         if (strncmp(line, "on:", 3) == 0) {
@@ -610,11 +623,15 @@ static void usdLogTask(void* prm)
           if (strcmp(&line[3], FIXED_FREQUENCY_EVENT_NAME) == 0) {
             // frequency
             line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
-            if (!line) break;
+            if (!line) {
+              break;
+            }
             usdLogConfig.frequency = strtol(line, &endptr, 10);
             // mode
             line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
-            if (!line) break;
+            if (!line) {
+              break;
+            }
             usdLogConfig.mode = strtol(line, &endptr, 10);
             cfg->eventId = FIXED_FREQUENCY_EVENT_ID;
             eventName = FIXED_FREQUENCY_EVENT_NAME;
@@ -700,7 +717,7 @@ static void usdLogTask(void* prm)
     /* allocate memory for buffer */
     DEBUG_PRINT("malloc buffer %d bytes ", usdLogConfig.bufferSize);
     // vTaskDelay(10); // small delay to allow debug message to be send
-    uint8_t* logBufferData = pvPortMalloc(usdLogConfig.bufferSize);
+    uint8_t *logBufferData = pvPortMalloc(usdLogConfig.bufferSize);
     if (logBufferData) {
       DEBUG_PRINT("[OK].\n");
     } else {
@@ -723,7 +740,7 @@ static void usdLogTask(void* prm)
                 USDWRITE_TASK_PRI, &xHandleWriteTask);
 
     bool lastEnableLogging = enableLogging;
-    while(1) {
+    while (1) {
       vTaskDelayUntil(&lastWakeTime, F2T(usdLogConfig.frequency));
 
       // if logging was just disabled, resume the writer task to give up mutex
@@ -772,7 +789,7 @@ uint32_t usddeckFileSize(void)
 
 // Read "length" number of bytes at "offset" into "buffer" of current file
 // Only works if logging is stopped
-bool usddeckRead(uint32_t offset, uint8_t* buffer, uint16_t length)
+bool usddeckRead(uint32_t offset, uint8_t *buffer, uint16_t length)
 {
   bool result = false;
   if (initSuccess && xSemaphoreTake(logFileMutex, 0) == pdTRUE) {
@@ -793,7 +810,8 @@ bool usddeckRead(uint32_t offset, uint8_t* buffer, uint16_t length)
   return result;
 }
 
-static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t *buffer)
+{
   bool result = false;
 
   if (memAddr + readLen <= usddeckFileSize()) {
@@ -818,7 +836,7 @@ static void usdWriteData(const void *data, size_t size)
   }
 }
 
-static void usdWriteTask(void* prm)
+static void usdWriteTask(void *prm)
 {
   /* create and start timer for card control timing */
   timer = xTimerCreate("usdTimer", M2T(SD_DISK_TIMER_PERIOD_MS),
@@ -847,18 +865,18 @@ static void usdWriteTask(void* prm)
       {
         FILINFO fno;
         uint8_t NUL = 0;
-        while(usdLogConfig.filename[NUL] != '\0') {
+        while (usdLogConfig.filename[NUL] != '\0') {
           NUL++;
         }
         while (f_stat(usdLogConfig.filename, &fno) == FR_OK) {
           /* increase file */
-          switch(usdLogConfig.filename[NUL-1]) {
+          switch (usdLogConfig.filename[NUL - 1]) {
             case '9':
-              usdLogConfig.filename[NUL-1] = '0';
-              usdLogConfig.filename[NUL-2]++;
+              usdLogConfig.filename[NUL - 1] = '0';
+              usdLogConfig.filename[NUL - 2]++;
               break;
             default:
-              usdLogConfig.filename[NUL-1]++;
+              usdLogConfig.filename[NUL - 1]++;
           }
         }
       }
@@ -883,7 +901,7 @@ static void usdWriteTask(void* prm)
         usdWriteData(&numEventTypes, sizeof(numEventTypes));
 
         for (int i = 0; i < numEventTypes; ++i) {
-          usdLogEventConfig_t* cfg = &usdLogConfig.eventConfigs[i];
+          usdLogEventConfig_t *cfg = &usdLogConfig.eventConfigs[i];
           const eventtrigger *et = eventtriggerGetById(cfg->eventId);
           uint16_t numVariables = cfg->numVars;
 
@@ -901,34 +919,33 @@ static void usdWriteTask(void* prm)
               usdWriteData(et->payloadDesc[j].name, strlen(et->payloadDesc[j].name));
               usdWriteData("(", 1);
               char typeChar;
-              switch (et->payloadDesc[j].type)
-              {
-              case eventtriggerType_uint8:
-                typeChar = 'B';
-                break;
-              case eventtriggerType_int8:
-                typeChar = 'b';
-                break;
-              case eventtriggerType_uint16:
-                typeChar = 'H';
-                break;
-              case eventtriggerType_int16:
-                typeChar = 'h';
-                break;
-              case eventtriggerType_uint32:
-                typeChar = 'I';
-                break;
-              case eventtriggerType_int32:
-                typeChar = 'i';
-                break;
-              case eventtriggerType_float:
-                typeChar = 'f';
-                break;
-              case eventtrigerType_fp16:
-                typeChar = 'e';
-                break;
-              default:
-                ASSERT(false);
+              switch (et->payloadDesc[j].type) {
+                case eventtriggerType_uint8:
+                  typeChar = 'B';
+                  break;
+                case eventtriggerType_int8:
+                  typeChar = 'b';
+                  break;
+                case eventtriggerType_uint16:
+                  typeChar = 'H';
+                  break;
+                case eventtriggerType_int16:
+                  typeChar = 'h';
+                  break;
+                case eventtriggerType_uint32:
+                  typeChar = 'I';
+                  break;
+                case eventtriggerType_int32:
+                  typeChar = 'i';
+                  break;
+                case eventtriggerType_float:
+                  typeChar = 'f';
+                  break;
+                case eventtrigerType_fp16:
+                  typeChar = 'e';
+                  break;
+                default:
+                  ASSERT(false);
               }
               usdWriteData(&typeChar, 1);
               usdWriteData(")", 2);
@@ -945,29 +962,29 @@ static void usdWriteTask(void* prm)
             usdWriteData("(", 1);
             char typeChar;
             switch (logGetType(varid)) {
-            case LOG_UINT8:
-              typeChar = 'B';
-              break;
-            case LOG_INT8:
-              typeChar = 'b';
-              break;
-            case LOG_UINT16:
-              typeChar = 'H';
-              break;
-            case LOG_INT16:
-              typeChar = 'h';
-              break;
-            case LOG_UINT32:
-              typeChar = 'I';
-              break;
-            case LOG_INT32:
-              typeChar = 'i';
-              break;
-            case LOG_FLOAT:
-              typeChar = 'f';
-              break;
-            default:
-              ASSERT(false);
+              case LOG_UINT8:
+                typeChar = 'B';
+                break;
+              case LOG_INT8:
+                typeChar = 'b';
+                break;
+              case LOG_UINT16:
+                typeChar = 'H';
+                break;
+              case LOG_INT16:
+                typeChar = 'h';
+                break;
+              case LOG_UINT32:
+                typeChar = 'I';
+                break;
+              case LOG_INT32:
+                typeChar = 'i';
+                break;
+              case LOG_FLOAT:
+                typeChar = 'f';
+                break;
+              default:
+                ASSERT(false);
             }
             usdWriteData(&typeChar, 1);
             usdWriteData(")", 2);
@@ -980,7 +997,7 @@ static void usdWriteTask(void* prm)
 
           // check if we have anything to write
           xSemaphoreTake(logBufferMutex, portMAX_DELAY);
-          const uint8_t* buf;
+          const uint8_t *buf;
           uint16_t size;
           bool hasData = ringBuffer_pop_start(&logBuffer, &buf, &size);
           xSemaphoreGive(logBufferMutex);
@@ -1023,10 +1040,10 @@ static void usdWriteTask(void* prm)
         }
 
         DEBUG_PRINT("Wrote %ld B to: %s (%ld of %ld events)\n",
-          lastFileSize,
-          usdLogConfig.filename,
-          usdLogStats.eventsWritten,
-          usdLogStats.eventsRequested);
+                    lastFileSize,
+                    usdLogConfig.filename,
+                    usdLogStats.eventsWritten,
+                    usdLogStats.eventsRequested);
 
         xSemaphoreGive(logFileMutex);
       } else {
@@ -1053,14 +1070,13 @@ static bool usdTest()
   }
 #ifdef USD_RUN_DISKIO_FUNCTION_TESTS
   int result;
-  extern int test_diskio (BYTE pdrv, UINT ncyc, DWORD* buff, UINT sz_buff);
+  extern int test_diskio(BYTE pdrv, UINT ncyc, DWORD * buff, UINT sz_buff);
 
-  result = test_diskio(0, 1, (DWORD*)&workBuff, sizeof(workBuff));
+  result = test_diskio(0, 1, (DWORD *)&workBuff, sizeof(workBuff));
   if (result) {
     DEBUG_PRINT("(result=%d)\nFatFs diskio functions test [FAIL].\n", result);
     isInit = false;
-  }
-  else {
+  } else {
     DEBUG_PRINT("FatFs diskio functions test [OK].\n");
   }
 #endif
@@ -1074,13 +1090,13 @@ static void usdTimer(xTimerHandle timer)
 }
 
 static const DeckDriver usd_deck = {
-    .vid = 0xBC,
-    .pid = 0x08,
-    .name = "bcUSD",
-    .usedGpio = DECK_USING_IO_4,
-    .usedPeriph = DECK_USING_SPI,
-    .init = usdInit,
-    .test = usdTest,
+  .vid = 0xBC,
+  .pid = 0x08,
+  .name = "bcUSD",
+  .usedGpio = DECK_USING_IO_4,
+  .usedPeriph = DECK_USING_SPI,
+  .init = usdInit,
+  .test = usdTest,
 };
 
 DECK_DRIVER(usd_deck);

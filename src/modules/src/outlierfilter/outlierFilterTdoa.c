@@ -29,7 +29,7 @@
 #include "stabilizer_types.h"
 
 
-static bool isDistanceDiffSmallerThanDistanceBetweenAnchors(const tdoaMeasurement_t* tdoa);
+static bool isDistanceDiffSmallerThanDistanceBetweenAnchors(const tdoaMeasurement_t *tdoa);
 
 // This filter uses an "integrator" to track the ratio of good/samples. Samples with an errors (measurement - predicted)
 // larger than the acceptance level will be discarded. The acceptance level is based on the integrator, with a
@@ -50,13 +50,16 @@ static const float INTEGRATOR_FORCE_OPEN_LEVEL = INTEGRATOR_SIZE * 0.1f;
 static const float INTEGRATOR_RESUME_ACTION_LEVEL = INTEGRATOR_SIZE * 0.9f;
 
 
-void outlierFilterTdoaReset(OutlierFilterTdoaState_t* this) {
+void outlierFilterTdoaReset(OutlierFilterTdoaState_t *this)
+{
   this->integrator = 0.0f;
   this->isFilterOpen = true;
   this->latestUpdateMs = 0;
 }
 
-bool outlierFilterTdoaValidateIntegrator(OutlierFilterTdoaState_t* this, const tdoaMeasurement_t* tdoa, const float error, const uint32_t nowMs) {
+bool outlierFilterTdoaValidateIntegrator(OutlierFilterTdoaState_t *this,
+    const tdoaMeasurement_t *tdoa, const float error, const uint32_t nowMs)
+{
   // The accepted error when the filter is closed
   const float acceptedDistance = tdoa->stdDev * 2.5f;
 
@@ -104,13 +107,18 @@ bool outlierFilterTdoaValidateIntegrator(OutlierFilterTdoaState_t* this, const t
   return sampleIsGood;
 }
 
-static float sq(float a) {return a * a;}
+static float sq(float a)
+{
+  return a * a;
+}
 
-static float distanceSq(const point_t* a, const point_t* b) {
+static float distanceSq(const point_t *a, const point_t *b)
+{
   return sq(a->x - b->x) + sq(a->y - b->y) + sq(a->z - b->z);
 }
 
-static bool isDistanceDiffSmallerThanDistanceBetweenAnchors(const tdoaMeasurement_t* tdoa) {
+static bool isDistanceDiffSmallerThanDistanceBetweenAnchors(const tdoaMeasurement_t *tdoa)
+{
   float anchorDistanceSq = distanceSq(&tdoa->anchorPositions[0], &tdoa->anchorPositions[1]);
   float distanceDiffSq = sq(tdoa->distanceDiff);
   return (distanceDiffSq < anchorDistanceSq);

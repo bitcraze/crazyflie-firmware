@@ -26,15 +26,15 @@
 #include "mm_pose.h"
 #include "math3d.h"
 
-void kalmanCoreUpdateWithPose(kalmanCoreData_t* this, poseMeasurement_t *pose)
+void kalmanCoreUpdateWithPose(kalmanCoreData_t *this, poseMeasurement_t *pose)
 {
   // a direct measurement of states x, y, and z, and orientation
   // do a scalar update for each state, since this should be faster than updating all together
-  for (int i=0; i<3; i++) {
+  for (int i = 0; i < 3; i++) {
     float h[KC_STATE_DIM] = {0};
     arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
-    h[KC_STATE_X+i] = 1;
-    kalmanCoreScalarUpdate(this, &H, pose->pos[i] - this->S[KC_STATE_X+i], pose->stdDevPos);
+    h[KC_STATE_X + i] = 1;
+    kalmanCoreScalarUpdate(this, &H, pose->pos[i] - this->S[KC_STATE_X + i], pose->stdDevPos);
   }
 
   // compute orientation error

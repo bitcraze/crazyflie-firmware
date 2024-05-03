@@ -48,39 +48,45 @@ typedef struct lighthouseTransmitState {
 } lighthouseTransmitState;
 
 static lighthouseTransmitState gState = {
-					 .enabled = 0,
-	 .channel = -1,
-	 .txPacket = {
-		      .port = 6,
-		      .channel = 3
-         }
+  .enabled = 0,
+  .channel = -1,
+  .txPacket = {
+    .port = 6,
+    .channel = 3
+  }
 };
 
-static void lighthouseResetCurrent(lighthouseTransmitState* state) {
+static void lighthouseResetCurrent(lighthouseTransmitState *state)
+{
   state->channel = -1;
   state->sensor_flags = 0;
   state->offset = 0;
   state->ref_timestamp = 0;
 }
 
-static void lighthouseTransmit(lighthouseTransmitState* state) {
-  if(state->txPacket.size) {
+static void lighthouseTransmit(lighthouseTransmitState *state)
+{
+  if (state->txPacket.size) {
     crtpSendPacket(&state->txPacket);
     state->txPacket.size = 0;
     state->queuedPackets = 0;
   }
 }
 
-static inline int32_t timediff_24bit(int32_t first_ts, int32_t second_ts) {
+static inline int32_t timediff_24bit(int32_t first_ts, int32_t second_ts)
+{
   int32_t diff = second_ts - first_ts;
-  if(abs(diff) > 1 << 23) {
+  if (abs(diff) > 1 << 23) {
     diff -= 1 << 24;
   }
   return diff;
 }
 
-static void lighthouseQueue(lighthouseTransmitState* state) {
-  if(state->channel == -1) return;
+static void lighthouseQueue(lighthouseTransmitState *state)
+{
+  if (state->channel == -1) {
+    return;
+  }
 
   // Basic strategy:
   // 3     Bytes: 0bCCCC 00OY 0xYY 0xYY - Channel, OOTX bit, 17 bits of sync data
@@ -88,7 +94,7 @@ static void lighthouseQueue(lighthouseTransmitState* state) {
   // 2 * 4 Bytes: 0xOO OO - 2 Byte offset from timestamp per sensor
   // 14 bytes; so we do two at a time
   int offset = state->queuedPackets * 14;
-  uint8_t* data = &state->txPacket.data[offset];
+  uint8_t *data = &state->txPacket.data[offset];
   uint32_t ref_timestamp = state->ref_timestamp;
 
   uint32_t channel_ootx_sync =
@@ -97,20 +103,20 @@ static void lighthouseQueue(lighthouseTransmitState* state) {
     (state->offset / 4);
 
   memcpy(data, &channel_ootx_sync, 3);
-  memcpy(&data[3], ((uint8_t*)&state->ref_timestamp), 3);
+  memcpy(&data[3], ((uint8_t *)&state->ref_timestamp), 3);
 
-  if(state->offset > state->ref_timestamp) {
+  if (state->offset > state->ref_timestamp) {
     state->offset -= (1 << 24);
   }
 
-  for(int i = 0;i < 4;i++) {
+  for (int i = 0; i < 4; i++) {
     int16_t delta16 = 0x7FFF;
-    if(state->sensor_flags & (1 << i)) {
+    if (state->sensor_flags & (1 << i)) {
       int32_t ts = state->sensor_timestamps[i];
 
       int32_t delta = ts - ref_timestamp;
-      if(abs(delta) < 0x7FFF) {
-	delta16 = delta;
+      if (abs(delta) < 0x7FFF) {
+        delta16 = delta;
       }
     }
     memcpy(&data[6 + 2 * i], &delta16, 2);
@@ -118,31 +124,35 @@ static void lighthouseQueue(lighthouseTransmitState* state) {
 
   state->txPacket.size += 14;
   lighthouseResetCurrent(state);
-  if(state->queuedPackets) {
+  if (state->queuedPackets) {
     lighthouseTransmit(state);
   } else {
     state->queuedPackets = 1;
   }
 }
 
-void lighthouseTransmitProcessFrame(const lighthouseUartFrame_t* frame) {
-  lighthouseTransmitState* state = &gState;
-  if(!state->enabled) {
+void lighthouseTransmitProcessFrame(const lighthouseUartFrame_t *frame)
+{
+  lighthouseTransmitState *state = &gState;
+  if (!state->enabled) {
     return;
   }
 
   int32_t timediff = 0;
-  if(frame->data.timestamp > state->ref_timestamp) timediff = frame->data.timestamp - state->last_timestamp;
-  else if(frame->data.timestamp > state->ref_timestamp) timediff = state->last_timestamp - frame->data.timestamp;
+  if (frame->data.timestamp > state->ref_timestamp) {
+    timediff = frame->data.timestamp - state->last_timestamp;
+  } else if (frame->data.timestamp > state->ref_timestamp) {
+    timediff = state->last_timestamp - frame->data.timestamp;
+  }
   state->last_timestamp = frame->data.timestamp;
 
-  if(state->channel != -1 && timediff > 0xFFFF) {
+  if (state->channel != -1 && timediff > 0xFFFF) {
     lighthouseQueue(state);
   }
 
   uint32_t ts_mid = frame->data.timestamp + (frame->data.width / 2);
-  if(frame->data.channelFound) {
-    if(state->channel == -1) {
+  if (frame->data.channelFound) {
+    if (state->channel == -1) {
       state->channel = frame->data.channel;
       state->slowBit = frame->data.slowBit;
       state->ref_timestamp = frame->data.timestamp;
@@ -153,26 +163,27 @@ void lighthouseTransmitProcessFrame(const lighthouseUartFrame_t* frame) {
     }
   }
 
-  if(frame->data.offset) {
+  if (frame->data.offset) {
     state->offset = frame->data.offset;
     state->ref_timestamp = frame->data.timestamp;
   }
 
   state->sensor_timestamps[frame->data.sensor] = ts_mid;
   state->sensor_flags |= 1 << frame->data.sensor;
-  if(state->sensor_flags == 0xf) {
+  if (state->sensor_flags == 0xf) {
     lighthouseQueue(state);
   }
 
 }
-void lighthouseTransmitProcessTimeout() {
-  lighthouseTransmitState* state = &gState;
-  if(!state->enabled) {
+void lighthouseTransmitProcessTimeout()
+{
+  lighthouseTransmitState *state = &gState;
+  if (!state->enabled) {
     return;
   }
   lighthouseQueue(state);
   lighthouseTransmit(state);
 }
 PARAM_GROUP_START(lighthouse)
-  PARAM_ADD(PARAM_UINT8, enLhRawStream, &gState.enabled)
+PARAM_ADD(PARAM_UINT8, enLhRawStream, &gState.enabled)
 PARAM_GROUP_STOP(lighthouse)

@@ -57,9 +57,9 @@
 typedef struct __attribute__((packed)) timing {
   uint8_t duration;       // How long this color should be show in parts of 1/25s. So 25 will show the color 1s, before going to the next color.
   uint8_t color[2];       // What color should be shown in RGB565 format.
-  unsigned leds:4;        // What led should be show, 0 equals all leds.
-  bool fade:1;            // Fade from previous colour to this colour during the full duration.
-  unsigned rotate:3;      // Speed of the rotation, number of seconds per revolution
+  unsigned leds: 4;       // What led should be show, 0 equals all leds.
+  bool fade: 1;           // Fade from previous colour to this colour during the full duration.
+  unsigned rotate: 3;     // Speed of the rotation, number of seconds per revolution
 } ledtiming;
 
 typedef struct timings {
@@ -73,9 +73,13 @@ static ledtimings ledringtimingsmem;
 static bool isInit = false;
 
 // Memory handler for ledringmem
-static uint32_t handleLedringmemGetSize(void) { return sizeof(ledringmem); }
-static bool handleLedringmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
-static bool handleLedringmemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
+static uint32_t handleLedringmemGetSize(void)
+{
+  return sizeof(ledringmem);
+}
+static bool handleLedringmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t *buffer);
+static bool handleLedringmemWrite(const uint32_t memAddr, const uint8_t writeLen,
+                                  const uint8_t *buffer);
 static const MemoryHandlerDef_t ledringmemDef = {
   .type = MEM_TYPE_LED12,
   .getSize = handleLedringmemGetSize,
@@ -84,9 +88,13 @@ static const MemoryHandlerDef_t ledringmemDef = {
 };
 
 // Memory handler for timingmem
-static uint32_t handleTimingmemGetSize(void) { return sizeof(ledringtimingsmem); }
-static bool handleTimingmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
-static bool handleTimingmemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
+static uint32_t handleTimingmemGetSize(void)
+{
+  return sizeof(ledringtimingsmem);
+}
+static bool handleTimingmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t *buffer);
+static bool handleTimingmemWrite(const uint32_t memAddr, const uint8_t writeLen,
+                                 const uint8_t *buffer);
 static const MemoryHandlerDef_t timingmemDef = {
   .type = MEM_TYPE_LEDMEM,
   .getSize = handleTimingmemGetSize,
@@ -161,9 +169,8 @@ static void blackEffect(uint8_t buffer[][3], bool reset)
 {
   int i;
 
-  if (reset)
-  {
-    for (i=0; i<CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
+  if (reset) {
+    for (i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
       buffer[i][0] = 0;
       buffer[i][1] = 0;
       buffer[i][2] = 0;
@@ -174,14 +181,14 @@ static void blackEffect(uint8_t buffer[][3], bool reset)
 /**************** White spin ***************/
 #if CONFIG_DECK_LEDRING_NBR_LEDS > 12
 static const uint8_t whiteRing[CONFIG_DECK_LEDRING_NBR_LEDS][3] = {
-  {32, 32, 32}, {8,8,8}, {2,2,2},
+  {32, 32, 32}, {8, 8, 8}, {2, 2, 2},
   BLACK, BLACK, BLACK,
   BLACK, BLACK, BLACK,
   BLACK, BLACK, BLACK,
 };
 #else
 static const uint8_t whiteRing[][3] = {
-  {32, 32, 32}, {8,8,8}, {2,2,2},
+  {32, 32, 32}, {8, 8, 8}, {2, 2, 2},
   BLACK, BLACK, BLACK,
   BLACK, BLACK, BLACK,
   BLACK, BLACK, BLACK,
@@ -190,14 +197,14 @@ static const uint8_t whiteRing[][3] = {
 
 #if CONFIG_DECK_LEDRING_NBR_LEDS > 12
 static const uint8_t blueRing[CONFIG_DECK_LEDRING_NBR_LEDS][3] = {
-  {64, 64, 255}, {32,32,64}, {8,8,16},
+  {64, 64, 255}, {32, 32, 64}, {8, 8, 16},
   BLACK, BLACK, BLACK,
   BLACK, BLACK, BLACK,
   BLACK, BLACK, BLACK,
 };
 #else
 static const uint8_t blueRing[][3] = {
-  {64, 64, 255}, {32,32,64}, {8,8,16},
+  {64, 64, 255}, {32, 32, 64}, {8, 8, 16},
   BLACK, BLACK, BLACK,
   BLACK, BLACK, BLACK,
   BLACK, BLACK, BLACK,
@@ -241,36 +248,39 @@ static void whiteSpinEffect(uint8_t buffer[][3], bool reset)
   int i;
   uint8_t temp[3];
 
-  if (reset)
-  {
-    for (i=0; i<CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
+  if (reset) {
+    for (i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
       COPY_COLOR(buffer[i], whiteRing[i]);
     }
   }
 
   COPY_COLOR(temp, buffer[0]);
-  for (i=0; i<(CONFIG_DECK_LEDRING_NBR_LEDS-1); i++) {
-    COPY_COLOR(buffer[i], buffer[i+1]);
+  for (i = 0; i < (CONFIG_DECK_LEDRING_NBR_LEDS - 1); i++) {
+    COPY_COLOR(buffer[i], buffer[i + 1]);
   }
-  COPY_COLOR(buffer[(CONFIG_DECK_LEDRING_NBR_LEDS-1)], temp);
+  COPY_COLOR(buffer[(CONFIG_DECK_LEDRING_NBR_LEDS - 1)], temp);
 }
 
-static uint8_t solidRed=20, solidGreen=20, solidBlue=20;
+static uint8_t solidRed = 20, solidGreen = 20, solidBlue = 20;
 static void solidColorEffect(uint8_t buffer[][3], bool reset)
 {
   int i;
-  static float brightness=0;
+  static float brightness = 0;
 
-  if (reset) brightness = 0;
+  if (reset) {
+    brightness = 0;
+  }
 
-  if (brightness<1) brightness += 0.05f;
-  else brightness = 1;
+  if (brightness < 1) {
+    brightness += 0.05f;
+  } else {
+    brightness = 1;
+  }
 
-  for (i=0; i<CONFIG_DECK_LEDRING_NBR_LEDS; i++)
-  {
-    buffer[i][0] = solidRed*brightness;
-    buffer[i][1] = solidGreen*brightness;
-    buffer[i][2] = solidBlue*brightness;
+  for (i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
+    buffer[i][0] = solidRed * brightness;
+    buffer[i][1] = solidGreen * brightness;
+    buffer[i][2] = solidBlue * brightness;
   }
 }
 
@@ -278,24 +288,22 @@ static void virtualMemEffect(uint8_t buffer[][3], bool reset)
 {
   int i;
 
-  if (reset)
-  {
-    for (i=0; i<CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
+  if (reset) {
+    for (i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
       COPY_COLOR(buffer[i], part_black);
     }
   }
 
-  for (i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++)
-  {
+  for (i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
     uint8_t R5, G6, B5;
     uint8_t (*led)[2] = (uint8_t (*)[2])ledringmem;
     // Convert from RGB565 to RGB888
     R5 = led[i][0] >> 3;
     G6 = ((led[i][0] & 0x07) << 3) | (led[i][1] >> 5);
     B5 = led[i][1] & 0x1F;
-    buffer[i][0] = ((uint16_t)R5 * 527 + 23 ) >> 6;
-    buffer[i][1] = ((uint16_t)G6 * 259 + 33 ) >> 6;
-    buffer[i][2] = ((uint16_t)B5 * 527 + 23 ) >> 6;
+    buffer[i][0] = ((uint16_t)R5 * 527 + 23) >> 6;
+    buffer[i][1] = ((uint16_t)G6 * 259 + 33) >> 6;
+    buffer[i][2] = ((uint16_t)B5 * 527 + 23) >> 6;
   }
 }
 
@@ -303,29 +311,25 @@ static void boatEffect(uint8_t buffer[][3], bool reset)
 {
   int i;
 
-  uint8_t reds[] = {1,2,3,4,5};
-  uint8_t greens[] = {7,8,9,10,11};
+  uint8_t reds[] = {1, 2, 3, 4, 5};
+  uint8_t greens[] = {7, 8, 9, 10, 11};
   uint8_t whites[] = {0};
   uint8_t blacks[] = {6};
 
 
-  for (i=0; i<sizeof(reds); i++)
-  {
+  for (i = 0; i < sizeof(reds); i++) {
     COPY_COLOR(buffer[reds[i]], red);
   }
 
-  for (i=0; i<sizeof(greens); i++)
-  {
+  for (i = 0; i < sizeof(greens); i++) {
     COPY_COLOR(buffer[greens[i]], green);
   }
 
-  for (i=0; i<sizeof(whites); i++)
-  {
+  for (i = 0; i < sizeof(whites); i++) {
     COPY_COLOR(buffer[whites[i]], white);
   }
 
-  for (i=0; i<sizeof(blacks); i++)
-  {
+  for (i = 0; i < sizeof(blacks); i++) {
     COPY_COLOR(buffer[blacks[i]], part_black);
   }
 
@@ -336,17 +340,17 @@ static void boatEffect(uint8_t buffer[][3], bool reset)
 
 #if CONFIG_DECK_LEDRING_NBR_LEDS > 12
 static const uint8_t colorRing[CONFIG_DECK_LEDRING_NBR_LEDS][3] = {
-  {0,0,32}, {0,0,16}, {0,0,8},
-  {0,0,4}, {16,16,16}, {8,8,8},
-  {4,4,4}, {32,0,0},{16,0,0},
-  {8,0,0}, {4,0,0}, {2,0,0},
+  {0, 0, 32}, {0, 0, 16}, {0, 0, 8},
+  {0, 0, 4}, {16, 16, 16}, {8, 8, 8},
+  {4, 4, 4}, {32, 0, 0}, {16, 0, 0},
+  {8, 0, 0}, {4, 0, 0}, {2, 0, 0},
 };
 #else
 static const uint8_t colorRing[][3] = {
-  {0,0,32}, {0,0,16}, {0,0,8},
-  {0,0,4}, {16,16,16}, {8,8,8},
-  {4,4,4},{32,0,0},{16,0,0},
-  {8,0,0}, {4,0,0}, {2,0,0},
+  {0, 0, 32}, {0, 0, 16}, {0, 0, 8},
+  {0, 0, 4}, {16, 16, 16}, {8, 8, 8},
+  {4, 4, 4}, {32, 0, 0}, {16, 0, 0},
+  {8, 0, 0}, {4, 0, 0}, {2, 0, 0},
 };
 #endif
 
@@ -355,18 +359,17 @@ static void colorSpinEffect(uint8_t buffer[][3], bool reset)
   int i;
   uint8_t temp[3];
 
-  if (reset)
-  {
-    for (i=0; i<CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
+  if (reset) {
+    for (i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
       COPY_COLOR(buffer[i], colorRing[i]);
     }
   }
 
   COPY_COLOR(temp, buffer[0]);
-  for (i=0; i<(CONFIG_DECK_LEDRING_NBR_LEDS-1); i++) {
-    COPY_COLOR(buffer[i], buffer[i+1]);
+  for (i = 0; i < (CONFIG_DECK_LEDRING_NBR_LEDS - 1); i++) {
+    COPY_COLOR(buffer[i], buffer[i + 1]);
   }
-  COPY_COLOR(buffer[(CONFIG_DECK_LEDRING_NBR_LEDS-1)], temp);
+  COPY_COLOR(buffer[(CONFIG_DECK_LEDRING_NBR_LEDS - 1)], temp);
 }
 
 static void spinEffect2(uint8_t buffer[][3], bool reset)
@@ -374,35 +377,36 @@ static void spinEffect2(uint8_t buffer[][3], bool reset)
   int i;
   uint8_t temp[3];
 
-  if (reset)
-  {
-    for (i=0; i<CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
-      COPY_COLOR(buffer[(CONFIG_DECK_LEDRING_NBR_LEDS-i)%CONFIG_DECK_LEDRING_NBR_LEDS], blueRing[i]);
+  if (reset) {
+    for (i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
+      COPY_COLOR(buffer[(CONFIG_DECK_LEDRING_NBR_LEDS - i) % CONFIG_DECK_LEDRING_NBR_LEDS], blueRing[i]);
     }
   }
 
-  COPY_COLOR(temp, buffer[(CONFIG_DECK_LEDRING_NBR_LEDS-1)]);
-  for (i=(CONFIG_DECK_LEDRING_NBR_LEDS-1); i>0; i--) {
-    COPY_COLOR(buffer[i], buffer[i-1]);
+  COPY_COLOR(temp, buffer[(CONFIG_DECK_LEDRING_NBR_LEDS - 1)]);
+  for (i = (CONFIG_DECK_LEDRING_NBR_LEDS - 1); i > 0; i--) {
+    COPY_COLOR(buffer[i], buffer[i - 1]);
   }
   COPY_COLOR(buffer[0], temp);
 }
 
-static void doubleSpinEffect(uint8_t buffer[][3], bool reset) {
+static void doubleSpinEffect(uint8_t buffer[][3], bool reset)
+{
   static uint8_t sub1[CONFIG_DECK_LEDRING_NBR_LEDS][3];
   static uint8_t sub2[CONFIG_DECK_LEDRING_NBR_LEDS][3];
   int i;
   static int step;
 
-  if (reset) step = 0;
+  if (reset) {
+    step = 0;
+  }
 
   whiteSpinEffect(sub1, reset);
   spinEffect2(sub2, reset);
   //if ((step%3)) spinEffect2(sub2, false);
   //if (reset) spinEffect2(sub2, true);
 
-  for (i=0; i<CONFIG_DECK_LEDRING_NBR_LEDS; i++)
-  {
+  for (i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
     ADD_COLOR(buffer[i], sub1[i], sub2[i]);
   }
 
@@ -413,36 +417,35 @@ static void doubleSpinEffect(uint8_t buffer[][3], bool reset) {
 
 static void tiltEffect(uint8_t buffer[][3], bool reset)
 {
-  static int pitchid, rollid, thrust=-1;
+  static int pitchid, rollid, thrust = -1;
 
   // 2014-12-28 chad: Reset LEDs to off to avoid color artifacts
   // when switching from other effects.
-  if (reset)
-    {
-        int i;
-        for (i=0; i<CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
-            buffer[i][0] = 0;
-            buffer[i][1] = 0;
-            buffer[i][2] = 0;
-        }
+  if (reset) {
+    int i;
+    for (i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
+      buffer[i][0] = 0;
+      buffer[i][1] = 0;
+      buffer[i][2] = 0;
     }
+  }
 
 
-  if (thrust<0) {
+  if (thrust < 0) {
     //Init
     pitchid = logGetVarId("stabilizer", "pitch");
     rollid = logGetVarId("stabilizer", "roll");
     thrust = logGetVarId("stabilizer", "thrust");
   } else {
     const int led_middle = 10;
-    float pitch = -1*logGetFloat(pitchid);
-    float roll  = -1*logGetFloat(rollid);
+    float pitch = -1 * logGetFloat(pitchid);
+    float roll  = -1 * logGetFloat(rollid);
 
-    pitch = (pitch>20)?20:(pitch<-20)?-20:pitch;
-    roll = (roll>20)?20:(roll<-20)?-20:roll;
+    pitch = (pitch > 20) ? 20 : (pitch < -20) ? -20 : pitch;
+    roll = (roll > 20) ? 20 : (roll < -20) ? -20 : roll;
 
-    pitch=SIGN(pitch)*pitch*pitch;
-    roll*=SIGN(roll)*roll;
+    pitch = SIGN(pitch) * pitch * pitch;
+    roll *= SIGN(roll) * roll;
 
     buffer[11][0] = LIMIT(led_middle + pitch);
     buffer[0][0] = LIMIT(led_middle + pitch);
@@ -488,7 +491,8 @@ static void gravityLight(uint8_t buffer[][3], bool reset)
   gravityLightRender(buffer, led_index, intensity);
 }
 
-static float gravityLightCalculateAngle(float pitch, float roll) {
+static float gravityLightCalculateAngle(float pitch, float roll)
+{
   float angle = 0.0;
 
   if (roll != 0) {
@@ -502,19 +506,20 @@ static float gravityLightCalculateAngle(float pitch, float roll) {
   return angle;
 }
 
-static void gravityLightRender(uint8_t buffer[][3], float led_index, int intensity) {
+static void gravityLightRender(uint8_t buffer[][3], float led_index, int intensity)
+{
   float width = 5;
   float height = intensity;
 
   int i;
   for (i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
-	float distance = fabsf(led_index - i);
-	if (distance > CONFIG_DECK_LEDRING_NBR_LEDS / 2) {
-		distance = CONFIG_DECK_LEDRING_NBR_LEDS - distance;
-	}
+    float distance = fabsf(led_index - i);
+    if (distance > CONFIG_DECK_LEDRING_NBR_LEDS / 2) {
+      distance = CONFIG_DECK_LEDRING_NBR_LEDS - distance;
+    }
 
-	int col = height - distance * (height / (width / 2));
-	SET_WHITE(buffer[i], LIMIT(col));
+    int col = height - distance * (height / (width / 2));
+    SET_WHITE(buffer[i], LIMIT(col));
   }
 }
 
@@ -526,27 +531,24 @@ static void gravityLightRender(uint8_t buffer[][3], float led_index, int intensi
 static void brightnessEffect(uint8_t buffer[][3], bool reset)
 {
 
-  static int gyroYid, gyroZid, gyroXid =- 1;
+  static int gyroYid, gyroZid, gyroXid = - 1;
   static uint8_t brightness = 0;
 
-  if (gyroXid < 0)
-  {
+  if (gyroXid < 0) {
     //Init
     gyroXid = logGetVarId("gyro", "x");
     gyroYid = logGetVarId("gyro", "y");
     gyroZid = logGetVarId("gyro", "z");
-  }
-  else
-  {
+  } else {
     int i;
     int gyroX = (int)logGetFloat(gyroXid);
     int gyroY = (int)logGetFloat(gyroYid);
     int gyroZ = (int)logGetFloat(gyroZid);
 
     // Adjust to interval
-    gyroX = (gyroX>MAX_RATE) ? MAX_RATE:(gyroX<-MAX_RATE) ? -MAX_RATE:gyroX;
-    gyroY = (gyroY>MAX_RATE) ? MAX_RATE:(gyroY<-MAX_RATE) ? -MAX_RATE:gyroY;
-    gyroZ = (gyroZ>MAX_RATE) ? MAX_RATE:(gyroZ<-MAX_RATE) ? -MAX_RATE:gyroZ;
+    gyroX = (gyroX > MAX_RATE) ? MAX_RATE : (gyroX < -MAX_RATE) ? -MAX_RATE : gyroX;
+    gyroY = (gyroY > MAX_RATE) ? MAX_RATE : (gyroY < -MAX_RATE) ? -MAX_RATE : gyroY;
+    gyroZ = (gyroZ > MAX_RATE) ? MAX_RATE : (gyroZ < -MAX_RATE) ? -MAX_RATE : gyroZ;
 
     gyroX = SIGN(gyroX) * gyroX / 2;
     gyroY = SIGN(gyroY) * gyroY / 2;
@@ -556,8 +558,7 @@ static void brightnessEffect(uint8_t buffer[][3], bool reset)
     gyroY = DEADBAND(gyroY, 5);
     gyroZ = DEADBAND(gyroZ, 5);
 
-    for (i=0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++)
-    {
+    for (i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
       buffer[i][0] = (uint8_t)(LIMIT(gyroZ));
       buffer[i][1] = (uint8_t)(LIMIT(gyroY));
       buffer[i][2] = (uint8_t)(LIMIT(gyroX));
@@ -570,10 +571,11 @@ static void brightnessEffect(uint8_t buffer[][3], bool reset)
 
 static void setHeadlightsOn(bool on)
 {
-  if (on)
+  if (on) {
     GPIO_SetBits(GPIOB, GPIO_Pin_4);
-  else
+  } else {
     GPIO_ResetBits(GPIOB, GPIO_Pin_4);
+  }
 }
 
 
@@ -583,20 +585,24 @@ static uint8_t test_pat[3][3] = {{TEST_INTENTS, 0, 0}, {0, TEST_INTENTS, 0}, {0,
 static uint8_t test_eff_nbr = 0;
 #define TEST_DELAY 4
 static uint8_t test_delay_counter = 0;
-static uint8_t headlight_test_counter =0;
+static uint8_t headlight_test_counter = 0;
 static uint8_t test_front = false;
 static void ledTestEffect(uint8_t buffer[][3], bool reset)
 {
   int i;
-  static float brightness=0;
+  static float brightness = 0;
 
-  if (reset) brightness = 0;
+  if (reset) {
+    brightness = 0;
+  }
 
-  if (brightness<1) brightness += 0.05f;
-  else brightness = 1;
+  if (brightness < 1) {
+    brightness += 0.05f;
+  } else {
+    brightness = 1;
+  }
 
-  for (i=0; i<CONFIG_DECK_LEDRING_NBR_LEDS; i++)
-  {
+  for (i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
     buffer[i][0] = test_pat[test_eff_nbr][0];
     buffer[i][1] = test_pat[test_eff_nbr][1];
     buffer[i][2] = test_pat[test_eff_nbr][2];
@@ -610,7 +616,7 @@ static void ledTestEffect(uint8_t buffer[][3], bool reset)
     test_eff_nbr = (test_eff_nbr + 1) % 3;
   }
 
-  if (headlight_test_counter > (TEST_DELAY*3)) {
+  if (headlight_test_counter > (TEST_DELAY * 3)) {
     headlight_test_counter = 0;
     test_front = !test_front;
     headlightEnable = test_front;
@@ -647,26 +653,24 @@ static void siren(uint8_t buffer[][3], bool reset)
   int i;
   static int tic = 0;
 
-  if (reset)
-  {
-    for (i=0; i<CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
+  if (reset) {
+    for (i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
       COPY_COLOR(buffer[i], part_black);
     }
   }
 
-  if ((tic < 10) && (tic & 1))
-  {
-    for (i=0; i<CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
+  if ((tic < 10) && (tic & 1)) {
+    for (i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
       COPY_COLOR(buffer[i], blue);
     }
-  }
-  else
-  {
-    for (i=0; i<CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
+  } else {
+    for (i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
       COPY_COLOR(buffer[i], part_black);
     }
   }
-  if (++tic >= 20) tic = 0;
+  if (++tic >= 20) {
+    tic = 0;
+  }
 }
 
 /**
@@ -719,16 +723,14 @@ static void fadeColorEffect(uint8_t buffer[][3], bool reset)
     previousTargetColor = fadeColor;
   }
 
-  if (currentFadeTime > 0)
-  {
+  if (currentFadeTime > 0) {
     float alpha = currentFadeTime / cachedFadeTime;
 
-    int red = (alpha * currentRed) + ((1-alpha) * targetRed);
+    int red = (alpha * currentRed) + ((1 - alpha) * targetRed);
     int green = (alpha * currentGreen) + ((1 - alpha) * targetGreen);
     int blue = (alpha * currentBlue) + ((1 - alpha) * targetBlue);
 
-    for (int i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++)
-    {
+    for (int i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
       buffer[i][0] = red;
       buffer[i][1] = green;
       buffer[i][2] = blue;
@@ -741,8 +743,7 @@ static void fadeColorEffect(uint8_t buffer[][3], bool reset)
     currentGreen = (fadeColor >> 8) & 0x0FF;
     currentBlue = (fadeColor >> 0) & 0x0FF;
 
-    for (int i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++)
-    {
+    for (int i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
       buffer[i][0] = currentRed;
       buffer[i][1] = currentGreen;
       buffer[i][2] = currentBlue;
@@ -795,7 +796,8 @@ static void lighthouseEffect(uint8_t buffer[][3], bool reset)
 
   for (int i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
     buffer[i][0] = LIMIT(LINSCALE(0.0f, 255.0f, 100.0f, 0.0f, validAngles)); // Red (small validAngles)
-    buffer[i][1] = LIMIT(LINSCALE(0.0f, 255.0f, 0.0f, 100.0f, validAngles)); // Green (large validAngles)
+    buffer[i][1] = LIMIT(LINSCALE(0.0f, 255.0f, 0.0f, 100.0f,
+                                  validAngles)); // Green (large validAngles)
     buffer[i][2] = 0;
   }
 #endif
@@ -837,8 +839,10 @@ static void locSrvStatus(uint8_t buffer[][3], bool reset)
       buffer[i][0] = 0;
       buffer[i][1] = 0;
     } else {
-      buffer[i][0] = LIMIT(LINSCALE(0, 30, 0, 100, time_since_last_update)); // Red (large time_since_last_update)
-      buffer[i][1] = LIMIT(LINSCALE(0, 30, 100, 0, time_since_last_update)); // Green (small time_since_last_update)
+      buffer[i][0] = LIMIT(LINSCALE(0, 30, 0, 100,
+                                    time_since_last_update)); // Red (large time_since_last_update)
+      buffer[i][1] = LIMIT(LINSCALE(0, 30, 100, 0,
+                                    time_since_last_update)); // Green (small time_since_last_update)
     }
     buffer[i][2] = 0;
   }
@@ -876,8 +880,9 @@ static void timeMemEffect(uint8_t outputBuffer[][3], bool reset)
   ledtiming current = ledringtimingsmem.timings[timeEffectI];
 
   // Stop when completed
-  if (isTimeMemDone(current))
+  if (isTimeMemDone(current)) {
     return;
+  }
 
   // Get the proper index
   uint64_t time = usecTimestamp() / 1000;
@@ -895,14 +900,16 @@ static void timeMemEffect(uint8_t outputBuffer[][3], bool reset)
     }
 
     // Goto next effect
-    if(current.rotate)
+    if (current.rotate) {
       timeEffectRotation += 1.0f * current.duration * LEDRING_TIME_MEM_SEC / (current.rotate * 1000);
+    }
     timeEffectTime += LEDRING_TIME_MEM_SEC * current.duration;
     timeEffectI++;
     current = ledringtimingsmem.timings[timeEffectI];
 
-    if (isTimeMemDone(current))
+    if (isTimeMemDone(current)) {
       return;
+    }
   }
 
   // Apply the current effect
@@ -917,13 +924,14 @@ static void timeMemEffect(uint8_t outputBuffer[][3], bool reset)
     float percent = 1.0 * (time - timeEffectTime) / (current.duration * LEDRING_TIME_MEM_SEC);
     if (current.leds == 0)
       for (int i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++)
-        for (int j = 0; j < 3; j++)
+        for (int j = 0; j < 3; j++) {
           currentBuffer[i][j] = (1.0f - percent) * timeEffectPrevBuffer[i][j] + percent * color[j];
-    else
-      for (int j = 0; j < 3; j++)
-        currentBuffer[current.leds][j] = (1.0f - percent) * timeEffectPrevBuffer[current.leds][j] + percent * color[j];
-  }
-  else {
+        } else
+      for (int j = 0; j < 3; j++) {
+        currentBuffer[current.leds][j] = (1.0f - percent) * timeEffectPrevBuffer[current.leds][j] + percent
+                                         * color[j];
+      }
+  } else {
     if (current.leds == 0) {
       for (int i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++) {
         COPY_COLOR(currentBuffer[i], color);
@@ -934,7 +942,7 @@ static void timeMemEffect(uint8_t outputBuffer[][3], bool reset)
   }
 
   float rotate = timeEffectRotation;
-  if(current.rotate) {
+  if (current.rotate) {
     rotate += 1.0f * (time - timeEffectTime) / (current.rotate * 1000);
   }
 
@@ -945,16 +953,15 @@ static void timeMemEffect(uint8_t outputBuffer[][3], bool reset)
   // Output current leds
   for (int i = 0; i < CONFIG_DECK_LEDRING_NBR_LEDS; i++)
     for (int j = 0; j < 3; j++)
-      outputBuffer[(i+shift) % CONFIG_DECK_LEDRING_NBR_LEDS][j] =
+      outputBuffer[(i + shift) % CONFIG_DECK_LEDRING_NBR_LEDS][j] =
         percentShift * currentBuffer[i][j] +
-        (1-percentShift) * currentBuffer[(i+1) % CONFIG_DECK_LEDRING_NBR_LEDS][j];
+        (1 - percentShift) * currentBuffer[(i + 1) % CONFIG_DECK_LEDRING_NBR_LEDS][j];
 }
 
 /**************** Effect list ***************/
 
 
-Ledring12Effect effectsFct[] =
-{
+Ledring12Effect effectsFct[] = {
   blackEffect,
   whiteSpinEffect,
   colorSpinEffect,
@@ -986,8 +993,7 @@ static struct {
 
 static void checkLightSignalTrigger(void)
 {
-  if (lightSignal.trigger)
-  {
+  if (lightSignal.trigger) {
     lightSignal.active = 1;
     lightSignal.triggeredAt = xTaskGetTickCount();
     lightSignal.trigger = 0;
@@ -1020,7 +1026,7 @@ static xTimerHandle timer;
 
 
 
-void ledring12Worker(void * data)
+void ledring12Worker(void *data)
 {
   static int current_effect = 0;
   static uint8_t buffer[CONFIG_DECK_LEDRING_NBR_LEDS][3];
@@ -1075,7 +1081,7 @@ static void ledring12Init(DeckInfo *info)
 
   ws2812Init();
 
-  neffect = sizeof(effectsFct)/sizeof(effectsFct[0])-1;
+  neffect = sizeof(effectsFct) / sizeof(effectsFct[0]) - 1;
 
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
@@ -1088,24 +1094,27 @@ static void ledring12Init(DeckInfo *info)
 
   isInit = true;
 
-  timer = xTimerCreate( "ringTimer", M2T(50),
-                                     pdTRUE, NULL, ledring12Timer );
+  timer = xTimerCreate("ringTimer", M2T(50),
+                       pdTRUE, NULL, ledring12Timer);
   xTimerStart(timer, 100);
 }
 
-static bool handleLedringmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+static bool handleLedringmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t *buffer)
+{
   bool result = false;
 
   if (memAddr + readLen <= sizeof(ledringmem)) {
-      if (memcpy(buffer, &(ledringmem[memAddr]), readLen)) {
-          result = true;
-      }
+    if (memcpy(buffer, &(ledringmem[memAddr]), readLen)) {
+      result = true;
+    }
   }
 
   return result;
 }
 
-static bool handleLedringmemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
+static bool handleLedringmemWrite(const uint32_t memAddr, const uint8_t writeLen,
+                                  const uint8_t *buffer)
+{
   bool result = false;
 
   if ((memAddr + writeLen) <= sizeof(ledringmem)) {
@@ -1116,11 +1125,12 @@ static bool handleLedringmemWrite(const uint32_t memAddr, const uint8_t writeLen
   return result;
 }
 
-static bool handleTimingmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+static bool handleTimingmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t *buffer)
+{
   bool result = false;
 
   if (memAddr + readLen <= sizeof(ledringtimingsmem.timings)) {
-    uint8_t* mem = (uint8_t*) &ledringtimingsmem.timings;
+    uint8_t *mem = (uint8_t *) &ledringtimingsmem.timings;
     memcpy(buffer, mem + memAddr, readLen);
     result = true;
   }
@@ -1128,12 +1138,14 @@ static bool handleTimingmemRead(const uint32_t memAddr, const uint8_t readLen, u
   return result;
 }
 
-static bool handleTimingmemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
+static bool handleTimingmemWrite(const uint32_t memAddr, const uint8_t writeLen,
+                                 const uint8_t *buffer)
+{
   bool result = false;
 
   if ((memAddr + writeLen) <= sizeof(ledringtimingsmem.timings)) {
-    uint8_t* mem = (uint8_t*) &ledringtimingsmem.timings;
-    memcpy(mem+memAddr, buffer, writeLen);
+    uint8_t *mem = (uint8_t *) &ledringtimingsmem.timings;
+    memcpy(mem + memAddr, buffer, writeLen);
     result = true;
   }
 

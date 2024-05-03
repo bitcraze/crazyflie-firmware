@@ -56,9 +56,9 @@
 #define COMMANDER_WDT_TIMEOUT_SHUTDOWN   M2T(2000)
 
 #ifndef CONFIG_MOTORS_REQUIRE_ARMING
-  #define AUTO_ARMING 1
+#define AUTO_ARMING 1
 #else
-  #define AUTO_ARMING 0
+#define AUTO_ARMING 0
 #endif
 
 static uint16_t landingTimeoutDuration = LANDING_TIMEOUT_MS;
@@ -95,41 +95,50 @@ static SupervisorMem_t supervisorMem;
 
 const static setpoint_t nullSetpoint;
 
-void infoDump(const SupervisorMem_t* this);
+void infoDump(const SupervisorMem_t *this);
 
-bool supervisorCanFly() {
+bool supervisorCanFly()
+{
   return supervisorMem.canFly;
 }
 
-bool supervisorIsFlying() {
+bool supervisorIsFlying()
+{
   return supervisorMem.isFlying;
 }
 
-bool supervisorIsTumbled() {
+bool supervisorIsTumbled()
+{
   return supervisorMem.isTumbled;
 }
 
-bool supervisorCanArm() {
+bool supervisorCanArm()
+{
   return supervisorStatePreFlChecksPassed == supervisorMem.state;
 }
 
-bool supervisorIsArmed() {
+bool supervisorIsArmed()
+{
   return supervisorMem.isArmingActivated || supervisorMem.deprecatedArmParam;
 }
 
-bool supervisorIsLocked() {
+bool supervisorIsLocked()
+{
   return supervisorStateLocked == supervisorMem.state;
 }
 
-bool supervisorIsCrashed() {
+bool supervisorIsCrashed()
+{
   return supervisorMem.isCrashed;
 }
 
-static void supervisorSetLatestLandingTime(SupervisorMem_t* this, const uint32_t currentTick) {
+static void supervisorSetLatestLandingTime(SupervisorMem_t *this, const uint32_t currentTick)
+{
   this->latestLandingTick = currentTick;
 }
 
-bool supervisorIsLandingTimeout(SupervisorMem_t* this, const uint32_t currentTick) {
+bool supervisorIsLandingTimeout(SupervisorMem_t *this, const uint32_t currentTick)
+{
   if (0 == this->latestLandingTick) {
     return false;
   }
@@ -138,7 +147,8 @@ bool supervisorIsLandingTimeout(SupervisorMem_t* this, const uint32_t currentTic
   return landingTime > M2T(landingTimeoutDuration);
 }
 
-bool supervisorRequestCrashRecovery(const bool doRecovery) {
+bool supervisorRequestCrashRecovery(const bool doRecovery)
+{
 
   if (doRecovery && !supervisorIsCrashed()) {
     return true;
@@ -153,7 +163,8 @@ bool supervisorRequestCrashRecovery(const bool doRecovery) {
   return false;
 }
 
-bool supervisorRequestArming(const bool doArm) {
+bool supervisorRequestArming(const bool doArm)
+{
   if (doArm == supervisorMem.isArmingActivated) {
     return true;
   }
@@ -169,7 +180,8 @@ bool supervisorRequestArming(const bool doArm) {
 //
 // We say we are flying if one or more motors are running over the idle thrust.
 //
-static bool isFlyingCheck(SupervisorMem_t* this, const uint32_t tick) {
+static bool isFlyingCheck(SupervisorMem_t *this, const uint32_t tick)
+{
   bool isThrustOverIdle = false;
   const uint32_t idleThrust = powerDistributionGetIdleThrust();
   for (int i = 0; i < NBR_OF_MOTORS; ++i) {
@@ -202,7 +214,8 @@ static bool isFlyingCheck(SupervisorMem_t* this, const uint32_t tick) {
 // the thrust to the motors, avoiding the Crazyflie from running propellers at
 // significant thrust when accidentally crashing into walls or the ground.
 //
-static bool isTumbledCheck(SupervisorMem_t* this, const sensorData_t *data, const uint32_t tick) {
+static bool isTumbledCheck(SupervisorMem_t *this, const sensorData_t *data, const uint32_t tick)
+{
   const float freeFallThreshold = 0.1;
 
   const float acceptedTiltAccZ = 0.5;  // 60 degrees tilt (when stationary)
@@ -211,14 +224,15 @@ static bool isTumbledCheck(SupervisorMem_t* this, const sensorData_t *data, cons
   const float acceptedUpsideDownAccZ = -0.2;
   const uint32_t maxUpsideDownTime = M2T(100);
 
-  const bool isFreeFalling = (fabsf(data->acc.z) < freeFallThreshold && fabsf(data->acc.y) < freeFallThreshold && fabsf(data->acc.x) < freeFallThreshold);
+  const bool isFreeFalling = (fabsf(data->acc.z) < freeFallThreshold &&
+                              fabsf(data->acc.y) < freeFallThreshold && fabsf(data->acc.x) < freeFallThreshold);
   if (isFreeFalling) {
     // Falling is OK, reset
     this->initialTumbleTick = 0;
   }
 
   const bool isTilted = (data->acc.z < acceptedTiltAccZ);
-  if(isTilted) {  // Will also be true for up side down
+  if (isTilted) { // Will also be true for up side down
     if (0 == this->initialTumbleTick) {
       // Start the clock
       this->initialTumbleTick = tick;
@@ -242,7 +256,8 @@ static bool isTumbledCheck(SupervisorMem_t* this, const sensorData_t *data, cons
   return false;
 }
 
-static bool checkEmergencyStopWatchdog(const uint32_t tick) {
+static bool checkEmergencyStopWatchdog(const uint32_t tick)
+{
   bool isOk = true;
 
   const uint32_t latestNotification = locSrvGetEmergencyStopWatchdogNotificationTick();
@@ -253,7 +268,9 @@ static bool checkEmergencyStopWatchdog(const uint32_t tick) {
   return isOk;
 }
 
-static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t previousState, const uint32_t currentTick) {
+static void postTransitionActions(SupervisorMem_t *this, const supervisorState_t previousState,
+                                  const uint32_t currentTick)
+{
   const supervisorState_t newState = this->state;
 
   if (newState == supervisorStateReadyToFly) {
@@ -263,7 +280,7 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
   if (newState == supervisorStateLanded) {
     supervisorSetLatestLandingTime(this, currentTick);
   }
-  
+
   if ((previousState == supervisorStateLanded) && (newState == supervisorStateReset)) {
     DEBUG_PRINT("Landing timeout, disarming\n");
   }
@@ -277,8 +294,10 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
     supervisorRequestCrashRecovery(false);
   }
 
-  if ((previousState == supervisorStateNotInitialized || previousState == supervisorStateReadyToFly || previousState == supervisorStateFlying) &&
-      newState != supervisorStateReadyToFly && newState != supervisorStateFlying && newState != supervisorStateLanded) {
+  if ((previousState == supervisorStateNotInitialized || previousState == supervisorStateReadyToFly ||
+       previousState == supervisorStateFlying) &&
+      newState != supervisorStateReadyToFly && newState != supervisorStateFlying &&
+      newState != supervisorStateLanded) {
     DEBUG_PRINT("Can not fly\n");
   }
 
@@ -297,7 +316,9 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
   }
 }
 
-static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* this, const sensorData_t *sensors, const setpoint_t* setpoint, const uint32_t currentTick) {
+static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t *this,
+    const sensorData_t *sensors, const setpoint_t *setpoint, const uint32_t currentTick)
+{
   supervisorConditionBits_t conditions = 0;
 
   if (supervisorIsArmed()) {
@@ -345,9 +366,11 @@ static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* th
   return conditions;
 }
 
-static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t conditions) {
+static void updateLogData(SupervisorMem_t *this, const supervisorConditionBits_t conditions)
+{
   this->canFly = supervisorAreMotorsAllowedToRun();
-  this->isFlying = (this->state == supervisorStateFlying) || (this->state == supervisorStateWarningLevelOut);
+  this->isFlying = (this->state == supervisorStateFlying) ||
+                   (this->state == supervisorStateWarningLevelOut);
   this->isTumbled = (conditions & SUPERVISOR_CB_IS_TUMBLED) != 0;
 
   this->infoBitfield = 0;
@@ -357,7 +380,7 @@ static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t
   if (supervisorIsArmed()) {
     this->infoBitfield |= 0x0002;
   }
-  if(AUTO_ARMING || this->deprecatedArmParam) {
+  if (AUTO_ARMING || this->deprecatedArmParam) {
     this->infoBitfield |= 0x0004;
   }
   if (this->canFly) {
@@ -377,15 +400,18 @@ static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t
   }
 }
 
-void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, stabilizerStep_t stabilizerStep) {
+void supervisorUpdate(const sensorData_t *sensors, const setpoint_t *setpoint,
+                      stabilizerStep_t stabilizerStep)
+{
   if (!RATE_DO_EXECUTE(RATE_SUPERVISOR, stabilizerStep)) {
     return;
   }
 
-  SupervisorMem_t* this = &supervisorMem;
+  SupervisorMem_t *this = &supervisorMem;
   const uint32_t currentTick = xTaskGetTickCount();
 
-  const supervisorConditionBits_t conditions = updateAndPopulateConditions(this, sensors, setpoint, currentTick);
+  const supervisorConditionBits_t conditions = updateAndPopulateConditions(this, sensors, setpoint,
+      currentTick);
   const supervisorState_t newState = supervisorStateUpdate(this->state, conditions);
   if (this->state != newState) {
     const supervisorState_t previousState = this->state;
@@ -401,13 +427,14 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, s
   }
 }
 
-void supervisorOverrideSetpoint(setpoint_t* setpoint) {
-  SupervisorMem_t* this = &supervisorMem;
-  switch(this->state){
+void supervisorOverrideSetpoint(setpoint_t *setpoint)
+{
+  SupervisorMem_t *this = &supervisorMem;
+  switch (this->state) {
     case supervisorStateReadyToFly:
-      // Fall through
+    // Fall through
     case supervisorStateLanded:
-      // Fall through
+    // Fall through
     case supervisorStateFlying:
       // Do nothing
       break;
@@ -431,19 +458,22 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint) {
   }
 }
 
-bool supervisorAreMotorsAllowedToRun() {
-  SupervisorMem_t* this = &supervisorMem;
+bool supervisorAreMotorsAllowedToRun()
+{
+  SupervisorMem_t *this = &supervisorMem;
   return (this->state == supervisorStateReadyToFly) ||
          (this->state == supervisorStateFlying) ||
          (this->state == supervisorStateWarningLevelOut) ||
          (this->state == supervisorStateLanded);
 }
 
-void infoDump(const SupervisorMem_t* this) {
+void infoDump(const SupervisorMem_t *this)
+{
   DEBUG_PRINT("Supervisor info ---\n");
   DEBUG_PRINT("State: %s\n", supervisorGetStateName(this->state));
   DEBUG_PRINT("Conditions: (0x%lx)\n", this->latestConditions);
-  for (supervisorConditions_t condition = 0; condition < supervisorCondition_NrOfConditions; condition++) {
+  for (supervisorConditions_t condition = 0; condition < supervisorCondition_NrOfConditions;
+       condition++) {
     const supervisorConditionBits_t bit = 1 << condition;
     int bitValue = 0;
     if (this->latestConditions & bit) {

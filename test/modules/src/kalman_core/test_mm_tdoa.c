@@ -12,7 +12,8 @@ static kalmanCoreData_t this;
 static float expectedHm[KC_STATE_DIM];
 static OutlierFilterTdoaState_t outlierFilterTdoaState;
 
-void setUp(void) {
+void setUp(void)
+{
   memset(&this, 0, sizeof(this));
   memset(&expectedHm, 0, sizeof(expectedHm));
 
@@ -22,11 +23,13 @@ void setUp(void) {
   outlierFilterTdoaReset(&outlierFilterTdoaState);
 }
 
-void tearDown(void) {
+void tearDown(void)
+{
   // Empty
 }
 
-void testThatScalarUpdateIsCalledInSimpleCase() {
+void testThatScalarUpdateIsCalledInSimpleCase()
+{
   // Fixture
   float expectedError = 0;
   float expectedStdMeasNoise = 0.123;
@@ -48,7 +51,8 @@ void testThatScalarUpdateIsCalledInSimpleCase() {
     .stdDev = expectedStdMeasNoise,
   };
 
-  setKalmanCoreScalarUpdateExpectationsSingleCall(&this, expectedHm, expectedError, expectedStdMeasNoise);
+  setKalmanCoreScalarUpdateExpectationsSingleCall(&this, expectedHm, expectedError,
+      expectedStdMeasNoise);
   outlierFilterTdoaValidateIntegrator_IgnoreAndReturn(true);
 
   // Test
@@ -59,7 +63,8 @@ void testThatScalarUpdateIsCalledInSimpleCase() {
 }
 
 
-void testThatSampleWhereDroneIsInSamePositionAsAnchorIsIgnored() {
+void testThatSampleWhereDroneIsInSamePositionAsAnchorIsIgnored()
+{
   // Fixture
   this.S[KC_STATE_X] = -1.0;
   this.S[KC_STATE_Y] = 0.0;
@@ -82,7 +87,8 @@ void testThatSampleWhereDroneIsInSamePositionAsAnchorIsIgnored() {
 }
 
 
-void testThatScalarUpdateIsNotCalledWhenTheOutlierFilterIsBlocking() {
+void testThatScalarUpdateIsNotCalledWhenTheOutlierFilterIsBlocking()
+{
   // Fixture
   this.S[KC_STATE_X] = 0.0;
   this.S[KC_STATE_Y] = 0.0;

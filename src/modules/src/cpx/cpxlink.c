@@ -58,8 +58,7 @@ static int cpxlinkSetEnable(bool enable);
 static int cpxlinkReceivePacket(CRTPPacket *p);
 static bool cpxlinkIsConnected(void);
 
-static struct crtpLinkOperations cpxlinkOp =
-{
+static struct crtpLinkOperations cpxlinkOp = {
   .setEnable         = cpxlinkSetEnable,
   .sendPacket        = cpxlinkSendPacket,
   .receivePacket     = cpxlinkReceivePacket,
@@ -68,8 +67,7 @@ static struct crtpLinkOperations cpxlinkOp =
 
 static int cpxlinkReceivePacket(CRTPPacket *p)
 {
-  if (cpxInternalRouterReceiveCRTP(&cpxRx) == pdTRUE)
-  {
+  if (cpxInternalRouterReceiveCRTP(&cpxRx) == pdTRUE) {
 
     p->size = cpxRx.dataLength - 1;
     p->header = cpxRx.data[0];
@@ -100,14 +98,16 @@ static int cpxlinkSetEnable(bool enable)
   return 0;
 }
 
-static bool cpxlinkIsConnected(void) {
+static bool cpxlinkIsConnected(void)
+{
   return clientIsConnected;
 }
 
 void cpxlinkInit()
 {
-  if(isInit)
+  if (isInit) {
     return;
+  }
 
   isInit = true;
 }
@@ -117,11 +117,12 @@ bool cpxlinkTest()
   return isInit;
 }
 
-void cpxLinkSetConnected(bool isConnected) {
+void cpxLinkSetConnected(bool isConnected)
+{
   clientIsConnected = isConnected;
 }
 
-struct crtpLinkOperations * cpxlinkGetLink()
+struct crtpLinkOperations *cpxlinkGetLink()
 {
   return &cpxlinkOp;
 }

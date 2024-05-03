@@ -45,7 +45,7 @@
 #endif
 
 //Private functions
-static void paramTask(void * prm);
+static void paramTask(void *prm);
 
 static bool isInit = false;
 static CRTPPacket p;
@@ -55,7 +55,7 @@ STATIC_MEM_TASK_ALLOC(paramTask, PARAM_TASK_STACKSIZE);
 
 void paramInit(void)
 {
-  if(isInit) {
+  if (isInit) {
     return;
   }
 
@@ -73,20 +73,20 @@ bool paramTest(void)
   return isInit;
 }
 
-void paramTask(void * prm)
+void paramTask(void *prm)
 {
-	crtpInitTaskQueue(CRTP_PORT_PARAM);
+  crtpInitTaskQueue(CRTP_PORT_PARAM);
 
-	while(1) {
-		crtpReceivePacketBlock(CRTP_PORT_PARAM, &p);
+  while (1) {
+    crtpReceivePacketBlock(CRTP_PORT_PARAM, &p);
 
-		if (p.channel==TOC_CH)
-		  paramTOCProcess(&p, p.data[0]);
-	  else if (p.channel==READ_CH)
-		  paramReadProcess(&p);
-		else if (p.channel==WRITE_CH)
-		  paramWriteProcess(&p);
-    else if (p.channel==MISC_CH) {
+    if (p.channel == TOC_CH) {
+      paramTOCProcess(&p, p.data[0]);
+    } else if (p.channel == READ_CH) {
+      paramReadProcess(&p);
+    } else if (p.channel == WRITE_CH) {
+      paramWriteProcess(&p);
+    } else if (p.channel == MISC_CH) {
       switch (p.data[0]) {
         case MISC_SETBYNAME:
           paramSetByName(&p);
@@ -110,5 +110,5 @@ void paramTask(void * prm)
           break;
       }
     }
-	}
+  }
 }

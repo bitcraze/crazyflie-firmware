@@ -35,11 +35,11 @@
 
 static bool isInit;
 
-static void commanderCrtpCB(CRTPPacket* pk);
+static void commanderCrtpCB(CRTPPacket *pk);
 
 void crtpCommanderInit(void)
 {
-  if(isInit) {
+  if (isInit) {
     return;
   }
 
@@ -102,35 +102,35 @@ void notifySetpointsStopDecoder(const void *data, size_t datalen)
   commanderRelaxPriority();
 }
 
- /* ---===== packetDecoders array =====--- */
+/* ---===== packetDecoders array =====--- */
 const static metaCommandDecoder_t metaCommandDecoders[] = {
   [metaNotifySetpointsStop] = notifySetpointsStopDecoder,
 };
 
 /* Decoder switch */
-static void commanderCrtpCB(CRTPPacket* pk)
+static void commanderCrtpCB(CRTPPacket *pk)
 {
   static setpoint_t setpoint;
 
-  if(pk->port == CRTP_PORT_SETPOINT && pk->channel == 0) {
+  if (pk->port == CRTP_PORT_SETPOINT && pk->channel == 0) {
     crtpCommanderRpytDecodeSetpoint(&setpoint, pk);
     commanderSetSetpoint(&setpoint, COMMANDER_PRIORITY_CRTP);
   } else if (pk->port == CRTP_PORT_SETPOINT_GENERIC) {
     switch (pk->channel) {
-    case SET_SETPOINT_CHANNEL:
-      crtpCommanderGenericDecodeSetpoint(&setpoint, pk);
-      commanderSetSetpoint(&setpoint, COMMANDER_PRIORITY_CRTP);
-      break;
-    case META_COMMAND_CHANNEL: {
+      case SET_SETPOINT_CHANNEL:
+        crtpCommanderGenericDecodeSetpoint(&setpoint, pk);
+        commanderSetSetpoint(&setpoint, COMMANDER_PRIORITY_CRTP);
+        break;
+      case META_COMMAND_CHANNEL: {
         uint8_t metaCmd = pk->data[0];
         if (metaCmd < nMetaCommands && (metaCommandDecoders[metaCmd] != NULL)) {
           metaCommandDecoders[metaCmd](pk->data + 1, pk->size - 1);
         }
       }
       break;
-    default:
-      /* Do nothing */
-      break;
+      default:
+        /* Do nothing */
+        break;
     }
   }
 }

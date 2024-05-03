@@ -69,13 +69,14 @@
 
 
 // Private functions
-static void memTask(void * prm);
-static void memSettingsProcess(CRTPPacket* p);
-static void memWriteProcess(CRTPPacket* p);
-static void memReadProcess(CRTPPacket* p);
-static void createNbrResponse(CRTPPacket* p);
-static void createInfoResponse(CRTPPacket* p, uint8_t memId);
-static void createInfoResponseBody(CRTPPacket* p, uint8_t type, uint32_t memSize, const uint8_t data[8]);
+static void memTask(void *prm);
+static void memSettingsProcess(CRTPPacket *p);
+static void memWriteProcess(CRTPPacket *p);
+static void memReadProcess(CRTPPacket *p);
+static void createNbrResponse(CRTPPacket *p);
+static void createInfoResponse(CRTPPacket *p, uint8_t memId);
+static void createInfoResponseBody(CRTPPacket *p, uint8_t type, uint32_t memSize,
+                                   const uint8_t data[8]);
 
 static bool isInit = false;
 
@@ -86,7 +87,7 @@ STATIC_MEM_TASK_ALLOC(memTask, MEM_TASK_STACKSIZE);
 
 void crtpMemInit(void)
 {
-  if(isInit) {
+  if (isInit) {
     return;
   }
 
@@ -96,7 +97,8 @@ void crtpMemInit(void)
   isInit = true;
 }
 
-bool crtpMemTest(void) {
+bool crtpMemTest(void)
+{
   if (!isInit) {
     return false;
   }
@@ -104,8 +106,9 @@ bool crtpMemTest(void) {
   return true;
 }
 
-static void memTask(void* param) {
-	crtpInitTaskQueue(CRTP_PORT_MEM);
+static void memTask(void *param)
+{
+  crtpInitTaskQueue(CRTP_PORT_MEM);
 
   // This should be synced with decks starting up, otherwise
   // there might be late arrivals for the registration that will
@@ -117,10 +120,10 @@ static void memTask(void* param) {
   // to query for available memories
   memBlockHandlerRegistration();
 
-	while(1) {
-		crtpReceivePacketBlock(CRTP_PORT_MEM, &packet);
+  while (1) {
+    crtpReceivePacketBlock(CRTP_PORT_MEM, &packet);
 
-		switch (packet.channel) {
+    switch (packet.channel) {
       case MEM_SETTINGS_CH:
         memSettingsProcess(&packet);
         break;
@@ -133,24 +136,24 @@ static void memTask(void* param) {
       default:
         // Do nothing
         break;
-		}
-	}
+    }
+  }
 }
 
-static void memSettingsProcess(CRTPPacket* p) {
+static void memSettingsProcess(CRTPPacket *p)
+{
   switch (p->data[0]) {
     case MEM_CMD_GET_NBR:
       createNbrResponse(p);
       crtpSendPacketBlock(p);
       break;
 
-    case MEM_CMD_GET_INFO:
-      {
-        uint8_t memId = p->data[1];
-        createInfoResponse(p, memId);
-        crtpSendPacketBlock(p);
-      }
-      break;
+    case MEM_CMD_GET_INFO: {
+      uint8_t memId = p->data[1];
+      createInfoResponse(p, memId);
+      crtpSendPacketBlock(p);
+    }
+    break;
 
     default:
       // Do nothing
@@ -158,7 +161,8 @@ static void memSettingsProcess(CRTPPacket* p) {
   }
 }
 
-static void createNbrResponse(CRTPPacket* p) {
+static void createNbrResponse(CRTPPacket *p)
+{
   const uint8_t nrOfMems = memGetNrOfMems();
   const uint8_t nbrOwMems = memGetNrOfOwMems();
 
@@ -168,7 +172,8 @@ static void createNbrResponse(CRTPPacket* p) {
   p->data[1] = nbrOwMems + nrOfMems;
 }
 
-static void createInfoResponse(CRTPPacket* p, uint8_t memId) {
+static void createInfoResponse(CRTPPacket *p, uint8_t memId)
+{
   const uint8_t nrOfMems = memGetNrOfMems();
 
   p->header = CRTP_HEADER(CRTP_PORT_MEM, MEM_SETTINGS_CH);
@@ -189,7 +194,9 @@ static void createInfoResponse(CRTPPacket* p, uint8_t memId) {
   }
 }
 
-static void createInfoResponseBody(CRTPPacket* p, uint8_t type, uint32_t memSize, const uint8_t data[8]) {
+static void createInfoResponseBody(CRTPPacket *p, uint8_t type, uint32_t memSize,
+                                   const uint8_t data[8])
+{
   p->data[2] = type;
   p->size += 1;
 
@@ -201,7 +208,8 @@ static void createInfoResponseBody(CRTPPacket* p, uint8_t type, uint32_t memSize
 }
 
 
-static void memReadProcess(CRTPPacket* p) {
+static void memReadProcess(CRTPPacket *p)
+{
   uint32_t memAddr;
   const uint8_t nrOfMems = memGetNrOfMems();
 
@@ -211,7 +219,7 @@ static void memReadProcess(CRTPPacket* p) {
   uint8_t memId = p->data[0];
   memcpy(&memAddr, &p->data[1], 4);
   uint8_t readLen = p->data[5];
-  uint8_t* startOfData = &p->data[6];
+  uint8_t *startOfData = &p->data[6];
 
   bool result = false;
   if (memId < nrOfMems) {
@@ -231,13 +239,14 @@ static void memReadProcess(CRTPPacket* p) {
   crtpSendPacketBlock(p);
 }
 
-static void memWriteProcess(CRTPPacket* p) {
+static void memWriteProcess(CRTPPacket *p)
+{
   uint32_t memAddr;
   const uint8_t nrOfMems = memGetNrOfMems();
 
   uint8_t memId = p->data[0];
   memcpy(&memAddr, &p->data[1], 4);
-  uint8_t* startOfData = &p->data[5];
+  uint8_t *startOfData = &p->data[5];
 
   uint8_t writeLen = p->size - 5;
 

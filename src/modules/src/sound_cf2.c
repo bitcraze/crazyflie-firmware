@@ -158,7 +158,7 @@
 
 #define MAX_NOTE_LENGTH 80
 
-static bool isInit=false;
+static bool isInit = false;
 
 typedef const struct {
   uint16_t tone;
@@ -195,22 +195,28 @@ static Melody starwars = {.bpm = 120, .delay = 1, .notes = {{A3, Q}, {A3, Q}, {A
     {A4, Q}, {A3, ES}, {A3, S}, {A4, Q}, {Ab4, ES}, {G4, S},
     {Gb4, S}, {E4, S}, {F4, E}, {0, E}, {Bb3, E}, {Eb4, Q}, {D4, ES}, {Db4, S},
     {Gb4, S}, {E4, S}, {F4, E}, {0, E}, {Bb3, E}, {Eb4, Q}, {D4, ES}, {Db4, S},
-    {C4,S}, {B3, S}, {C4, E}, {0, E}, {F3, E}, {Ab3, Q}, {F3, ES}, {C4, S},
+    {C4, S}, {B3, S}, {C4, E}, {0, E}, {F3, E}, {Ab3, Q}, {F3, ES}, {C4, S},
     {A3, Q}, {F3, ES}, {C4, S}, {A3, H}, {0, H},
-    REPEAT}};
+    REPEAT
+  }
+};
 static Melody valkyries = {.bpm = 140, .delay = 1, .notes = {{Gb3, Q}, {B3, Q},
     {Gb3, S}, {B3, E},  {D4, Q}, {B3, Q}, {D4, Q}, {B3, S}, {D4, E}, {Gb4, Q},
     {D4, Q}, {Gb4, Q}, {D4, S}, {Gb4, E}, {A4, Q}, {A3, Q}, {D4, Q}, {A3, S},
     {D4, E}, {Gb4, H},
-    REPEAT}};
+    REPEAT
+  }
+};
 
-typedef void (*BuzzerEffect)(uint32_t timer, uint32_t * mi, Melody * melody);
+typedef void (*BuzzerEffect)(uint32_t timer, uint32_t *mi, Melody *melody);
 
-static void off(uint32_t counter, uint32_t * mi, Melody * m) {
+static void off(uint32_t counter, uint32_t *mi, Melody *m)
+{
   buzzerOff();
 }
 
-static void turnCurrentEffectOff() {
+static void turnCurrentEffectOff()
+{
   if (sys_effect != 0) {
     sys_effect = 0;
   } else {
@@ -219,7 +225,8 @@ static void turnCurrentEffectOff() {
 }
 
 static uint32_t mcounter = 0;
-static void melodyplayer(uint32_t counter, uint32_t * mi, Melody * m) {
+static void melodyplayer(uint32_t counter, uint32_t *mi, Melody *m)
+{
   uint16_t tone = m->notes[(*mi)].tone;
   uint16_t duration = m->notes[(*mi)].duration;
 
@@ -239,14 +246,14 @@ static void melodyplayer(uint32_t counter, uint32_t * mi, Melody * m) {
     }
   } else {
     if (mcounter == 1) {
-        buzzerOff();
+      buzzerOff();
     }
     mcounter--;
   }
 }
 
 static uint16_t static_freq = 4000;
-static void bypass(uint32_t counter, uint32_t * mi, Melody * melody)
+static void bypass(uint32_t counter, uint32_t *mi, Melody *melody)
 {
   buzzerOn(static_freq);
 }
@@ -255,7 +262,7 @@ static uint16_t siren_start = 2000;
 static uint16_t siren_freq = 2000;
 static uint16_t siren_stop = 4000;
 static int16_t siren_step = 40;
-static void siren(uint32_t counter, uint32_t * mi, Melody * melody)
+static void siren(uint32_t counter, uint32_t *mi, Melody *melody)
 {
   siren_freq += siren_step;
   if (siren_freq > siren_stop) {
@@ -275,7 +282,7 @@ static int pitch;
 static int roll;
 static int tilt_freq;
 static int tilt_ratio;
-static void tilt(uint32_t counter, uint32_t * mi, Melody * melody)
+static void tilt(uint32_t counter, uint32_t *mi, Melody *melody)
 {
   pitchid = logGetVarId("stabilizer", "pitch");
   rollid = logGetVarId("stabilizer", "roll");
@@ -295,25 +302,25 @@ static void tilt(uint32_t counter, uint32_t * mi, Melody * melody)
 typedef struct {
   BuzzerEffect call;
   uint32_t mi;
-  Melody * melody;
+  Melody *melody;
 } EffectCall;
 
 static EffectCall effects[] = {
-    [SND_OFF] = {.call = &off},
-    [FACTORY_TEST] = {.call = &melodyplayer, .melody = &factory_test},
-    [SND_USB_CONN] = {.call = &melodyplayer, .melody = &usb_connect},
-    [SND_USB_DISC] = {.call = &melodyplayer, .melody = &usb_disconnect},
-    [SND_BAT_FULL] = {.call = &melodyplayer, .melody = &chg_done},
-    [SND_BAT_LOW] = {.call = &melodyplayer, .melody = &lowbatt},
-    [SND_STARTUP] = {.call = &melodyplayer, .melody = &startup},
-    [SND_CALIB] = {.call = &melodyplayer, .melody = &calibrated},
-    {.call = &melodyplayer, .melody = &range_slow},
-    {.call = &melodyplayer, .melody = &range_fast},
-    {.call = &melodyplayer, .melody = &starwars},
-    {.call = &melodyplayer, .melody = &valkyries},
-    {.call = &bypass},
-    {.call = &siren},
-    {.call = &tilt}
+  [SND_OFF] = {.call = &off},
+  [FACTORY_TEST] = {.call = &melodyplayer, .melody = &factory_test},
+  [SND_USB_CONN] = {.call = &melodyplayer, .melody = &usb_connect},
+  [SND_USB_DISC] = {.call = &melodyplayer, .melody = &usb_disconnect},
+  [SND_BAT_FULL] = {.call = &melodyplayer, .melody = &chg_done},
+  [SND_BAT_LOW] = {.call = &melodyplayer, .melody = &lowbatt},
+  [SND_STARTUP] = {.call = &melodyplayer, .melody = &startup},
+  [SND_CALIB] = {.call = &melodyplayer, .melody = &calibrated},
+  {.call = &melodyplayer, .melody = &range_slow},
+  {.call = &melodyplayer, .melody = &range_fast},
+  {.call = &melodyplayer, .melody = &starwars},
+  {.call = &melodyplayer, .melody = &valkyries},
+  {.call = &bypass},
+  {.call = &siren},
+  {.call = &tilt}
 };
 
 static xTimerHandle timer;
@@ -365,7 +372,8 @@ void soundSetEffect(uint32_t effect)
   sys_effect = effect;
 }
 
-void soundSetFreq(uint32_t freq) {
+void soundSetFreq(uint32_t freq)
+{
 
 }
 

@@ -65,12 +65,10 @@ enum TrajectoryLocation_e {
   // Future features might include trajectories on flash or uSD card
 };
 
-struct trajectoryDescription
-{
+struct trajectoryDescription {
   uint8_t trajectoryLocation; // one of TrajectoryLocation_e
   uint8_t trajectoryType;     // one of TrajectoryType_e
-  union
-  {
+  union {
     struct {
       uint32_t offset;  // offset in uploaded memory
       uint8_t n_pieces;
@@ -113,9 +111,12 @@ static float defaultTakeoffVelocity = 0.5f;
 static float defaultLandingVelocity = 0.5f;
 
 // Trajectory memory handling from the memory module
-static uint32_t handleMemGetSize(void) { return crtpCommanderHighLevelTrajectoryMemSize(); }
-static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
-static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
+static uint32_t handleMemGetSize(void)
+{
+  return crtpCommanderHighLevelTrajectoryMemSize();
+}
+static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t *buffer);
+static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t *buffer);
 static const MemoryHandlerDef_t memDef = {
   .type = MEM_TYPE_TRAJ,
   .getSize = handleMemGetSize,
@@ -234,19 +235,19 @@ struct data_define_trajectory {
 } __attribute__((packed));
 
 // Private functions
-static void crtpCommanderHighLevelTask(void * prm);
+static void crtpCommanderHighLevelTask(void *prm);
 
-static int set_group_mask(const struct data_set_group_mask* data);
-static int takeoff(const struct data_takeoff* data);
-static int land(const struct data_land* data);
-static int takeoff2(const struct data_takeoff_2* data);
-static int land2(const struct data_land_2* data);
-static int takeoff_with_velocity(const struct data_takeoff_with_velocity* data);
-static int land_with_velocity(const struct data_land_with_velocity* data);
-static int stop(const struct data_stop* data);
-static int go_to(const struct data_go_to* data);
-static int start_trajectory(const struct data_start_trajectory* data);
-static int define_trajectory(const struct data_define_trajectory* data);
+static int set_group_mask(const struct data_set_group_mask *data);
+static int takeoff(const struct data_takeoff *data);
+static int land(const struct data_land *data);
+static int takeoff2(const struct data_takeoff_2 *data);
+static int land2(const struct data_land_2 *data);
+static int takeoff_with_velocity(const struct data_takeoff_with_velocity *data);
+static int land_with_velocity(const struct data_land_with_velocity *data);
+static int stop(const struct data_stop *data);
+static int go_to(const struct data_go_to *data);
+static int start_trajectory(const struct data_start_trajectory *data);
+static int define_trajectory(const struct data_define_trajectory *data);
 
 // Helper functions
 static struct vec state2vec(struct vec3_s v)
@@ -254,7 +255,8 @@ static struct vec state2vec(struct vec3_s v)
   return mkvec(v.x, v.y, v.z);
 }
 
-bool isInGroup(uint8_t g) {
+bool isInGroup(uint8_t g)
+{
   return g == ALL_GROUPS || (g & group_mask) != 0;
 }
 
@@ -268,7 +270,8 @@ void crtpCommanderHighLevelInit(void)
   plan_init(&planner);
 
   //Start the trajectory task
-  STATIC_MEM_TASK_CREATE(crtpCommanderHighLevelTask, crtpCommanderHighLevelTask, CMD_HIGH_LEVEL_TASK_NAME, NULL, CMD_HIGH_LEVEL_TASK_PRI);
+  STATIC_MEM_TASK_CREATE(crtpCommanderHighLevelTask, crtpCommanderHighLevelTask,
+                         CMD_HIGH_LEVEL_TASK_NAME, NULL, CMD_HIGH_LEVEL_TASK_PRI);
 
   lockTraj = xSemaphoreCreateMutexStatic(&lockTrajBuffer);
 
@@ -301,7 +304,8 @@ int crtpCommanderHighLevelDisable()
   return 0;
 }
 
-bool crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *state, stabilizerStep_t stabilizerStep)
+bool crtpCommanderHighLevelGetSetpoint(setpoint_t *setpoint, const state_t *state,
+                                       stabilizerStep_t stabilizerStep)
 {
   if (!RATE_DO_EXECUTE(RATE_HL_COMMANDER, stabilizerStep)) {
     return false;
@@ -329,8 +333,7 @@ bool crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *stat
     }
     // Otherwise, do not mutate the setpoint.
     return false;
-  }
-  else if (is_traj_eval_valid(&ev)) {
+  } else if (is_traj_eval_valid(&ev)) {
     setpoint->position.x = ev.pos.x;
     setpoint->position.y = ev.pos.y;
     setpoint->position.z = ev.pos.z;
@@ -358,52 +361,50 @@ bool crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *stat
     yaw = ev.yaw;
 
     return true;
-  }
-  else {
+  } else {
     // Not disabled or stopped but invalid eval indicates a programming error.
     plan_disable(&planner);
     return false;
   }
 }
 
-static int handleCommand(const enum TrajectoryCommand_e command, const uint8_t* data)
+static int handleCommand(const enum TrajectoryCommand_e command, const uint8_t *data)
 {
   int ret = 0;
 
-  switch(command)
-  {
+  switch (command) {
     case COMMAND_SET_GROUP_MASK:
-      ret = set_group_mask((const struct data_set_group_mask*)data);
+      ret = set_group_mask((const struct data_set_group_mask *)data);
       break;
     case COMMAND_TAKEOFF:
-      ret = takeoff((const struct data_takeoff*)data);
+      ret = takeoff((const struct data_takeoff *)data);
       break;
     case COMMAND_LAND:
-      ret = land((const struct data_land*)data);
+      ret = land((const struct data_land *)data);
       break;
     case COMMAND_TAKEOFF_2:
-      ret = takeoff2((const struct data_takeoff_2*)data);
+      ret = takeoff2((const struct data_takeoff_2 *)data);
       break;
     case COMMAND_LAND_2:
-      ret = land2((const struct data_land_2*)data);
+      ret = land2((const struct data_land_2 *)data);
       break;
     case COMMAND_TAKEOFF_WITH_VELOCITY:
-      ret = takeoff_with_velocity((const struct data_takeoff_with_velocity*)data);
+      ret = takeoff_with_velocity((const struct data_takeoff_with_velocity *)data);
       break;
     case COMMAND_LAND_WITH_VELOCITY:
-      ret = land_with_velocity((const struct data_land_with_velocity*)data);
+      ret = land_with_velocity((const struct data_land_with_velocity *)data);
       break;
     case COMMAND_STOP:
-      ret = stop((const struct data_stop*)data);
+      ret = stop((const struct data_stop *)data);
       break;
     case COMMAND_GO_TO:
-      ret = go_to((const struct data_go_to*)data);
+      ret = go_to((const struct data_go_to *)data);
       break;
     case COMMAND_START_TRAJECTORY:
-      ret = start_trajectory((const struct data_start_trajectory*)data);
+      ret = start_trajectory((const struct data_start_trajectory *)data);
       break;
     case COMMAND_DEFINE_TRAJECTORY:
-      ret = define_trajectory((const struct data_define_trajectory*)data);
+      ret = define_trajectory((const struct data_define_trajectory *)data);
       break;
     default:
       ret = ENOEXEC;
@@ -413,12 +414,12 @@ static int handleCommand(const enum TrajectoryCommand_e command, const uint8_t* 
   return ret;
 }
 
-void crtpCommanderHighLevelTask(void * prm)
+void crtpCommanderHighLevelTask(void *prm)
 {
   CRTPPacket p;
   crtpInitTaskQueue(CRTP_PORT_SETPOINT_HL);
 
-  while(1) {
+  while (1) {
     crtpReceivePacketBlock(CRTP_PORT_SETPOINT_HL, &p);
 
     int ret = handleCommand(p.data[0], &p.data[1]);
@@ -430,7 +431,7 @@ void crtpCommanderHighLevelTask(void * prm)
   }
 }
 
-int set_group_mask(const struct data_set_group_mask* data)
+int set_group_mask(const struct data_set_group_mask *data)
 {
   group_mask = data->groupMask;
 
@@ -438,7 +439,7 @@ int set_group_mask(const struct data_set_group_mask* data)
 }
 
 // Deprecated (removed after August 2023)
-int takeoff(const struct data_takeoff* data)
+int takeoff(const struct data_takeoff *data)
 {
   if (isBlocked) {
     return EBUSY;
@@ -454,7 +455,7 @@ int takeoff(const struct data_takeoff* data)
   return result;
 }
 
-int takeoff2(const struct data_takeoff_2* data)
+int takeoff2(const struct data_takeoff_2 *data)
 {
   if (isBlocked) {
     return EBUSY;
@@ -476,7 +477,7 @@ int takeoff2(const struct data_takeoff_2* data)
   return result;
 }
 
-int takeoff_with_velocity(const struct data_takeoff_with_velocity* data)
+int takeoff_with_velocity(const struct data_takeoff_with_velocity *data)
 {
   if (isBlocked) {
     return EBUSY;
@@ -506,7 +507,7 @@ int takeoff_with_velocity(const struct data_takeoff_with_velocity* data)
 }
 
 // Deprecated (removed after August 2023)
-int land(const struct data_land* data)
+int land(const struct data_land *data)
 {
   if (isBlocked) {
     return EBUSY;
@@ -522,7 +523,7 @@ int land(const struct data_land* data)
   return result;
 }
 
-int land2(const struct data_land_2* data)
+int land2(const struct data_land_2 *data)
 {
   if (isBlocked) {
     return EBUSY;
@@ -544,7 +545,7 @@ int land2(const struct data_land_2* data)
   return result;
 }
 
-int land_with_velocity(const struct data_land_with_velocity* data)
+int land_with_velocity(const struct data_land_with_velocity *data)
 {
   if (isBlocked) {
     return EBUSY;
@@ -573,7 +574,7 @@ int land_with_velocity(const struct data_land_with_velocity* data)
   return result;
 }
 
-int stop(const struct data_stop* data)
+int stop(const struct data_stop *data)
 {
   int result = 0;
   if (isInGroup(data->groupMask)) {
@@ -584,7 +585,7 @@ int stop(const struct data_stop* data)
   return result;
 }
 
-int go_to(const struct data_go_to* data)
+int go_to(const struct data_go_to *data)
 {
   static struct traj_eval ev = {
     // pos, vel, yaw will be filled before using
@@ -606,8 +607,7 @@ int go_to(const struct data_go_to* data)
       ev.vel = vel;
       ev.yaw = yaw;
       result = plan_go_to_from(&planner, &ev, data->relative, hover_pos, data->yaw, data->duration, t);
-    }
-    else {
+    } else {
       result = plan_go_to(&planner, data->relative, hover_pos, data->yaw, data->duration, t);
     }
     xSemaphoreGive(lockTraj);
@@ -615,7 +615,7 @@ int go_to(const struct data_go_to* data)
   return result;
 }
 
-int start_trajectory(const struct data_start_trajectory* data)
+int start_trajectory(const struct data_start_trajectory *data)
 {
   if (isBlocked) {
     return EBUSY;
@@ -624,19 +624,20 @@ int start_trajectory(const struct data_start_trajectory* data)
   int result = 0;
   if (isInGroup(data->groupMask)) {
     if (data->trajectoryId < NUM_TRAJECTORY_DEFINITIONS) {
-      struct trajectoryDescription* trajDesc = &trajectory_descriptions[data->trajectoryId];
-      if (   trajDesc->trajectoryLocation == TRAJECTORY_LOCATION_MEM
+      struct trajectoryDescription *trajDesc = &trajectory_descriptions[data->trajectoryId];
+      if (trajDesc->trajectoryLocation == TRAJECTORY_LOCATION_MEM
           && trajDesc->trajectoryType == CRTP_CHL_TRAJECTORY_TYPE_POLY4D) {
         xSemaphoreTake(lockTraj, portMAX_DELAY);
         float t = usecTimestamp() / 1e6;
         trajectory.t_begin = t;
         trajectory.timescale = data->timescale;
         trajectory.n_pieces = trajDesc->trajectoryIdentifier.mem.n_pieces;
-        trajectory.pieces = (struct poly4d*)&trajectories_memory[trajDesc->trajectoryIdentifier.mem.offset];
+        trajectory.pieces = (struct poly4d *)
+                            &trajectories_memory[trajDesc->trajectoryIdentifier.mem.offset];
         result = plan_start_trajectory(&planner, &trajectory, data->reversed, data->relative, pos);
         xSemaphoreGive(lockTraj);
       } else if (trajDesc->trajectoryLocation == TRAJECTORY_LOCATION_MEM
-          && trajDesc->trajectoryType == CRTP_CHL_TRAJECTORY_TYPE_POLY4D_COMPRESSED) {
+                 && trajDesc->trajectoryType == CRTP_CHL_TRAJECTORY_TYPE_POLY4D_COMPRESSED) {
 
         if (data->timescale != 1 || data->reversed) {
           result = ENOEXEC;
@@ -657,7 +658,7 @@ int start_trajectory(const struct data_start_trajectory* data)
   return result;
 }
 
-int define_trajectory(const struct data_define_trajectory* data)
+int define_trajectory(const struct data_define_trajectory *data)
 {
   if (data->trajectoryId >= NUM_TRAJECTORY_DEFINITIONS) {
     return ENOEXEC;
@@ -666,15 +667,17 @@ int define_trajectory(const struct data_define_trajectory* data)
   return 0;
 }
 
-static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t *buffer)
+{
   return crtpCommanderHighLevelReadTrajectory(memAddr, readLen, buffer);
 }
 
-static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
+static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t *buffer)
+{
   return crtpCommanderHighLevelWriteTrajectory(memAddr, writeLen, buffer);
 }
 
-uint8_t* initCrtpPacket(CRTPPacket* packet, const enum TrajectoryCommand_e command)
+uint8_t *initCrtpPacket(CRTPPacket *packet, const enum TrajectoryCommand_e command)
 {
   packet->port = CRTP_PORT_SETPOINT_HL;
   packet->data[0] = command;
@@ -683,21 +686,20 @@ uint8_t* initCrtpPacket(CRTPPacket* packet, const enum TrajectoryCommand_e comma
 
 int crtpCommanderHighLevelTakeoff(const float absoluteHeight_m, const float duration_s)
 {
-  struct data_takeoff_2 data =
-  {
+  struct data_takeoff_2 data = {
     .height = absoluteHeight_m,
     .duration = duration_s,
     .useCurrentYaw = true,
     .groupMask = ALL_GROUPS,
   };
 
-  return handleCommand(COMMAND_TAKEOFF_2, (const uint8_t*)&data);
+  return handleCommand(COMMAND_TAKEOFF_2, (const uint8_t *)&data);
 }
 
-int crtpCommanderHighLevelTakeoffYaw(const float absoluteHeight_m, const float duration_s, const float yaw)
+int crtpCommanderHighLevelTakeoffYaw(const float absoluteHeight_m, const float duration_s,
+                                     const float yaw)
 {
-  struct data_takeoff_2 data =
-  {
+  struct data_takeoff_2 data = {
     .height = absoluteHeight_m,
     .duration = duration_s,
     .useCurrentYaw = false,
@@ -705,13 +707,13 @@ int crtpCommanderHighLevelTakeoffYaw(const float absoluteHeight_m, const float d
     .groupMask = ALL_GROUPS,
   };
 
-  return handleCommand(COMMAND_TAKEOFF_2, (const uint8_t*)&data);
+  return handleCommand(COMMAND_TAKEOFF_2, (const uint8_t *)&data);
 }
 
-int crtpCommanderHighLevelTakeoffWithVelocity(const float height_m, const float velocity_m_s, bool relative)
+int crtpCommanderHighLevelTakeoffWithVelocity(const float height_m, const float velocity_m_s,
+    bool relative)
 {
-  struct data_takeoff_with_velocity data =
-  {
+  struct data_takeoff_with_velocity data = {
     .height = height_m,
     .heightIsRelative = relative,
     .velocity = velocity_m_s,
@@ -719,26 +721,25 @@ int crtpCommanderHighLevelTakeoffWithVelocity(const float height_m, const float 
     .groupMask = ALL_GROUPS,
   };
 
-  return handleCommand(COMMAND_TAKEOFF_WITH_VELOCITY, (const uint8_t*)&data);
+  return handleCommand(COMMAND_TAKEOFF_WITH_VELOCITY, (const uint8_t *)&data);
 }
 
 int crtpCommanderHighLevelLand(const float absoluteHeight_m, const float duration_s)
 {
-  struct data_land_2 data =
-  {
+  struct data_land_2 data = {
     .height = absoluteHeight_m,
     .duration = duration_s,
     .useCurrentYaw = true,
     .groupMask = ALL_GROUPS,
   };
 
-  return handleCommand(COMMAND_LAND_2, (const uint8_t*)&data);
+  return handleCommand(COMMAND_LAND_2, (const uint8_t *)&data);
 }
 
-int crtpCommanderHighLevelLandWithVelocity(const float height_m, const float velocity_m_s, bool relative)
+int crtpCommanderHighLevelLandWithVelocity(const float height_m, const float velocity_m_s,
+    bool relative)
 {
-  struct data_land_with_velocity data =
-  {
+  struct data_land_with_velocity data = {
     .height = height_m,
     .heightIsRelative = relative,
     .velocity = velocity_m_s,
@@ -746,13 +747,13 @@ int crtpCommanderHighLevelLandWithVelocity(const float height_m, const float vel
     .groupMask = ALL_GROUPS,
   };
 
-  return handleCommand(COMMAND_LAND_WITH_VELOCITY, (const uint8_t*)&data);
+  return handleCommand(COMMAND_LAND_WITH_VELOCITY, (const uint8_t *)&data);
 }
 
-int crtpCommanderHighLevelLandYaw(const float absoluteHeight_m, const float duration_s, const float yaw)
+int crtpCommanderHighLevelLandYaw(const float absoluteHeight_m, const float duration_s,
+                                  const float yaw)
 {
-  struct data_land_2 data =
-  {
+  struct data_land_2 data = {
     .height = absoluteHeight_m,
     .duration = duration_s,
     .useCurrentYaw = false,
@@ -760,29 +761,25 @@ int crtpCommanderHighLevelLandYaw(const float absoluteHeight_m, const float dura
     .groupMask = ALL_GROUPS,
   };
 
-  return handleCommand(COMMAND_LAND_2, (const uint8_t*)&data);
+  return handleCommand(COMMAND_LAND_2, (const uint8_t *)&data);
 }
 
 int crtpCommanderHighLevelStop()
 {
-  struct data_stop data =
-  {
+  struct data_stop data = {
     .groupMask = ALL_GROUPS,
   };
 
-  return handleCommand(COMMAND_STOP, (const uint8_t*)&data);
+  return handleCommand(COMMAND_STOP, (const uint8_t *)&data);
 }
 
 int crtpCommanderBlock(bool doBlock)
 {
-  if (doBlock)
-  {
-    if (!isBlocked)
-    {
+  if (doBlock) {
+    if (!isBlocked) {
       const bool isNotDisabled = !plan_is_disabled(&planner);
       const bool isNotStopped = !plan_is_stopped(&planner);
-      if (isNotDisabled && isNotStopped)
-      {
+      if (isNotDisabled && isNotStopped) {
         xSemaphoreTake(lockTraj, portMAX_DELAY);
         plan_stop(&planner);
         xSemaphoreGive(lockTraj);
@@ -800,10 +797,10 @@ bool crtpCommanderHighLevelIsBlocked()
   return isBlocked;
 }
 
-int crtpCommanderHighLevelGoTo(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative)
+int crtpCommanderHighLevelGoTo(const float x, const float y, const float z, const float yaw,
+                               const float duration_s, const bool relative)
 {
-  struct data_go_to data =
-  {
+  struct data_go_to data = {
     .x = x,
     .y = y,
     .z = z,
@@ -813,21 +810,21 @@ int crtpCommanderHighLevelGoTo(const float x, const float y, const float z, cons
     .groupMask = ALL_GROUPS,
   };
 
-  return handleCommand(COMMAND_GO_TO, (const uint8_t*)&data);
+  return handleCommand(COMMAND_GO_TO, (const uint8_t *)&data);
 }
 
 bool crtpCommanderHighLevelIsTrajectoryDefined(uint8_t trajectoryId)
 {
   return (
-    trajectoryId < NUM_TRAJECTORY_DEFINITIONS &&
-    trajectory_descriptions[trajectoryId].trajectoryLocation != TRAJECTORY_LOCATION_INVALID
-  );
+           trajectoryId < NUM_TRAJECTORY_DEFINITIONS &&
+           trajectory_descriptions[trajectoryId].trajectoryLocation != TRAJECTORY_LOCATION_INVALID
+         );
 }
 
-int crtpCommanderHighLevelStartTrajectory(const uint8_t trajectoryId, const float timeScale, const bool relative, const bool reversed)
+int crtpCommanderHighLevelStartTrajectory(const uint8_t trajectoryId, const float timeScale,
+    const bool relative, const bool reversed)
 {
-  struct data_start_trajectory data =
-  {
+  struct data_start_trajectory data = {
     .trajectoryId = trajectoryId,
     .timescale = timeScale,
     .relative = relative,
@@ -835,13 +832,13 @@ int crtpCommanderHighLevelStartTrajectory(const uint8_t trajectoryId, const floa
     .groupMask = ALL_GROUPS,
   };
 
-  return handleCommand(COMMAND_START_TRAJECTORY, (const uint8_t*)&data);
+  return handleCommand(COMMAND_START_TRAJECTORY, (const uint8_t *)&data);
 }
 
-int crtpCommanderHighLevelDefineTrajectory(const uint8_t trajectoryId, const crtpCommanderTrajectoryType_t type, const uint32_t offset, const uint8_t nPieces)
+int crtpCommanderHighLevelDefineTrajectory(const uint8_t trajectoryId,
+    const crtpCommanderTrajectoryType_t type, const uint32_t offset, const uint8_t nPieces)
 {
-  struct data_define_trajectory data =
-  {
+  struct data_define_trajectory data = {
     .trajectoryId = trajectoryId,
     .description.trajectoryLocation = TRAJECTORY_LOCATION_MEM,
     .description.trajectoryType = type,
@@ -849,7 +846,7 @@ int crtpCommanderHighLevelDefineTrajectory(const uint8_t trajectoryId, const crt
     .description.trajectoryIdentifier.mem.n_pieces = nPieces,
   };
 
-  return handleCommand(COMMAND_DEFINE_TRAJECTORY, (const uint8_t*)&data);
+  return handleCommand(COMMAND_DEFINE_TRAJECTORY, (const uint8_t *)&data);
 }
 
 uint32_t crtpCommanderHighLevelTrajectoryMemSize()
@@ -857,7 +854,8 @@ uint32_t crtpCommanderHighLevelTrajectoryMemSize()
   return sizeof(trajectories_memory);
 }
 
-bool crtpCommanderHighLevelWriteTrajectory(const uint32_t offset, const uint32_t length, const uint8_t* data)
+bool crtpCommanderHighLevelWriteTrajectory(const uint32_t offset, const uint32_t length,
+    const uint8_t *data)
 {
   bool result = false;
 
@@ -869,18 +867,21 @@ bool crtpCommanderHighLevelWriteTrajectory(const uint32_t offset, const uint32_t
   return result;
 }
 
-bool crtpCommanderHighLevelReadTrajectory(const uint32_t offset, const uint32_t length, uint8_t* destination)
+bool crtpCommanderHighLevelReadTrajectory(const uint32_t offset, const uint32_t length,
+    uint8_t *destination)
 {
   bool result = false;
 
-  if (offset + length <= sizeof(trajectories_memory) && memcpy(destination, &(trajectories_memory[offset]), length)) {
+  if (offset + length <= sizeof(trajectories_memory) &&
+      memcpy(destination, &(trajectories_memory[offset]), length)) {
     result = true;
   }
 
   return result;
 }
 
-bool crtpCommanderHighLevelIsTrajectoryFinished() {
+bool crtpCommanderHighLevelIsTrajectoryFinished()
+{
   float t = usecTimestamp() / 1e6;
   return plan_is_finished(&planner, t);
 }
@@ -903,7 +904,7 @@ PARAM_ADD_CORE(PARAM_FLOAT, vland, &defaultLandingVelocity)
 
 /**
  * @brief Group mask of this Crazyflie
- * 
+ *
  * There are up to 8 groups each robot may belong to.
  * Use 0 to indicate no group, i.e., this Crazyflie will react to all commands.
  * Otherwise, for each group this robot should belong to set the corresponding bit to 1.

@@ -55,17 +55,20 @@ static uint32_t previousTotalRunTime = 0;
 
 static StaticTimer_t timerBuffer;
 
-void sysLoadInit() {
+void sysLoadInit()
+{
   ASSERT(!initialized);
 
-  xTimerHandle timer = xTimerCreateStatic( "sysLoadMonitorTimer", TIMER_PERIOD, pdTRUE, NULL, timerHandler, &timerBuffer);
+  xTimerHandle timer = xTimerCreateStatic("sysLoadMonitorTimer", TIMER_PERIOD, pdTRUE, NULL,
+                                          timerHandler, &timerBuffer);
   xTimerStart(timer, 100);
 
   initialized = true;
 }
 
 
-static taskData_t* getPreviousTaskData(uint32_t xTaskNumber) {
+static taskData_t *getPreviousTaskData(uint32_t xTaskNumber)
+{
   // Try to find the task in the list of tasks
   for (int i = 0; i < taskTopIndex; i++) {
     if (previousSnapshot[i].xTaskNumber == xTaskNumber) {
@@ -75,7 +78,7 @@ static taskData_t* getPreviousTaskData(uint32_t xTaskNumber) {
 
   // Allocate a new entry
   ASSERT(taskTopIndex < TASK_MAX_COUNT);
-  taskData_t* result = &previousSnapshot[taskTopIndex];
+  taskData_t *result = &previousSnapshot[taskTopIndex];
   result->xTaskNumber = xTaskNumber;
 
   taskTopIndex++;
@@ -83,7 +86,8 @@ static taskData_t* getPreviousTaskData(uint32_t xTaskNumber) {
   return result;
 }
 
-static void timerHandler(xTimerHandle timer) {
+static void timerHandler(xTimerHandle timer)
+{
   if (triggerDump != 0) {
     uint32_t totalRunTime;
 
@@ -101,8 +105,8 @@ static void timerHandler(xTimerHandle timer) {
     DEBUG_PRINT("Task dump\n");
     DEBUG_PRINT("Load\tStack left\tName\n");
     for (uint32_t i = 0; i < taskCount; i++) {
-      TaskStatus_t* stats = &taskStats[i];
-      taskData_t* previousTaskData = getPreviousTaskData(stats->xTaskNumber);
+      TaskStatus_t *stats = &taskStats[i];
+      taskData_t *previousTaskData = getPreviousTaskData(stats->xTaskNumber);
 
       uint32_t taskRunTime = stats->ulRunTimeCounter;
       float load = f * (taskRunTime - previousTaskData->ulRunTimeCounter);

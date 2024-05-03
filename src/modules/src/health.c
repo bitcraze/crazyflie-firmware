@@ -83,12 +83,13 @@ static uint8_t batteryPass = 0;
 static float batterySag = 0;
 
 typedef enum { configureAcc, measureNoiseFloor, measureProp, testBattery, restartBatTest,
-               evaluatePropResult, evaluateBatResult, testDone } TestState;
+               evaluatePropResult, evaluateBatResult, testDone
+             } TestState;
 
 #ifdef RUN_PROP_TEST_AT_STARTUP
-  static TestState testState = configureAcc;
+static TestState testState = configureAcc;
 #else
-  static TestState testState = testDone;
+static TestState testState = testDone;
 #endif
 
 static float variance(float *buffer, uint32_t length)
@@ -97,8 +98,7 @@ static float variance(float *buffer, uint32_t length)
   float sum = 0;
   float sumSq = 0;
 
-  for (i = 0; i < length; i++)
-  {
+  for (i = 0; i < length; i++) {
     sum += buffer[i];
     sumSq += buffer[i] * buffer[i];
   }
@@ -115,8 +115,7 @@ static float variance(float *buffer, uint32_t length)
  */
 static bool evaluatePropTest(float low, float high, float value, uint8_t motor)
 {
-  if (value < low || value > high)
-  {
+  if (value < low || value > high) {
     DEBUG_PRINT("Propeller test on M%d [FAIL]. low: %0.2f, high: %0.2f, measured: %0.2f\n",
                 motor + 1, (double)low, (double)high, (double)value);
     return false;
@@ -144,12 +143,11 @@ bool healthShallWeRunTest(void)
 
 void healthRunTests(sensorData_t *sensors)
 {
-  const MotorHealthTestDef* healthTestSettings;
+  const MotorHealthTestDef *healthTestSettings;
   int32_t sampleIndex;
 
   /* Propeller test */
-  if (testState == configureAcc)
-  {
+  if (testState == configureAcc) {
     motorPass = 0;
     sensorsSetAccMode(ACC_MODE_PROPTEST);
     testState = measureNoiseFloor;
@@ -161,14 +159,12 @@ void healthRunTests(sensorData_t *sensors)
     // Make sure motors are stopped first.
     motorsStop();
   }
-  if (testState == measureNoiseFloor)
-  {
+  if (testState == measureNoiseFloor) {
     accX[tick] = sensors->acc.x;
     accY[tick] = sensors->acc.y;
     accZ[tick] = sensors->acc.z;
 
-    if (++tick >= PROPTEST_NBR_OF_VARIANCE_VALUES)
-    {
+    if (++tick >= PROPTEST_NBR_OF_VARIANCE_VALUES) {
       tick = 0;
       accVarXnf = variance(accX, PROPTEST_NBR_OF_VARIANCE_VALUES);
       accVarYnf = variance(accY, PROPTEST_NBR_OF_VARIANCE_VALUES);
@@ -177,50 +173,40 @@ void healthRunTests(sensorData_t *sensors)
                   (double)accVarXnf + (double)accVarYnf, (double)accVarZnf);
       testState = measureProp;
     }
-  }
-  else if (testState == measureProp)
-  {
+  } else if (testState == measureProp) {
     healthTestSettings = motorsGetHealthTestSettings(motorToTest);
 
     sampleIndex = ((int32_t) tick) - healthTestSettings->varianceMeasurementStartMsec;
-    if (sampleIndex >= 0 && sampleIndex < PROPTEST_NBR_OF_VARIANCE_VALUES)
-    {
+    if (sampleIndex >= 0 && sampleIndex < PROPTEST_NBR_OF_VARIANCE_VALUES) {
       accX[sampleIndex] = sensors->acc.x;
       accY[sampleIndex] = sensors->acc.y;
       accZ[sampleIndex] = sensors->acc.z;
-      if (pmGetBatteryVoltage() < minSingleLoadedVoltage[motorToTest])
-      {
+      if (pmGetBatteryVoltage() < minSingleLoadedVoltage[motorToTest]) {
         minSingleLoadedVoltage[motorToTest] = pmGetBatteryVoltage();
       }
     }
     tick++;
 
-    if (sampleIndex == PROPTEST_NBR_OF_VARIANCE_VALUES)
-    {
+    if (sampleIndex == PROPTEST_NBR_OF_VARIANCE_VALUES) {
       accVarX[motorToTest] = variance(accX, PROPTEST_NBR_OF_VARIANCE_VALUES);
       accVarY[motorToTest] = variance(accY, PROPTEST_NBR_OF_VARIANCE_VALUES);
       accVarZ[motorToTest] = variance(accZ, PROPTEST_NBR_OF_VARIANCE_VALUES);
       DEBUG_PRINT("Motor M%d variance X+Y: %.2f (Z:%.2f), voltage sag:%.2f\n",
-                   motorToTest+1,
-                   (double)accVarX[motorToTest] + (double)accVarY[motorToTest],
-                   (double)accVarZ[motorToTest],
-                   (double)(idleVoltage - minSingleLoadedVoltage[motorToTest]));
+                  motorToTest + 1,
+                  (double)accVarX[motorToTest] + (double)accVarY[motorToTest],
+                  (double)accVarZ[motorToTest],
+                  (double)(idleVoltage - minSingleLoadedVoltage[motorToTest]));
     }
 
-    if (tick == 1 && healthTestSettings->onPeriodMsec > 0)
-    {
-      motorsSetRatio(motorToTest, propTestPWMRatio > 0 ? propTestPWMRatio : healthTestSettings->onPeriodPWMRatioProp);
-    }
-    else if (tick == healthTestSettings->onPeriodMsec)
-    {
+    if (tick == 1 && healthTestSettings->onPeriodMsec > 0) {
+      motorsSetRatio(motorToTest, propTestPWMRatio > 0 ? propTestPWMRatio :
+                     healthTestSettings->onPeriodPWMRatioProp);
+    } else if (tick == healthTestSettings->onPeriodMsec) {
       motorsSetRatio(motorToTest, 0);
-    }
-    else if (tick >= healthTestSettings->onPeriodMsec + healthTestSettings->offPeriodMsec)
-    {
+    } else if (tick >= healthTestSettings->onPeriodMsec + healthTestSettings->offPeriodMsec) {
       tick = 0;
       motorToTest++;
-      if (motorToTest >= NBR_OF_MOTORS)
-      {
+      if (motorToTest >= NBR_OF_MOTORS) {
         tick = 0;
         motorToTest = 0;
         testState = evaluatePropResult;
@@ -229,72 +215,57 @@ void healthRunTests(sensorData_t *sensors)
     }
   }
   /* Experimental battery test, tick should count up each ms */
-  else if (testState == testBattery)
-  {
+  else if (testState == testBattery) {
     healthTestSettings = motorsGetHealthTestSettings(0);
 
-    if (tick == 0)
-    {
+    if (tick == 0) {
       batteryPass = 0;
       minLoadedVoltage = idleVoltage = pmGetBatteryVoltage();
     }
-    if (tick == 1)
-    {
-      motorsSetRatio(MOTOR_M1, batTestPWMRatio > 0 ? batTestPWMRatio : healthTestSettings->onPeriodPWMRatioBat);
-      motorsSetRatio(MOTOR_M2, batTestPWMRatio > 0 ? batTestPWMRatio : healthTestSettings->onPeriodPWMRatioBat);
-      motorsSetRatio(MOTOR_M3, batTestPWMRatio > 0 ? batTestPWMRatio : healthTestSettings->onPeriodPWMRatioBat);
-      motorsSetRatio(MOTOR_M4, batTestPWMRatio > 0 ? batTestPWMRatio : healthTestSettings->onPeriodPWMRatioBat);
-    }
-    else if (tick < 50)
-    {
-      if (pmGetBatteryVoltage() < minLoadedVoltage)
+    if (tick == 1) {
+      motorsSetRatio(MOTOR_M1, batTestPWMRatio > 0 ? batTestPWMRatio :
+                     healthTestSettings->onPeriodPWMRatioBat);
+      motorsSetRatio(MOTOR_M2, batTestPWMRatio > 0 ? batTestPWMRatio :
+                     healthTestSettings->onPeriodPWMRatioBat);
+      motorsSetRatio(MOTOR_M3, batTestPWMRatio > 0 ? batTestPWMRatio :
+                     healthTestSettings->onPeriodPWMRatioBat);
+      motorsSetRatio(MOTOR_M4, batTestPWMRatio > 0 ? batTestPWMRatio :
+                     healthTestSettings->onPeriodPWMRatioBat);
+    } else if (tick < 50) {
+      if (pmGetBatteryVoltage() < minLoadedVoltage) {
         minLoadedVoltage = pmGetBatteryVoltage();
-    }
-    else if (tick == 50)
-    {
+      }
+    } else if (tick == 50) {
       motorsStop();
       testState = evaluateBatResult;
     }
     tick++;
-  }
-  else if (testState == restartBatTest)
-  {
+  } else if (testState == restartBatTest) {
     // Mainly used for testing
-    if (tick++ > 2000)
-    {
+    if (tick++ > 2000) {
       DEBUG_PRINT("Idle:%.2f sag: %.2f\n", (double)idleVoltage,
                   (double)(idleVoltage - minLoadedVoltage));
       testState = testBattery;
       tick = 0;
     }
-  }
-  else if (testState == evaluateBatResult)
-  {
+  } else if (testState == evaluateBatResult) {
     batterySag = idleVoltage - minLoadedVoltage;
-    if (batterySag > BAT_LOADING_SAG_THRESHOLD)
-    {
+    if (batterySag > BAT_LOADING_SAG_THRESHOLD) {
       DEBUG_PRINT("Battery sag during load test (%.2f > %.2f) [FAILED].\n", (double)batterySag,
                   (double)(BAT_LOADING_SAG_THRESHOLD));
       batteryPass = 0;
-    }
-    else
-    {
+    } else {
       DEBUG_PRINT("Idle:%.2fV sag: %.2fV (< %.2fV) [OK]\n", (double)idleVoltage,
                   (double)(batterySag), (double)(BAT_LOADING_SAG_THRESHOLD));
       batteryPass = 1;
     }
     testState = testDone;
-  }
-  else if (testState == evaluatePropResult)
-  {
-    for (int m = 0; m < NBR_OF_MOTORS; m++)
-    {
-      if (!evaluatePropTest(0, PROPELLER_BALANCE_TEST_THRESHOLD,  accVarX[m] + accVarY[m], m))
-      {
+  } else if (testState == evaluatePropResult) {
+    for (int m = 0; m < NBR_OF_MOTORS; m++) {
+      if (!evaluatePropTest(0, PROPELLER_BALANCE_TEST_THRESHOLD,  accVarX[m] + accVarY[m], m)) {
         nrFailedTests++;
-        for (int j = 0; j < 3; j++)
-        {
-          motorsBeep(m, true, testsound[m], (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / A4)/ 20);
+        for (int j = 0; j < 3; j++) {
+          motorsBeep(m, true, testsound[m], (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / A4) / 20);
           vTaskDelay(M2T(MOTORS_TEST_ON_TIME_MS));
           motorsBeep(m, false, 0, 0);
           vTaskDelay(M2T(100));
@@ -302,11 +273,9 @@ void healthRunTests(sensorData_t *sensors)
       }
     }
 #ifdef PLAY_STARTUP_MELODY_ON_MOTORS
-    if (nrFailedTests == 0)
-    {
-      for (int m = 0; m < NBR_OF_MOTORS; m++)
-      {
-        motorsBeep(m, true, testsound[m], (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / A4)/ 20);
+    if (nrFailedTests == 0) {
+      for (int m = 0; m < NBR_OF_MOTORS; m++) {
+        motorsBeep(m, true, testsound[m], (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / A4) / 20);
         vTaskDelay(M2T(MOTORS_TEST_ON_TIME_MS));
         motorsBeep(m, false, 0, 0);
         vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME_MS));

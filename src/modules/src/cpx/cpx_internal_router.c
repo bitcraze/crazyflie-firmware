@@ -42,21 +42,25 @@ static xQueueHandle mixedQueue;
 
 static xQueueHandle txq;
 
-int cpxInternalRouterReceiveCRTP(CPXPacket_t * packet) {
+int cpxInternalRouterReceiveCRTP(CPXPacket_t *packet)
+{
   return xQueueReceive(crtpQueue, packet, M2T(100));
 }
 
-void cpxInternalRouterReceiveOthers(CPXPacket_t * packet) {
+void cpxInternalRouterReceiveOthers(CPXPacket_t *packet)
+{
   xQueueReceive(mixedQueue, packet, (TickType_t)portMAX_DELAY);
 }
 
-void cpxSendPacketBlocking(const CPXPacket_t * packet) {
+void cpxSendPacketBlocking(const CPXPacket_t *packet)
+{
   if (cpxCheckVersion(packet->route.version)) {
     xQueueSend(txq, packet, portMAX_DELAY);
   }
 }
 
-bool cpxSendPacketBlockingTimeout(const CPXPacket_t * packet, const uint32_t timeout) {
+bool cpxSendPacketBlockingTimeout(const CPXPacket_t *packet, const uint32_t timeout)
+{
   if (cpxCheckVersion(packet->route.version)) {
     return xQueueSend(txq, packet, timeout) == pdTRUE;
   } else {
@@ -64,11 +68,13 @@ bool cpxSendPacketBlockingTimeout(const CPXPacket_t * packet, const uint32_t tim
   }
 }
 
-bool cpxSendPacket(const CPXPacket_t * packet, uint32_t timeout) {
+bool cpxSendPacket(const CPXPacket_t *packet, uint32_t timeout)
+{
   return true;
 }
 
-void cpxInternalRouterRouteIn(const CPXRoutablePacket_t* packet) {
+void cpxInternalRouterRouteIn(const CPXRoutablePacket_t *packet)
+{
   // this should never fail, as it should be checked when the packet is received
   // however, double checking doesn't harm
   if (cpxCheckVersion(packet->route.version)) {
@@ -91,11 +97,13 @@ void cpxInternalRouterRouteIn(const CPXRoutablePacket_t* packet) {
 }
 
 // Route from STM to external targets
-void cpxInternalRouterRouteOut(CPXRoutablePacket_t* packet) {
+void cpxInternalRouterRouteOut(CPXRoutablePacket_t *packet)
+{
   xQueueReceive(txq, packet, (TickType_t)portMAX_DELAY);
 }
 
-void cpxInternalRouterInit(void) {
+void cpxInternalRouterInit(void)
+{
   txq = xQueueCreate(QUEUE_LENGTH, sizeof(CPXPacket_t));
   crtpQueue = xQueueCreate(QUEUE_LENGTH, sizeof(CPXPacket_t));;
   mixedQueue = xQueueCreate(QUEUE_LENGTH, sizeof(CPXPacket_t));;

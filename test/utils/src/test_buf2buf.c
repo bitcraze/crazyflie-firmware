@@ -42,7 +42,8 @@ static uint8_t outBuf[OUT_BUF_SIZE];
 
 static void validateStdUseCase(uint32_t inBufSize, uint32_t nrOfInBufs, uint32_t outBufSize);
 
-void setUp(void) {
+void setUp(void)
+{
   for (int i = 0; i < IN_BUF_SIZE; i++) {
     inBuf[i] = i + 1;
   }
@@ -53,7 +54,8 @@ void setUp(void) {
 
 void tearDown(void) {}
 
-void testThatASmallInBufferIsNotFillingLargeOutBuffer() {
+void testThatASmallInBufferIsNotFillingLargeOutBuffer()
+{
   // Fixture
   buf2bufInit(&context, outBuf, 10);
 
@@ -65,7 +67,8 @@ void testThatASmallInBufferIsNotFillingLargeOutBuffer() {
   TEST_ASSERT_FALSE(actual);
 }
 
-void testThatEqualSizeInAndOutBufferFillsOutBuffer() {
+void testThatEqualSizeInAndOutBufferFillsOutBuffer()
+{
   // Fixture
   buf2bufInit(&context, outBuf, 10);
 
@@ -77,7 +80,8 @@ void testThatEqualSizeInAndOutBufferFillsOutBuffer() {
   TEST_ASSERT_TRUE(actual);
 }
 
-void testThatALargeInBufferFillsSmallerOutBuffer() {
+void testThatALargeInBufferFillsSmallerOutBuffer()
+{
   // Fixture
   buf2bufInit(&context, outBuf, 10);
 
@@ -89,7 +93,8 @@ void testThatALargeInBufferFillsSmallerOutBuffer() {
   TEST_ASSERT_TRUE(actual);
 }
 
-void testThatMultipleSmallInBufferFillsOutBuffer() {
+void testThatMultipleSmallInBufferFillsOutBuffer()
+{
   // Fixture
   buf2bufInit(&context, outBuf, 10);
 
@@ -105,7 +110,8 @@ void testThatMultipleSmallInBufferFillsOutBuffer() {
   TEST_ASSERT_TRUE(actual2);
 }
 
-void testThatOutBufferWithDataReportsSizeWhenReleased() {
+void testThatOutBufferWithDataReportsSizeWhenReleased()
+{
   // Fixture
   buf2bufInit(&context, outBuf, 10);
 
@@ -122,7 +128,8 @@ void testThatOutBufferWithDataReportsSizeWhenReleased() {
   TEST_ASSERT_EQUAL_UINT32(8, actual);
 }
 
-void testStdUseCaseWithVariousConfigurations() {
+void testStdUseCaseWithVariousConfigurations()
+{
   // Same buffer size
   validateStdUseCase(5, 5, 5);
 
@@ -147,7 +154,8 @@ void testStdUseCaseWithVariousConfigurations() {
 
 // Helpers -------------------------------
 
-static void validateStdUseCase(uint32_t inBufSize, uint32_t nrOfInBufs, uint32_t outBufSize) {
+static void validateStdUseCase(uint32_t inBufSize, uint32_t nrOfInBufs, uint32_t outBufSize)
+{
   TEST_ASSERT_LESS_OR_EQUAL(IN_BUF_SIZE, inBufSize);
   TEST_ASSERT_LESS_OR_EQUAL(OUT_BUF_SIZE, outBufSize);
 
@@ -166,7 +174,7 @@ static void validateStdUseCase(uint32_t inBufSize, uint32_t nrOfInBufs, uint32_t
     inIndex += inBufSize;
 
     buf2bufAddInBuf(&context, inBuf, inBufSize);
-    while(buf2bufConsumeInBuf(&context)) {
+    while (buf2bufConsumeInBuf(&context)) {
       // Store out buffers
       memcpy(&concatOutBufs[outIndex], outBuf, outBufSize);
       outIndex += outBufSize;

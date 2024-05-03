@@ -104,27 +104,27 @@ static struct this_s this = {
     },
     .pid.dt = DT,
   },
-  #if CONFIG_CONTROLLER_PID_IMPROVED_BARO_Z_HOLD
-    .pidVZ = {
-      .pid = {
-        .kp = PID_VEL_Z_KP_BARO_Z_HOLD,
-        .ki = PID_VEL_Z_KI_BARO_Z_HOLD,
-        .kd = PID_VEL_Z_KD_BARO_Z_HOLD,
-        .kff = PID_VEL_Z_KFF_BARO_Z_HOLD,
-      },
-      .pid.dt = DT,
+#if CONFIG_CONTROLLER_PID_IMPROVED_BARO_Z_HOLD
+  .pidVZ = {
+    .pid = {
+      .kp = PID_VEL_Z_KP_BARO_Z_HOLD,
+      .ki = PID_VEL_Z_KI_BARO_Z_HOLD,
+      .kd = PID_VEL_Z_KD_BARO_Z_HOLD,
+      .kff = PID_VEL_Z_KFF_BARO_Z_HOLD,
     },
-  #else
-    .pidVZ = {
-      .pid = {
-        .kp = PID_VEL_Z_KP,
-        .ki = PID_VEL_Z_KI,
-        .kd = PID_VEL_Z_KD,
-        .kff = PID_VEL_Z_KFF,
-      },
-      .pid.dt = DT,
+    .pid.dt = DT,
+  },
+#else
+  .pidVZ = {
+    .pid = {
+      .kp = PID_VEL_Z_KP,
+      .ki = PID_VEL_Z_KI,
+      .kd = PID_VEL_Z_KD,
+      .kff = PID_VEL_Z_KFF,
     },
-  #endif
+    .pid.dt = DT,
+  },
+#endif
   .pidX = {
     .pid = {
       .kp = PID_POS_X_KP,
@@ -154,11 +154,11 @@ static struct this_s this = {
     },
     .pid.dt = DT,
   },
-  #if CONFIG_CONTROLLER_PID_IMPROVED_BARO_Z_HOLD
-    .thrustBase = PID_VEL_THRUST_BASE_BARO_Z_HOLD,
-  #else
-    .thrustBase = PID_VEL_THRUST_BASE,
-  #endif
+#if CONFIG_CONTROLLER_PID_IMPROVED_BARO_Z_HOLD
+  .thrustBase = PID_VEL_THRUST_BASE_BARO_Z_HOLD,
+#else
+  .thrustBase = PID_VEL_THRUST_BASE,
+#endif
   .thrustMin  = PID_VEL_THRUST_MIN,
 };
 #endif
@@ -166,21 +166,25 @@ static struct this_s this = {
 void positionControllerInit()
 {
   pidInit(&this.pidX.pid, this.pidX.setpoint, this.pidX.pid.kp, this.pidX.pid.ki, this.pidX.pid.kd,
-      this.pidX.pid.kff, this.pidX.pid.dt, POSITION_RATE, posFiltCutoff, posFiltEnable);
+          this.pidX.pid.kff, this.pidX.pid.dt, POSITION_RATE, posFiltCutoff, posFiltEnable);
   pidInit(&this.pidY.pid, this.pidY.setpoint, this.pidY.pid.kp, this.pidY.pid.ki, this.pidY.pid.kd,
-      this.pidY.pid.kff, this.pidY.pid.dt, POSITION_RATE, posFiltCutoff, posFiltEnable);
+          this.pidY.pid.kff, this.pidY.pid.dt, POSITION_RATE, posFiltCutoff, posFiltEnable);
   pidInit(&this.pidZ.pid, this.pidZ.setpoint, this.pidZ.pid.kp, this.pidZ.pid.ki, this.pidZ.pid.kd,
-      this.pidZ.pid.kff, this.pidZ.pid.dt, POSITION_RATE, posZFiltCutoff, posZFiltEnable);
+          this.pidZ.pid.kff, this.pidZ.pid.dt, POSITION_RATE, posZFiltCutoff, posZFiltEnable);
 
-  pidInit(&this.pidVX.pid, this.pidVX.setpoint, this.pidVX.pid.kp, this.pidVX.pid.ki, this.pidVX.pid.kd,
-      this.pidVX.pid.kff, this.pidVX.pid.dt, POSITION_RATE, velFiltCutoff, velFiltEnable);
-  pidInit(&this.pidVY.pid, this.pidVY.setpoint, this.pidVY.pid.kp, this.pidVY.pid.ki, this.pidVY.pid.kd,
-      this.pidVY.pid.kff, this.pidVY.pid.dt, POSITION_RATE, velFiltCutoff, velFiltEnable);
-  pidInit(&this.pidVZ.pid, this.pidVZ.setpoint, this.pidVZ.pid.kp, this.pidVZ.pid.ki, this.pidVZ.pid.kd,
-      this.pidVZ.pid.kff, this.pidVZ.pid.dt, POSITION_RATE, velZFiltCutoff, velZFiltEnable);
+  pidInit(&this.pidVX.pid, this.pidVX.setpoint, this.pidVX.pid.kp, this.pidVX.pid.ki,
+          this.pidVX.pid.kd,
+          this.pidVX.pid.kff, this.pidVX.pid.dt, POSITION_RATE, velFiltCutoff, velFiltEnable);
+  pidInit(&this.pidVY.pid, this.pidVY.setpoint, this.pidVY.pid.kp, this.pidVY.pid.ki,
+          this.pidVY.pid.kd,
+          this.pidVY.pid.kff, this.pidVY.pid.dt, POSITION_RATE, velFiltCutoff, velFiltEnable);
+  pidInit(&this.pidVZ.pid, this.pidVZ.setpoint, this.pidVZ.pid.kp, this.pidVZ.pid.ki,
+          this.pidVZ.pid.kd,
+          this.pidVZ.pid.kff, this.pidVZ.pid.dt, POSITION_RATE, velZFiltCutoff, velZFiltEnable);
 }
 
-static float runPid(float input, struct pidAxis_s *axis, float setpoint, float dt) {
+static float runPid(float input, struct pidAxis_s *axis, float setpoint, float dt)
+{
   axis->setpoint = setpoint;
 
   pidSetDesired(&axis->pid, axis->setpoint);
@@ -190,8 +194,8 @@ static float runPid(float input, struct pidAxis_s *axis, float setpoint, float d
 
 float state_body_x, state_body_y, state_body_vx, state_body_vy;
 
-void positionController(float* thrust, attitude_t *attitude, const setpoint_t *setpoint,
-                                                             const state_t *state)
+void positionController(float *thrust, attitude_t *attitude, const setpoint_t *setpoint,
+                        const state_t *state)
 {
   this.pidX.pid.outputLimit = xVelMax * velMaxOverhead;
   this.pidY.pid.outputLimit = yVelMax * velMaxOverhead;
@@ -233,8 +237,8 @@ void positionController(float* thrust, attitude_t *attitude, const setpoint_t *s
   velocityController(thrust, attitude, &setpoint_velocity, state);
 }
 
-void velocityController(float* thrust, attitude_t *attitude, const Axis3f* setpoint_velocity,
-                                                             const state_t *state)
+void velocityController(float *thrust, attitude_t *attitude, const Axis3f *setpoint_velocity,
+                        const state_t *state)
 {
   this.pidVX.pid.outputLimit = pLimit * rpLimitOverhead;
   this.pidVY.pid.outputLimit = rLimit * rpLimitOverhead;
@@ -257,12 +261,12 @@ void velocityController(float* thrust, attitude_t *attitude, const Axis3f* setpo
   // Thrust
   float thrustRaw = runPid(state->velocity.z, &this.pidVZ, setpoint_velocity->z, DT);
   // Scale the thrust and add feed forward term
-  *thrust = thrustRaw*thrustScale + this.thrustBase;
+  *thrust = thrustRaw * thrustScale + this.thrustBase;
   // Check for minimum thrust
   if (*thrust < this.thrustMin) {
     *thrust = this.thrustMin;
   }
-    // saturate
+  // saturate
   *thrust = constrain(*thrust, 0, UINT16_MAX);
 }
 
@@ -276,7 +280,8 @@ void positionControllerResetAllPID()
   pidReset(&this.pidVZ.pid);
 }
 
-void positionControllerResetAllfilters() {
+void positionControllerResetAllfilters()
+{
   filterReset(&this.pidX.pid, POSITION_RATE, posFiltCutoff, posFiltEnable);
   filterReset(&this.pidY.pid, POSITION_RATE, posFiltCutoff, posFiltEnable);
   filterReset(&this.pidZ.pid, POSITION_RATE, posZFiltCutoff, posZFiltEnable);

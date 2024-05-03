@@ -31,7 +31,7 @@
 #define PLATFORM_INFO_OTP_NR_OF_BLOCKS 16
 #define PLATFORM_INFO_OTP_BLOCK_LEN 32
 #if PLATFORM_DEVICE_TYPE_STRING_MAX_LEN < (PLATFORM_INFO_OTP_BLOCK_LEN + 1)
-  #error
+#error
 #endif
 
 
@@ -39,22 +39,24 @@
 
 
 #ifndef UNIT_TEST_MODE
-static char* getAddressOfOtpMemoryBlock(int blockNr) {
-  return (char*)(0x1fff7800 + blockNr * 0x20);
+static char *getAddressOfOtpMemoryBlock(int blockNr)
+{
+  return (char *)(0x1fff7800 + blockNr * 0x20);
 }
 #else
-  // This function is replaced by a mock in unit tests
-  char* getAddressOfOtpMemoryBlock(const int blockNr);
+// This function is replaced by a mock in unit tests
+char *getAddressOfOtpMemoryBlock(const int blockNr);
 #endif
 
 
 
 
-void platformGetDeviceTypeString(char* deviceTypeString) {
-  char* block = 0;
+void platformGetDeviceTypeString(char *deviceTypeString)
+{
+  char *block = 0;
 
   for (int i = 0; i < PLATFORM_INFO_OTP_NR_OF_BLOCKS; i++) {
-    char* candidateBlock = getAddressOfOtpMemoryBlock(i);
+    char *candidateBlock = getAddressOfOtpMemoryBlock(i);
     if (candidateBlock[0] != 0) {
       block = candidateBlock;
       break;

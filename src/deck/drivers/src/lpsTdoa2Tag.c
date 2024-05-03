@@ -42,27 +42,27 @@
 #include "tdoaEngineInstance.h"
 
 #if ANCHOR_STORAGE_COUNT < LOCODECK_NR_OF_TDOA2_ANCHORS
-  #error "Tdoa engine storage is too small"
+#error "Tdoa engine storage is too small"
 #endif
 #if REMOTE_ANCHOR_DATA_COUNT < LOCODECK_NR_OF_TDOA2_ANCHORS
-  #error "Tdoa engine storage is too small"
+#error "Tdoa engine storage is too small"
 #endif
 
 // Config
 static lpsTdoa2AlgoOptions_t defaultOptions = {
-   .anchorAddress = {
-     0xbccf000000000000,
-     0xbccf000000000001,
-     0xbccf000000000002,
-     0xbccf000000000003,
-     0xbccf000000000004,
-     0xbccf000000000005,
-     0xbccf000000000006,
-     0xbccf000000000007,
-   },
+  .anchorAddress = {
+    0xbccf000000000000,
+    0xbccf000000000001,
+    0xbccf000000000002,
+    0xbccf000000000003,
+    0xbccf000000000004,
+    0xbccf000000000005,
+    0xbccf000000000006,
+    0xbccf000000000007,
+  },
 };
 
-static lpsTdoa2AlgoOptions_t* options = &defaultOptions;
+static lpsTdoa2AlgoOptions_t *options = &defaultOptions;
 
 // State
 typedef struct {
@@ -79,7 +79,8 @@ static lpsLppShortPacket_t lppPacket;
 static bool lppPacketToSend;
 static int lppPacketSendTryCounter;
 
-static void lpsHandleLppShortPacket(const uint8_t srcId, const uint8_t *data, tdoaAnchorContext_t* anchorCtx);
+static void lpsHandleLppShortPacket(const uint8_t srcId, const uint8_t *data,
+                                    tdoaAnchorContext_t *anchorCtx);
 
 // Log data
 static float logUwbTdoaDistDiff[LOCODECK_NR_OF_TDOA2_ANCHORS];
@@ -92,15 +93,18 @@ static float stdDev = TDOA_ENGINE_MEASUREMENT_NOISE_STD;
 // The default receive time in the anchors for messages from other anchors is 0
 // and is overwritten with the actual receive time when a packet arrives.
 // That is, if no message was received the rx time will be 0.
-static bool isValidTimeStamp(const int64_t anchorRxTime) {
+static bool isValidTimeStamp(const int64_t anchorRxTime)
+{
   return anchorRxTime != 0;
 }
 
-static bool isConsecutiveIds(const uint8_t previousAnchor, const uint8_t currentAnchor) {
+static bool isConsecutiveIds(const uint8_t previousAnchor, const uint8_t currentAnchor)
+{
   return (((previousAnchor + 1) & 0x07) == currentAnchor);
 }
 
-static void updateRemoteData(tdoaAnchorContext_t* anchorCtx, const rangePacket2_t* packet) {
+static void updateRemoteData(tdoaAnchorContext_t *anchorCtx, const rangePacket2_t *packet)
+{
   const uint8_t anchorId = tdoaStorageGetId(anchorCtx);
   for (uint8_t i = 0; i < LOCODECK_NR_OF_TDOA2_ANCHORS; i++) {
     if (anchorId != i) {
@@ -127,7 +131,9 @@ static void updateRemoteData(tdoaAnchorContext_t* anchorCtx, const rangePacket2_
   }
 }
 
-static void handleLppPacket(const int dataLength, const packet_t* rxPacket, tdoaAnchorContext_t* anchorCtx) {
+static void handleLppPacket(const int dataLength, const packet_t *rxPacket,
+                            tdoaAnchorContext_t *anchorCtx)
+{
   const int32_t payloadLength = dataLength - MAC802154_HEADER_LENGTH;
   const int32_t startOfLppDataInPayload = LPS_TDOA2_LPP_HEADER;
   const int32_t lppDataLength = payloadLength - startOfLppDataInPayload;
@@ -137,7 +143,7 @@ static void handleLppPacket(const int dataLength, const packet_t* rxPacket, tdoa
     if (lppPacketHeader == LPP_HEADER_SHORT_PACKET) {
       int srcId = -1;
 
-      for (int i=0; i < LOCODECK_NR_OF_TDOA2_ANCHORS; i++) {
+      for (int i = 0; i < LOCODECK_NR_OF_TDOA2_ANCHORS; i++) {
         if (rxPacket->sourceAddress == options->anchorAddress[i]) {
           srcId = i;
           break;
@@ -168,21 +174,22 @@ static void sendLppShort(dwDevice_t *dev, lpsLppShortPacket_t *packet)
 
   dwNewTransmit(dev);
   dwSetDefaults(dev);
-  dwSetData(dev, (uint8_t*)&txPacket, MAC802154_HEADER_LENGTH+1+packet->length);
+  dwSetData(dev, (uint8_t *)&txPacket, MAC802154_HEADER_LENGTH + 1 + packet->length);
 
   dwWaitForResponse(dev, true);
   dwStartTransmit(dev);
 }
 
-static bool rxcallback(dwDevice_t *dev) {
-  tdoaStats_t* stats = &tdoaEngineState.stats;
+static bool rxcallback(dwDevice_t *dev)
+{
+  tdoaStats_t *stats = &tdoaEngineState.stats;
   STATS_CNT_RATE_EVENT(&stats->packetsReceived);
 
   int dataLength = dwGetDataLength(dev);
   packet_t rxPacket;
 
-  dwGetData(dev, (uint8_t*)&rxPacket, dataLength);
-  const rangePacket2_t* packet = (rangePacket2_t*)rxPacket.payload;
+  dwGetData(dev, (uint8_t *)&rxPacket, dataLength);
+  const rangePacket2_t *packet = (rangePacket2_t *)rxPacket.payload;
 
   bool lppSent = false;
   if (packet->type == PACKET_TYPE_TDOA2) {
@@ -223,14 +230,16 @@ static bool rxcallback(dwDevice_t *dev) {
   return lppSent;
 }
 
-static void setRadioInReceiveMode(dwDevice_t *dev) {
+static void setRadioInReceiveMode(dwDevice_t *dev)
+{
   dwNewReceive(dev);
   dwSetDefaults(dev);
   dwStartReceive(dev);
 }
 
-static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
-  switch(event) {
+static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event)
+{
+  switch (event) {
     case eventPacketReceived:
       if (rxcallback(dev)) {
         lppPacketToSend = false;
@@ -250,9 +259,9 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
       }
       break;
     case eventTimeout:
-      // Fall through
+    // Fall through
     case eventReceiveFailed:
-      // Fall through
+    // Fall through
     case eventReceiveTimeout:
       setRadioInReceiveMode(dev);
       break;
@@ -276,19 +285,20 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
 }
 
 
-static void sendTdoaToEstimatorCallback(tdoaMeasurement_t* tdoaMeasurement) {
+static void sendTdoaToEstimatorCallback(tdoaMeasurement_t *tdoaMeasurement)
+{
   // Override the default standard deviation set by the TDoA engine.
   tdoaMeasurement->stdDev = stdDev;
 
   estimatorEnqueueTDOA(tdoaMeasurement);
 
-  #ifdef CONFIG_DECK_LOCO_2D_POSITION
+#ifdef CONFIG_DECK_LOCO_2D_POSITION
   heightMeasurement_t heightData;
   heightData.timestamp = xTaskGetTickCount();
   heightData.height = DECK_LOCO_2D_POSITION_HEIGHT;
   heightData.stdDev = 0.0001;
   estimatorEnqueueAbsoluteHeight(&heightData);
-  #endif
+#endif
 
   const uint8_t idA = tdoaMeasurement->anchorIds[0];
   const uint8_t idB = tdoaMeasurement->anchorIds[1];
@@ -298,9 +308,11 @@ static void sendTdoaToEstimatorCallback(tdoaMeasurement_t* tdoaMeasurement) {
 }
 
 
-static void Initialize(dwDevice_t *dev) {
+static void Initialize(dwDevice_t *dev)
+{
   uint32_t now_ms = T2M(xTaskGetTickCount());
-  tdoaEngineInit(&tdoaEngineState, now_ms, sendTdoaToEstimatorCallback, LOCODECK_TS_FREQ, TdoaEngineMatchingAlgorithmYoungest);
+  tdoaEngineInit(&tdoaEngineState, now_ms, sendTdoaToEstimatorCallback, LOCODECK_TS_FREQ,
+                 TdoaEngineMatchingAlgorithmYoungest);
 
   previousAnchor = 0;
 
@@ -319,11 +331,13 @@ static bool isRangingOk()
   return rangingOk;
 }
 
-static bool getAnchorPosition(const uint8_t anchorId, point_t* position) {
+static bool getAnchorPosition(const uint8_t anchorId, point_t *position)
+{
   tdoaAnchorContext_t anchorCtx;
   uint32_t now_ms = T2M(xTaskGetTickCount());
 
-  bool contextFound = tdoaStorageGetAnchorCtx(tdoaEngineState.anchorInfoArray, anchorId, now_ms, &anchorCtx);
+  bool contextFound = tdoaStorageGetAnchorCtx(tdoaEngineState.anchorInfoArray, anchorId, now_ms,
+                      &anchorCtx);
   if (contextFound) {
     tdoaStorageGetAnchorPosition(&anchorCtx, position);
     return true;
@@ -332,23 +346,28 @@ static bool getAnchorPosition(const uint8_t anchorId, point_t* position) {
   return false;
 }
 
-static uint8_t getAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize) {
-  return tdoaStorageGetListOfAnchorIds(tdoaEngineState.anchorInfoArray, unorderedAnchorList, maxListSize);
+static uint8_t getAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize)
+{
+  return tdoaStorageGetListOfAnchorIds(tdoaEngineState.anchorInfoArray, unorderedAnchorList,
+                                       maxListSize);
 }
 
-static uint8_t getActiveAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize) {
+static uint8_t getActiveAnchorIdList(uint8_t unorderedAnchorList[], const int maxListSize)
+{
   uint32_t now_ms = T2M(xTaskGetTickCount());
-  return tdoaStorageGetListOfActiveAnchorIds(tdoaEngineState.anchorInfoArray, unorderedAnchorList, maxListSize, now_ms);
+  return tdoaStorageGetListOfActiveAnchorIds(tdoaEngineState.anchorInfoArray, unorderedAnchorList,
+         maxListSize, now_ms);
 }
 
 // Loco Posisioning Protocol (LPP) handling
-static void lpsHandleLppShortPacket(const uint8_t srcId, const uint8_t *data, tdoaAnchorContext_t* anchorCtx)
+static void lpsHandleLppShortPacket(const uint8_t srcId, const uint8_t *data,
+                                    tdoaAnchorContext_t *anchorCtx)
 {
   uint8_t type = data[0];
 
   if (type == LPP_SHORT_ANCHORPOS) {
     if (srcId < LOCODECK_NR_OF_TDOA2_ANCHORS) {
-      struct lppShortAnchorPos_s *newpos = (struct lppShortAnchorPos_s*)&data[1];
+      struct lppShortAnchorPos_s *newpos = (struct lppShortAnchorPos_s *)&data[1];
       tdoaStorageSetAnchorPosition(anchorCtx, newpos->x, newpos->y, newpos->z);
     }
   }
@@ -363,19 +382,20 @@ uwbAlgorithm_t uwbTdoa2TagAlgorithm = {
   .getActiveAnchorIdList = getActiveAnchorIdList,
 };
 
-void lpsTdoa2TagSetOptions(lpsTdoa2AlgoOptions_t* newOptions) {
+void lpsTdoa2TagSetOptions(lpsTdoa2AlgoOptions_t *newOptions)
+{
   options = newOptions;
 }
 
 LOG_GROUP_START(tdoa2)
-LOG_ADD(LOG_FLOAT, d7-0, &logUwbTdoaDistDiff[0])
-LOG_ADD(LOG_FLOAT, d0-1, &logUwbTdoaDistDiff[1])
-LOG_ADD(LOG_FLOAT, d1-2, &logUwbTdoaDistDiff[2])
-LOG_ADD(LOG_FLOAT, d2-3, &logUwbTdoaDistDiff[3])
-LOG_ADD(LOG_FLOAT, d3-4, &logUwbTdoaDistDiff[4])
-LOG_ADD(LOG_FLOAT, d4-5, &logUwbTdoaDistDiff[5])
-LOG_ADD(LOG_FLOAT, d5-6, &logUwbTdoaDistDiff[6])
-LOG_ADD(LOG_FLOAT, d6-7, &logUwbTdoaDistDiff[7])
+LOG_ADD(LOG_FLOAT, d7 - 0, &logUwbTdoaDistDiff[0])
+LOG_ADD(LOG_FLOAT, d0 - 1, &logUwbTdoaDistDiff[1])
+LOG_ADD(LOG_FLOAT, d1 - 2, &logUwbTdoaDistDiff[2])
+LOG_ADD(LOG_FLOAT, d2 - 3, &logUwbTdoaDistDiff[3])
+LOG_ADD(LOG_FLOAT, d3 - 4, &logUwbTdoaDistDiff[4])
+LOG_ADD(LOG_FLOAT, d4 - 5, &logUwbTdoaDistDiff[5])
+LOG_ADD(LOG_FLOAT, d5 - 6, &logUwbTdoaDistDiff[6])
+LOG_ADD(LOG_FLOAT, d6 - 7, &logUwbTdoaDistDiff[7])
 
 LOG_ADD(LOG_FLOAT, cc0, &logClockCorrection[0])
 LOG_ADD(LOG_FLOAT, cc1, &logClockCorrection[1])
@@ -386,14 +406,14 @@ LOG_ADD(LOG_FLOAT, cc5, &logClockCorrection[5])
 LOG_ADD(LOG_FLOAT, cc6, &logClockCorrection[6])
 LOG_ADD(LOG_FLOAT, cc7, &logClockCorrection[7])
 
-LOG_ADD(LOG_UINT16, dist7-0, &logAnchorDistance[0])
-LOG_ADD(LOG_UINT16, dist0-1, &logAnchorDistance[1])
-LOG_ADD(LOG_UINT16, dist1-2, &logAnchorDistance[2])
-LOG_ADD(LOG_UINT16, dist2-3, &logAnchorDistance[3])
-LOG_ADD(LOG_UINT16, dist3-4, &logAnchorDistance[4])
-LOG_ADD(LOG_UINT16, dist4-5, &logAnchorDistance[5])
-LOG_ADD(LOG_UINT16, dist5-6, &logAnchorDistance[6])
-LOG_ADD(LOG_UINT16, dist6-7, &logAnchorDistance[7])
+LOG_ADD(LOG_UINT16, dist7 - 0, &logAnchorDistance[0])
+LOG_ADD(LOG_UINT16, dist0 - 1, &logAnchorDistance[1])
+LOG_ADD(LOG_UINT16, dist1 - 2, &logAnchorDistance[2])
+LOG_ADD(LOG_UINT16, dist2 - 3, &logAnchorDistance[3])
+LOG_ADD(LOG_UINT16, dist3 - 4, &logAnchorDistance[4])
+LOG_ADD(LOG_UINT16, dist4 - 5, &logAnchorDistance[5])
+LOG_ADD(LOG_UINT16, dist5 - 6, &logAnchorDistance[6])
+LOG_ADD(LOG_UINT16, dist6 - 7, &logAnchorDistance[7])
 LOG_GROUP_STOP(tdoa2)
 
 PARAM_GROUP_START(tdoa2)

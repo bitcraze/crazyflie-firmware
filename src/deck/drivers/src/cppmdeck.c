@@ -40,8 +40,9 @@ static bool isInit;
 
 static void cppmdeckInit(DeckInfo *info)
 {
-  if(isInit)
+  if (isInit) {
     return;
+  }
 
   extRxInit();
 
@@ -52,8 +53,9 @@ static bool cppmdeckTest()
 {
   bool status = true;
 
-  if(!isInit)
+  if (!isInit) {
     return false;
+  }
 
   return status;
 }

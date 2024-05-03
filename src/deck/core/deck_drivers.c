@@ -33,21 +33,22 @@
 #include "debug.h"
 
 #ifdef CONFIG_DEBUG
-  #define DECK_DRV_DBG_PRINT(fmt, ...)  DEBUG_PRINT(fmt, ## __VA_ARGS__)
+#define DECK_DRV_DBG_PRINT(fmt, ...)  DEBUG_PRINT(fmt, ## __VA_ARGS__)
 #else
-  #define DECK_DRV_DBG_PRINT(...)
+#define DECK_DRV_DBG_PRINT(...)
 #endif
 
 /* Symbols set by the linker script */
-extern const struct deck_driver * _deckDriver_start;
-extern const struct deck_driver * _deckDriver_stop;
+extern const struct deck_driver *_deckDriver_start;
+extern const struct deck_driver *_deckDriver_stop;
 
-static const struct deck_driver ** drivers;
+static const struct deck_driver **drivers;
 static int driversLen;
 
 // Init the toc access variables. Lazy initialisation: it is going to be done
 // the first time any api function is called.
-static void deckdriversInit() {
+static void deckdriversInit()
+{
   static bool init = false;
   if (!init) {
     int i;
@@ -57,7 +58,7 @@ static void deckdriversInit() {
     init = true;
 
     DECK_DRV_DBG_PRINT("Found %d drivers\n", driversLen);
-    for (i=0; i<driversLen; i++) {
+    for (i = 0; i < driversLen; i++) {
       if (drivers[i]->name) {
         DECK_DRV_DBG_PRINT("VID:PID %02x:%02x (%s)\n", drivers[i]->vid, drivers[i]->pid, drivers[i]->name);
       } else {
@@ -68,27 +69,30 @@ static void deckdriversInit() {
   }
 }
 
-int deckDriverCount() {
+int deckDriverCount()
+{
   deckdriversInit();
 
   return driversLen;
 }
 
-const struct deck_driver* deckGetDriver(int i) {
+const struct deck_driver *deckGetDriver(int i)
+{
   deckdriversInit();
 
-  if (i<driversLen) {
+  if (i < driversLen) {
     return drivers[i];
   }
   return NULL;
 }
 
-const DeckDriver* deckFindDriverByVidPid(uint8_t vid, uint8_t pid) {
+const DeckDriver *deckFindDriverByVidPid(uint8_t vid, uint8_t pid)
+{
   int i;
 
   deckdriversInit();
 
-  for (i=0; i<driversLen; i++) {
+  for (i = 0; i < driversLen; i++) {
     if ((vid == drivers[i]->vid) && (pid == drivers[i]->pid)) {
       return drivers[i];
     }
@@ -96,12 +100,13 @@ const DeckDriver* deckFindDriverByVidPid(uint8_t vid, uint8_t pid) {
   return NULL;
 }
 
-const DeckDriver* deckFindDriverByName(char* name) {
+const DeckDriver *deckFindDriverByName(char *name)
+{
   int i;
 
   deckdriversInit();
 
-  for (i=0; i<driversLen; i++) {
+  for (i = 0; i < driversLen; i++) {
     if (!strcmp(name, drivers[i]->name)) {
       return drivers[i];
     }

@@ -51,20 +51,20 @@ static uint16_t servo_MAX_us = 2000;
 
 static bool isInit = false;
 
-const MotorPerifDef* servoMap;
-extern const MotorPerifDef* servoMapIO1;
-extern const MotorPerifDef* servoMapIO2;
-extern const MotorPerifDef* servoMapIO3;
-extern const MotorPerifDef* servoMapRX2;
-extern const MotorPerifDef* servoMapTX2;
-extern const MotorPerifDef* servoMapMOSI;
+const MotorPerifDef *servoMap;
+extern const MotorPerifDef *servoMapIO1;
+extern const MotorPerifDef *servoMapIO2;
+extern const MotorPerifDef *servoMapIO3;
+extern const MotorPerifDef *servoMapRX2;
+extern const MotorPerifDef *servoMapTX2;
+extern const MotorPerifDef *servoMapMOSI;
 
 /* Public functions */
 static uint8_t servo_idle = 90;
 static uint8_t s_servo_angle;
 static uint8_t servo_range = 180; // in degrees
 
-void servoMapInit(const MotorPerifDef* servoMapSelect)
+void servoMapInit(const MotorPerifDef *servoMapSelect)
 {
   servoMap = servoMapSelect;
 
@@ -117,34 +117,34 @@ void servoMapInit(const MotorPerifDef* servoMapSelect)
 
 void servoInit()
 {
-  if (isInit){
+  if (isInit) {
     return;
   }
 
-  #ifdef CONFIG_DECK_SERVO_USE_IO1
-    servoMapInit(servoMapIO1);
-    DEBUG_PRINT("Init on IO1 [OK]\n");
-  #elif CONFIG_DECK_SERVO_USE_IO2
-    servoMapInit(servoMapIO2);
-    DEBUG_PRINT("Init on IO2 [OK]\n");
-  #elif CONFIG_DECK_SERVO_USE_IO3
-    servoMapInit(servoMapIO3);
-    DEBUG_PRINT("Init on IO3 [OK]\n");
-  #elif CONFIG_DECK_SERVO_USE_RX2
-    servoMapInit(servoMapRX2);
-    DEBUG_PRINT("Init on RX2 [OK]\n"); // not working on Bolt 1.1...
-  #elif CONFIG_DECK_SERVO_USE_MOSI
-    servoMapInit(servoMapMOSI);
-    DEBUG_PRINT("Init on MOSI [OK]\n");
-  #elif CONFIG_DECK_SERVO_USE_TX2
-    servoMapInit(servoMapTX2);
-    DEBUG_PRINT("Init on TX2 [OK]\n"); // not working on Bolt 1.1...
-  #else
-    isInit = false
-    DEBUG_PRINT("Failed to configure servo pin!\n");
-    return;
-  #endif
-  
+#ifdef CONFIG_DECK_SERVO_USE_IO1
+  servoMapInit(servoMapIO1);
+  DEBUG_PRINT("Init on IO1 [OK]\n");
+#elif CONFIG_DECK_SERVO_USE_IO2
+  servoMapInit(servoMapIO2);
+  DEBUG_PRINT("Init on IO2 [OK]\n");
+#elif CONFIG_DECK_SERVO_USE_IO3
+  servoMapInit(servoMapIO3);
+  DEBUG_PRINT("Init on IO3 [OK]\n");
+#elif CONFIG_DECK_SERVO_USE_RX2
+  servoMapInit(servoMapRX2);
+  DEBUG_PRINT("Init on RX2 [OK]\n"); // not working on Bolt 1.1...
+#elif CONFIG_DECK_SERVO_USE_MOSI
+  servoMapInit(servoMapMOSI);
+  DEBUG_PRINT("Init on MOSI [OK]\n");
+#elif CONFIG_DECK_SERVO_USE_TX2
+  servoMapInit(servoMapTX2);
+  DEBUG_PRINT("Init on TX2 [OK]\n"); // not working on Bolt 1.1...
+#else
+  isInit = false
+           DEBUG_PRINT("Failed to configure servo pin!\n");
+  return;
+#endif
+
   servoSetAngle(saturateAngle(servo_idle));
 
   s_servo_angle = servo_idle;
@@ -162,25 +162,24 @@ void servoSetAngle(uint8_t angle)
   // set CCR register
   // Duty% = CCR/ARR*100, so CCR = Duty%/100 * ARR
 
-  double pulse_length_us = (double)(angle) / servo_range * (servo_MAX_us - servo_MIN_us) + servo_MIN_us;
+  double pulse_length_us = (double)(angle) / servo_range * (servo_MAX_us - servo_MIN_us) +
+                           servo_MIN_us;
   double pulse_length_s = pulse_length_us / 1000000;
   const uint32_t ccr_val = (uint32_t)(pulse_length_s * SERVO_PWM_PERIOD * SERVO_PWM_FREQUENCY_HZ);
   servoMap->setCompare(servoMap->tim, ccr_val);
-  
-  #ifdef DEBUG_SERVO
-    DEBUG_PRINT("Set Angle: %u deg, pulse width: %f us \n", angle, pulse_length_us);
-  #endif
+
+#ifdef DEBUG_SERVO
+  DEBUG_PRINT("Set Angle: %u deg, pulse width: %f us \n", angle, pulse_length_us);
+#endif
 }
 
 uint8_t saturateAngle(uint8_t angle)
 {
   if (angle > servo_range) {
     return servo_range;
-  }
-  else if (angle < 0) {
+  } else if (angle < 0) {
     return 0;
-  }
-  else {
+  } else {
     return angle;
   }
 
@@ -196,29 +195,29 @@ static const DeckDriver servo_deck = {
   .pid = 0x00,
   .name = "bcServo",
 
-  #ifdef CONFIG_DECK_SERVO_USE_IO1
-    .usedPeriph = DECK_USING_TIMER4,
-    .usedGpio = DECK_USING_IO_1,
-  #elif CONFIG_DECK_SERVO_USE_IO2
-    .usedPeriph = DECK_USING_TIMER3,
-    .usedGpio = DECK_USING_IO_2,
-  #elif CONFIG_DECK_SERVO_USE_IO3
-    .usedPeriph = DECK_USING_TIMER3,
-    .usedGpio = DECK_USING_IO_3,
-  #elif CONFIG_DECK_SERVO_USE_RX2
-    .usedPeriph = DECK_USING_TIMER5,
-    .usedGpio = DECK_USING_PA3,
-  #elif CONFIG_DECK_SERVO_USE_MOSI
-    .usedPeriph = DECK_USING_TIMER14,
-    .usedGpio = DECK_USING_PA7,
-  #elif CONFIG_DECK_SERVO_USE_TX2
-    .usedPeriph = DECK_USING_TIMER5,
-    .usedGpio = DECK_USING_PA2,
-  #else
-    .usedPeriph = 0,
-    .usedGpio = 0,
-  #endif
-  
+#ifdef CONFIG_DECK_SERVO_USE_IO1
+  .usedPeriph = DECK_USING_TIMER4,
+  .usedGpio = DECK_USING_IO_1,
+#elif CONFIG_DECK_SERVO_USE_IO2
+  .usedPeriph = DECK_USING_TIMER3,
+  .usedGpio = DECK_USING_IO_2,
+#elif CONFIG_DECK_SERVO_USE_IO3
+  .usedPeriph = DECK_USING_TIMER3,
+  .usedGpio = DECK_USING_IO_3,
+#elif CONFIG_DECK_SERVO_USE_RX2
+  .usedPeriph = DECK_USING_TIMER5,
+  .usedGpio = DECK_USING_PA3,
+#elif CONFIG_DECK_SERVO_USE_MOSI
+  .usedPeriph = DECK_USING_TIMER14,
+  .usedGpio = DECK_USING_PA7,
+#elif CONFIG_DECK_SERVO_USE_TX2
+  .usedPeriph = DECK_USING_TIMER5,
+  .usedGpio = DECK_USING_PA2,
+#else
+  .usedPeriph = 0,
+  .usedGpio = 0,
+#endif
+
   .init = servoInit,
   .test = servoTest,
 };
@@ -254,6 +253,6 @@ PARAM_ADD(PARAM_UINT8 | PARAM_PERSISTENT, servoIdle, &servo_idle)
 /**
  * @brief Servo angular position (in degrees, min = 0, max = servoRange)
  */
-PARAM_ADD_WITH_CALLBACK(PARAM_UINT8 , servoAngle, &s_servo_angle, &servoAngleCallBack)
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, servoAngle, &s_servo_angle, &servoAngleCallBack)
 
 PARAM_GROUP_STOP(servo)

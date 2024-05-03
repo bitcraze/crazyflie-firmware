@@ -35,15 +35,11 @@
 
 void decktestEval(bool result, char *failString, bool *status)
 {
-  if (STATUS_EVAL)
-  {
-    if (!result)
-    {
+  if (STATUS_EVAL) {
+    if (!result) {
       consolePrintf("%s [FAIL]\n", failString);
       *status = false;
-    }
-    else
-    {
+    } else {
       *status = true;
     }
   }

@@ -28,7 +28,7 @@
  *      Author: Christos Zosimidis
  *
  *  Modified for the P2P protocol by: Bitcraze AB
- * 
+ *
  */
 
 
@@ -44,49 +44,55 @@ static bool sender_timer_running = false;
 
 static char type_to_spam[15];
 
-void dtrStartProtocolTask(void){
-	xTaskCreate(dtrTaskHandler, "DTR_P2P", DTR_PROTOCOL_TASK_STACK_SIZE, NULL,DTR_PROTOCOL_TASK_PRIORITY, &DTRtaskHandler);
+void dtrStartProtocolTask(void)
+{
+  xTaskCreate(dtrTaskHandler, "DTR_P2P", DTR_PROTOCOL_TASK_STACK_SIZE, NULL,
+              DTR_PROTOCOL_TASK_PRIORITY, &DTRtaskHandler);
 }
 
-void dtrStopProtocolTask(void){
-	vTaskDelete(DTRtaskHandler);
+void dtrStopProtocolTask(void)
+{
+  vTaskDelete(DTRtaskHandler);
 }
 
-void dtrInitSenderTimer(void) {
-	sender_timer = xTimerCreate("DTRSenderTimer", M2T(20), pdTRUE, NULL, dtrTimeOutCallBack);
+void dtrInitSenderTimer(void)
+{
+  sender_timer = xTimerCreate("DTRSenderTimer", M2T(20), pdTRUE, NULL, dtrTimeOutCallBack);
 }
 
-void dtrShutdownSenderTimer(void) {
-	if (xTimerIsTimerActive(sender_timer)==pdTRUE) {
-		xTimerStop(sender_timer, 0);
-		DTR_DEBUG_PRINT("Stopped spamming messages\n");
-		sender_timer_running = false;
-	}else{
-		DTR_DEBUG_PRINT("Radio timer not running\n");
-	}
+void dtrShutdownSenderTimer(void)
+{
+  if (xTimerIsTimerActive(sender_timer) == pdTRUE) {
+    xTimerStop(sender_timer, 0);
+    DTR_DEBUG_PRINT("Stopped spamming messages\n");
+    sender_timer_running = false;
+  } else {
+    DTR_DEBUG_PRINT("Radio timer not running\n");
+  }
 }
 
 
-void dtrStartSenderTimer(unsigned int time_out) {
+void dtrStartSenderTimer(unsigned int time_out)
+{
 
-	if(time_out == MAX_WAIT_TIME_FOR_RTS ){
-		strcpy(type_to_spam, "RTS");
-	}else if (time_out == MAX_WAIT_TIME_FOR_CTS ){
-		strcpy(type_to_spam, "CTS");
-	}else if (time_out == MAX_WAIT_TIME_FOR_DATA_ACK ){
-		strcpy(type_to_spam, "DATA");
-	}
+  if (time_out == MAX_WAIT_TIME_FOR_RTS) {
+    strcpy(type_to_spam, "RTS");
+  } else if (time_out == MAX_WAIT_TIME_FOR_CTS) {
+    strcpy(type_to_spam, "CTS");
+  } else if (time_out == MAX_WAIT_TIME_FOR_DATA_ACK) {
+    strcpy(type_to_spam, "DATA");
+  }
 
-	if (sender_timer_running){
-		DTR_DEBUG_PRINT("Radio timer already running\n");
-	}else{
-		#ifdef DEBUG_DTR_PROTOCOL
-		DTR_DEBUG_PRINT("Started spamming %s\n", type_to_spam);
-		#endif
+  if (sender_timer_running) {
+    DTR_DEBUG_PRINT("Radio timer already running\n");
+  } else {
+#ifdef DEBUG_DTR_PROTOCOL
+    DTR_DEBUG_PRINT("Started spamming %s\n", type_to_spam);
+#endif
 
-		xTimerStart(sender_timer, 20);
-		// xTimerChangePeriod(sender_timer, M2T(time_out), 0);
+    xTimerStart(sender_timer, 20);
+    // xTimerChangePeriod(sender_timer, M2T(time_out), 0);
 
-		sender_timer_running = true;
-	}
+    sender_timer_running = true;
+  }
 }

@@ -9,26 +9,30 @@ static char actualDeviceType[100];
 
 
 // Mock implementation
-static char* deviceTypeStringToReturn = "";
-void platformGetDeviceTypeString(char* deviceTypeString) {
+static char *deviceTypeStringToReturn = "";
+void platformGetDeviceTypeString(char *deviceTypeString)
+{
   strcpy(deviceTypeString, deviceTypeStringToReturn);
 }
 
 #define CONFIG_COUNT 3
 static platformConfig_t fixtureConfig[CONFIG_COUNT];
 
-void setUp(void) {
+void setUp(void)
+{
   strcpy(actualDeviceType, "abcdefghijklmn");
   deviceTypeStringToReturn = "";
 }
 
-void tearDown(void) {
+void tearDown(void)
+{
   // Empty
 }
 
-void testThatDeviceTypeStringIsReturned() {
+void testThatDeviceTypeStringIsReturned()
+{
   // Fixture
-  const char* deviceTypeString = "0;CF20";
+  const char *deviceTypeString = "0;CF20";
 
   // Test
   int actual = platformParseDeviceTypeString(deviceTypeString, actualDeviceType);
@@ -38,9 +42,10 @@ void testThatDeviceTypeStringIsReturned() {
   TEST_ASSERT_EQUAL(0, actual);
 }
 
-void testThatDeviceTypeStringIsReturnedWithTrailingSemiColonAndKeyValues() {
+void testThatDeviceTypeStringIsReturnedWithTrailingSemiColonAndKeyValues()
+{
   // Fixture
-  const char* deviceTypeString = "0;CF21;R=C";
+  const char *deviceTypeString = "0;CF21;R=C";
 
   // Test
   int actual = platformParseDeviceTypeString(deviceTypeString, actualDeviceType);
@@ -50,9 +55,10 @@ void testThatDeviceTypeStringIsReturnedWithTrailingSemiColonAndKeyValues() {
   TEST_ASSERT_EQUAL(0, actual);
 }
 
-void testThatDeviceTypeStringIsReturnedWhenTypeIdentifierIsShorterThan4Chars() {
+void testThatDeviceTypeStringIsReturnedWhenTypeIdentifierIsShorterThan4Chars()
+{
   // Fixture
-  const char* deviceTypeString = "0;AB;R=C";
+  const char *deviceTypeString = "0;AB;R=C";
 
   // Test
   int actual = platformParseDeviceTypeString(deviceTypeString, actualDeviceType);
@@ -62,9 +68,10 @@ void testThatDeviceTypeStringIsReturnedWhenTypeIdentifierIsShorterThan4Chars() {
   TEST_ASSERT_EQUAL(0, actual);
 }
 
-void testThatDeviceTypeIsNotReturnedWhenTypeIdentifierIsTooLong() {
+void testThatDeviceTypeIsNotReturnedWhenTypeIdentifierIsTooLong()
+{
   // Fixture
-  const char* deviceTypeString = "0;CF21XXX;R=C";
+  const char *deviceTypeString = "0;CF21XXX;R=C";
 
   // Test
   int actual = platformParseDeviceTypeString(deviceTypeString, actualDeviceType);
@@ -73,9 +80,10 @@ void testThatDeviceTypeIsNotReturnedWhenTypeIdentifierIsTooLong() {
   TEST_ASSERT_NOT_EQUAL(0, actual);
 }
 
-void testThatDeviceTypeIsNotReturnedIfVersionIfNot0() {
+void testThatDeviceTypeIsNotReturnedIfVersionIfNot0()
+{
   // Fixture
-  const char* deviceTypeString = "1;CF21";
+  const char *deviceTypeString = "1;CF21";
 
   // Test
   int actual = platformParseDeviceTypeString(deviceTypeString, actualDeviceType);
@@ -84,9 +92,10 @@ void testThatDeviceTypeIsNotReturnedIfVersionIfNot0() {
   TEST_ASSERT_NOT_EQUAL(0, actual);
 }
 
-void testThatDeviceTypeIsNotReturnedIfSecondCharIsNotSemicolon() {
+void testThatDeviceTypeIsNotReturnedIfSecondCharIsNotSemicolon()
+{
   // Fixture
-  const char* deviceTypeString = "0+CF21";
+  const char *deviceTypeString = "0+CF21";
 
   // Test
   int actual = platformParseDeviceTypeString(deviceTypeString, actualDeviceType);
@@ -95,7 +104,8 @@ void testThatDeviceTypeIsNotReturnedIfSecondCharIsNotSemicolon() {
   TEST_ASSERT_NOT_EQUAL(0, actual);
 }
 
-void testThatFirstMatchingPlatformConfigIsReturned() {
+void testThatFirstMatchingPlatformConfigIsReturned()
+{
   // Fixture
   deviceTypeStringToReturn = "0;ASD";
 
@@ -103,13 +113,14 @@ void testThatFirstMatchingPlatformConfigIsReturned() {
   int actual = platformInitConfiguration(fixtureConfig, CONFIG_COUNT);
 
   // Assert
-  const char* actualName = platformConfigGetDeviceTypeName();
+  const char *actualName = platformConfigGetDeviceTypeName();
 
   TEST_ASSERT_EQUAL(0, actual);
   TEST_ASSERT_EQUAL_STRING("Second", actualName);
 }
 
-void testThatErrorIsReturnedWhenDeviceIsNotInConfig() {
+void testThatErrorIsReturnedWhenDeviceIsNotInConfig()
+{
   // Fixture
   deviceTypeStringToReturn = "0;WRNG";
 
@@ -120,7 +131,8 @@ void testThatErrorIsReturnedWhenDeviceIsNotInConfig() {
   TEST_ASSERT_EQUAL(1, actual);
 }
 
-void testThatItIsNotSearchingOutsideListOfPlatformConfigs() {
+void testThatItIsNotSearchingOutsideListOfPlatformConfigs()
+{
   // Fixture
   deviceTypeStringToReturn = "0;ZXC";
 
@@ -135,11 +147,12 @@ void testThatItIsNotSearchingOutsideListOfPlatformConfigs() {
 
 // Dummy implementations -------------------
 
-const platformConfig_t* platformGetListOfConfigurations(int* nrOfConfigs){
+const platformConfig_t *platformGetListOfConfigurations(int *nrOfConfigs)
+{
   return 0;
 }
 
-void platformInitHardware(){}
+void platformInitHardware() {}
 
 // Fixtures -------------------------
 

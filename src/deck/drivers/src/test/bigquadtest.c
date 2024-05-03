@@ -111,12 +111,11 @@ static bool bigquadtestRun()
   readVoltage = analogReadVoltage(DECK_GPIO_MISO);
   TEST((readVoltage > VBAT_TEST_VOLTAGE_LOW &&
         readVoltage < VBAT_TEST_VOLTAGE_HIGH),
-        "VBAT(MISO) voltage", &status);
+       "VBAT(MISO) voltage", &status);
 
   decktestRestoreGPIOStatesABC(&gpioSaved);
 
-  if (status)
-  {
+  if (status) {
     testsPass = 1;
     DEBUG_PRINT("BigQuad deck test [OK]\n");
   }

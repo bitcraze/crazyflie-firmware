@@ -37,7 +37,8 @@
 
 static platformConfig_t configs[] = {
 #ifdef CONFIG_SENSORS_BMI088_SPI
-  {  // Old ID of Crazyflie Bolt
+  {
+    // Old ID of Crazyflie Bolt
     .deviceType = "RZ10",
     .deviceTypeName = "Crazyflie Bolt",
     .sensorImplementation = SensorImplementation_bmi088_spi_bmp3xx,
@@ -56,21 +57,23 @@ static platformConfig_t configs[] = {
     .deviceTypeName = "Crazyflie Bolt 1.1",
     .sensorImplementation = SensorImplementation_bmi088_spi_bmp3xx,
     .physicalLayoutAntennasAreClose = false,
-  #ifdef CONFIG_BOLT11_BRUSHED
+#ifdef CONFIG_BOLT11_BRUSHED
     .motorMap = motorMapBolt11Brushed,
-  #else
+#else
     .motorMap = motorMapBolt11Brushless,
-  #endif
+#endif
   }
 #endif
 };
 
-const platformConfig_t* platformGetListOfConfigurations(int* nrOfConfigs) {
+const platformConfig_t *platformGetListOfConfigurations(int *nrOfConfigs)
+{
   *nrOfConfigs = sizeof(configs) / sizeof(platformConfig_t);
   return configs;
 }
 
-void platformInitHardware() {
+void platformInitHardware()
+{
   //Low level init: Clock and Interrupt controller
   nvicInit();
 
@@ -81,6 +84,7 @@ void platformInitHardware() {
 
 // Config functions ------------------------
 
-const char* platformConfigGetPlatformName() {
+const char *platformConfigGetPlatformName()
+{
   return "bolt";
 }

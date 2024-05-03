@@ -48,9 +48,9 @@ static bool isInit;
 
 static int nopFunc(void);
 static struct crtpLinkOperations nopLink = {
-  .setEnable         = (void*) nopFunc,
-  .sendPacket        = (void*) nopFunc,
-  .receivePacket     = (void*) nopFunc,
+  .setEnable         = (void *) nopFunc,
+  .sendPacket        = (void *) nopFunc,
+  .receivePacket     = (void *) nopFunc,
 };
 
 static struct crtpLinkOperations *link = &nopLink;
@@ -85,8 +85,9 @@ STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(crtpRxTask, CRTP_RX_TASK_STACKSIZE);
 
 void crtpInit(void)
 {
-  if(isInit)
+  if (isInit) {
     return;
+  }
 
   txQueue = xQueueCreate(CRTP_TX_QUEUE_SIZE, sizeof(CRTPPacket));
   DEBUG_QUEUE_MONITOR_REGISTER(txQueue);
@@ -144,24 +145,18 @@ void crtpTxTask(void *param)
 {
   CRTPPacket p;
 
-  while (true)
-  {
-    if (link != &nopLink)
-    {
-      if (xQueueReceive(txQueue, &p, portMAX_DELAY) == pdTRUE)
-      {
+  while (true) {
+    if (link != &nopLink) {
+      if (xQueueReceive(txQueue, &p, portMAX_DELAY) == pdTRUE) {
         // Keep testing, if the link changes to USB it will go though
-        while (link->sendPacket(&p) == false)
-        {
+        while (link->sendPacket(&p) == false) {
           // Relaxation time
           vTaskDelay(M2T(10));
         }
         stats.txCount++;
         updateStats();
       }
-    }
-    else
-    {
+    } else {
       vTaskDelay(M2T(10));
     }
   }
@@ -171,29 +166,22 @@ void crtpRxTask(void *param)
 {
   CRTPPacket p;
 
-  while (true)
-  {
-    if (link != &nopLink)
-    {
-      if (!link->receivePacket(&p))
-      {
-        if (queues[p.port])
-        {
+  while (true) {
+    if (link != &nopLink) {
+      if (!link->receivePacket(&p)) {
+        if (queues[p.port]) {
           // Block, since we should never drop a packet
           xQueueSend(queues[p.port], &p, portMAX_DELAY);
         }
 
-        if (callbacks[p.port])
-        {
+        if (callbacks[p.port]) {
           callbacks[p.port](&p);
         }
 
         stats.rxCount++;
         updateStats();
       }
-    }
-    else
-    {
+    } else {
       vTaskDelay(M2T(10));
     }
   }
@@ -201,8 +189,9 @@ void crtpRxTask(void *param)
 
 void crtpRegisterPortCB(int port, CrtpCallback cb)
 {
-  if (port>CRTP_NBR_OF_PORTS)
+  if (port > CRTP_NBR_OF_PORTS) {
     return;
+  }
 
   callbacks[port] = cb;
 }
@@ -235,20 +224,23 @@ int crtpReset(void)
 
 bool crtpIsConnected(void)
 {
-  if (link->isConnected)
+  if (link->isConnected) {
     return link->isConnected();
+  }
   return true;
 }
 
-void crtpSetLink(struct crtpLinkOperations * lk)
+void crtpSetLink(struct crtpLinkOperations *lk)
 {
-  if(link)
+  if (link) {
     link->setEnable(false);
+  }
 
-  if (lk)
+  if (lk) {
     link = lk;
-  else
+  } else {
     link = &nopLink;
+  }
 
   link->setEnable(true);
 }

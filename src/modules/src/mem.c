@@ -34,9 +34,13 @@
 #define MEM_TESTER_SIZE            0x1000
 
 // Private functions, mem tester
-static uint32_t handleMemTesterGetSize(void) { return MEM_TESTER_SIZE; }
-static bool handleMemTesterRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
-static bool handleMemTesterWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* startOfData);
+static uint32_t handleMemTesterGetSize(void)
+{
+  return MEM_TESTER_SIZE;
+}
+static bool handleMemTesterRead(const uint32_t memAddr, const uint8_t readLen, uint8_t *buffer);
+static bool handleMemTesterWrite(const uint32_t memAddr, const uint8_t writeLen,
+                                 const uint8_t *startOfData);
 static uint32_t memTesterWriteErrorCount = 0;
 static uint8_t memTesterWriteReset = 0;
 static const MemoryHandlerDef_t memTesterDef = {
@@ -52,14 +56,14 @@ static bool registrationEnabled = true;
 static uint8_t nrOfOwMems = 0;
 
 #define MAX_NR_HANDLERS 20
-static const MemoryHandlerDef_t* handlers[MAX_NR_HANDLERS];
+static const MemoryHandlerDef_t *handlers[MAX_NR_HANDLERS];
 static uint8_t nrOfHandlers = 0;
-static const MemoryOwHandlerDef_t* owMemHandler = 0;
+static const MemoryOwHandlerDef_t *owMemHandler = 0;
 
 
 void memInit(void)
 {
-  if(isInit) {
+  if (isInit) {
     return;
   }
 
@@ -68,7 +72,8 @@ void memInit(void)
   isInit = true;
 }
 
-bool memTest(void) {
+bool memTest(void)
+{
   if (!isInit) {
     return false;
   }
@@ -81,7 +86,8 @@ bool memTest(void) {
 }
 
 #ifdef UNIT_TEST_MODE
-void memReset() {
+void memReset()
+{
   isInit = false;
 
   registrationEnabled = true;
@@ -90,7 +96,8 @@ void memReset() {
 }
 #endif
 
-void memoryRegisterHandler(const MemoryHandlerDef_t* handlerDef){
+void memoryRegisterHandler(const MemoryHandlerDef_t *handlerDef)
+{
   for (int i = 0; i < nrOfHandlers; i++) {
     ASSERT(handlerDef->type != handlers[i]->type);
   }
@@ -100,7 +107,8 @@ void memoryRegisterHandler(const MemoryHandlerDef_t* handlerDef){
   nrOfHandlers++;
 }
 
-void memoryRegisterOwHandler(const MemoryOwHandlerDef_t* handlerDef){
+void memoryRegisterOwHandler(const MemoryOwHandlerDef_t *handlerDef)
+{
   ASSERT(owMemHandler == 0);
   ASSERT(registrationEnabled);
   owMemHandler = handlerDef;
@@ -108,26 +116,31 @@ void memoryRegisterOwHandler(const MemoryOwHandlerDef_t* handlerDef){
   nrOfOwMems = handlerDef->nrOfMems;
 }
 
-void memBlockHandlerRegistration() {
+void memBlockHandlerRegistration()
+{
   registrationEnabled = false;
 }
 
-MemoryType_t memGetType(const uint16_t memId) {
+MemoryType_t memGetType(const uint16_t memId)
+{
   ASSERT(memId < nrOfHandlers);
   return handlers[memId]->type;
 }
 
-uint32_t memGetSize(const uint16_t memId) {
+uint32_t memGetSize(const uint16_t memId)
+{
   ASSERT(memId < nrOfHandlers);
   return handlers[memId]->getSize();
 }
 
-uint32_t memGetOwSize() {
+uint32_t memGetOwSize()
+{
   ASSERT(owMemHandler);
   return owMemHandler->size;
 }
 
-bool memRead(const uint16_t memId, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+bool memRead(const uint16_t memId, const uint32_t memAddr, const uint8_t readLen, uint8_t *buffer)
+{
   bool result = false;
 
   ASSERT(memId < nrOfHandlers);
@@ -138,7 +151,9 @@ bool memRead(const uint16_t memId, const uint32_t memAddr, const uint8_t readLen
   return result;
 }
 
-bool memWrite(const uint16_t memId, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
+bool memWrite(const uint16_t memId, const uint32_t memAddr, const uint8_t writeLen,
+              const uint8_t *buffer)
+{
   bool result = false;
 
   ASSERT(memId < nrOfHandlers);
@@ -149,26 +164,33 @@ bool memWrite(const uint16_t memId, const uint32_t memAddr, const uint8_t writeL
   return result;
 }
 
-bool memReadOw(const uint16_t owMemId, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+bool memReadOw(const uint16_t owMemId, const uint32_t memAddr, const uint8_t readLen,
+               uint8_t *buffer)
+{
   ASSERT(owMemHandler);
   return owMemHandler->read(owMemId, memAddr, readLen, buffer);
 }
 
-bool memGetOwSerialNr(const uint8_t owMemId, uint8_t* serialNr) {
+bool memGetOwSerialNr(const uint8_t owMemId, uint8_t *serialNr)
+{
   ASSERT(owMemHandler);
   return owMemHandler->getSerialNr(owMemId, serialNr);
 }
 
-bool memWriteOw(const uint16_t owMemId, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
+bool memWriteOw(const uint16_t owMemId, const uint32_t memAddr, const uint8_t writeLen,
+                const uint8_t *buffer)
+{
   ASSERT(owMemHandler);
   return owMemHandler->write(owMemId, memAddr, writeLen, buffer);
 }
 
-uint16_t memGetNrOfMems() {
+uint16_t memGetNrOfMems()
+{
   return nrOfHandlers;
 }
 
-uint16_t memGetNrOfOwMems() {
+uint16_t memGetNrOfOwMems()
+{
   return nrOfOwMems;
 }
 
@@ -186,7 +208,9 @@ uint16_t memGetNrOfOwMems() {
  * @param startOfData - address to write result to
  * @return Always returns true
  */
-static bool handleMemTesterRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* startOfData) {
+static bool handleMemTesterRead(const uint32_t memAddr, const uint8_t readLen,
+                                uint8_t *startOfData)
+{
   for (int i = 0; i < readLen; i++) {
     uint32_t addr = memAddr + i;
     uint8_t data = addr & 0xff;
@@ -205,7 +229,9 @@ static bool handleMemTesterRead(const uint32_t memAddr, const uint8_t readLen, u
  * @param startOfData - pointer to the data in the packet that is provided by the client
  * @return Always returns true
  */
-static bool handleMemTesterWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* startOfData) {
+static bool handleMemTesterWrite(const uint32_t memAddr, const uint8_t writeLen,
+                                 const uint8_t *startOfData)
+{
   if (memTesterWriteReset) {
     memTesterWriteReset = 0;
     memTesterWriteErrorCount = 0;
@@ -218,7 +244,8 @@ static bool handleMemTesterWrite(const uint32_t memAddr, const uint8_t writeLen,
     if (actualData != expectedData) {
       // Log first error
       if (memTesterWriteErrorCount == 0) {
-        DEBUG_PRINT("Verification failed: expected: %d, actual: %d, addr: %lu\n", expectedData, actualData, addr);
+        DEBUG_PRINT("Verification failed: expected: %d, actual: %d, addr: %lu\n", expectedData, actualData,
+                    addr);
       }
 
       memTesterWriteErrorCount++;
@@ -230,9 +257,9 @@ static bool handleMemTesterWrite(const uint32_t memAddr, const uint8_t writeLen,
 }
 
 PARAM_GROUP_START(memTst)
-  PARAM_ADD(PARAM_UINT8, resetW, &memTesterWriteReset)
+PARAM_ADD(PARAM_UINT8, resetW, &memTesterWriteReset)
 PARAM_GROUP_STOP(memTst)
 
 LOG_GROUP_START(memTst)
-  LOG_ADD(LOG_UINT32, errCntW, &memTesterWriteErrorCount)
+LOG_ADD(LOG_UINT32, errCntW, &memTesterWriteErrorCount)
 LOG_GROUP_STOP(memTst)

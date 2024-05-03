@@ -38,13 +38,16 @@ static const int32_t lhBadSampleWindowChangeMs = -LH_MS_PER_FRAME;
 static const int32_t lhGoodSampleWindowChangeMs = LH_MS_PER_FRAME / 2;
 static const float lhMaxError = 0.05f;
 
-void outlierFilterLighthouseReset(OutlierFilterLhState_t* this, const uint32_t nowMs) {
+void outlierFilterLighthouseReset(OutlierFilterLhState_t *this, const uint32_t nowMs)
+{
   this->openingTimeMs = nowMs;
   this->openingWindowMs = lhMinWindowTimeMs;
 }
 
 
-bool outlierFilterLighthouseValidateSweep(OutlierFilterLhState_t* this, const float distanceToBs, const float angleError, const uint32_t nowMs) {
+bool outlierFilterLighthouseValidateSweep(OutlierFilterLhState_t *this, const float distanceToBs,
+    const float angleError, const uint32_t nowMs)
+{
   // float error = distanceToBs * tan(angleError);
   // We use an approximattion
   float error = distanceToBs * angleError;

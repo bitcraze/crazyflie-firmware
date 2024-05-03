@@ -10,13 +10,16 @@
 #define CLOCK_CORRECTION_FILTER 0.1
 #define CLOCK_CORRECTION_BUCKET_MAX 4
 
-void setUp(void) {
+void setUp(void)
+{
 }
 
-void tearDown(void) {
+void tearDown(void)
+{
 }
 
-void testGetClockCorrection() {
+void testGetClockCorrection()
+{
   // Fixture
   const double clockCorrection = 12345.6789;
   clockCorrectionStorage_t clockCorrectionStorage = {
@@ -32,7 +35,8 @@ void testGetClockCorrection() {
   TEST_ASSERT_EQUAL_DOUBLE(expectedResult, result);
 }
 
-void testCalculateClockCorrectionWithValidInputDataWithoutWrapAround() {
+void testCalculateClockCorrectionWithValidInputDataWithoutWrapAround()
+{
   // Fixture
   const double clockCorrection = 1.0057;
   const uint64_t mask = 0xFFFFFFFFFF; // 40 bits
@@ -41,17 +45,20 @@ void testCalculateClockCorrectionWithValidInputDataWithoutWrapAround() {
   const uint64_t old_t_in_cl_x = 1000;
   const uint64_t new_t_in_cl_x = old_t_in_cl_x + difference_in_cl_x; // Does not wrap around
   const uint64_t old_t_in_cl_reference = 56789;
-  const uint64_t new_t_in_cl_reference = old_t_in_cl_reference + clockCorrection * difference_in_cl_x; // Does not wrap around
+  const uint64_t new_t_in_cl_reference = old_t_in_cl_reference + clockCorrection *
+                                         difference_in_cl_x; // Does not wrap around
 
   // Test
-  const double result = clockCorrectionEngineCalculate(new_t_in_cl_reference, old_t_in_cl_reference, new_t_in_cl_x, old_t_in_cl_x, mask);
+  const double result = clockCorrectionEngineCalculate(new_t_in_cl_reference, old_t_in_cl_reference,
+                        new_t_in_cl_x, old_t_in_cl_x, mask);
 
   // Assert
   const double expectedClockCorrection = clockCorrection;
   TEST_ASSERT_EQUAL_DOUBLE(expectedClockCorrection, result);
 }
 
-void testCalculateClockCorrectionWithValidInputDataWithWrapAround() {
+void testCalculateClockCorrectionWithValidInputDataWithWrapAround()
+{
   // Fixture
   const double clockCorrection = 1.0057;
   const uint64_t mask = 0xFFFFFFFFFF; // 40 bits
@@ -60,13 +67,16 @@ void testCalculateClockCorrectionWithValidInputDataWithWrapAround() {
   const uint64_t old_t_in_cl_x = mask - difference_in_cl_x / 2;
   const uint64_t new_t_in_cl_x = (old_t_in_cl_x + difference_in_cl_x) & mask; // Wraps around
   const uint64_t old_t_in_cl_reference = 56789;
-  const uint64_t new_t_in_cl_reference = old_t_in_cl_reference + clockCorrection * difference_in_cl_x; // Does not wrap around
+  const uint64_t new_t_in_cl_reference = old_t_in_cl_reference + clockCorrection *
+                                         difference_in_cl_x; // Does not wrap around
 
   // Test
-  const double result1 = clockCorrectionEngineCalculate(new_t_in_cl_reference, old_t_in_cl_reference, new_t_in_cl_x, old_t_in_cl_x, mask);
+  const double result1 = clockCorrectionEngineCalculate(new_t_in_cl_reference, old_t_in_cl_reference,
+                         new_t_in_cl_x, old_t_in_cl_x, mask);
   // This second part of the test veryfies that when the bit mask has a higher number of bits than the timestamps, the result is wrong if wrap around happens
   const uint64_t wrongMask = 0x1FFFFFFFFFF; // 41 bits
-  const double result2 = clockCorrectionEngineCalculate(new_t_in_cl_reference, old_t_in_cl_reference, new_t_in_cl_x, old_t_in_cl_x, wrongMask);
+  const double result2 = clockCorrectionEngineCalculate(new_t_in_cl_reference, old_t_in_cl_reference,
+                         new_t_in_cl_x, old_t_in_cl_x, wrongMask);
 
   // Assert
   const double expectedClockCorrection = clockCorrection;
@@ -74,7 +84,8 @@ void testCalculateClockCorrectionWithValidInputDataWithWrapAround() {
   TEST_ASSERT_NOT_EQUAL(expectedClockCorrection, result2);
 }
 
-void testCalculateClockCorrectionWithInvalidInputData() {
+void testCalculateClockCorrectionWithInvalidInputData()
+{
   // Fixture
   const uint64_t mask = 0xFFFFFFFFFF; // 40 bits
 
@@ -84,14 +95,16 @@ void testCalculateClockCorrectionWithInvalidInputData() {
   const uint64_t new_t_in_cl_reference = 56789;
 
   // Test
-  const double result = clockCorrectionEngineCalculate(new_t_in_cl_reference, old_t_in_cl_reference, new_t_in_cl_x, old_t_in_cl_x, mask);
+  const double result = clockCorrectionEngineCalculate(new_t_in_cl_reference, old_t_in_cl_reference,
+                        new_t_in_cl_x, old_t_in_cl_x, mask);
 
   // Assert
   const double expectedClockCorrection = -1;
   TEST_ASSERT_EQUAL_DOUBLE(expectedClockCorrection, result);
 }
 
-void testUpdateClockCorrectionWithSampleInTheOuterLimitOfTheSpecs() {
+void testUpdateClockCorrectionWithSampleInTheOuterLimitOfTheSpecs()
+{
   // Fixture
   const double clockCorrection = 5;
   const unsigned int clockCorrectionBucket = 3;
@@ -103,7 +116,8 @@ void testUpdateClockCorrectionWithSampleInTheOuterLimitOfTheSpecs() {
   };
 
   // Test
-  const double sampleIsReliable = clockCorrectionEngineUpdate(&clockCorrectionStorage, clockCorrectionCandidate);
+  const double sampleIsReliable = clockCorrectionEngineUpdate(&clockCorrectionStorage,
+                                  clockCorrectionCandidate);
 
   // Assert
   const double expectedClockCorrection = clockCorrection;
@@ -113,11 +127,13 @@ void testUpdateClockCorrectionWithSampleInTheOuterLimitOfTheSpecs() {
   TEST_ASSERT_EQUAL_UINT(expectedClockCorrectionBucket, clockCorrectionStorage.clockCorrectionBucket);
 }
 
-void testUpdateClockCorrectionWithSampleInTheInnerLimitOfTheSpecsWithEmptyBucket() {
+void testUpdateClockCorrectionWithSampleInTheInnerLimitOfTheSpecsWithEmptyBucket()
+{
   // Fixture
   const double clockCorrection = 1;
   const unsigned int clockCorrectionBucket = 0;
-  const double clockCorrectionCandidate = nextafter(CLOCK_CORRECTION_SPEC_MAX, 1); // First value in the specs
+  const double clockCorrectionCandidate = nextafter(CLOCK_CORRECTION_SPEC_MAX,
+                                          1); // First value in the specs
 
   clockCorrectionStorage_t clockCorrectionStorage = {
     .clockCorrection = clockCorrection,
@@ -125,7 +141,8 @@ void testUpdateClockCorrectionWithSampleInTheInnerLimitOfTheSpecsWithEmptyBucket
   };
 
   // Test
-  const double sampleIsReliable = clockCorrectionEngineUpdate(&clockCorrectionStorage, clockCorrectionCandidate);
+  const double sampleIsReliable = clockCorrectionEngineUpdate(&clockCorrectionStorage,
+                                  clockCorrectionCandidate);
 
   // Assert
   const double expectedClockCorrection = clockCorrectionCandidate;
@@ -135,11 +152,13 @@ void testUpdateClockCorrectionWithSampleInTheInnerLimitOfTheSpecsWithEmptyBucket
   TEST_ASSERT_EQUAL_UINT(expectedClockCorrectionBucket, clockCorrectionStorage.clockCorrectionBucket);
 }
 
-void testUpdateClockCorrectionWithSampleInTheOuterLimitOfTheAcceptableNoiseWithEmptyBucket() {
+void testUpdateClockCorrectionWithSampleInTheOuterLimitOfTheAcceptableNoiseWithEmptyBucket()
+{
   // Fixture
   const double clockCorrection = 1;
   const unsigned int clockCorrectionBucket = 0;
-  const double clockCorrectionCandidate = clockCorrection + CLOCK_CORRECTION_ACCEPTED_NOISE; // First value out of acceptable noise
+  const double clockCorrectionCandidate = clockCorrection +
+                                          CLOCK_CORRECTION_ACCEPTED_NOISE; // First value out of acceptable noise
 
   clockCorrectionStorage_t clockCorrectionStorage = {
     .clockCorrection = clockCorrection,
@@ -147,7 +166,8 @@ void testUpdateClockCorrectionWithSampleInTheOuterLimitOfTheAcceptableNoiseWithE
   };
 
   // Test
-  const double sampleIsReliable = clockCorrectionEngineUpdate(&clockCorrectionStorage, clockCorrectionCandidate);
+  const double sampleIsReliable = clockCorrectionEngineUpdate(&clockCorrectionStorage,
+                                  clockCorrectionCandidate);
 
   // Assert
   const double expectedClockCorrection = clockCorrectionCandidate;
@@ -157,11 +177,13 @@ void testUpdateClockCorrectionWithSampleInTheOuterLimitOfTheAcceptableNoiseWithE
   TEST_ASSERT_EQUAL_UINT(expectedClockCorrectionBucket, clockCorrectionStorage.clockCorrectionBucket);
 }
 
-void testUpdateClockCorrectionWithSampleInTheOuterLimitOfTheAcceptableNoiseWithNonEmptyBucket() {
+void testUpdateClockCorrectionWithSampleInTheOuterLimitOfTheAcceptableNoiseWithNonEmptyBucket()
+{
   // Fixture
   const double clockCorrection = 1;
   const unsigned int clockCorrectionBucket = 2;
-  const double clockCorrectionCandidate = clockCorrection + CLOCK_CORRECTION_ACCEPTED_NOISE; // First value out of acceptable noise
+  const double clockCorrectionCandidate = clockCorrection +
+                                          CLOCK_CORRECTION_ACCEPTED_NOISE; // First value out of acceptable noise
 
   clockCorrectionStorage_t clockCorrectionStorage = {
     .clockCorrection = clockCorrection,
@@ -169,7 +191,8 @@ void testUpdateClockCorrectionWithSampleInTheOuterLimitOfTheAcceptableNoiseWithN
   };
 
   // Test
-  const double sampleIsReliable = clockCorrectionEngineUpdate(&clockCorrectionStorage, clockCorrectionCandidate);
+  const double sampleIsReliable = clockCorrectionEngineUpdate(&clockCorrectionStorage,
+                                  clockCorrectionCandidate);
 
   // Assert
   const double expectedClockCorrection = clockCorrection;
@@ -179,11 +202,13 @@ void testUpdateClockCorrectionWithSampleInTheOuterLimitOfTheAcceptableNoiseWithN
   TEST_ASSERT_EQUAL_UINT(expectedClockCorrectionBucket, clockCorrectionStorage.clockCorrectionBucket);
 }
 
-void testUpdateClockCorrectionWithSampleInTheInnerLimitOfTheAcceptableNoise() {
+void testUpdateClockCorrectionWithSampleInTheInnerLimitOfTheAcceptableNoise()
+{
   // Fixture
   const double clockCorrection = 1.0 + 10e-6; // A value inside the clock specs
   const unsigned int clockCorrectionBucket = 2;
-  const double clockCorrectionCandidate = nextafter(clockCorrection + CLOCK_CORRECTION_ACCEPTED_NOISE, 1); // First value in the acceptable noise
+  const double clockCorrectionCandidate = nextafter(clockCorrection + CLOCK_CORRECTION_ACCEPTED_NOISE,
+                                          1); // First value in the acceptable noise
 
   clockCorrectionStorage_t clockCorrectionStorage = {
     .clockCorrection = clockCorrection,
@@ -191,10 +216,12 @@ void testUpdateClockCorrectionWithSampleInTheInnerLimitOfTheAcceptableNoise() {
   };
 
   // Test
-  const double sampleIsReliable = clockCorrectionEngineUpdate(&clockCorrectionStorage, clockCorrectionCandidate);
+  const double sampleIsReliable = clockCorrectionEngineUpdate(&clockCorrectionStorage,
+                                  clockCorrectionCandidate);
 
   // Assert
-  const double expectedClockCorrection = clockCorrection * CLOCK_CORRECTION_FILTER + clockCorrectionCandidate * (1.0 - CLOCK_CORRECTION_FILTER);
+  const double expectedClockCorrection = clockCorrection * CLOCK_CORRECTION_FILTER +
+                                         clockCorrectionCandidate * (1.0 - CLOCK_CORRECTION_FILTER);
   const unsigned int expectedClockCorrectionBucket = clockCorrectionBucket + 1;
   TEST_ASSERT_TRUE(sampleIsReliable);
   TEST_ASSERT_EQUAL_DOUBLE(expectedClockCorrection, clockCorrectionStorage.clockCorrection);

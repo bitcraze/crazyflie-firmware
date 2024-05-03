@@ -32,10 +32,11 @@
 
 
 // Helpers
-void assertRateCounterIsInitialized(statsCntRateCounter_t* sut);
-void assertLoggerIsInitialized(statsCntRateLogger_t* sut);
+void assertRateCounterIsInitialized(statsCntRateCounter_t *sut);
+void assertLoggerIsInitialized(statsCntRateLogger_t *sut);
 
-void testThatRateCounterIsInitialized() {
+void testThatRateCounterIsInitialized()
+{
   // Fixture
   statsCntRateCounter_t sut = {
     .count = 1,
@@ -52,7 +53,8 @@ void testThatRateCounterIsInitialized() {
   assertRateCounterIsInitialized(&sut);
 }
 
-void testThatRateIsComputedWhenTimeSinceLastComputationIsLongerThanTheInterval() {
+void testThatRateIsComputedWhenTimeSinceLastComputationIsLongerThanTheInterval()
+{
   // Fixture
   uint32_t interval = 500;
 
@@ -82,7 +84,8 @@ void testThatRateIsComputedWhenTimeSinceLastComputationIsLongerThanTheInterval()
   TEST_ASSERT_EQUAL_FLOAT(expected, sut.latestRate);
 }
 
-void testThatRateNotIsComputedWhenTimeSinceLastComputationIsLessThanTheInterval() {
+void testThatRateNotIsComputedWhenTimeSinceLastComputationIsLessThanTheInterval()
+{
   // Fixture
   uint32_t interval = 500;
 
@@ -110,7 +113,8 @@ void testThatRateNotIsComputedWhenTimeSinceLastComputationIsLessThanTheInterval(
   TEST_ASSERT_EQUAL_FLOAT(expected, sut.latestRate);
 }
 
-void testThatRateLoggerIsInitialized() {
+void testThatRateLoggerIsInitialized()
+{
   // Fixture
   statsCntRateLogger_t sut = {
     .logByFunction = {.data = 0, .aquireFloat = 0},
@@ -124,7 +128,8 @@ void testThatRateLoggerIsInitialized() {
   assertLoggerIsInitialized(&sut);
 }
 
-void testThatRateLoggerIsInitializedInline() {
+void testThatRateLoggerIsInitializedInline()
+{
   // Fixture
   // Test
   STATS_CNT_RATE_DEFINE(sut, 4711);
@@ -133,21 +138,23 @@ void testThatRateLoggerIsInitializedInline() {
   assertLoggerIsInitialized(&sut);
 }
 
-void testThatStatsCntRateLoggerCanBeCastToLogByFunction() {
+void testThatStatsCntRateLoggerCanBeCastToLogByFunction()
+{
   // Fixture
   statsCntRateLogger_t sut = {
-    .logByFunction = {.data = (void*)47, .aquireFloat = (logAcquireFloat)11},
+    .logByFunction = {.data = (void *)47, .aquireFloat = (logAcquireFloat)11},
   };
 
   // Test
-  logByFunction_t* actual = (logByFunction_t*)&sut;
+  logByFunction_t *actual = (logByFunction_t *)&sut;
 
   // Assert
   TEST_ASSERT_EQUAL_PTR(47, actual->data);
   TEST_ASSERT_EQUAL_PTR(11, actual->aquireFloat);
 }
 
-void testThatCounterIsIncreased() {
+void testThatCounterIsIncreased()
+{
   // Fixture
   statsCntRateLogger_t sut;
   STATS_CNT_RATE_INIT(&sut, 4711);
@@ -162,7 +169,8 @@ void testThatCounterIsIncreased() {
 
 // Helpers
 
-void assertRateCounterIsInitialized(statsCntRateCounter_t* sut) {
+void assertRateCounterIsInitialized(statsCntRateCounter_t *sut)
+{
   TEST_ASSERT_EQUAL_UINT32(4711, sut->intervalMs);
   TEST_ASSERT_EQUAL_UINT32(0, sut->count);
   TEST_ASSERT_EQUAL_UINT32(0, sut->latestCount);
@@ -170,7 +178,8 @@ void assertRateCounterIsInitialized(statsCntRateCounter_t* sut) {
   TEST_ASSERT_EQUAL_FLOAT(0.0, sut->latestRate);
 }
 
-void assertLoggerIsInitialized(statsCntRateLogger_t* sut) {
+void assertLoggerIsInitialized(statsCntRateLogger_t *sut)
+{
   TEST_ASSERT_EQUAL_PTR(sut, sut->logByFunction.data);
   TEST_ASSERT_EQUAL_PTR(statsCntRateLogHandler, sut->logByFunction.aquireFloat);
 

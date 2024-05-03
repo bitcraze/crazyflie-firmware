@@ -69,7 +69,8 @@ bool powerDistributionTest(void)
   return pass;
 }
 
-static uint16_t capMinThrust(float thrust, uint32_t minThrust) {
+static uint16_t capMinThrust(float thrust, uint32_t minThrust)
+{
   if (thrust < minThrust) {
     return minThrust;
   }
@@ -77,7 +78,8 @@ static uint16_t capMinThrust(float thrust, uint32_t minThrust) {
   return thrust;
 }
 
-static void powerDistributionLegacy(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
+static void powerDistributionLegacy(const control_t *control,
+                                    motors_thrust_uncapped_t *motorThrustUncapped)
 {
   int16_t r = control->roll / 2.0f;
   int16_t p = control->pitch / 2.0f;
@@ -88,7 +90,9 @@ static void powerDistributionLegacy(const control_t *control, motors_thrust_unca
   motorThrustUncapped->motors.m4 = control->thrust + r + p - control->yaw;
 }
 
-static void powerDistributionForceTorque(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped) {
+static void powerDistributionForceTorque(const control_t *control,
+    motors_thrust_uncapped_t *motorThrustUncapped)
+{
   static float motorForces[STABILIZER_NR_OF_MOTORS];
 
   const float arm = 0.707106781f * armLength;
@@ -108,16 +112,19 @@ static void powerDistributionForceTorque(const control_t *control, motors_thrust
       motorForce = 0.0f;
     }
 
-    float motor_pwm = (-pwmToThrustB + sqrtf(pwmToThrustB * pwmToThrustB + 4.0f * pwmToThrustA * motorForce)) / (2.0f * pwmToThrustA);
+    float motor_pwm = (-pwmToThrustB + sqrtf(pwmToThrustB * pwmToThrustB + 4.0f * pwmToThrustA *
+                       motorForce)) / (2.0f * pwmToThrustA);
     motorThrustUncapped->list[motorIndex] = motor_pwm * UINT16_MAX;
   }
 }
 
-static void powerDistributionForce(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped) {
+static void powerDistributionForce(const control_t *control,
+                                   motors_thrust_uncapped_t *motorThrustUncapped)
+{
   // Not implemented yet
 }
 
-void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
+void powerDistribution(const control_t *control, motors_thrust_uncapped_t *motorThrustUncapped)
 {
   switch (control->controlMode) {
     case controlModeLegacy:
@@ -135,31 +142,28 @@ void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motor
   }
 }
 
-bool powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUncapped, motors_thrust_pwm_t* motorPwm)
+bool powerDistributionCap(const motors_thrust_uncapped_t *motorThrustBatCompUncapped,
+                          motors_thrust_pwm_t *motorPwm)
 {
   const int32_t maxAllowedThrust = UINT16_MAX;
   bool isCapped = false;
 
   // Find highest thrust
   int32_t highestThrustFound = 0;
-  for (int motorIndex = 0; motorIndex < STABILIZER_NR_OF_MOTORS; motorIndex++)
-  {
+  for (int motorIndex = 0; motorIndex < STABILIZER_NR_OF_MOTORS; motorIndex++) {
     const int32_t thrust = motorThrustBatCompUncapped->list[motorIndex];
-    if (thrust > highestThrustFound)
-    {
+    if (thrust > highestThrustFound) {
       highestThrustFound = thrust;
     }
   }
 
   int32_t reduction = 0;
-  if (highestThrustFound > maxAllowedThrust)
-  {
+  if (highestThrustFound > maxAllowedThrust) {
     reduction = highestThrustFound - maxAllowedThrust;
     isCapped = true;
   }
 
-  for (int motorIndex = 0; motorIndex < STABILIZER_NR_OF_MOTORS; motorIndex++)
-  {
+  for (int motorIndex = 0; motorIndex < STABILIZER_NR_OF_MOTORS; motorIndex++) {
     int32_t thrustCappedUpper = motorThrustBatCompUncapped->list[motorIndex] - reduction;
     motorPwm->list[motorIndex] = capMinThrust(thrustCappedUpper, idleThrust);
   }
@@ -167,7 +171,8 @@ bool powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUnca
   return isCapped;
 }
 
-uint32_t powerDistributionGetIdleThrust() {
+uint32_t powerDistributionGetIdleThrust()
+{
   return idleThrust;
 }
 

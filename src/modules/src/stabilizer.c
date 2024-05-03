@@ -119,7 +119,7 @@ static struct {
 
 STATIC_MEM_TASK_ALLOC(stabilizerTask, STABILIZER_TASK_STACKSIZE);
 
-static void stabilizerTask(void* param);
+static void stabilizerTask(void *param);
 
 static void calcSensorToOutputLatency(const sensorData_t *sensorData)
 {
@@ -145,7 +145,8 @@ static void compressState()
     state.attitudeQuaternion.x,
     state.attitudeQuaternion.y,
     state.attitudeQuaternion.z,
-    state.attitudeQuaternion.w};
+    state.attitudeQuaternion.w
+  };
   stateCompressed.quat = quatcompress(q);
 
   float const deg2millirad = ((float)M_PI * 1000.0f) / 180.0f;
@@ -171,8 +172,9 @@ static void compressSetpoint()
 
 void stabilizerInit(StateEstimatorType estimator)
 {
-  if(isInit)
+  if (isInit) {
     return;
+  }
 
   sensorsInit();
   stateEstimatorInit(estimator);
@@ -183,7 +185,8 @@ void stabilizerInit(StateEstimatorType estimator)
   estimatorType = stateEstimatorGetType();
   controllerType = controllerGetType();
 
-  STATIC_MEM_TASK_CREATE(stabilizerTask, stabilizerTask, STABILIZER_TASK_NAME, NULL, STABILIZER_TASK_PRI);
+  STATIC_MEM_TASK_CREATE(stabilizerTask, stabilizerTask, STABILIZER_TASK_NAME, NULL,
+                         STABILIZER_TASK_PRI);
 
   isInit = true;
 }
@@ -202,17 +205,18 @@ bool stabilizerTest(void)
   return pass;
 }
 
-static void batteryCompensation(const motors_thrust_uncapped_t* motorThrustUncapped, motors_thrust_uncapped_t* motorThrustBatCompUncapped)
+static void batteryCompensation(const motors_thrust_uncapped_t *motorThrustUncapped,
+                                motors_thrust_uncapped_t *motorThrustBatCompUncapped)
 {
   float supplyVoltage = pmGetBatteryVoltage();
 
-  for (int motor = 0; motor < STABILIZER_NR_OF_MOTORS; motor++)
-  {
-    motorThrustBatCompUncapped->list[motor] = motorsCompensateBatteryVoltage(motor, motorThrustUncapped->list[motor], supplyVoltage);
+  for (int motor = 0; motor < STABILIZER_NR_OF_MOTORS; motor++) {
+    motorThrustBatCompUncapped->list[motor] = motorsCompensateBatteryVoltage(motor,
+        motorThrustUncapped->list[motor], supplyVoltage);
   }
 }
 
-static void setMotorRatios(const motors_thrust_pwm_t* motorPwm)
+static void setMotorRatios(const motors_thrust_pwm_t *motorPwm)
 {
   motorsSetRatio(MOTOR_M1, motorPwm->motors.m1);
   motorsSetRatio(MOTOR_M2, motorPwm->motors.m2);
@@ -220,7 +224,8 @@ static void setMotorRatios(const motors_thrust_pwm_t* motorPwm)
   motorsSetRatio(MOTOR_M4, motorPwm->motors.m4);
 }
 
-static void updateStateEstimatorAndControllerTypes() {
+static void updateStateEstimatorAndControllerTypes()
+{
   if (stateEstimatorGetType() != estimatorType) {
     stateEstimatorSwitchTo(estimatorType);
     estimatorType = stateEstimatorGetType();
@@ -232,8 +237,9 @@ static void updateStateEstimatorAndControllerTypes() {
   }
 }
 
-static void logCapWarning(const bool isCapped) {
-  #ifdef CONFIG_LOG_MOTOR_CAP_WARNING
+static void logCapWarning(const bool isCapped)
+{
+#ifdef CONFIG_LOG_MOTOR_CAP_WARNING
   static uint32_t nextReportTick = 0;
 
   if (isCapped) {
@@ -243,10 +249,11 @@ static void logCapWarning(const bool isCapped) {
       nextReportTick = now + M2T(3000);
     }
   }
-  #endif
+#endif
 }
 
-static void controlMotors(const control_t* control) {
+static void controlMotors(const control_t *control)
+{
   powerDistribution(control, &motorThrustUncapped);
   batteryCompensation(&motorThrustUncapped, &motorThrustBatCompUncapped);
   const bool isCapped = powerDistributionCap(&motorThrustBatCompUncapped, &motorPwm);
@@ -258,11 +265,11 @@ static void controlMotors(const control_t* control) {
  * responsibility of the different functions to run slower by skipping call
  * (ie. returning without modifying the output structure).
  */
-static void stabilizerTask(void* param)
+static void stabilizerTask(void *param)
 {
   stabilizerStep_t stabilizerStep;
   uint32_t lastWakeTime;
-  vTaskSetApplicationTaskTag(0, (void*)TASK_STABILIZER_ID_NBR);
+  vTaskSetApplicationTaskTag(0, (void *)TASK_STABILIZER_ID_NBR);
 
   //Wait for the system to be fully started to start stabilization loop
   systemWaitStart();
@@ -271,7 +278,7 @@ static void stabilizerTask(void* param)
 
   // Wait for sensors to be calibrated
   lastWakeTime = xTaskGetTickCount();
-  while(!sensorsAreCalibrated()) {
+  while (!sensorsAreCalibrated()) {
     vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
   }
   // Initialize stabilizerStep to something else than 0
@@ -281,7 +288,7 @@ static void stabilizerTask(void* param)
   DEBUG_PRINT("Starting stabilizer loop\n");
   rateSupervisorInit(&rateSupervisorContext, xTaskGetTickCount(), M2T(1000), 997, 1003, 1);
 
-  while(1) {
+  while (1) {
     // The sensor should unlock at 1kHz
     sensorsWaitDataReady();
 
@@ -344,7 +351,8 @@ static void stabilizerTask(void* param)
 
       if (!rateSupervisorValidate(&rateSupervisorContext, xTaskGetTickCount())) {
         if (!rateWarningDisplayed) {
-          DEBUG_PRINT("WARNING: stabilizer loop rate is off (%lu)\n", rateSupervisorLatestCount(&rateSupervisorContext));
+          DEBUG_PRINT("WARNING: stabilizer loop rate is off (%lu)\n",
+                      rateSupervisorLatestCount(&rateSupervisorContext));
           rateWarningDisplayed = true;
         }
       }

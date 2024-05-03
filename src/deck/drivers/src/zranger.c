@@ -58,10 +58,11 @@ static bool isInit;
 
 static VL53L0xDev dev;
 
-void zRangerInit(DeckInfo* info)
+void zRangerInit(DeckInfo *info)
 {
-  if (isInit)
+  if (isInit) {
     return;
+  }
 
   vl53l0xInit(&dev, I2C1_DEV, true);
 
@@ -77,15 +78,16 @@ bool zRangerTest(void)
 {
   bool testStatus;
 
-  if (!isInit)
+  if (!isInit) {
     return false;
+  }
 
   testStatus  = vl53l0xTestConnection(&dev);
 
   return testStatus;
 }
 
-void zRangerTask(void* arg)
+void zRangerTask(void *arg)
 {
   systemWaitStart();
   TickType_t xLastWakeTime;
@@ -107,7 +109,7 @@ void zRangerTask(void* arg)
     // occur as >8 [m] measurements
     if (range_last < RANGE_OUTLIER_LIMIT) {
       float distance = (float)range_last * 0.001f; // Scale from [mm] to [m]
-      float stdDev = expStdA * (1.0f  + expf( expCoeff * (distance - expPointA)));
+      float stdDev = expStdA * (1.0f  + expf(expCoeff * (distance - expPointA)));
       rangeEnqueueDownRangeInEstimator(distance, stdDev, xTaskGetTickCount());
     }
   }

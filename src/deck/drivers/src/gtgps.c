@@ -51,10 +51,10 @@ static bool isInit;
 char buff[MAX_LEN_SENTANCE];
 uint8_t bi;
 
-typedef bool (*SentanceParser)(char * buff);
+typedef bool (*SentanceParser)(char *buff);
 
 typedef struct {
-  const char * token;
+  const char *token;
   SentanceParser parser;
 } ParserConfig;
 
@@ -94,25 +94,28 @@ static Basic b;
 static MeasData m;
 
 // Only use on 0-terminated strings!
-static int skip_to_next(char ** sp, const char ch) {
-  int steps=0;
+static int skip_to_next(char **sp, const char ch)
+{
+  int steps = 0;
   while (ch != 0 && (**sp) != ch) {
     (*sp)++;
     steps++;
   }
-  if (ch != 0)
+  if (ch != 0) {
     (*sp)++;
+  }
   return (ch != 0 ? steps : -1);
 }
 
-static int32_t parse_coordinate(char ** sp) {
+static int32_t parse_coordinate(char **sp)
+{
   int32_t dm;
   int32_t degree;
   int32_t minute;
   int32_t second;
   int32_t ret;
-  char * i;
-  char * j;
+  char *i;
+  char *j;
 
   // Format as DDDMM.SSSS converted by long or lat = DDD + MM / 100 + SSSS/3600
   // To avoid inaccuracy caused by float representation save this value as
@@ -122,26 +125,28 @@ static int32_t parse_coordinate(char ** sp) {
   dm = strtol(*sp, &i, 10);
   degree = (dm / 100) * 10000000;
   minute = ((dm % 100) * 10000000) / 60;
-  second = (strtol(i+1, &j, 10) * 1000) / 60;
+  second = (strtol(i + 1, &j, 10) * 1000) / 60;
   ret = degree + minute + second;
   skip_to_next(sp, ',');
-  if (**sp == 'S' || **sp == 'W')
+  if (**sp == 'S' || **sp == 'W') {
     ret *= -1;
+  }
   return ret;
 }
 
-static float parse_float(char * sp) {
+static float parse_float(char *sp)
+{
   float ret = 0;
   int major = 0;
   int minor = 0;
   int deci_nbr = 0;
-  char * i;
-  char * j;
+  char *i;
+  char *j;
 
   major = strtol(sp, &i, 10);
   // Do decimals
   if (strncmp(i, ".", 1) == 0) {
-    minor = strtol(i+1, &j, 10);
+    minor = strtol(i + 1, &j, 10);
     deci_nbr = j - i - 1;
   }
   ret = (major * pow(10, deci_nbr) + minor) / pow(10, deci_nbr);
@@ -149,24 +154,26 @@ static float parse_float(char * sp) {
   return ret;
 }
 
-static void parse_next(char ** sp, FieldType t, void * value) {
+static void parse_next(char **sp, FieldType t, void *value)
+{
   skip_to_next(sp, ',');
   //DEBUG_PRINT("[%s]\n", (*sp));
   switch (t) {
     case FIELD_INT:
-      *((uint32_t*) value) = strtol(*sp, 0, 10);
+      *((uint32_t *) value) = strtol(*sp, 0, 10);
       break;
     case FIELD_FLOAT:
-      *((float*) value) = parse_float(*sp);
+      *((float *) value) = parse_float(*sp);
       break;
     case FIELD_COORD:
-      *((int32_t*) value) = parse_coordinate(sp);
+      *((int32_t *) value) = parse_coordinate(sp);
   }
 }
 
-static bool gpgsaParser(char * buff) {
+static bool gpgsaParser(char *buff)
+{
   int i = 0;
-  char * sp = buff;
+  char *sp = buff;
 
   // Skip leading A/M
   skip_to_next(&sp, ',');
@@ -183,8 +190,9 @@ static bool gpgsaParser(char * buff) {
   return false;
 }
 
-static bool gpggaParser(char * buff) {
-  char * sp = buff;
+static bool gpggaParser(char *buff)
+{
+  char *sp = buff;
 
   parse_next(&sp, FIELD_INT, &m.fixtime);
   parse_next(&sp, FIELD_COORD, &m.latitude);
@@ -209,14 +217,15 @@ static ParserConfig parsers[] = {
   {.token = "GPGGA", .parser = gpggaParser}
 };
 
-static bool verifyChecksum(const char * buff) {
+static bool verifyChecksum(const char *buff)
+{
   uint8_t test_chksum = 0;
   uint32_t ref_chksum = 0;
   uint8_t i = 0;
-  while (buff[i] != '*' && i < MAX_LEN_SENTANCE-3) {
+  while (buff[i] != '*' && i < MAX_LEN_SENTANCE - 3) {
     test_chksum ^= buff[i++];
   }
-  ref_chksum = strtol(&buff[i+1], 0, 16);
+  ref_chksum = strtol(&buff[i + 1], 0, 16);
 
   return (test_chksum == ref_chksum);
 }
@@ -250,8 +259,7 @@ void gtgpsTask(void *param)
 //  uart1SendData(sizeof(updaterate4), updaterate4);
 
 
-  while(1)
-  {
+  while (1) {
     uart1Getchar(&ch);
     consolePutchar(ch);
 
@@ -261,7 +269,7 @@ void gtgpsTask(void *param)
       buff[bi] = 0; // Terminate with null
       if (verifyChecksum(buff)) {
         //DEBUG_PRINT("O");
-        for (j = 0; j < sizeof(parsers)/sizeof(parsers[0]); j++) {
+        for (j = 0; j < sizeof(parsers) / sizeof(parsers[0]); j++) {
           if (strncmp(parsers[j].token, buff, LEN_TOKEN) == 0) {
             parsers[j].parser(&buff[LEN_TOKEN]);
           }
@@ -276,8 +284,9 @@ void gtgpsTask(void *param)
 
 static void gtgpsInit(DeckInfo *info)
 {
-  if(isInit)
+  if (isInit) {
     return;
+  }
 
   DEBUG_PRINT("Enabling reading from GlobalTop GPS\n");
   uart1Init(9600);
@@ -292,8 +301,9 @@ static bool gtgpsTest()
 {
   bool status = true;
 
-  if(!isInit)
+  if (!isInit) {
     return false;
+  }
 
   return status;
 }

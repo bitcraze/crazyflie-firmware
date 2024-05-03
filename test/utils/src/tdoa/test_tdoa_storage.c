@@ -39,14 +39,19 @@
 
 
 static tdaoAnchorInfoArray_t storage;
-static void fixtureSetRemoteRxTime(tdoaAnchorContext_t* context, const uint8_t anchor, const uint32_t storageTime, const uint8_t remoteAnchor, const uint64_t remoteRxTime, const uint8_t seqNr);
-static void fixtureSetTof(tdoaAnchorContext_t* context, const uint8_t anchor, const uint32_t storageTime, const uint8_t remoteAnchor, const uint64_t tof);
+static void fixtureSetRemoteRxTime(tdoaAnchorContext_t *context, const uint8_t anchor,
+                                   const uint32_t storageTime, const uint8_t remoteAnchor, const uint64_t remoteRxTime,
+                                   const uint8_t seqNr);
+static void fixtureSetTof(tdoaAnchorContext_t *context, const uint8_t anchor,
+                          const uint32_t storageTime, const uint8_t remoteAnchor, const uint64_t tof);
 
-void setUp(void) {
+void setUp(void)
+{
   tdoaStorageInitialize(storage);
 }
 
-void testThatCurrentTimeIsSetInContextForGet() {
+void testThatCurrentTimeIsSetInContextForGet()
+{
   // Fixture
   uint8_t anchor = 17;
   uint32_t expectedTime = 123;
@@ -60,7 +65,8 @@ void testThatCurrentTimeIsSetInContextForGet() {
 }
 
 
-void testThatCurrentTimeIsSetInContextForGetCreate() {
+void testThatCurrentTimeIsSetInContextForGetCreate()
+{
   // Fixture
   uint8_t anchor = 17;
   uint32_t expectedTime = 123;
@@ -74,7 +80,8 @@ void testThatCurrentTimeIsSetInContextForGetCreate() {
 }
 
 
-void testThatNoAnchorIsReturnedWhenItDoesNotExistInStorage() {
+void testThatNoAnchorIsReturnedWhenItDoesNotExistInStorage()
+{
   // Fixture
   uint8_t anchor = 17;
   uint32_t currentTime = 123;
@@ -90,7 +97,8 @@ void testThatNoAnchorIsReturnedWhenItDoesNotExistInStorage() {
 }
 
 
-void testThatANewAnchorContextIsReturnedWhenItDoesNotExistInStorage() {
+void testThatANewAnchorContextIsReturnedWhenItDoesNotExistInStorage()
+{
   // Fixture
   uint8_t anchor = 17;
   uint32_t currentTime = 123;
@@ -106,7 +114,8 @@ void testThatANewAnchorContextIsReturnedWhenItDoesNotExistInStorage() {
 }
 
 
-void testThatTheSameAnchorContextIsReturnedWhenItAlreadyExistsInStorageForGet() {
+void testThatTheSameAnchorContextIsReturnedWhenItAlreadyExistsInStorageForGet()
+{
   // Fixture
   uint8_t anchor = 17;
   uint32_t currentTime = 123;
@@ -126,7 +135,8 @@ void testThatTheSameAnchorContextIsReturnedWhenItAlreadyExistsInStorageForGet() 
 }
 
 
-void testThatTheSameAnchorContextIsReturnedWhenItAlreadyExistsInStorageForGetCreate() {
+void testThatTheSameAnchorContextIsReturnedWhenItAlreadyExistsInStorageForGetCreate()
+{
   // Fixture
   uint8_t anchor = 17;
   uint32_t currentTime = 123;
@@ -146,7 +156,8 @@ void testThatTheSameAnchorContextIsReturnedWhenItAlreadyExistsInStorageForGetCre
 }
 
 
-void testThatTheOldestAnchorContextIsReplacedWhenStorageIsFull() {
+void testThatTheOldestAnchorContextIsReplacedWhenStorageIsFull()
+{
   // Fixture
   const uint32_t oldestAnchorTime = 900;
   const uint32_t baseAnchorTime = 1000;
@@ -182,7 +193,8 @@ void testThatTheOldestAnchorContextIsReplacedWhenStorageIsFull() {
 }
 
 
-void testThatAListOfAnchorIdsIsReturned() {
+void testThatAListOfAnchorIdsIsReturned()
+{
   // Fixture
   tdoaAnchorContext_t context;
   uint32_t currentTime = 1234;
@@ -209,7 +221,8 @@ void testThatAListOfAnchorIdsIsReturned() {
   TEST_ASSERT_EQUAL_INT8(expectedId2, unorderedAnchorList[2]);
 }
 
-void testThatAListOfAnchorIdsIsReturnedButNotMoreThanTheListLength() {
+void testThatAListOfAnchorIdsIsReturnedButNotMoreThanTheListLength()
+{
   // Fixture
   tdoaAnchorContext_t context;
   uint32_t currentTime = 1234;
@@ -236,7 +249,8 @@ void testThatAListOfAnchorIdsIsReturnedButNotMoreThanTheListLength() {
 }
 
 
-void testThatAListOfActiveAnchorIdsIsReturned() {
+void testThatAListOfActiveAnchorIdsIsReturned()
+{
   // Fixture
   tdoaAnchorContext_t context;
   uint32_t oldTime = 1234; // Not valid
@@ -263,7 +277,8 @@ void testThatAListOfActiveAnchorIdsIsReturned() {
   uint8_t unorderedAnchorList[10];
 
   // Test
-  uint8_t actualCount = tdoaStorageGetListOfActiveAnchorIds(storage, unorderedAnchorList, 10, currentTime);
+  uint8_t actualCount = tdoaStorageGetListOfActiveAnchorIds(storage, unorderedAnchorList, 10,
+                        currentTime);
 
   // Assert
   TEST_ASSERT_EQUAL_INT8(expectedCount, actualCount);
@@ -272,7 +287,8 @@ void testThatAListOfActiveAnchorIdsIsReturned() {
 }
 
 
-void testThatAListOfActiveAnchorIdsIsReturnedButNotMoreThanTheListLength() {
+void testThatAListOfActiveAnchorIdsIsReturnedButNotMoreThanTheListLength()
+{
   // Fixture
   tdoaAnchorContext_t context;
   uint32_t currentTime = 10000;
@@ -292,7 +308,8 @@ void testThatAListOfActiveAnchorIdsIsReturnedButNotMoreThanTheListLength() {
   uint8_t unorderedAnchorList[10];
 
   // Test
-  uint8_t actualCount = tdoaStorageGetListOfActiveAnchorIds(storage, unorderedAnchorList, expectedCount, currentTime);
+  uint8_t actualCount = tdoaStorageGetListOfActiveAnchorIds(storage, unorderedAnchorList,
+                        expectedCount, currentTime);
 
   // Assert
   TEST_ASSERT_EQUAL_INT8(expectedCount, actualCount);
@@ -300,7 +317,8 @@ void testThatAListOfActiveAnchorIdsIsReturnedButNotMoreThanTheListLength() {
 }
 
 
-void testThatAnchorPositionIsSetAndGet() {
+void testThatAnchorPositionIsSetAndGet()
+{
   // Fixture
   float expectedX = 1.0;
   float expectedY = 2.0;
@@ -328,7 +346,8 @@ void testThatAnchorPositionIsSetAndGet() {
 }
 
 
-void testThatAnchorPositionIsNotReturnedWhenTooOld() {
+void testThatAnchorPositionIsNotReturnedWhenTooOld()
+{
   // Fixture
   float x = 1.0;
   float y = 2.0;
@@ -351,7 +370,8 @@ void testThatAnchorPositionIsNotReturnedWhenTooOld() {
 }
 
 
-void testThatRxTxDataIsSet() {
+void testThatRxTxDataIsSet()
+{
   // Fixture
   uint32_t expectedUpdateTime = 1234;
   int64_t expectedRxTime = 4747474747;
@@ -372,13 +392,14 @@ void testThatRxTxDataIsSet() {
 }
 
 
-void testThatClockCorrectionIsReturned() {
+void testThatClockCorrectionIsReturned()
+{
   // Fixture
   tdoaAnchorContext_t context;
   tdoaStorageGetCreateAnchorCtx(storage, 0, 0, &context);
 
   double expected = 123.456;
-  clockCorrectionStorage_t* clockCorrectionStorage = tdoaStorageGetClockCorrectionStorage(&context);
+  clockCorrectionStorage_t *clockCorrectionStorage = tdoaStorageGetClockCorrectionStorage(&context);
   clockCorrectionEngineGet_ExpectAndReturn(clockCorrectionStorage, expected);
 
   // Test
@@ -389,7 +410,8 @@ void testThatClockCorrectionIsReturned() {
 }
 
 
-void testThatRemoteRxTimeIsReturned() {
+void testThatRemoteRxTimeIsReturned()
+{
   // Fixture
   tdoaAnchorContext_t context;
   tdoaStorageGetCreateAnchorCtx(storage, 0, 0, &context);
@@ -407,7 +429,8 @@ void testThatRemoteRxTimeIsReturned() {
 }
 
 
-void testThatRemoteRxTimeIsNotReturnedWhenOutdated() {
+void testThatRemoteRxTimeIsNotReturnedWhenOutdated()
+{
   // Fixture
   tdoaAnchorContext_t context;
   const uint32_t storageTime = 1117;
@@ -430,7 +453,8 @@ void testThatRemoteRxTimeIsNotReturnedWhenOutdated() {
 }
 
 
-void testThatRemoteRxTimeIsNotReturnedForUnknownRemoteAnchor() {
+void testThatRemoteRxTimeIsNotReturnedForUnknownRemoteAnchor()
+{
   // Fixture
   tdoaAnchorContext_t context;
   tdoaStorageGetCreateAnchorCtx(storage, 0, 0, &context);
@@ -445,7 +469,8 @@ void testThatRemoteRxTimeIsNotReturnedForUnknownRemoteAnchor() {
 }
 
 
-void testThatRemoteRxTimeIsOverwrittenWhenSetWithTheSameRemoteId() {
+void testThatRemoteRxTimeIsOverwrittenWhenSetWithTheSameRemoteId()
+{
   // Fixture
   tdoaAnchorContext_t context;
   tdoaStorageGetCreateAnchorCtx(storage, 0, 0, &context);
@@ -469,7 +494,8 @@ void testThatRemoteRxTimeIsOverwrittenWhenSetWithTheSameRemoteId() {
 }
 
 
-void testThatRemoteRxTimeReplacesTheOldestEntryWhenStorageIsFull() {
+void testThatRemoteRxTimeReplacesTheOldestEntryWhenStorageIsFull()
+{
   // Fixture
   tdoaAnchorContext_t context;
   const uint8_t anchor = 17;
@@ -497,7 +523,8 @@ void testThatRemoteRxTimeReplacesTheOldestEntryWhenStorageIsFull() {
   const uint8_t verificationRemoteAnchor = REMOTE_ANCHOR_DATA_COUNT;
   const uint64_t verificationRemoteRxTime = 6543;
   const uint32_t verificationStorageTime = newerStorageTime + 1;
-  fixtureSetRemoteRxTime(&context, anchor, verificationStorageTime, verificationRemoteAnchor, verificationRemoteRxTime, seqNr);
+  fixtureSetRemoteRxTime(&context, anchor, verificationStorageTime, verificationRemoteAnchor,
+                         verificationRemoteRxTime, seqNr);
 
   // Assert
   const int64_t actualVerification = tdoaStorageGetRemoteRxTime(&context, verificationRemoteAnchor);
@@ -507,7 +534,8 @@ void testThatRemoteRxTimeReplacesTheOldestEntryWhenStorageIsFull() {
   TEST_ASSERT_EQUAL_INT64(0, actualReplaced);
 }
 
-void testThatRemoteRxTimeAndSequenceNumberIsReturned() {
+void testThatRemoteRxTimeAndSequenceNumberIsReturned()
+{
   // Fixture
   tdoaAnchorContext_t context;
   tdoaStorageGetCreateAnchorCtx(storage, 0, 0, &context);
@@ -528,7 +556,8 @@ void testThatRemoteRxTimeAndSequenceNumberIsReturned() {
   TEST_ASSERT_EQUAL_INT8(expectedRemoteSeqNr, actualSeqNr);
 }
 
-void testThatRemoteRxTimeAndSequenceNumberIsNotReturnedWhenNotInList() {
+void testThatRemoteRxTimeAndSequenceNumberIsNotReturnedWhenNotInList()
+{
   // Fixture
   tdoaAnchorContext_t context;
   tdoaStorageGetCreateAnchorCtx(storage, 0, 0, &context);
@@ -544,7 +573,8 @@ void testThatRemoteRxTimeAndSequenceNumberIsNotReturnedWhenNotInList() {
   TEST_ASSERT_FALSE(actual);
 }
 
-void testThatAListOfSequenceNumbersAndIdsOfRemoteAnchorsIsReturned() {
+void testThatAListOfSequenceNumbersAndIdsOfRemoteAnchorsIsReturned()
+{
   // Fixture
   tdoaAnchorContext_t context;
   const uint8_t anchor = 5;
@@ -555,7 +585,8 @@ void testThatAListOfSequenceNumbersAndIdsOfRemoteAnchorsIsReturned() {
   const uint32_t oldStorageTime = 1117;
   const uint64_t someRemoteRxTime = 1234;
 
-  fixtureSetRemoteRxTime(&context, anchor, oldStorageTime, oldRemoteAncor, someRemoteRxTime, oldSeqNr);
+  fixtureSetRemoteRxTime(&context, anchor, oldStorageTime, oldRemoteAncor, someRemoteRxTime,
+                         oldSeqNr);
 
   // Add remote data for two more anchors that are not too old
   const uint8_t activeRemoteAnchor0 = 11;
@@ -564,8 +595,10 @@ void testThatAListOfSequenceNumbersAndIdsOfRemoteAnchorsIsReturned() {
   const uint8_t activeSeqNr1 = 102;
   const uint32_t activeStorageTime = oldStorageTime + 1;
 
-  fixtureSetRemoteRxTime(&context, anchor, activeStorageTime, activeRemoteAnchor0, someRemoteRxTime, activeSeqNr0);
-  fixtureSetRemoteRxTime(&context, anchor, activeStorageTime, activeRemoteAnchor1, someRemoteRxTime, activeSeqNr1);
+  fixtureSetRemoteRxTime(&context, anchor, activeStorageTime, activeRemoteAnchor0, someRemoteRxTime,
+                         activeSeqNr0);
+  fixtureSetRemoteRxTime(&context, anchor, activeStorageTime, activeRemoteAnchor1, someRemoteRxTime,
+                         activeSeqNr1);
 
   const uint32_t currentTime = oldStorageTime + REMOTE_DATA_VALIDITY_PERIOD;
   tdoaStorageGetCreateAnchorCtx(storage, anchor, currentTime, &context);
@@ -588,7 +621,8 @@ void testThatAListOfSequenceNumbersAndIdsOfRemoteAnchorsIsReturned() {
 }
 
 
-void testThatNoTimeOfFlightIsReturnedWhenRemoteAnchorIsNotInStorage() {
+void testThatNoTimeOfFlightIsReturnedWhenRemoteAnchorIsNotInStorage()
+{
   // Fixture
   tdoaAnchorContext_t context;
   const uint8_t anchor = 5;
@@ -606,7 +640,8 @@ void testThatNoTimeOfFlightIsReturnedWhenRemoteAnchorIsNotInStorage() {
 }
 
 
-void testThatTimeOfFlightIsReturnedWhenSet() {
+void testThatTimeOfFlightIsReturnedWhenSet()
+{
   // Fixture
   tdoaAnchorContext_t context;
   const uint8_t anchor = 5;
@@ -624,7 +659,8 @@ void testThatTimeOfFlightIsReturnedWhenSet() {
 }
 
 
-void testThatTimeOfFlightIsReturnedWhenSetASecondTime() {
+void testThatTimeOfFlightIsReturnedWhenSetASecondTime()
+{
   // Fixture
   tdoaAnchorContext_t context;
   const uint8_t anchor = 5;
@@ -645,7 +681,8 @@ void testThatTimeOfFlightIsReturnedWhenSetASecondTime() {
 }
 
 
-void testThatTofReplacesTheOldestEntryWhenStorageIsFull() {
+void testThatTofReplacesTheOldestEntryWhenStorageIsFull()
+{
   // Fixture
   tdoaAnchorContext_t context;
   const uint8_t anchor = 17;
@@ -675,7 +712,8 @@ void testThatTofReplacesTheOldestEntryWhenStorageIsFull() {
   fixtureSetTof(&context, anchor, verificationStorageTime, verificationRemoteAnchor, verificationTof);
 
   // Assert
-  const int64_t actualVerification = tdoaStorageGetRemoteTimeOfFlight(&context, verificationRemoteAnchor);
+  const int64_t actualVerification = tdoaStorageGetRemoteTimeOfFlight(&context,
+                                     verificationRemoteAnchor);
   TEST_ASSERT_EQUAL_INT64(verificationTof, actualVerification);
 
   const int64_t actualReplaced = tdoaStorageGetRemoteTimeOfFlight(&context, oldestRemoteAnchor);
@@ -683,7 +721,8 @@ void testThatTofReplacesTheOldestEntryWhenStorageIsFull() {
 }
 
 // Not possible to put the ifdef outside the test function due to the way the test framework is implemented
-void testThatTimeOfFlightIsSet() {
+void testThatTimeOfFlightIsSet()
+{
 #ifdef CONFIG_DECK_LOCO_TDOA3_HYBRID_MODE
   // Fixture
   uint32_t storageTime_ms = 1234;
@@ -705,12 +744,17 @@ void testThatTimeOfFlightIsSet() {
 
 // Helpers ///////////////
 
-static void fixtureSetRemoteRxTime(tdoaAnchorContext_t* context, const uint8_t anchor, const uint32_t storageTime, const uint8_t remoteAnchor, const uint64_t remoteRxTime, const uint8_t seqNr) {
+static void fixtureSetRemoteRxTime(tdoaAnchorContext_t *context, const uint8_t anchor,
+                                   const uint32_t storageTime, const uint8_t remoteAnchor, const uint64_t remoteRxTime,
+                                   const uint8_t seqNr)
+{
   tdoaStorageGetCreateAnchorCtx(storage, anchor, storageTime, context);
   tdoaStorageSetRemoteRxTime(context, remoteAnchor, remoteRxTime, seqNr);
 }
 
-static void fixtureSetTof(tdoaAnchorContext_t* context, const uint8_t anchor, const uint32_t storageTime, const uint8_t remoteAnchor, const uint64_t tof) {
+static void fixtureSetTof(tdoaAnchorContext_t *context, const uint8_t anchor,
+                          const uint32_t storageTime, const uint8_t remoteAnchor, const uint64_t tof)
+{
   tdoaStorageGetCreateAnchorCtx(storage, anchor, storageTime, context);
   tdoaStorageSetRemoteTimeOfFlight(context, remoteAnchor, tof);
 }

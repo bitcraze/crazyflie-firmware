@@ -10,19 +10,22 @@ static kalmanCoreData_t this;
 static float h[KC_STATE_DIM];
 
 
-void setUp(void) {
+void setUp(void)
+{
   memset(&this, 0, sizeof(this));
   memset(&h, 0, sizeof(h));
 
   initKalmanCoreScalarUpdateExpectationsSingleCall();
 }
 
-void tearDown(void) {
+void tearDown(void)
+{
   // Empty
 }
 
 
-void testThatCorrectValuesAreUsedInScalatUpdate() {
+void testThatCorrectValuesAreUsedInScalatUpdate()
+{
   // Fixture
   float currentZ = 47.11f;
   float measuredHeight = 12.34;

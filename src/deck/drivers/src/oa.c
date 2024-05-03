@@ -72,7 +72,7 @@ static void oaTask(void *param)
 
   TickType_t lastWakeTime = xTaskGetTickCount();
 
-  while(1) {
+  while (1) {
     vTaskDelayUntil(&lastWakeTime, M2T(50));
 
     rangeFront = vl53l0xReadRangeContinuousMillimeters(&devFront);

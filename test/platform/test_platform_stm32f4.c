@@ -12,18 +12,21 @@
 static char mockOtpBlocks[PLATFORM_INFO_OTP_NR_OF_BLOCKS][PLATFORM_INFO_OTP_BLOCK_LEN];
 
 static void fixtureInitOtpBlocks();
-static void fixtureSetOtpBlockString(const int blockNr, const char* content);
+static void fixtureSetOtpBlockString(const int blockNr, const char *content);
 static void fixtureClearOtpBlock(const int blockNr);
 
-void setUp(void) {
+void setUp(void)
+{
   fixtureInitOtpBlocks();
 }
 
-void tearDown(void) {
+void tearDown(void)
+{
   // Empty
 }
 
-void testThatFirstBlockIsReturnedIfSet() {
+void testThatFirstBlockIsReturnedIfSet()
+{
   // Fixture
   fixtureSetOtpBlockString(0, "0;CF21");
 
@@ -36,7 +39,8 @@ void testThatFirstBlockIsReturnedIfSet() {
   TEST_ASSERT_EQUAL_STRING("0;CF21", actual);
 }
 
-void testThatLAterBlockIsReturnedIfEarlierBlockAreCleared() {
+void testThatLAterBlockIsReturnedIfEarlierBlockAreCleared()
+{
   // Fixture
   fixtureClearOtpBlock(0);
   fixtureClearOtpBlock(1);
@@ -52,7 +56,8 @@ void testThatLAterBlockIsReturnedIfEarlierBlockAreCleared() {
   TEST_ASSERT_EQUAL_STRING("0;CF21", actual);
 }
 
-void testThatDefaultPlatformStringIsCF20IfNoInfoIsSet() {
+void testThatDefaultPlatformStringIsCF20IfNoInfoIsSet()
+{
   // Fixture
   char actual[PLATFORM_DEVICE_TYPE_STRING_MAX_LEN];
 
@@ -63,7 +68,8 @@ void testThatDefaultPlatformStringIsCF20IfNoInfoIsSet() {
   TEST_ASSERT_EQUAL_STRING("0;CF20", actual);
 }
 
-void testThatDefaultPlatformStringIsCF20IfAllBlocksAreCleared() {
+void testThatDefaultPlatformStringIsCF20IfAllBlocksAreCleared()
+{
   // Fixture
   memset(mockOtpBlocks, 0x00, sizeof(mockOtpBlocks));
 
@@ -76,7 +82,8 @@ void testThatDefaultPlatformStringIsCF20IfAllBlocksAreCleared() {
   TEST_ASSERT_EQUAL_STRING("0;CF20", actual);
 }
 
-void testThatNoMoreThanTheBlockSizeIsCopiedIfTheBlockIsNotNullTerminated() {
+void testThatNoMoreThanTheBlockSizeIsCopiedIfTheBlockIsNotNullTerminated()
+{
   // Fixture
   // Set the block to a string that is longer than the block size of 32
   fixtureSetOtpBlockString(0, "0123456789012345678901234567890123456789");
@@ -93,21 +100,25 @@ void testThatNoMoreThanTheBlockSizeIsCopiedIfTheBlockIsNotNullTerminated() {
 
 
 // Replaces function in file under test
-char* getAddressOfOtpMemoryBlock(const int blockNr) {
+char *getAddressOfOtpMemoryBlock(const int blockNr)
+{
   return mockOtpBlocks[blockNr];
 }
 
 
 // Fixtures
 
-static void fixtureInitOtpBlocks() {
+static void fixtureInitOtpBlocks()
+{
   memset(mockOtpBlocks, 0xff, sizeof(mockOtpBlocks));
 }
 
-static void fixtureSetOtpBlockString(const int blockNr, const char* content) {
+static void fixtureSetOtpBlockString(const int blockNr, const char *content)
+{
   strcpy(mockOtpBlocks[blockNr], content);
 }
 
-static void fixtureClearOtpBlock(const int blockNr) {
+static void fixtureClearOtpBlock(const int blockNr)
+{
   memset(mockOtpBlocks[blockNr], 0, PLATFORM_INFO_OTP_BLOCK_LEN);
 }

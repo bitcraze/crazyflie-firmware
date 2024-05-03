@@ -52,22 +52,24 @@ static CPXRoutablePacket_t internalRxBuf;
 static RouteContext_t uart_task_context;
 static CPXRoutablePacket_t uartRxBuf;
 
-typedef void (*Receiver_t)(CPXRoutablePacket_t* packet);
-typedef void (*Sender_t)(const CPXRoutablePacket_t* packet);
+typedef void (*Receiver_t)(CPXRoutablePacket_t *packet);
+typedef void (*Sender_t)(const CPXRoutablePacket_t *packet);
 
-static const int START_UP_UART_ROUTER_RUNNING = (1<<0);
-static const int START_UP_RADIO_ROUTER_RUNNING = (1<<1);
-static const int START_UP_INTERNAL_ROUTER_RUNNING = (1<<2);
+static const int START_UP_UART_ROUTER_RUNNING = (1 << 0);
+static const int START_UP_RADIO_ROUTER_RUNNING = (1 << 1);
+static const int START_UP_INTERNAL_ROUTER_RUNNING = (1 << 2);
 
 static EventGroupHandle_t startUpEventGroup;
 
-static void splitAndSend(const CPXRoutablePacket_t* rxp, RouteContext_t* context, Sender_t sender, const uint16_t mtu) {
-  CPXRoutablePacket_t* txp = &context->txp;
+static void splitAndSend(const CPXRoutablePacket_t *rxp, RouteContext_t *context, Sender_t sender,
+                         const uint16_t mtu)
+{
+  CPXRoutablePacket_t *txp = &context->txp;
 
   txp->route = rxp->route;
 
   uint16_t remainingToSend = rxp->dataLength;
-  const uint8_t* startOfDataToSend = rxp->data;
+  const uint8_t *startOfDataToSend = rxp->data;
   while (remainingToSend > 0) {
     uint16_t toSend = remainingToSend;
     bool lastPacket = rxp->route.lastPacket;
@@ -86,8 +88,10 @@ static void splitAndSend(const CPXRoutablePacket_t* rxp, RouteContext_t* context
   }
 }
 
-static void route(Receiver_t receive, CPXRoutablePacket_t* rxp, RouteContext_t* context, const char* routerName) {
-  while(1) {
+static void route(Receiver_t receive, CPXRoutablePacket_t *rxp, RouteContext_t *context,
+                  const char *routerName)
+{
+  while (1) {
     receive(rxp);
     // this should never fail, as it should be checked when the packet is received
     // however, double checking doesn't harm
@@ -105,32 +109,40 @@ static void route(Receiver_t receive, CPXRoutablePacket_t* rxp, RouteContext_t* 
           break;
         case CPX_T_STM32:
           //DEBUG_PRINT("%s [0x%02X] -> STM32 [0x%02X] (%u)\n", routerName, source, destination, cpxDataLength);
-          splitAndSend(rxp, context, cpxInternalRouterRouteIn, CPX_UART_TRANSPORT_MTU - CPX_ROUTING_PACKED_SIZE);
+          splitAndSend(rxp, context, cpxInternalRouterRouteIn,
+                       CPX_UART_TRANSPORT_MTU - CPX_ROUTING_PACKED_SIZE);
           break;
         default:
-          DEBUG_PRINT("Cannot route from %s [0x%02X] to [0x%02X](%u)\n", routerName, source, destination, cpxDataLength);
+          DEBUG_PRINT("Cannot route from %s [0x%02X] to [0x%02X](%u)\n", routerName, source, destination,
+                      cpxDataLength);
           break;
       }
     }
   }
 }
 
-static void router_from_uart(void* _param) {
+static void router_from_uart(void *_param)
+{
   xEventGroupSetBits(startUpEventGroup, START_UP_UART_ROUTER_RUNNING);
   route(cpxUARTTransportReceive, &uartRxBuf, &uart_task_context, "UART2");
 }
 
-static void router_from_internal(void* _param) {
+static void router_from_internal(void *_param)
+{
   xEventGroupSetBits(startUpEventGroup, START_UP_INTERNAL_ROUTER_RUNNING);
   route(cpxInternalRouterRouteOut, &internalRxBuf, &internal_task_context, "STM32");
 }
 
-void cpxExternalRouterInit() {
+void cpxExternalRouterInit()
+{
   startUpEventGroup = xEventGroupCreate();
-  xEventGroupClearBits(startUpEventGroup, START_UP_UART_ROUTER_RUNNING | START_UP_INTERNAL_ROUTER_RUNNING);
+  xEventGroupClearBits(startUpEventGroup,
+                       START_UP_UART_ROUTER_RUNNING | START_UP_INTERNAL_ROUTER_RUNNING);
 
-  xTaskCreate(router_from_uart, CPX_RT_UART_TASK_NAME, AI_DECK_TASK_STACKSIZE, NULL, AI_DECK_TASK_PRI, NULL);
-  xTaskCreate(router_from_internal, CPX_RT_INT_TASK_NAME, AI_DECK_TASK_STACKSIZE, NULL, AI_DECK_TASK_PRI, NULL);
+  xTaskCreate(router_from_uart, CPX_RT_UART_TASK_NAME, AI_DECK_TASK_STACKSIZE, NULL, AI_DECK_TASK_PRI,
+              NULL);
+  xTaskCreate(router_from_internal, CPX_RT_INT_TASK_NAME, AI_DECK_TASK_STACKSIZE, NULL,
+              AI_DECK_TASK_PRI, NULL);
 
   DEBUG_PRINT("Waiting for CPX External router initialization\n");
   xEventGroupWaitBits(startUpEventGroup,

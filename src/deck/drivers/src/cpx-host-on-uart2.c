@@ -43,8 +43,9 @@ static bool isInit = false;
 
 static void cpxOverUart2Init(DeckInfo *info)
 {
-  if (isInit)
+  if (isInit) {
     return;
+  }
 
   cpxUARTTransportInit();
   cpxInternalRouterInit();
@@ -60,12 +61,12 @@ static bool cpxOverUart2Test()
 }
 
 static const DeckDriver crtpOver2UART = {
-    .name = "cpxOverUART2",
+  .name = "cpxOverUART2",
 
-    .usedPeriph = DECK_USING_UART2,
+  .usedPeriph = DECK_USING_UART2,
 
-    .init = cpxOverUart2Init,
-    .test = cpxOverUart2Test,
+  .init = cpxOverUart2Init,
+  .test = cpxOverUart2Test,
 };
 
 /** @addtogroup deck

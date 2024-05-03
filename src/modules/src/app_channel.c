@@ -39,30 +39,32 @@ static xQueueHandle  rxQueue;
 
 static bool overflow;
 
-static int sendDataPacket(void* data, size_t length, const bool doBlock);
+static int sendDataPacket(void *data, size_t length, const bool doBlock);
 
 // Deprecated (removed after August 2023)
-void appchannelSendPacket(void* data, size_t length)
+void appchannelSendPacket(void *data, size_t length)
 {
   appchannelSendDataPacketBlock(data, length);
 }
 
-int appchannelSendDataPacket(void* data, size_t length)
+int appchannelSendDataPacket(void *data, size_t length)
 {
   return sendDataPacket(data, length, false);
 }
 
-void appchannelSendDataPacketBlock(void* data, size_t length)
+void appchannelSendDataPacketBlock(void *data, size_t length)
 {
   sendDataPacket(data, length, true);
 }
 
 // Deprecated (removed after August 2023)
-size_t appchannelReceivePacket(void* buffer, size_t max_length, int timeout_ms) {
+size_t appchannelReceivePacket(void *buffer, size_t max_length, int timeout_ms)
+{
   return appchannelReceiveDataPacket(buffer, max_length, timeout_ms);
 }
 
-size_t appchannelReceiveDataPacket(void* buffer, size_t max_length, int timeout_ms) {
+size_t appchannelReceiveDataPacket(void *buffer, size_t max_length, int timeout_ms)
+{
   static CRTPPacket packet;
   int tickToWait = 0;
 
@@ -75,7 +77,7 @@ size_t appchannelReceiveDataPacket(void* buffer, size_t max_length, int timeout_
   int result = xQueueReceive(rxQueue, &packet, tickToWait);
 
   if (result == pdTRUE) {
-    int lenghtToCopy = (max_length < packet.size)?max_length:packet.size;
+    int lenghtToCopy = (max_length < packet.size) ? max_length : packet.size;
     memcpy(buffer, packet.data, lenghtToCopy);
     return lenghtToCopy;
   } else {
@@ -91,8 +93,9 @@ bool appchannelHasOverflowOccurred()
   return hasOverflowed;
 }
 
-bool appchannelHasOverflowOccured() {
-    return appchannelHasOverflowOccurred();
+bool appchannelHasOverflowOccured()
+{
+  return appchannelHasOverflowOccurred();
 }
 
 void appchannelInit()
@@ -113,19 +116,18 @@ void appchannelIncomingPacket(CRTPPacket *p)
   }
 }
 
-static int sendDataPacket(void* data, size_t length, const bool doBlock)
+static int sendDataPacket(void *data, size_t length, const bool doBlock)
 {
   static CRTPPacket packet;
 
   xSemaphoreTake(sendMutex, portMAX_DELAY);
 
-  packet.size = (length > APPCHANNEL_MTU)?APPCHANNEL_MTU:length;
+  packet.size = (length > APPCHANNEL_MTU) ? APPCHANNEL_MTU : length;
   memcpy(packet.data, data, packet.size);
 
   // CRTP channel and ports are set in platformservice
   int result = 0;
-  if (doBlock)
-  {
+  if (doBlock) {
     result = platformserviceSendAppchannelPacketBlock(&packet);
   } else {
     result = platformserviceSendAppchannelPacket(&packet);

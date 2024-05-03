@@ -5,16 +5,19 @@
 
 kalmanCoreData_t coreData;
 
-void setUp(void) {
+void setUp(void)
+{
   memset(&coreData, 0, sizeof(coreData));
 }
 
-void tearDown(void) {
+void tearDown(void)
+{
   // Empty
 }
 
 
-void testThatStationaryInOriginIsAccepted() {
+void testThatStationaryInOriginIsAccepted()
+{
   // Fixture
   bool expected = true;
 
@@ -25,7 +28,8 @@ void testThatStationaryInOriginIsAccepted() {
   TEST_ASSERT_EQUAL(actual, expected);
 }
 
-void testThatPositionOutOfBoundsPositiveIsNotAccepted() {
+void testThatPositionOutOfBoundsPositiveIsNotAccepted()
+{
   // Fixture
   bool expected = false;
   coreData.S[KC_STATE_X] = 200;
@@ -37,7 +41,8 @@ void testThatPositionOutOfBoundsPositiveIsNotAccepted() {
   TEST_ASSERT_EQUAL(actual, expected);
 }
 
-void testThatPositionOutOfBoundsNegativeIsNotAccepted() {
+void testThatPositionOutOfBoundsNegativeIsNotAccepted()
+{
   // Fixture
   bool expected = false;
   coreData.S[KC_STATE_Z] = -200;
@@ -49,7 +54,8 @@ void testThatPositionOutOfBoundsNegativeIsNotAccepted() {
   TEST_ASSERT_EQUAL(actual, expected);
 }
 
-void testThatVelocityOutOfBoundsPositiveIsNotAccepted() {
+void testThatVelocityOutOfBoundsPositiveIsNotAccepted()
+{
   // Fixture
   bool expected = false;
   coreData.S[KC_STATE_PX] = 20;
@@ -61,7 +67,8 @@ void testThatVelocityOutOfBoundsPositiveIsNotAccepted() {
   TEST_ASSERT_EQUAL(actual, expected);
 }
 
-void testThatVelocityOutOfBoundsNegativeIsNotAccepted() {
+void testThatVelocityOutOfBoundsNegativeIsNotAccepted()
+{
   // Fixture
   bool expected = false;
   coreData.S[KC_STATE_PZ] = -20;

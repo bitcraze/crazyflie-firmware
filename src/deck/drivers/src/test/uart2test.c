@@ -41,16 +41,18 @@
 //Hardware configuration
 static bool isInit;
 
-void uart2testTask(void* arg);
+void uart2testTask(void *arg);
 
 static void uart2testInit(DeckInfo *info)
 {
-  if(isInit)
+  if (isInit) {
     return;
+  }
 
   uart2Init(115200);
 
-  xTaskCreate(uart2testTask, UART2_TEST_TASK_NAME, UART2_TEST_TASK_STACKSIZE, NULL, UART2_TEST_TASK_PRI, NULL);
+  xTaskCreate(uart2testTask, UART2_TEST_TASK_NAME, UART2_TEST_TASK_STACKSIZE, NULL,
+              UART2_TEST_TASK_PRI, NULL);
 
   isInit = true;
 }
@@ -59,18 +61,18 @@ static bool uart2testTest()
 {
   bool status = true;
 
-  if(!isInit)
+  if (!isInit) {
     return false;
+  }
 
   return status;
 }
 
-void uart2testTask(void* arg)
+void uart2testTask(void *arg)
 {
   systemWaitStart();
 
-  while (1)
-  {
+  while (1) {
     char c;
     uart2Getchar(&c);
     consolePutchar(c);

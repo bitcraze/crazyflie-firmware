@@ -22,7 +22,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * loadcell.c - Deck driver for HX711 load cell
- * See 
+ * See
  *  * https://learn.sparkfun.com/tutorials/load-cell-amplifier-hx711-breakout-hookup-guide
  *  * Code based on https://github.com/bogde/HX711
  */
@@ -52,10 +52,9 @@ static bool enable = true;
 static float a = 4.22852802e-05;
 static float b = -2.21784688e+01;
 
-static void loadcellTask(void* prm);
+static void loadcellTask(void *prm);
 
-static enum hx711_gain
-{
+static enum hx711_gain {
   GAIN128 = 1,
   GAIN64 = 3,
   GAIN32 = 2,
@@ -104,7 +103,7 @@ static int32_t hx711_read(void)
   // If the total pulse time exceeds 60 uSec this will cause the HX711 to enter
   // power down mode during the middle of the read sequence.  While the device will
   // wake up when PD_SCK goes low again, the reset starts a new conversion cycle which
-  // forces DOUT high until that cycle is completed.  
+  // forces DOUT high until that cycle is completed.
   //
   // The result is that all subsequent bits read by shiftIn() will read back as 1,
   // corrupting the value returned by read().
@@ -132,7 +131,7 @@ static int32_t hx711_read(void)
   // portENABLE_INTERRUPTS();
 
   // Replicate the most significant bit to pad out a 32-bit signed integer
-  if (value & (1<<24)) {
+  if (value & (1 << 24)) {
     value = 0xFF000000 | value;
   }
   return value;
@@ -167,11 +166,11 @@ static void loadcellInit(DeckInfo *info)
   isInit = true;
 }
 
-static void loadcellTask(void* prm)
+static void loadcellTask(void *prm)
 {
   TickType_t lastWakeTime = xTaskGetTickCount();
 
-  while(1) {
+  while (1) {
     vTaskDelayUntil(&lastWakeTime, F2T(100));
 
     if (enable && hx711_is_ready()) {

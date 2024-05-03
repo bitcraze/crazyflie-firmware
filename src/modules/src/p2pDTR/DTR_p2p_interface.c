@@ -23,7 +23,7 @@
  *
  *
  * DTR_p2p_interface.c
- *  
+ *
  */
 
 
@@ -36,49 +36,52 @@
 static P2PPacket p2p_TXpacket;
 static dtrPacket prev_received = {0};
 
-void dtrSendP2Ppacket(const dtrPacket* packet) {
-    p2p_TXpacket.port = DTR_P2P_PORT;
+void dtrSendP2Ppacket(const dtrPacket *packet)
+{
+  p2p_TXpacket.port = DTR_P2P_PORT;
 
-    memcpy(&p2p_TXpacket.data[0], packet, packet->packetSize);
-    p2p_TXpacket.size = packet->packetSize;
-    
-    radiolinkSendP2PPacketBroadcast(&p2p_TXpacket);
+  memcpy(&p2p_TXpacket.data[0], packet, packet->packetSize);
+  p2p_TXpacket.size = packet->packetSize;
+
+  radiolinkSendP2PPacketBroadcast(&p2p_TXpacket);
 }
 
-static void dtrFeedPacketToProtocol(dtrPacket *incoming_DTR) {
+static void dtrFeedPacketToProtocol(dtrPacket *incoming_DTR)
+{
 
-     bool same_packet_received =  incoming_DTR->messageType == prev_received.messageType && 
-                        incoming_DTR->targetId == prev_received.targetId &&
-                        incoming_DTR->sourceId == prev_received.sourceId;
+  bool same_packet_received =  incoming_DTR->messageType == prev_received.messageType &&
+                               incoming_DTR->targetId == prev_received.targetId &&
+                               incoming_DTR->sourceId == prev_received.sourceId;
 
-    // if there are packets in the queue and the new packet is the same as the previous one, ignore it
-    DTR_DEBUG_PRINT("Packets in RX_SRV queue: %d\n", dtrGetNumberOfPacketsInQueue(RX_SRV_Q) );
-    if ( dtrGetNumberOfPacketsInQueue(RX_SRV_Q) !=0 && same_packet_received ) {
-        DTR_DEBUG_PRINT("Duplicate packet received\n");
-        DTR_DEBUG_PRINT("Message type: %d\n", incoming_DTR->messageType);
-        DTR_DEBUG_PRINT("Target id: %d\n", incoming_DTR->targetId);
+  // if there are packets in the queue and the new packet is the same as the previous one, ignore it
+  DTR_DEBUG_PRINT("Packets in RX_SRV queue: %d\n", dtrGetNumberOfPacketsInQueue(RX_SRV_Q));
+  if (dtrGetNumberOfPacketsInQueue(RX_SRV_Q) != 0 && same_packet_received) {
+    DTR_DEBUG_PRINT("Duplicate packet received\n");
+    DTR_DEBUG_PRINT("Message type: %d\n", incoming_DTR->messageType);
+    DTR_DEBUG_PRINT("Target id: %d\n", incoming_DTR->targetId);
 
-        return;
-    }
+    return;
+  }
 
-    prev_received.messageType = incoming_DTR->messageType;
-    prev_received.targetId = incoming_DTR->targetId;
-    prev_received.sourceId = incoming_DTR->sourceId;
+  prev_received.messageType = incoming_DTR->messageType;
+  prev_received.targetId = incoming_DTR->targetId;
+  prev_received.sourceId = incoming_DTR->sourceId;
 
-    dtrInsertPacketToQueue(incoming_DTR, RX_SRV_Q);
+  dtrInsertPacketToQueue(incoming_DTR, RX_SRV_Q);
 }
 
-bool dtrP2PIncomingHandler(P2PPacket *p){
-    if (p->port != DTR_P2P_PORT){
-        return false;
-    }
+bool dtrP2PIncomingHandler(P2PPacket *p)
+{
+  if (p->port != DTR_P2P_PORT) {
+    return false;
+  }
 
-    dtrPacket incoming_DTR;	
+  dtrPacket incoming_DTR;
 
-    uint8_t DTRpacket_size = p->data[0];
+  uint8_t DTRpacket_size = p->data[0];
 
-	memcpy(&incoming_DTR, &(p->data[0]), DTRpacket_size);
-    dtrFeedPacketToProtocol(&incoming_DTR);
+  memcpy(&incoming_DTR, &(p->data[0]), DTRpacket_size);
+  dtrFeedPacketToProtocol(&incoming_DTR);
 
-    return true;
+  return true;
 }

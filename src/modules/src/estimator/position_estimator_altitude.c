@@ -58,18 +58,26 @@ static struct selfState_s state = {
   .estimatedVZ = 0.0f,
 };
 
-static void positionEstimateInternal(state_t* estimate, const baro_t* baro, const tofMeasurement_t* tofMeasurement, float dt, stabilizerStep_t stabilizerStep, struct selfState_s* state);
-static void positionUpdateVelocityInternal(float accWZ, float dt, struct selfState_s* state);
+static void positionEstimateInternal(state_t *estimate, const baro_t *baro,
+                                     const tofMeasurement_t *tofMeasurement, float dt, stabilizerStep_t stabilizerStep,
+                                     struct selfState_s *state);
+static void positionUpdateVelocityInternal(float accWZ, float dt, struct selfState_s *state);
 
-void positionEstimate(state_t* estimate, const baro_t* baro, const tofMeasurement_t* tofMeasurement, float dt, stabilizerStep_t stabilizerStep) {
+void positionEstimate(state_t *estimate, const baro_t *baro, const tofMeasurement_t *tofMeasurement,
+                      float dt, stabilizerStep_t stabilizerStep)
+{
   positionEstimateInternal(estimate, baro, tofMeasurement, dt, stabilizerStep, &state);
 }
 
-void positionUpdateVelocity(float accWZ, float dt) {
+void positionUpdateVelocity(float accWZ, float dt)
+{
   positionUpdateVelocityInternal(accWZ, dt, &state);
 }
 
-static void positionEstimateInternal(state_t* estimate, const baro_t* baro, const tofMeasurement_t* tofMeasurement, float dt, stabilizerStep_t stabilizerStep, struct selfState_s* state) {
+static void positionEstimateInternal(state_t *estimate, const baro_t *baro,
+                                     const tofMeasurement_t *tofMeasurement, float dt, stabilizerStep_t stabilizerStep,
+                                     struct selfState_s *state)
+{
   float filteredZ;
   static float prev_estimatedZ = 0;
   static bool surfaceFollowingMode = false;
@@ -86,7 +94,7 @@ static void positionEstimateInternal(state_t* estimate, const baro_t* baro, cons
   if (surfaceFollowingMode) {
     if (isSampleUseful) {
       // IIR filter zrange
-      filteredZ = (state->estAlphaZrange       ) * state->estimatedZ +
+      filteredZ = (state->estAlphaZrange) * state->estimatedZ +
                   (1.0f - state->estAlphaZrange) * tofMeasurement->distance;
       // Use zrange as base and add velocity changes.
       state->estimatedZ = filteredZ + (state->velocityFactor * state->velocityZ * dt);
@@ -97,15 +105,15 @@ static void positionEstimateInternal(state_t* estimate, const baro_t* baro, cons
       filteredZ = baro->asl;
     } else {
       // IIR filter asl
-      filteredZ = (state->estAlphaAsl       ) * state->estimatedZ +
+      filteredZ = (state->estAlphaAsl) * state->estimatedZ +
                   (1.0f - state->estAlphaAsl) * baro->asl;
     }
-    #if CONFIG_CONTROLLER_PID_IMPROVED_BARO_Z_HOLD
-      state->estimatedZ = filteredZ;
-    #else
-      // Use asl as base and add velocity changes.
-      state->estimatedZ = filteredZ + (state->velocityFactor * state->velocityZ * dt);
-    #endif
+#if CONFIG_CONTROLLER_PID_IMPROVED_BARO_Z_HOLD
+    state->estimatedZ = filteredZ;
+#else
+    // Use asl as base and add velocity changes.
+    state->estimatedZ = filteredZ + (state->velocityFactor * state->velocityZ * dt);
+#endif
   }
 
   estimate->position.x = 0.0f;
@@ -116,7 +124,8 @@ static void positionEstimateInternal(state_t* estimate, const baro_t* baro, cons
   prev_estimatedZ = state->estimatedZ;
 }
 
-static void positionUpdateVelocityInternal(float accWZ, float dt, struct selfState_s* state) {
+static void positionUpdateVelocityInternal(float accWZ, float dt, struct selfState_s *state)
+{
   state->velocityZ += deadband(accWZ, state->vAccDeadband) * dt * G;
   state->velocityZ *= state->velZAlpha;
 }

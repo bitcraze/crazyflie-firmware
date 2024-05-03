@@ -59,7 +59,8 @@
  *   5 - Pull-request your change :-)
  */
 
-typedef void (*packetDecoder_t)(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen);
+typedef void (*packetDecoder_t)(setpoint_t *setpoint, uint8_t type, const void *data,
+                                size_t datalen);
 
 /* ---===== 1 - packetType_e enum =====--- */
 enum packet_type {
@@ -173,8 +174,8 @@ static float s_CppmEmuYawMaxRateDps = 400.0f; // Used regardless of flight mode
 
 struct cppmEmuPacket_s {
   struct {
-      uint8_t numAuxChannels : 4;   // Set to 0 through MAX_AUX_RC_CHANNELS
-      uint8_t reserved : 4;
+    uint8_t numAuxChannels : 4;   // Set to 0 through MAX_AUX_RC_CHANNELS
+    uint8_t reserved : 4;
   } hdr;
   uint16_t channelRoll;
   uint16_t channelPitch;
@@ -183,7 +184,8 @@ struct cppmEmuPacket_s {
   uint16_t channelAux[MAX_AUX_RC_CHANNELS];
 } __attribute__((packed));
 
-static inline float getChannelUnitMultiplier(uint16_t channelValue, uint16_t channelMidpoint, uint16_t channelRange)
+static inline float getChannelUnitMultiplier(uint16_t channelValue, uint16_t channelMidpoint,
+    uint16_t channelRange)
 {
   // Compute a float from -1 to 1 based on the RC channel value, midpoint, and total range magnitude
   return ((float)channelValue - (float)channelMidpoint) / (float)channelRange;
@@ -220,7 +222,8 @@ static void cppmEmuDecoder(setpoint_t *setpoint, uint8_t type, const void *data,
 
   ASSERT(datalen >= 9); // minimum 9 bytes expected - 1byte header + four 2byte channels
   const struct cppmEmuPacket_s *values = data;
-  ASSERT(datalen == 9 + (2*values->hdr.numAuxChannels)); // Total size is 9 + number of active aux channels
+  ASSERT(datalen == 9 + (2 *
+                         values->hdr.numAuxChannels)); // Total size is 9 + number of active aux channels
 
   // Aux channel 0 is reserved for enabling/disabling self-leveling
   // If it's in use, check and see if it's set and enable self-leveling.
@@ -242,23 +245,25 @@ static void cppmEmuDecoder(setpoint_t *setpoint, uint8_t type, const void *data,
   setpoint->mode.pitch = isSelfLevelEnabled ? modeAbs : modeVelocity;
 
   // Rescale the CPPM values into angles to build the setpoint packet
-  if(isSelfLevelEnabled)
-  {
-    setpoint->attitude.roll = -1 * getChannelUnitMultiplier(values->channelRoll, 1500, 500) * s_CppmEmuRollMaxAngleDeg; // roll inverted
-    setpoint->attitude.pitch = -1 * getChannelUnitMultiplier(values->channelPitch, 1500, 500) * s_CppmEmuPitchMaxAngleDeg; // pitch inverted
-  }
-  else
-  {
-    setpoint->attitudeRate.roll = -1 * getChannelUnitMultiplier(values->channelRoll, 1500, 500) * s_CppmEmuRollMaxRateDps; // roll inverted
-    setpoint->attitudeRate.pitch = -1 * getChannelUnitMultiplier(values->channelPitch, 1500, 500) * s_CppmEmuPitchMaxRateDps; // pitch inverted
+  if (isSelfLevelEnabled) {
+    setpoint->attitude.roll = -1 * getChannelUnitMultiplier(values->channelRoll, 1500,
+                              500) * s_CppmEmuRollMaxAngleDeg; // roll inverted
+    setpoint->attitude.pitch = -1 * getChannelUnitMultiplier(values->channelPitch, 1500,
+                               500) * s_CppmEmuPitchMaxAngleDeg; // pitch inverted
+  } else {
+    setpoint->attitudeRate.roll = -1 * getChannelUnitMultiplier(values->channelRoll, 1500,
+                                  500) * s_CppmEmuRollMaxRateDps; // roll inverted
+    setpoint->attitudeRate.pitch = -1 * getChannelUnitMultiplier(values->channelPitch, 1500,
+                                   500) * s_CppmEmuPitchMaxRateDps; // pitch inverted
   }
 
-  setpoint->attitudeRate.yaw = -1 * getChannelUnitMultiplier(values->channelYaw, 1500, 500) * s_CppmEmuYawMaxRateDps; // yaw inverted
-  setpoint->thrust = getChannelUnitMultiplier(values->channelThrust, 1000, 1000) * (float)UINT16_MAX; // Thrust is positive only - uses the full 1000-2000 range
+  setpoint->attitudeRate.yaw = -1 * getChannelUnitMultiplier(values->channelYaw, 1500,
+                               500) * s_CppmEmuYawMaxRateDps; // yaw inverted
+  setpoint->thrust = getChannelUnitMultiplier(values->channelThrust, 1000,
+                     1000) * (float)UINT16_MAX; // Thrust is positive only - uses the full 1000-2000 range
 
   // Make sure thrust isn't negative
-  if(setpoint->thrust < 0)
-  {
+  if (setpoint->thrust < 0) {
     setpoint->thrust = 0;
   }
 }
@@ -348,7 +353,7 @@ static void fullStateDecoder(setpoint_t *setpoint, uint8_t type, const void *dat
 
   ASSERT(datalen == sizeof(struct fullStatePacket_s));
 
-  #define UNPACK(x) \
+#define UNPACK(x) \
   setpoint->mode.x = modeAbs; \
   setpoint->position.x = values->x / 1000.0f; \
   setpoint->velocity.x = (values->v ## x) / 1000.0f; \
@@ -357,7 +362,7 @@ static void fullStateDecoder(setpoint_t *setpoint, uint8_t type, const void *dat
   UNPACK(x)
   UNPACK(y)
   UNPACK(z)
-  #undef UNPACK
+#undef UNPACK
 
   float const millirad2deg = 180.0f / ((float)M_PI * 1000.0f);
   setpoint->attitudeRate.roll = millirad2deg * values->rateRoll;
@@ -374,12 +379,12 @@ static void fullStateDecoder(setpoint_t *setpoint, uint8_t type, const void *dat
 /* positionDecoder
  * Set the absolute postition and orientation
  */
- struct positionPacket_s {
-   float x;     // Position in m
-   float y;
-   float z;
-   float yaw;   // Orientation in degree
- } __attribute__((packed));
+struct positionPacket_s {
+  float x;     // Position in m
+  float y;
+  float z;
+  float yaw;   // Orientation in degree
+} __attribute__((packed));
 static void positionDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
 {
   const struct positionPacket_s *values = data;
@@ -398,7 +403,7 @@ static void positionDecoder(setpoint_t *setpoint, uint8_t type, const void *data
   setpoint->attitude.yaw = values->yaw;
 }
 
- /* ---===== 3 - packetDecoders array =====--- */
+/* ---===== 3 - packetDecoders array =====--- */
 const static packetDecoder_t packetDecoders[] = {
   [stopType]          = stopDecoder,
   [velocityWorldType] = velocityDecoder,
@@ -417,16 +422,16 @@ void crtpCommanderGenericDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
 
   ASSERT(pk->size > 0);
 
-  if (nTypes<0) {
-    nTypes = sizeof(packetDecoders)/sizeof(packetDecoders[0]);
+  if (nTypes < 0) {
+    nTypes = sizeof(packetDecoders) / sizeof(packetDecoders[0]);
   }
 
   uint8_t type = pk->data[0];
 
   memset(setpoint, 0, sizeof(setpoint_t));
 
-  if (type<nTypes && (packetDecoders[type] != NULL)) {
-    packetDecoders[type](setpoint, type, ((char*)pk->data)+1, pk->size-1);
+  if (type < nTypes && (packetDecoders[type] != NULL)) {
+    packetDecoders[type](setpoint, type, ((char *)pk->data) + 1, pk->size - 1);
   }
 }
 
@@ -435,7 +440,7 @@ void crtpCommanderGenericDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
  * configure the maximum angle/rate output given a maximum stick input
  * for CRTP packets with emulated CPPM channels (e.g. RC transmitters connecting
  * directly to the NRF radio, often with a 4-in-1 Multimodule), or for CPPM channels
- * from an external receiver.  
+ * from an external receiver.
  */
 PARAM_GROUP_START(cppm)
 

@@ -44,41 +44,44 @@
 
 
 /**
- * @brief Branch directly to the bootloader address, setting the 
+ * @brief Branch directly to the bootloader address, setting the
  * stack pointer and destination address first.
  * Based from the micropython machine_bootloader function.
- * 
+ *
  * @param r0 The register to utilize
  * @param bl_addr The bootloader address to jump to
  */
-static void branch_to_bootloader(uint32_t r0, uint32_t bl_addr){
-    __asm volatile (
-        "ldr r2, [r1, #0]\n"    // get address of stack pointer
-        "msr msp, r2\n"         // get stack pointer
-        "ldr r2, [r1, #4]\n"    // get address of destination
-        "bx r2\n"               // branch to bootloader
-        );
-    //unreachable code
-    while(1);
+static void branch_to_bootloader(uint32_t r0, uint32_t bl_addr)
+{
+  __asm volatile(
+    "ldr r2, [r1, #0]\n"    // get address of stack pointer
+    "msr msp, r2\n"         // get stack pointer
+    "ldr r2, [r1, #4]\n"    // get address of destination
+    "bx r2\n"               // branch to bootloader
+  );
+  //unreachable code
+  while (1);
 }
 
-void check_enter_bootloader(){
-    uint64_t bl_state = *BL_STATE_PTR;
-    //set to invalid for next boot
-    *BL_STATE_PTR = BL_STATE_INVALID;
+void check_enter_bootloader()
+{
+  uint64_t bl_state = *BL_STATE_PTR;
+  //set to invalid for next boot
+  *BL_STATE_PTR = BL_STATE_INVALID;
 
-    if(BL_STATE_GET_KEY(bl_state) == BL_STATE_KEY && (RCC->CSR & RCC_CSR_SFTRSTF)){
-        //if botloader data valid and was just reset with NVIC_SystemReset
+  if (BL_STATE_GET_KEY(bl_state) == BL_STATE_KEY && (RCC->CSR & RCC_CSR_SFTRSTF)) {
+    //if botloader data valid and was just reset with NVIC_SystemReset
 
-        //remap memory to system flash
-        SYSCFG_MemoryRemapConfig(SYSCFG_MemoryRemap_SystemFlash);
-        branch_to_bootloader(BL_STATE_GET_REG(bl_state), BL_STATE_GET_ADDR(bl_state));
-    }
+    //remap memory to system flash
+    SYSCFG_MemoryRemapConfig(SYSCFG_MemoryRemap_SystemFlash);
+    branch_to_bootloader(BL_STATE_GET_REG(bl_state), BL_STATE_GET_ADDR(bl_state));
+  }
 }
 
-void enter_bootloader(uint32_t r0, uint32_t bl_addr){
-    //set bootloader state values    
-    *BL_STATE_PTR = BL_STATE_VALID(r0, bl_addr);
-    
-    NVIC_SystemReset();
+void enter_bootloader(uint32_t r0, uint32_t bl_addr)
+{
+  //set bootloader state values
+  *BL_STATE_PTR = BL_STATE_VALID(r0, bl_addr);
+
+  NVIC_SystemReset();
 }

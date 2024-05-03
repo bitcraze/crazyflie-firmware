@@ -42,7 +42,7 @@
 #include "static_mem.h"
 #include "supervisor.h"
 
-static bool isInit=false;
+static bool isInit = false;
 STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(platformSrvTask, PLATFORM_SRV_TASK_STACKSIZE);
 
 typedef enum {
@@ -54,7 +54,7 @@ typedef enum {
 typedef enum {
   setContinuousWave  = 0x00,
   armSystem          = 0x01,
-  recoverSystem     = 0x02, 
+  recoverSystem     = 0x02,
 } PlatformCommand;
 
 typedef enum {
@@ -63,19 +63,21 @@ typedef enum {
   getDeviceTypeName  = 0x02,
 } VersionCommand;
 
-static void platformSrvTask(void*);
+static void platformSrvTask(void *);
 static void platformCommandProcess(CRTPPacket *p);
 static void versionCommandProcess(CRTPPacket *p);
 
 void platformserviceInit(void)
 {
-  if (isInit)
+  if (isInit) {
     return;
+  }
 
   appchannelInit();
 
   //Start the task
-  STATIC_MEM_TASK_CREATE(platformSrvTask, platformSrvTask, PLATFORM_SRV_TASK_NAME, NULL, PLATFORM_SRV_TASK_PRI);
+  STATIC_MEM_TASK_CREATE(platformSrvTask, platformSrvTask, PLATFORM_SRV_TASK_NAME, NULL,
+                         PLATFORM_SRV_TASK_PRI);
 
   isInit = true;
 }
@@ -85,17 +87,16 @@ bool platformserviceTest(void)
   return isInit;
 }
 
-static void platformSrvTask(void* prm)
+static void platformSrvTask(void *prm)
 {
   static CRTPPacket p;
 
   crtpInitTaskQueue(CRTP_PORT_PLATFORM);
 
-  while(1) {
+  while (1) {
     crtpReceivePacketBlock(CRTP_PORT_PLATFORM, &p);
 
-    switch (p.channel)
-    {
+    switch (p.channel) {
       case platformCommand:
         platformCommandProcess(&p);
         crtpSendPacketBlock(&p);
@@ -118,8 +119,7 @@ static void platformCommandProcess(CRTPPacket *p)
   uint8_t *data = &p->data[1];
 
   switch (command) {
-    case setContinuousWave:
-    {
+    case setContinuousWave: {
       static SyslinkPacket slp;
       slp.type = SYSLINK_RADIO_CONTWAVE;
       slp.length = 1;
@@ -127,8 +127,7 @@ static void platformCommandProcess(CRTPPacket *p)
       syslinkSendPacket(&slp);
       break;
     }
-    case armSystem:
-    {
+    case armSystem: {
       const bool doArm = data[0];
       const bool success = supervisorRequestArming(doArm);
       data[0] = success;
@@ -136,14 +135,13 @@ static void platformCommandProcess(CRTPPacket *p)
       p->size = 2;
       break;
     }
-    case recoverSystem:
-    {
+    case recoverSystem: {
       const bool success = supervisorRequestCrashRecovery(true);
       data[0] = success;
       data[1] = !supervisorIsCrashed();
       p->size = 2;
       break;
-    }    
+    }
     default:
       break;
   }
@@ -167,23 +165,22 @@ static void versionCommandProcess(CRTPPacket *p)
 {
   switch (p->data[0]) {
     case getProtocolVersion:
-      *(int*)&p->data[1] = CRTP_PROTOCOL_VERSION;
+      *(int *)&p->data[1] = CRTP_PROTOCOL_VERSION;
       p->size = 5;
       crtpSendPacketBlock(p);
       break;
     case getFirmwareVersion:
-      strncpy((char*)&p->data[1], V_STAG, CRTP_MAX_DATA_SIZE-1);
-      p->size = (strlen(V_STAG)>CRTP_MAX_DATA_SIZE-1)?CRTP_MAX_DATA_SIZE:strlen(V_STAG)+1;
+      strncpy((char *)&p->data[1], V_STAG, CRTP_MAX_DATA_SIZE - 1);
+      p->size = (strlen(V_STAG) > CRTP_MAX_DATA_SIZE - 1) ? CRTP_MAX_DATA_SIZE : strlen(V_STAG) + 1;
       crtpSendPacketBlock(p);
       break;
-    case getDeviceTypeName:
-      {
-      const char* name = platformConfigGetDeviceTypeName();
-      strncpy((char*)&p->data[1], name, CRTP_MAX_DATA_SIZE-1);
-      p->size = (strlen(name)>CRTP_MAX_DATA_SIZE-1)?CRTP_MAX_DATA_SIZE:strlen(name)+1;
+    case getDeviceTypeName: {
+      const char *name = platformConfigGetDeviceTypeName();
+      strncpy((char *)&p->data[1], name, CRTP_MAX_DATA_SIZE - 1);
+      p->size = (strlen(name) > CRTP_MAX_DATA_SIZE - 1) ? CRTP_MAX_DATA_SIZE : strlen(name) + 1;
       crtpSendPacketBlock(p);
-      }
-      break;
+    }
+    break;
     default:
       break;
   }

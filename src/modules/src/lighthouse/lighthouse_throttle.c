@@ -36,29 +36,30 @@ static const uint32_t evaluationIntervalMs = 100;
 static uint16_t maxRate = 50;  // Samples / second
 static float discardProbability = 0.0f;
 
-bool throttleLh2Samples(const uint32_t nowMs) {
-    static uint32_t previousEvaluationTime = 0;
-    static uint32_t nextEvaluationTime = 0;
-    static uint32_t eventCounter = 0;
-    static int discardThreshold = 0;
+bool throttleLh2Samples(const uint32_t nowMs)
+{
+  static uint32_t previousEvaluationTime = 0;
+  static uint32_t nextEvaluationTime = 0;
+  static uint32_t eventCounter = 0;
+  static int discardThreshold = 0;
 
-    eventCounter++;
+  eventCounter++;
 
-    if (nowMs > nextEvaluationTime) {
-        const float currentRate = 1000.0f * (float)eventCounter / (float)(nowMs - previousEvaluationTime);
-        if (currentRate < (float)maxRate) {
-            discardProbability = 0.0;
-        } else {
-            discardProbability = 1.0f - (float)maxRate / currentRate;
-        }
-        discardThreshold = RAND_MAX * discardProbability;
-
-        previousEvaluationTime = nowMs;
-        eventCounter = 0;
-        nextEvaluationTime = nowMs + evaluationIntervalMs;
+  if (nowMs > nextEvaluationTime) {
+    const float currentRate = 1000.0f * (float)eventCounter / (float)(nowMs - previousEvaluationTime);
+    if (currentRate < (float)maxRate) {
+      discardProbability = 0.0;
+    } else {
+      discardProbability = 1.0f - (float)maxRate / currentRate;
     }
+    discardThreshold = RAND_MAX * discardProbability;
 
-    return (rand() > discardThreshold);
+    previousEvaluationTime = nowMs;
+    eventCounter = 0;
+    nextEvaluationTime = nowMs + evaluationIntervalMs;
+  }
+
+  return (rand() > discardThreshold);
 }
 
 PARAM_GROUP_START(lighthouse)

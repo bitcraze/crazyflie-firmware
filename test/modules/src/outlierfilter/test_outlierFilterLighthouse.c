@@ -4,15 +4,17 @@
 #include "unity.h"
 
 // Helpers
-uint32_t fixtureCloseLhFilter(OutlierFilterLhState_t* this);
-uint32_t fixtureOpenLhFilter(OutlierFilterLhState_t* this);
+uint32_t fixtureCloseLhFilter(OutlierFilterLhState_t *this);
+uint32_t fixtureOpenLhFilter(OutlierFilterLhState_t *this);
 
 
-void setUp(void) {
+void setUp(void)
+{
   // Empty
 }
 
-void tearDown(void) {
+void tearDown(void)
+{
   // Empty
 }
 
@@ -22,7 +24,8 @@ void tearDown(void) {
 #define LH_GOOD_ANGLE 0.0001
 #define LH_TIME_STEP (1000 / 120)
 
-void testThatLhFilterLetsGoodSampleThroughWhenOpen() {
+void testThatLhFilterLetsGoodSampleThroughWhenOpen()
+{
   // Fixture
   OutlierFilterLhState_t this;
   uint32_t time = fixtureOpenLhFilter(&this);
@@ -35,7 +38,8 @@ void testThatLhFilterLetsGoodSampleThroughWhenOpen() {
   TEST_ASSERT_EQUAL(expected, actual);
 }
 
-void testThatLhFilterLetsBadSampleThroughWhenOpen() {
+void testThatLhFilterLetsBadSampleThroughWhenOpen()
+{
   // Fixture
   OutlierFilterLhState_t this;
   uint32_t time = fixtureOpenLhFilter(&this);
@@ -48,7 +52,8 @@ void testThatLhFilterLetsBadSampleThroughWhenOpen() {
   TEST_ASSERT_EQUAL(expected, actual);
 }
 
-void testThatLhFilterLetsGoodSampleThroughWhenClosed() {
+void testThatLhFilterLetsGoodSampleThroughWhenClosed()
+{
   // Fixture
   OutlierFilterLhState_t this;
   uint32_t time = fixtureCloseLhFilter(&this);
@@ -61,7 +66,8 @@ void testThatLhFilterLetsGoodSampleThroughWhenClosed() {
   TEST_ASSERT_EQUAL(expected, actual);
 }
 
-void testThatLhFilterBlocksBadSampleWhenClosed() {
+void testThatLhFilterBlocksBadSampleWhenClosed()
+{
   // Fixture
   OutlierFilterLhState_t this;
   uint32_t time = fixtureCloseLhFilter(&this);
@@ -74,7 +80,8 @@ void testThatLhFilterBlocksBadSampleWhenClosed() {
   TEST_ASSERT_EQUAL(expected, actual);
 }
 
-void testThatLhFilterOpensForManyBadSamples() {
+void testThatLhFilterOpensForManyBadSamples()
+{
   // Fixture
   OutlierFilterLhState_t this;
   uint32_t time = fixtureCloseLhFilter(&this);
@@ -90,7 +97,8 @@ void testThatLhFilterOpensForManyBadSamples() {
   }
 }
 
-void testThatLhFilterOpensAfterInactivity() {
+void testThatLhFilterOpensAfterInactivity()
+{
   // Fixture
   OutlierFilterLhState_t this;
   uint32_t time = fixtureCloseLhFilter(&this);
@@ -104,7 +112,8 @@ void testThatLhFilterOpensAfterInactivity() {
   TEST_ASSERT_EQUAL(expected, actual);
 }
 
-void testThatLhFilterClosesAfterManyGoodSamples() {
+void testThatLhFilterClosesAfterManyGoodSamples()
+{
   // Fixture
   OutlierFilterLhState_t this;
   uint32_t time = fixtureOpenLhFilter(&this);
@@ -121,7 +130,8 @@ void testThatLhFilterClosesAfterManyGoodSamples() {
   TEST_ASSERT_EQUAL(expected, actual);
 }
 
-void testThatLhFilterOpensWithMixedSamples() {
+void testThatLhFilterOpensWithMixedSamples()
+{
   // Fixture
   OutlierFilterLhState_t this;
   uint32_t time = fixtureCloseLhFilter(&this);
@@ -141,7 +151,8 @@ void testThatLhFilterOpensWithMixedSamples() {
 
 
 // Helpers /////////////////////////////////////////////////////////////////////////////////
-uint32_t fixtureCloseLhFilter(OutlierFilterLhState_t* this) {
+uint32_t fixtureCloseLhFilter(OutlierFilterLhState_t *this)
+{
   uint32_t time = 1000;
 
   outlierFilterLighthouseReset(this, time);
@@ -155,7 +166,8 @@ uint32_t fixtureCloseLhFilter(OutlierFilterLhState_t* this) {
   return time;
 }
 
-uint32_t fixtureOpenLhFilter(OutlierFilterLhState_t* this) {
+uint32_t fixtureOpenLhFilter(OutlierFilterLhState_t *this)
+{
   uint32_t time = 1000;
 
   outlierFilterLighthouseReset(this, time);

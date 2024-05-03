@@ -20,10 +20,10 @@
 
 #include <stdbool.h>
 
-static void uart1SetSequence(char* sequence, int length);
+static void uart1SetSequence(char *sequence, int length);
 static emptySequence[] = {0};
 static int uart1BytesRead = 0;
-static char* uart1Sequence;
+static char *uart1Sequence;
 static int uart1SequenceLength;
 static lighthouseUartFrame_t frame;
 
@@ -32,30 +32,37 @@ extern pulseProcessor_t lighthouseCoreState;
 // Functions under test
 void waitForUartSynchFrame();
 bool getUartFrameRaw(lighthouseUartFrame_t *frame);
-lighthouseBaseStationType_t identifyBaseStationType(const lighthouseUartFrame_t* frame, lighthouseBsIdentificationData_t* state);
+lighthouseBaseStationType_t identifyBaseStationType(const lighthouseUartFrame_t *frame,
+    lighthouseBsIdentificationData_t *state);
 
 // Dummy mocks timer
-uint32_t xTaskGetTickCount() {return 0;}
+uint32_t xTaskGetTickCount()
+{
+  return 0;
+}
 void vTaskDelay(const uint32_t ignore) {}
 
 static int nrOfCallsToStorageFetchForCalib = 0;
-static size_t mockStorageFetchForCalib(char* key, void* buffer, size_t length, int cmock_num_calls);
+static size_t mockStorageFetchForCalib(char *key, void *buffer, size_t length, int cmock_num_calls);
 
 static const uint32_t FRAME_LENGTH = 12;
 
-void setUp(void) {
-    nrOfCallsToStorageFetchForCalib = 0;
-    uart1SetSequence(emptySequence, 0);
+void setUp(void)
+{
+  nrOfCallsToStorageFetchForCalib = 0;
+  uart1SetSequence(emptySequence, 0);
 
-    memset(&frame, 0, sizeof(frame));
+  memset(&frame, 0, sizeof(frame));
 }
 
-void tearDown(void) {
+void tearDown(void)
+{
   // Empty
 }
 
 
-void testThatUartFrameIsDetected() {
+void testThatUartFrameIsDetected()
+{
   // Fixture
   unsigned char sequence[] = {0, 1, 2, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0, 1, 2};
   int expected = 15;
@@ -70,10 +77,12 @@ void testThatUartFrameIsDetected() {
 }
 
 
-void testThatUartSyncFramesAreSkipped() {
+void testThatUartSyncFramesAreSkipped()
+{
   // Fixture
   unsigned char sequence[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+                              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                             };
   int expectedRead = 24;
   uart1SetSequence(sequence, sizeof(sequence));
   uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
@@ -83,7 +92,7 @@ void testThatUartSyncFramesAreSkipped() {
   do {
     bool actual = getUartFrameRaw(&frame);
     TEST_ASSERT_TRUE(actual);
-  } while(frame.isSyncFrame);
+  } while (frame.isSyncFrame);
 
   // Assert
   int actualRead = uart1BytesRead;
@@ -91,7 +100,8 @@ void testThatUartSyncFramesAreSkipped() {
 }
 
 
-void testThatCorruptUartFramesAreDetectedWithOnesInFirstPadding() {
+void testThatCorruptUartFramesAreDetectedWithOnesInFirstPadding()
+{
   // Fixture
   unsigned char sequence[] = {0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0};
   uart1SetSequence(sequence, sizeof(sequence));
@@ -105,7 +115,8 @@ void testThatCorruptUartFramesAreDetectedWithOnesInFirstPadding() {
 }
 
 
-void testThatCorruptUartFramesAreDetectedWithOnesInSecondPadding() {
+void testThatCorruptUartFramesAreDetectedWithOnesInSecondPadding()
+{
   // Fixture
   unsigned char sequence[] = {0, 0, 0, 0, 0, 0, 0, 0, 128, 0, 0, 0};
   uart1SetSequence(sequence, sizeof(sequence));
@@ -119,7 +130,8 @@ void testThatCorruptUartFramesAreDetectedWithOnesInSecondPadding() {
 }
 
 
-void testThatTimeStampIsDecodedInUartFrame() {
+void testThatTimeStampIsDecodedInUartFrame()
+{
   // Fixture
   unsigned char sequence[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 2, 1};
   uint32_t expected = 0x010203;
@@ -135,7 +147,8 @@ void testThatTimeStampIsDecodedInUartFrame() {
 }
 
 
-void testThatWidthIsDecodedInUartFrame() {
+void testThatWidthIsDecodedInUartFrame()
+{
   // Fixture
   unsigned char sequence[] = {0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   uint32_t expected = 0x0201;
@@ -151,7 +164,8 @@ void testThatWidthIsDecodedInUartFrame() {
 }
 
 
-void testThatOffsetIsDecodedInUartFrame() {
+void testThatOffsetIsDecodedInUartFrame()
+{
   // Fixture
   unsigned char sequence[] = {0, 0, 0, 3, 2, 1, 0, 0, 0, 0, 0, 0};
 
@@ -172,7 +186,8 @@ void testThatOffsetIsDecodedInUartFrame() {
 }
 
 
-void testThatBeamDataIsDecodedInUartFrame() {
+void testThatBeamDataIsDecodedInUartFrame()
+{
   // Fixture
   unsigned char sequence[] = {0, 0, 0, 0, 0, 0, 3, 2, 1, 0, 0, 0};
   uint32_t expected = 0x10203;
@@ -190,7 +205,8 @@ void testThatBeamDataIsDecodedInUartFrame() {
   TEST_ASSERT_TRUE(frameOk);
 }
 
-void testThatSensorIsDecodedInUartFrame() {
+void testThatSensorIsDecodedInUartFrame()
+{
   // Fixture
   unsigned char sequence[] = {3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   uint8_t expected = 0x3;
@@ -208,7 +224,8 @@ void testThatSensorIsDecodedInUartFrame() {
   TEST_ASSERT_TRUE(frame.data.channelFound);
 }
 
-void testThatLackOfChannelIsDecodedInUartFrame() {
+void testThatLackOfChannelIsDecodedInUartFrame()
+{
   // Fixture
   unsigned char sequence[] = {0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   uart1SetSequence(sequence, sizeof(sequence));
@@ -226,7 +243,8 @@ void testThatLackOfChannelIsDecodedInUartFrame() {
 }
 
 
-void testThatChannelIsDecodedInUartFrame() {
+void testThatChannelIsDecodedInUartFrame()
+{
   // Fixture
   unsigned char sequence[] = {0x78, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   uint8_t expected = 0x0f;
@@ -245,7 +263,8 @@ void testThatChannelIsDecodedInUartFrame() {
 }
 
 
-void testThatSlowBitIsDecodedInUartFrame() {
+void testThatSlowBitIsDecodedInUartFrame()
+{
   // Fixture
   unsigned char sequence[] = {0x04, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   uint8_t expected = 0x0f;
@@ -264,25 +283,28 @@ void testThatSlowBitIsDecodedInUartFrame() {
 }
 
 // Test support ----------------------------------------------------------------------------------------------------
-static void uart1ReadCallback(char* ch, int cmock_num_calls) {
-    if (uart1BytesRead >= uart1SequenceLength) {
-        TEST_FAIL_MESSAGE("Too many bytes read from uart1");
-    }
+static void uart1ReadCallback(char *ch, int cmock_num_calls)
+{
+  if (uart1BytesRead >= uart1SequenceLength) {
+    TEST_FAIL_MESSAGE("Too many bytes read from uart1");
+  }
 
-    *ch = uart1Sequence[uart1BytesRead];
-    uart1BytesRead++;
+  *ch = uart1Sequence[uart1BytesRead];
+  uart1BytesRead++;
 }
 
-static bool uart1GetcharCallback(char* ch, int cmock_num_calls) {
-    uart1ReadCallback(ch, cmock_num_calls);
-    return true;
+static bool uart1GetcharCallback(char *ch, int cmock_num_calls)
+{
+  uart1ReadCallback(ch, cmock_num_calls);
+  return true;
 }
 
-static void uart1SetSequence(char* sequence, int length) {
-    uart1BytesRead = 0;
-    uart1Sequence = sequence;
-    uart1SequenceLength = length;
+static void uart1SetSequence(char *sequence, int length)
+{
+  uart1BytesRead = 0;
+  uart1Sequence = sequence;
+  uart1SequenceLength = length;
 
-    uart1Getchar_StubWithCallback(uart1ReadCallback);
-    uart1Getchar_StubWithCallback(uart1GetcharCallback);
+  uart1Getchar_StubWithCallback(uart1ReadCallback);
+  uart1Getchar_StubWithCallback(uart1GetcharCallback);
 }

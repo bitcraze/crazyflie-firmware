@@ -58,8 +58,7 @@ static MspObject s_MspObject;
 
 static void osdTask(void *param)
 {
-  while(1)
-  {
+  while (1) {
     char ch;
     uart1Getchar(&ch);
 
@@ -67,7 +66,7 @@ static void osdTask(void *param)
   }
 }
 
-static void osdResponseCallback(uint8_t* pBuffer, uint32_t bufferLen)
+static void osdResponseCallback(uint8_t *pBuffer, uint32_t bufferLen)
 {
   uart1SendData(bufferLen, pBuffer);
 }
@@ -76,7 +75,7 @@ static void osdResponseCallback(uint8_t* pBuffer, uint32_t bufferLen)
 
 static void bigquadInit(DeckInfo *info)
 {
-  if(isInit) {
+  if (isInit) {
     return;
   }
 
@@ -106,8 +105,9 @@ static bool bigquadTest()
 {
   bool status = true;
 
-  if(!isInit)
+  if (!isInit) {
     return false;
+  }
 
   status = motorsTest();
 
@@ -121,7 +121,7 @@ static const DeckDriver bigquad_deck = {
 
   .usedPeriph = DECK_USING_TIMER3 | DECK_USING_TIMER14,
   .usedGpio = DECK_USING_PA2 | DECK_USING_PA3 | DECK_USING_IO_3 |
-              DECK_USING_IO_2 | DECK_USING_PA7,
+  DECK_USING_IO_2 | DECK_USING_PA7,
   .init = bigquadInit,
   .test = bigquadTest,
 };

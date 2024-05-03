@@ -87,11 +87,11 @@ static struct vec sidestepGoal(
   }
   // Otherwise no sidestep, but still project
   return vprojectpolytope(
-    goal,
-    A, B, projectionWorkspace, nRows,
-    params->voronoiProjectionTolerance,
-    params->voronoiProjectionMaxIters
-  );
+           goal,
+           A, B, projectionWorkspace, nRows,
+           params->voronoiProjectionTolerance,
+           params->voronoiProjectionMaxIters
+         );
 }
 
 void collisionAvoidanceUpdateSetpointCore(
@@ -164,36 +164,32 @@ void collisionAvoidanceUpdateSetpointCore(
       pseudoGoal = sidestepGoal(params, pseudoGoal, true, A, B, projectionWorkspace, nRows);
       if (vinpolytope(pseudoGoal, A, B, nRows, inPolytopeTolerance)) {
         setVel = vdiv(pseudoGoal, params->horizonSecs);
-      }
-      else {
+      } else {
         // Projection failed to converge. Best we can do is stay still.
         setVel = vzero();
       }
-    }
-    else {
+    } else {
       // Atypical case - our current position is not within our cell. Forget
       // about the original goal velocity and try to move towards our cell.
       struct vec nearestInCell = vprojectpolytope(
-        vzero(),
-        A, B, projectionWorkspace, nRows,
-        params->voronoiProjectionTolerance,
-        params->voronoiProjectionMaxIters
-      );
+                                   vzero(),
+                                   A, B, projectionWorkspace, nRows,
+                                   params->voronoiProjectionTolerance,
+                                   params->voronoiProjectionMaxIters
+                                 );
       if (vinpolytope(nearestInCell, A, B, nRows, inPolytopeTolerance)) {
         setVel = vclampnorm(nearestInCell, params->maxSpeed);
-      }
-      else {
+      } else {
         // Projection failed to converge. Best we can do is stay still.
         setVel = vzero();
       }
     }
     collisionState->lastFeasibleSetPosition = ourPos;
-  }
-  else if (setpoint->mode.x == modeAbs) {
+  } else if (setpoint->mode.x == modeAbs) {
 
     struct vec const setPosRelative = vsub(setPos, ourPos);
     struct vec const setPosRelativeNew = sidestepGoal(
-      params, setPosRelative, false, A, B, projectionWorkspace, nRows);
+                                           params, setPosRelative, false, A, B, projectionWorkspace, nRows);
 
     if (!vinpolytope(setPosRelativeNew, A, B, nRows, inPolytopeTolerance)) {
       // If the projection algorithm failed to converge, then either
@@ -208,21 +204,18 @@ void collisionAvoidanceUpdateSetpointCore(
       setVel = vzero();
       if (!visnan(collisionState->lastFeasibleSetPosition)) {
         setPos = collisionState->lastFeasibleSetPosition;
-      }
-      else {
+      } else {
         // This case should never happen as long as collision avoidance is
         // initialized in a collision-free state, but we do something reasonable
         // just in case.
         setPos = ourPos;
         collisionState->lastFeasibleSetPosition = ourPos;
       }
-    }
-    else if (veq(setVel, vzero())) {
+    } else if (veq(setVel, vzero())) {
       // Position, but no velocity. Interpret as waypoint, not trajectory
       // tracking. "Go to this position and stop".
       setPos = vadd(ourPos, setPosRelativeNew);
-    }
-    else {
+    } else {
       // Position with nonzero velocity. Interpret as trajectory tracking.
       if (vneq(setPosRelative, setPosRelativeNew)) {
         // Set position is not within our cell. The situation has likely diverged
@@ -230,8 +223,7 @@ void collisionAvoidanceUpdateSetpointCore(
         // further away from our cell. Therefore, degrade to the v == 0 behavior.
         setPos = vadd(ourPos, setPosRelativeNew);
         setVel = vzero();
-      }
-      else {
+      } else {
         // Set position is within our cell. In case velocity would take us
         // outside the cell within the planning horizon, scale it appropriately.
         // See github issue #567 for more detailed discussion of this behavior.
@@ -243,8 +235,7 @@ void collisionAvoidanceUpdateSetpointCore(
       }
     }
     collisionState->lastFeasibleSetPosition = setPos;
-  }
-  else {
+  } else {
     // Unsupported control mode, do nothing.
   }
 
@@ -306,7 +297,8 @@ static float workspace[7 * MAX_CELL_ROWS];
 static uint32_t latency = 0;
 
 void collisionAvoidanceUpdateSetpoint(
-  setpoint_t *setpoint, sensorData_t const *sensorData, state_t const *state, stabilizerStep_t stabilizerStep)
+  setpoint_t *setpoint, sensorData_t const *sensorData, state_t const *state,
+  stabilizerStep_t stabilizerStep)
 {
   if (!collisionAvoidanceEnable) {
     return;
@@ -336,13 +328,14 @@ void collisionAvoidanceUpdateSetpoint(
     ++nOthers;
   }
 
-  collisionAvoidanceUpdateSetpointCore(&params, &collisionState, nOthers, workspace, workspace, setpoint, sensorData, state);
+  collisionAvoidanceUpdateSetpointCore(&params, &collisionState, nOthers, workspace, workspace,
+                                       setpoint, sensorData, state);
 
   latency = xTaskGetTickCount() - time;
 }
 
 LOG_GROUP_START(colAv)
-  LOG_ADD(LOG_UINT32, latency, &latency)
+LOG_ADD(LOG_UINT32, latency, &latency)
 LOG_GROUP_STOP(colAv)
 
 
@@ -390,42 +383,42 @@ LOG_GROUP_STOP(colAv)
  */
 PARAM_GROUP_START(colAv)
 
-  /**
-   * @brief Nonzero to enable collision avoidance
-   *
-   * Used to enable or disable the collision avoidance module.
-   */
-  PARAM_ADD_CORE(PARAM_UINT8, enable, &collisionAvoidanceEnable)
+/**
+ * @brief Nonzero to enable collision avoidance
+ *
+ * Used to enable or disable the collision avoidance module.
+ */
+PARAM_ADD_CORE(PARAM_UINT8, enable, &collisionAvoidanceEnable)
 
-  /**
-   * @brief The x radius of the ellipsoid collision volume
-  */
-  PARAM_ADD_CORE(PARAM_FLOAT, ellipsoidX, &params.ellipsoidRadii.x)
+/**
+ * @brief The x radius of the ellipsoid collision volume
+*/
+PARAM_ADD_CORE(PARAM_FLOAT, ellipsoidX, &params.ellipsoidRadii.x)
 
-  /**
-   * @brief The y radius of the ellipsoid collision volume
-  */
-  PARAM_ADD_CORE(PARAM_FLOAT, ellipsoidY, &params.ellipsoidRadii.y)
+/**
+ * @brief The y radius of the ellipsoid collision volume
+*/
+PARAM_ADD_CORE(PARAM_FLOAT, ellipsoidY, &params.ellipsoidRadii.y)
 
-  /**
-   * @brief The z radius of the ellipsoid collision volume
-  */
-  PARAM_ADD_CORE(PARAM_FLOAT, ellipsoidZ, &params.ellipsoidRadii.z)
+/**
+ * @brief The z radius of the ellipsoid collision volume
+*/
+PARAM_ADD_CORE(PARAM_FLOAT, ellipsoidZ, &params.ellipsoidRadii.z)
 
-  PARAM_ADD(PARAM_FLOAT, bboxMinX, &params.bboxMin.x)
-  PARAM_ADD(PARAM_FLOAT, bboxMinY, &params.bboxMin.y)
-  PARAM_ADD(PARAM_FLOAT, bboxMinZ, &params.bboxMin.z)
+PARAM_ADD(PARAM_FLOAT, bboxMinX, &params.bboxMin.x)
+PARAM_ADD(PARAM_FLOAT, bboxMinY, &params.bboxMin.y)
+PARAM_ADD(PARAM_FLOAT, bboxMinZ, &params.bboxMin.z)
 
-  PARAM_ADD(PARAM_FLOAT, bboxMaxX, &params.bboxMax.x)
-  PARAM_ADD(PARAM_FLOAT, bboxMaxY, &params.bboxMax.y)
-  PARAM_ADD(PARAM_FLOAT, bboxMaxZ, &params.bboxMax.z)
+PARAM_ADD(PARAM_FLOAT, bboxMaxX, &params.bboxMax.x)
+PARAM_ADD(PARAM_FLOAT, bboxMaxY, &params.bboxMax.y)
+PARAM_ADD(PARAM_FLOAT, bboxMaxZ, &params.bboxMax.z)
 
-  PARAM_ADD(PARAM_FLOAT, horizon, &params.horizonSecs)
-  PARAM_ADD(PARAM_FLOAT, maxSpeed, &params.maxSpeed)
-  PARAM_ADD(PARAM_FLOAT, sidestepThrsh, &params.sidestepThreshold)
-  PARAM_ADD(PARAM_INT32, maxPeerLocAge, &params.maxPeerLocAgeMillis)
-  PARAM_ADD(PARAM_FLOAT, vorTol, &params.voronoiProjectionTolerance)
-  PARAM_ADD(PARAM_INT32, vorIters, &params.voronoiProjectionMaxIters)
+PARAM_ADD(PARAM_FLOAT, horizon, &params.horizonSecs)
+PARAM_ADD(PARAM_FLOAT, maxSpeed, &params.maxSpeed)
+PARAM_ADD(PARAM_FLOAT, sidestepThrsh, &params.sidestepThreshold)
+PARAM_ADD(PARAM_INT32, maxPeerLocAge, &params.maxPeerLocAgeMillis)
+PARAM_ADD(PARAM_FLOAT, vorTol, &params.voronoiProjectionTolerance)
+PARAM_ADD(PARAM_INT32, vorIters, &params.voronoiProjectionMaxIters)
 PARAM_GROUP_STOP(colAv)
 
 // \\cond

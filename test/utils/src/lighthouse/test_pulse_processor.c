@@ -9,10 +9,12 @@
 #include "mock_pulse_processor_v1.h"
 #include "mock_pulse_processor_v2.h"
 
-void setUp(void) {
+void setUp(void)
+{
 }
 
-void testThatResultStructIsCleared() {
+void testThatResultStructIsCleared()
+{
   // Fixture
   pulseProcessorResult_t angles;
   angles.baseStationMeasurementsLh1[1].sensorMeasurements[2].validCount = 2;
@@ -26,7 +28,8 @@ void testThatResultStructIsCleared() {
   TEST_ASSERT_EQUAL_INT(0, angles.baseStationMeasurementsLh2[1].sensorMeasurements[2].validCount);
 }
 
-void testThatTsDiffReturnsDifference() {
+void testThatTsDiffReturnsDifference()
+{
   // Fixture
   uint32_t a = 100;
   uint32_t b = 60;
@@ -39,7 +42,8 @@ void testThatTsDiffReturnsDifference() {
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 }
 
-void testThatTsDiffReturnsDifferenceWhenClocksWrap() {
+void testThatTsDiffReturnsDifferenceWhenClocksWrap()
+{
   // Fixture
   uint32_t a = 100;
   uint32_t b = PULSE_PROCESSOR_TIMESTAMP_MAX + 1 - 20;
@@ -52,7 +56,8 @@ void testThatTsDiffReturnsDifferenceWhenClocksWrap() {
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 }
 
-void testThatTsDiffReturnsDifferenceWhenDifferenceWraps() {
+void testThatTsDiffReturnsDifferenceWhenDifferenceWraps()
+{
   // Fixture
   uint32_t a = 40;
   uint32_t b = 60;
@@ -65,7 +70,8 @@ void testThatTsDiffReturnsDifferenceWhenDifferenceWraps() {
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 }
 
-void testThatTsAbsDiffGreaterThan() {
+void testThatTsAbsDiffGreaterThan()
+{
   // Fixture
   // Test
   // Assert

@@ -158,7 +158,7 @@ static void spi3DMAInit()
   DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
   DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
   DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
-  DMA_InitStructure.DMA_PeripheralBaseAddr =(uint32_t) (&(SPI->DR)) ;
+  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)(&(SPI->DR)) ;
   DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
   DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
   DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
@@ -169,13 +169,13 @@ static void spi3DMAInit()
   // Configure TX DMA
   DMA_InitStructure.DMA_Channel = SPI_TX_DMA_CHANNEL;
   DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
-  DMA_Cmd(SPI_TX_DMA_STREAM,DISABLE);
+  DMA_Cmd(SPI_TX_DMA_STREAM, DISABLE);
   DMA_Init(SPI_TX_DMA_STREAM, &DMA_InitStructure);
 
   // Configure RX DMA
   DMA_InitStructure.DMA_Channel = SPI_RX_DMA_CHANNEL;
   DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
-  DMA_Cmd(SPI_RX_DMA_STREAM,DISABLE);
+  DMA_Cmd(SPI_RX_DMA_STREAM, DISABLE);
   DMA_Init(SPI_RX_DMA_STREAM, &DMA_InitStructure);
 
   // Configure interrupts
@@ -214,7 +214,7 @@ bool spi3Test(void)
   return isInit;
 }
 
-bool spi3Exchange(size_t length, const uint8_t * data_tx, uint8_t * data_rx)
+bool spi3Exchange(size_t length, const uint8_t *data_tx, uint8_t *data_rx)
 {
   ASSERT_DMA_SAFE(data_tx);
   ASSERT_DMA_SAFE(data_rx);
@@ -231,12 +231,14 @@ bool spi3Exchange(size_t length, const uint8_t * data_tx, uint8_t * data_rx)
   DMA_ITConfig(SPI_RX_DMA_STREAM, DMA_IT_TC, ENABLE);
 
   // Clear DMA Flags
-  DMA_ClearFlag(SPI_TX_DMA_STREAM, DMA_FLAG_FEIF7|DMA_FLAG_DMEIF7|DMA_FLAG_TEIF7|DMA_FLAG_HTIF7|DMA_FLAG_TCIF7);
-  DMA_ClearFlag(SPI_RX_DMA_STREAM, DMA_FLAG_FEIF0|DMA_FLAG_DMEIF0|DMA_FLAG_TEIF0|DMA_FLAG_HTIF0|DMA_FLAG_TCIF0);
+  DMA_ClearFlag(SPI_TX_DMA_STREAM,
+                DMA_FLAG_FEIF7 | DMA_FLAG_DMEIF7 | DMA_FLAG_TEIF7 | DMA_FLAG_HTIF7 | DMA_FLAG_TCIF7);
+  DMA_ClearFlag(SPI_RX_DMA_STREAM,
+                DMA_FLAG_FEIF0 | DMA_FLAG_DMEIF0 | DMA_FLAG_TEIF0 | DMA_FLAG_HTIF0 | DMA_FLAG_TCIF0);
 
   // Enable DMA Streams
-  DMA_Cmd(SPI_TX_DMA_STREAM,ENABLE);
-  DMA_Cmd(SPI_RX_DMA_STREAM,ENABLE);
+  DMA_Cmd(SPI_TX_DMA_STREAM, ENABLE);
+  DMA_Cmd(SPI_RX_DMA_STREAM, ENABLE);
 
   // Enable SPI DMA requests
   SPI_I2S_DMACmd(SPI, SPI_I2S_DMAReq_Tx, ENABLE);
@@ -247,7 +249,7 @@ bool spi3Exchange(size_t length, const uint8_t * data_tx, uint8_t * data_rx)
 
   // Wait for completion
   bool result = (xSemaphoreTake(txComplete, portMAX_DELAY) == pdTRUE)
-             && (xSemaphoreTake(rxComplete, portMAX_DELAY) == pdTRUE);
+                && (xSemaphoreTake(rxComplete, portMAX_DELAY) == pdTRUE);
 
   // Disable peripheral
   SPI_Cmd(SPI, DISABLE);
@@ -275,19 +277,18 @@ void __attribute__((used)) SPI_TX_DMA_IRQHandler(void)
   DMA_ClearITPendingBit(SPI_TX_DMA_STREAM, SPI_TX_DMA_FLAG_TCIF);
 
   // Clear stream flags
-  DMA_ClearFlag(SPI_TX_DMA_STREAM,SPI_TX_DMA_FLAG_TCIF);
+  DMA_ClearFlag(SPI_TX_DMA_STREAM, SPI_TX_DMA_FLAG_TCIF);
 
   // Disable SPI DMA requests
   SPI_I2S_DMACmd(SPI, SPI_I2S_DMAReq_Tx, DISABLE);
 
   // Disable streams
-  DMA_Cmd(SPI_TX_DMA_STREAM,DISABLE);
+  DMA_Cmd(SPI_TX_DMA_STREAM, DISABLE);
 
   // Give the semaphore, allowing the SPI transaction to complete
   xSemaphoreGiveFromISR(txComplete, &xHigherPriorityTaskWoken);
 
-  if (xHigherPriorityTaskWoken)
-  {
+  if (xHigherPriorityTaskWoken) {
     portYIELD();
   }
 }
@@ -301,19 +302,18 @@ void __attribute__((used)) SPI_RX_DMA_IRQHandler(void)
   DMA_ClearITPendingBit(SPI_RX_DMA_STREAM, SPI_RX_DMA_FLAG_TCIF);
 
   // Clear stream flags
-  DMA_ClearFlag(SPI_RX_DMA_STREAM,SPI_RX_DMA_FLAG_TCIF);
+  DMA_ClearFlag(SPI_RX_DMA_STREAM, SPI_RX_DMA_FLAG_TCIF);
 
   // Disable SPI DMA requests
   SPI_I2S_DMACmd(SPI, SPI_I2S_DMAReq_Rx, DISABLE);
 
   // Disable streams
-  DMA_Cmd(SPI_RX_DMA_STREAM,DISABLE);
+  DMA_Cmd(SPI_RX_DMA_STREAM, DISABLE);
 
   // Give the semaphore, allowing the SPI transaction to complete
   xSemaphoreGiveFromISR(rxComplete, &xHigherPriorityTaskWoken);
 
-  if (xHigherPriorityTaskWoken)
-  {
+  if (xHigherPriorityTaskWoken) {
     portYIELD();
   }
 }

@@ -52,27 +52,23 @@ static bool uarttestRun()
   uart1Init(9600);
   uart2Init(9600);
 
-  for (int i = 0; i < sizeof(testString) && status; i++)
-  {
+  for (int i = 0; i < sizeof(testString) && status; i++) {
     uart1Putchar(testString[i]);
     uart2GetCharWithDefaultTimeout(&testChar);
-    if (testChar != testString[i])
-    {
+    if (testChar != testString[i]) {
       DEBUG_PRINT(" Uart1->Uart2 [FAIL]\n");
       status = false;
     }
 
     uart2Putchar(testString[i]);
     uart1GetDataWithDefaultTimeout(&testChar);
-    if (testChar != testString[i])
-    {
+    if (testChar != testString[i]) {
       DEBUG_PRINT(" Uart2->Uart1 [FAIL]\n");
       status = false;
     }
   }
 
-  if (status)
-  {
+  if (status) {
     DEBUG_PRINT("Read/write test [OK]\n");
   }
 

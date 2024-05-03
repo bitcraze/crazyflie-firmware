@@ -107,7 +107,8 @@ static Axis3f accLatest;
 static Axis3f gyroLatest;
 
 // Data used to enable the task and stabilizer loop to run with minimal locking
-static state_t taskEstimatorState; // The estimator state produced by the task, copied to the stabilzer when needed.
+static state_t
+taskEstimatorState; // The estimator state produced by the task, copied to the stabilzer when needed.
 
 // Statistics
 #define ONE_SECOND 1000
@@ -211,18 +212,22 @@ static bool resetNavigation = true;
 static void navigationInit(void);
 static void resetNavigationStates(void);
 
-static void updateStrapdownAlgorithm(float *stateNav, Axis3f* accAverage, Axis3f* gyroAverage, float dt);
+static void updateStrapdownAlgorithm(float *stateNav, Axis3f *accAverage, Axis3f *gyroAverage,
+                                     float dt);
 static void predictNavigationFilter(float *stateNav, Axis3f *acc, Axis3f *gyro, float dt);
 
 static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage);
 
 static void computeOutputTof(float *output, float *state);
-static void computeOutputFlow_x(float *output, float *state, flowMeasurement_t *flow, Axis3f *omegaBody);
-static void computeOutputFlow_y(float *output, float *state, flowMeasurement_t *flow, Axis3f *omegaBody);
+static void computeOutputFlow_x(float *output, float *state, flowMeasurement_t *flow,
+                                Axis3f *omegaBody);
+static void computeOutputFlow_y(float *output, float *state, flowMeasurement_t *flow,
+                                Axis3f *omegaBody);
 static void computeOutputTdoa(float *output, float *state, tdoaMeasurement_t *tdoa);
 static void computeOutputBaro(float *output, float *state);
 
-static void computeOutputSweep(float *output, float *state, sweepAngleMeasurement_t *sweepInfo, float *xy);
+static void computeOutputSweep(float *output, float *state, sweepAngleMeasurement_t *sweepInfo,
+                               float *xy);
 
 static bool ukfUpdate(float *Pxy, float *Pyy, float innovation);
 static void computeSigmaPoints(void);
@@ -272,16 +277,16 @@ static void errorUkfTask(void *parameters)
 
   // Tracks whether an update to the state has been made, and the state therefore requires finalization
   PattxOut = 0.0f;
-  while (true)
-  {
+  while (true) {
     xSemaphoreTake(runTaskSemaphore, portMAX_DELAY);
 
     // compute bias error for first ticks averaging the measurements
-    if ((accAccumulatorCount > numberInitSteps) && (gyroAccumulatorCount > numberInitSteps) && (!initializedNav))
-    {
+    if ((accAccumulatorCount > numberInitSteps) && (gyroAccumulatorCount > numberInitSteps) &&
+        (!initializedNav)) {
       accBias.x = accAccumulator.x / ((float)accAccumulatorCount);
       accBias.y = accAccumulator.y / ((float)accAccumulatorCount);
-      accBias.z = accAccumulator.z / ((float)accAccumulatorCount) - 1.0f; // CF is on ground, so compensate gravity to not enter bias computation
+      accBias.z = accAccumulator.z / ((float)accAccumulatorCount) -
+                  1.0f; // CF is on ground, so compensate gravity to not enter bias computation
 
       omegaBias.x = gyroAccumulator.x / ((float)gyroAccumulatorCount);
       omegaBias.y = gyroAccumulator.y / ((float)gyroAccumulatorCount);
@@ -291,25 +296,26 @@ static void errorUkfTask(void *parameters)
 
       initializedNav = true;
 
-      accAccumulator = (Axis3f){.axis = {0}};
+      accAccumulator = (Axis3f) {
+        .axis = {0}
+      };
       accAccumulatorCount = 0;
-      gyroAccumulator = (Axis3f){.axis = {0}};
+      gyroAccumulator = (Axis3f) {
+        .axis = {0}
+      };
       gyroAccumulatorCount = 0;
       baroAslAccumulator = 0.0f;
       baroAccumulatorCount = 0;
 
-      for (ii = 0; ii < DIM_STRAPDOWN; ii++)
-      {
+      for (ii = 0; ii < DIM_STRAPDOWN; ii++) {
         stateNav[ii] = 0.0f;
       }
       stateNav[6] = 1.0f; // no rotation initially
 
       // initialize covariance matrix of navigation Filter
-      for (ii = 0; ii < DIM_FILTER; ii++)
-      {
+      for (ii = 0; ii < DIM_FILTER; ii++) {
         xEst[ii] = 0.0f;
-        for (jj = 0; jj < DIM_FILTER; jj++)
-        {
+        for (jj = 0; jj < DIM_FILTER; jj++) {
           covNavFilter[ii][jj] = 0.0f;
         }
       }
@@ -332,8 +338,7 @@ static void errorUkfTask(void *parameters)
     }
 
     // If the client triggers an estimator reset via parameter update "kalman.resetEstimation"
-    if (resetNavigation)
-    {
+    if (resetNavigation) {
       errorEstimatorUkfInit();
       paramSetInt(paramGetVarId("ukf", "resetEstimation"), 0);
       resetNavigation = false;
@@ -342,9 +347,13 @@ static void errorUkfTask(void *parameters)
 
       // set bias accumalation counters to zero
       initializedNav = false;
-      accBias = (Axis3f){.axis = {0}};
+      accBias = (Axis3f) {
+        .axis = {0}
+      };
       accAccumulatorCount = 0;
-      omegaBias = (Axis3f){.axis = {0}};
+      omegaBias = (Axis3f) {
+        .axis = {0}
+      };
       gyroAccumulatorCount = 0;
 
       accNed[0] = 0.0f;
@@ -361,18 +370,20 @@ static void errorUkfTask(void *parameters)
     Axis3f gyroAverage;
     Axis3f accAverage;
 
-    if (osTick >= nextPrediction)
-    { // update at the PREDICT_RATE
+    if (osTick >= nextPrediction) {
+      // update at the PREDICT_RATE
       float dt = T2S(osTick - lastPrediction);
 
-      accAverage = (Axis3f){.axis = {0}};
+      accAverage = (Axis3f) {
+        .axis = {0}
+      };
       accAverage.z = GRAVITY_MAGNITUDE;
-      gyroAverage = (Axis3f){.axis = {0}};
+      gyroAverage = (Axis3f) {
+        .axis = {0}
+      };
 
-      if (initializedNav)
-      {
-        if ((accAccumulatorCount > 0) && (gyroAccumulatorCount > 0))
-        {
+      if (initializedNav) {
+        if ((accAccumulatorCount > 0) && (gyroAccumulatorCount > 0)) {
           // gyro is in deg/sec but the estimator requires rad/sec
           gyroAverage.x = (gyroAccumulator.x / ((float)gyroAccumulatorCount) - omegaBias.x) * DEG_TO_RAD;
           gyroAverage.y = (gyroAccumulator.y / ((float)gyroAccumulatorCount) - omegaBias.y) * DEG_TO_RAD;
@@ -383,9 +394,13 @@ static void errorUkfTask(void *parameters)
           accAverage.y = (accAccumulator.y / ((float)accAccumulatorCount) - accBias.y) * GRAVITY_MAGNITUDE;
           accAverage.z = (accAccumulator.z / ((float)accAccumulatorCount) - accBias.z) * GRAVITY_MAGNITUDE;
 
-          accAccumulator = (Axis3f){.axis = {0}};
+          accAccumulator = (Axis3f) {
+            .axis = {0}
+          };
           accAccumulatorCount = 0;
-          gyroAccumulator = (Axis3f){.axis = {0}};
+          gyroAccumulator = (Axis3f) {
+            .axis = {0}
+          };
           gyroAccumulatorCount = 0;
 
           //prediction of strapdown navigation, setting also accumlator back to zero!
@@ -440,9 +455,12 @@ static void errorUkfTask(void *parameters)
 
     taskEstimatorState.acc.timestamp = osTick;
     // transform into lab frame
-    accNed[0] = (dcmTp[0][0] * accLog[0] + dcmTp[0][1] * accLog[1] + dcmTp[0][2] * accLog[2]) / GRAVITY_MAGNITUDE;
-    accNed[1] = (dcmTp[1][0] * accLog[0] + dcmTp[1][1] * accLog[1] + dcmTp[1][2] * accLog[2]) / GRAVITY_MAGNITUDE;
-    accNed[2] = (dcmTp[2][0] * accLog[0] + dcmTp[2][1] * accLog[1] + dcmTp[2][2] * accLog[2] - GRAVITY_MAGNITUDE) / GRAVITY_MAGNITUDE;
+    accNed[0] = (dcmTp[0][0] * accLog[0] + dcmTp[0][1] * accLog[1] + dcmTp[0][2] * accLog[2]) /
+                GRAVITY_MAGNITUDE;
+    accNed[1] = (dcmTp[1][0] * accLog[0] + dcmTp[1][1] * accLog[1] + dcmTp[1][2] * accLog[2]) /
+                GRAVITY_MAGNITUDE;
+    accNed[2] = (dcmTp[2][0] * accLog[0] + dcmTp[2][1] * accLog[1] + dcmTp[2][2] * accLog[2] -
+                 GRAVITY_MAGNITUDE) / GRAVITY_MAGNITUDE;
 
     taskEstimatorState.acc.x = accNed[0];
     taskEstimatorState.acc.y = accNed[1];
@@ -463,7 +481,7 @@ static void errorUkfTask(void *parameters)
 
     xSemaphoreGive(dataMutex);
 
-    procTime = (float)(usecTimestamp()-lastTime)/1000000.0f;
+    procTime = (float)(usecTimestamp() - lastTime) / 1000000.0f;
     lastTime = usecTimestamp();
   } // END infinite loop
 }
@@ -487,8 +505,12 @@ void errorEstimatorUkf(state_t *state, const uint32_t tick)
 void errorEstimatorUkfInit(void)
 {
   xSemaphoreTake(dataMutex, portMAX_DELAY);
-  accAccumulator = (Axis3f){.axis = {0}};
-  gyroAccumulator = (Axis3f){.axis = {0}};
+  accAccumulator = (Axis3f) {
+    .axis = {0}
+  };
+  gyroAccumulator = (Axis3f) {
+    .axis = {0}
+  };
   baroAslAccumulator = 0;
 
   accAccumulatorCount = 0;
@@ -522,7 +544,8 @@ void errorEstimatorUkfGetEstimatedRot(float *rotationMatrix)
 }
 
 //update step for strapdown navigation
-static void updateStrapdownAlgorithm(float *stateNav, Axis3f *accAverage, Axis3f *gyroAverage, float dt)
+static void updateStrapdownAlgorithm(float *stateNav, Axis3f *accAverage, Axis3f *gyroAverage,
+                                     float dt)
 {
   float stateNew[DIM_STRAPDOWN];
   float quat[4] = {stateNav[6], stateNav[7], stateNav[8], stateNav[9]};
@@ -536,7 +559,8 @@ static void updateStrapdownAlgorithm(float *stateNav, Axis3f *accAverage, Axis3f
   // transform into ned frame
   accNed[0] = dcmTp[0][0] * accAverage->x + dcmTp[0][1] * accAverage->y + dcmTp[0][2] * accAverage->z;
   accNed[1] = dcmTp[1][0] * accAverage->x + dcmTp[1][1] * accAverage->y + dcmTp[1][2] * accAverage->z;
-  accNed[2] = dcmTp[2][0] * accAverage->x + dcmTp[2][1] * accAverage->y + dcmTp[2][2] * accAverage->z - GRAVITY_MAGNITUDE;
+  accNed[2] = dcmTp[2][0] * accAverage->x + dcmTp[2][1] * accAverage->y + dcmTp[2][2] * accAverage->z
+              - GRAVITY_MAGNITUDE;
 
   // position update
   stateNew[0] = stateNav[0] + stateNav[3] * dt + 0.5f * accNed[0] * dt * dt;
@@ -559,7 +583,8 @@ static void updateStrapdownAlgorithm(float *stateNav, Axis3f *accAverage, Axis3f
   // update quaternion
   float scaleQf;
   multQuat(&quat[0], &deltaQ[0], &quatNew[0]);
-  scaleQf = quatNew[0] * quatNew[0] + quatNew[1] * quatNew[1] + quatNew[2] * quatNew[2] + quatNew[3] * quatNew[3];
+  scaleQf = quatNew[0] * quatNew[0] + quatNew[1] * quatNew[1] + quatNew[2] * quatNew[2] + quatNew[3] *
+            quatNew[3];
 
   // normalize quaternion
   stateNew[6] = 1 / scaleQf * quatNew[0];
@@ -568,8 +593,7 @@ static void updateStrapdownAlgorithm(float *stateNav, Axis3f *accAverage, Axis3f
   stateNew[9] = 1 / scaleQf * quatNew[3];
 
   uint32_t ii;
-  for (ii = 0; ii < DIM_STRAPDOWN; ii++)
-  {
+  for (ii = 0; ii < DIM_STRAPDOWN; ii++) {
     stateNav[ii] = stateNew[ii];
   }
 }
@@ -579,8 +603,7 @@ static void navigationInit(void)
 {
   // initialize state of strapdown navigation algorithm
   uint32_t ii, jj;
-  for (ii = 0; ii < DIM_STRAPDOWN; ii++)
-  {
+  for (ii = 0; ii < DIM_STRAPDOWN; ii++) {
     stateNav[ii] = 0.0f;
   }
   stateNav[6] = 1.0f; // no rotation initially
@@ -589,11 +612,9 @@ static void navigationInit(void)
   transposeMatrix(&dcm[0][0], &dcmTp[0][0]);
 
   // initialize covariance matrix of navigation Filter
-  for (ii = 0; ii < DIM_FILTER; ii++)
-  {
+  for (ii = 0; ii < DIM_FILTER; ii++) {
     xEst[ii] = 0.0f;
-    for (jj = 0; jj < DIM_FILTER; jj++)
-    {
+    for (jj = 0; jj < DIM_FILTER; jj++) {
       covNavFilter[ii][jj] = 0.0f;
     }
   }
@@ -614,30 +635,27 @@ static void navigationInit(void)
 
   //______________________________________________________________________
   //compute weights
-  for (jj = 0; jj < (DIM_FILTER+2); jj++)	{
-    for (ii = 0; ii < DIM_FILTER; ii++){
+  for (jj = 0; jj < (DIM_FILTER + 2); jj++)	{
+    for (ii = 0; ii < DIM_FILTER; ii++) {
       sigmaPointsTempl[ii][jj] = 0.0f;
     }
   }
 
   //compute template sigma points normalized to mean 0 and covariance I
   float tmp;
-  float weight1 = (1.0f-weight0)/((float)DIM_FILTER+1.0f);
+  float weight1 = (1.0f - weight0) / ((float)DIM_FILTER + 1.0f);
   weights[0] = weight0;
-  for (ii = 1; ii < (DIM_FILTER + 2); ii++)
-  {
+  for (ii = 1; ii < (DIM_FILTER + 2); ii++) {
     weights[ii] = weight1;
 
   }
 
-  for (ii = 0; ii < DIM_FILTER; ii++)
-  {
-    tmp = 1.0f/sqrtf(((float)ii+1.0f)*((float)ii+2.0f)*weight1);
-    for (jj = 1; jj < (ii + 2); jj++)
-    {
+  for (ii = 0; ii < DIM_FILTER; ii++) {
+    tmp = 1.0f / sqrtf(((float)ii + 1.0f) * ((float)ii + 2.0f) * weight1);
+    for (jj = 1; jj < (ii + 2); jj++) {
       sigmaPointsTempl[ii][jj] = -tmp;
     }
-    sigmaPointsTempl[ii][(ii+2)] = tmp*((float)ii+1.0f);
+    sigmaPointsTempl[ii][(ii + 2)] = tmp * ((float)ii + 1.0f);
   }
 
   DEBUG_PRINT("Sigma Points chosen\n");
@@ -654,10 +672,8 @@ static void predictNavigationFilter(float *stateNav, Axis3f *acc, Axis3f *gyro, 
 
   // compute error State transition matrix
   uint8_t ii, jj, kk;
-  for (ii = 0; ii < DIM_FILTER; ii++)
-  {
-    for (jj = 0; jj < DIM_FILTER; jj++)
-    {
+  for (ii = 0; ii < DIM_FILTER; ii++) {
+    for (jj = 0; jj < DIM_FILTER; jj++) {
       errorTransMat[ii][jj] = 0.0f;
     }
   }
@@ -702,42 +718,32 @@ static void predictNavigationFilter(float *stateNav, Axis3f *acc, Axis3f *gyro, 
   computeSigmaPoints();
 
   // Predict Sigma Points
-  for (jj = 0; jj < (DIM_FILTER + 2); jj++)
-  {
-    for (ii = 0; ii < DIM_FILTER; ii++)
-    {
+  for (jj = 0; jj < (DIM_FILTER + 2); jj++) {
+    for (ii = 0; ii < DIM_FILTER; ii++) {
       sigmaPointsTmp[ii][jj] = 0.0f;
-      for (kk = 0; kk < DIM_FILTER; kk++)
-      {
+      for (kk = 0; kk < DIM_FILTER; kk++) {
         sigmaPointsTmp[ii][jj] = sigmaPointsTmp[ii][jj] + errorTransMat[ii][kk] * sigmaPoints[kk][jj];
       }
     }
   }
 
   // copy results to sigma points
-  for (jj = 0; jj < (DIM_FILTER+2); jj++)
-  {
-    for (ii = 0; ii < DIM_FILTER; ii++)
-    {
+  for (jj = 0; jj < (DIM_FILTER + 2); jj++) {
+    for (ii = 0; ii < DIM_FILTER; ii++) {
       sigmaPoints[ii][jj] = sigmaPointsTmp[ii][jj];
     }
   }
 
-  for (ii = 0; ii < DIM_FILTER; ii++)
-  {
-    for (jj = 0; jj < DIM_FILTER; jj++)
-    {
+  for (ii = 0; ii < DIM_FILTER; ii++) {
+    for (jj = 0; jj < DIM_FILTER; jj++) {
       covNew[ii][jj] = 0.0f;
     }
   }
   // initial error state is zero and we have a linear transition operation, e.g. state0 and xEst are zero so
   // diffsigma equals sigmapoints
-  for (kk = 0; kk < (DIM_FILTER + 2); kk++)
-  {
-    for (ii = 0; ii < DIM_FILTER; ii++)
-    {
-      for (jj = 0; jj < DIM_FILTER; jj++)
-      {
+  for (kk = 0; kk < (DIM_FILTER + 2); kk++) {
+    for (ii = 0; ii < DIM_FILTER; ii++) {
+      for (jj = 0; jj < DIM_FILTER; jj++) {
         covNew[ii][jj] = covNew[ii][jj] + weights[kk] * (sigmaPoints[ii][kk] * sigmaPoints[jj][kk]);
       }
     }
@@ -763,10 +769,8 @@ static void predictNavigationFilter(float *stateNav, Axis3f *acc, Axis3f *gyro, 
   covNew[7][7] += procRate_h * dt;
   covNew[8][8] += procRate_z * dt;
 
-  for (ii = 0; ii < DIM_FILTER; ii++)
-  {
-    for (jj = 0; jj < DIM_FILTER; jj++)
-    {
+  for (ii = 0; ii < DIM_FILTER; ii++) {
+    for (jj = 0; jj < DIM_FILTER; jj++) {
       covNavFilter[ii][jj] = 0.5f * (covNew[ii][jj] + covNew[jj][ii]);
     }
   }
@@ -793,46 +797,38 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
 
   // Pull the latest sensors values of interest; discard the rest
   measurement_t m;
-  while (estimatorDequeue(&m))
-  {
+  while (estimatorDequeue(&m)) {
 
-    if (m.type == MeasurementTypeGyroscope)
-    {
+    if (m.type == MeasurementTypeGyroscope) {
       gyroAccumulator.x += m.data.gyroscope.gyro.x;
       gyroAccumulator.y += m.data.gyroscope.gyro.y;
       gyroAccumulator.z += m.data.gyroscope.gyro.z;
       gyroLatest = m.data.gyroscope.gyro;
       gyroAccumulatorCount++;
     }
-    if (m.type == MeasurementTypeAcceleration)
-    {
+    if (m.type == MeasurementTypeAcceleration) {
       accAccumulator.x += m.data.acceleration.acc.x;
       accAccumulator.y += m.data.acceleration.acc.y;
       accAccumulator.z += m.data.acceleration.acc.z;
       accLatest = m.data.acceleration.acc;
       accAccumulatorCount++;
     }
-    if((m.type==MeasurementTypeBarometer)&&(!initializedNav))
-    {
+    if ((m.type == MeasurementTypeBarometer) && (!initializedNav)) {
       baroAslAccumulator += m.data.barometer.baro.asl;
       baroAccumulatorCount ++;
     }
 
-    if (initializedNav)
-    {
+    if (initializedNav) {
 
-      switch (m.type)
-      {
+      switch (m.type) {
         case MeasurementTypeTDOA:
           //_________________________________________________________________________________
           // UKF update - TDOA
           //_________________________________________________________________________________
           // compute mean tdoa observation
           observation = 0.0f;
-          for (jj = 0; jj < (DIM_FILTER + 2); jj++)
-          {
-            for (ii = 0; ii < DIM_FILTER; ii++)
-            {
+          for (jj = 0; jj < (DIM_FILTER + 2); jj++) {
+            for (ii = 0; ii < DIM_FILTER; ii++) {
               tmpSigmaVec[ii] = sigmaPoints[ii][jj];
             }
             computeOutputTdoa(&outTmp, &tmpSigmaVec[0], &m.data.tdoa);
@@ -841,23 +837,19 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
 
           // initialize measurement and cross covariance
           Pyy = 0.0f;
-          for (jj = 0; jj < DIM_FILTER; jj++)
-          {
+          for (jj = 0; jj < DIM_FILTER; jj++) {
             Pxy[jj] = 0.0f;
           }
 
           // loop over all sigma points
-          for (jj = 0; jj < (DIM_FILTER + 2); jj++)
-          {
-            for (ii = 0; ii < DIM_FILTER; ii++)
-            {
+          for (jj = 0; jj < (DIM_FILTER + 2); jj++) {
+            for (ii = 0; ii < DIM_FILTER; ii++) {
               tmpSigmaVec[ii] = sigmaPoints[ii][jj];
             }
             computeOutputTdoa(&outTmp, &tmpSigmaVec[0], &m.data.tdoa);
             Pyy = Pyy + weights[jj] * (outTmp - observation) * (outTmp - observation);
 
-            for (kk = 0; kk < DIM_FILTER; kk++)
-            {
+            for (kk = 0; kk < DIM_FILTER; kk++) {
               Pxy[kk] = Pxy[kk] + weights[jj] * (tmpSigmaVec[kk] - xEst[kk]) * (outTmp - observation);
             }
           }
@@ -867,8 +859,7 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
           innovation = m.data.tdoa.distanceDiff - observation;
 
           innoCheck = innovation * innovation / Pyy;
-          if (outlierFilterTdoaValidateIntegrator(&outlierFilterTdoaState, &m.data.tdoa, innovation, nowMs))
-          {
+          if (outlierFilterTdoaValidateIntegrator(&outlierFilterTdoaState, &m.data.tdoa, innovation, nowMs)) {
             //	if(innoCheck<qualGateTdoa){ // TdoA outlier rejection
             ukfUpdate(&Pxy[0], &Pyy, innovation);
             //	}
@@ -879,14 +870,11 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
           //_________________________________________________________________________________
           // UKF update - TOF
           //_________________________________________________________________________________
-          if ((fabs(dcm[2][2]) > 0.1) && (dcm[2][2] > 0.0f))
-          {
+          if ((fabs(dcm[2][2]) > 0.1) && (dcm[2][2] > 0.0f)) {
             // compute mean tdoa observation
             observation = 0.0f;
-            for (jj = 0; jj < (DIM_FILTER + 2); jj++)
-            {
-              for (ii = 0; ii < DIM_FILTER; ii++)
-              {
+            for (jj = 0; jj < (DIM_FILTER + 2); jj++) {
+              for (ii = 0; ii < DIM_FILTER; ii++) {
                 tmpSigmaVec[ii] = sigmaPoints[ii][jj];
               }
               computeOutputTof(&outTmp, &tmpSigmaVec[0]);
@@ -895,33 +883,26 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
 
             // initialize measurement and cross covariance
             Pyy = 0.0f;
-            for (jj = 0; jj < DIM_FILTER; jj++)
-            {
+            for (jj = 0; jj < DIM_FILTER; jj++) {
               Pxy[jj] = 0.0f;
             }
 
             // loop over all sigma points
-            for (jj = 0; jj < (DIM_FILTER + 2); jj++)
-            {
-              for (ii = 0; ii < DIM_FILTER; ii++)
-              {
+            for (jj = 0; jj < (DIM_FILTER + 2); jj++) {
+              for (ii = 0; ii < DIM_FILTER; ii++) {
                 tmpSigmaVec[ii] = sigmaPoints[ii][jj];
               }
               computeOutputTof(&outTmp, &tmpSigmaVec[0]);
               Pyy = Pyy + weights[jj] * (outTmp - observation) * (outTmp - observation);
 
-              for (kk = 0; kk < DIM_FILTER; kk++)
-              {
+              for (kk = 0; kk < DIM_FILTER; kk++) {
                 Pxy[kk] = Pxy[kk] + weights[jj] * (tmpSigmaVec[kk] - xEst[kk]) * (outTmp - observation);
               }
             }
 
-            if (m.data.tof.distance < 0.03f)
-            {
+            if (m.data.tof.distance < 0.03f) {
               innovation = 0.0f - observation;
-            }
-            else
-            {
+            } else {
               innovation = m.data.tof.distance - observation;
             }
             // Add TOF Noise R
@@ -933,13 +914,10 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
             innoCheckTof = innoCheck;
 
             // if an outlier is detected, flowActive flag prevents fusing optical flow too
-            if (innoCheck < qualGateTof)
-            {
+            if (innoCheck < qualGateTof) {
               ukfUpdate(&Pxy[0], &Pyy, innovation);
               flowActive = true;
-            }
-            else
-            {
+            } else {
               flowActive = false;
             }
           }
@@ -947,17 +925,14 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
 
         case MeasurementTypeFlow:
 
-          if (flowActive)
-          {
+          if (flowActive) {
             //_________________________________________________________________________________
             // UKF update - Flow - body x
             //_________________________________________________________________________________
             // compute mean tdoa observation
             observation = 0.0f;
-            for (jj = 0; jj < (DIM_FILTER + 2); jj++)
-            {
-              for (ii = 0; ii < DIM_FILTER; ii++)
-              {
+            for (jj = 0; jj < (DIM_FILTER + 2); jj++) {
+              for (ii = 0; ii < DIM_FILTER; ii++) {
                 tmpSigmaVec[ii] = sigmaPoints[ii][jj];
               }
               computeOutputFlow_x(&outTmp, &tmpSigmaVec[0], &m.data.flow, gyroAverage);
@@ -966,23 +941,19 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
 
             // initialize measurement and cross covariance
             Pyy = 0.0f;
-            for (jj = 0; jj < DIM_FILTER; jj++)
-            {
+            for (jj = 0; jj < DIM_FILTER; jj++) {
               Pxy[jj] = 0.0f;
             }
 
             // loop over all sigma points
-            for (jj = 0; jj < (DIM_FILTER + 2); jj++)
-            {
-              for (ii = 0; ii < DIM_FILTER; ii++)
-              {
+            for (jj = 0; jj < (DIM_FILTER + 2); jj++) {
+              for (ii = 0; ii < DIM_FILTER; ii++) {
                 tmpSigmaVec[ii] = sigmaPoints[ii][jj];
               }
               computeOutputFlow_x(&outTmp, &tmpSigmaVec[0], &m.data.flow, gyroAverage);
               Pyy = Pyy + weights[jj] * (outTmp - observation) * (outTmp - observation);
 
-              for (kk = 0; kk < DIM_FILTER; kk++)
-              {
+              for (kk = 0; kk < DIM_FILTER; kk++) {
                 Pxy[kk] = Pxy[kk] + weights[jj] * (tmpSigmaVec[kk] - xEst[kk]) * (outTmp - observation);
               }
             }
@@ -1003,10 +974,8 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
             //_________________________________________________________________________________
             // compute mean tdoa observation
             observation = 0.0f;
-            for (jj = 0; jj < (DIM_FILTER + 2); jj++)
-            {
-              for (ii = 0; ii < DIM_FILTER; ii++)
-              {
+            for (jj = 0; jj < (DIM_FILTER + 2); jj++) {
+              for (ii = 0; ii < DIM_FILTER; ii++) {
                 tmpSigmaVec[ii] = sigmaPoints[ii][jj];
               }
               computeOutputFlow_y(&outTmp, &tmpSigmaVec[0], &m.data.flow, gyroAverage);
@@ -1015,23 +984,19 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
 
             // initialize measurement and cross covariance
             Pyy = 0.0f;
-            for (jj = 0; jj < DIM_FILTER; jj++)
-            {
+            for (jj = 0; jj < DIM_FILTER; jj++) {
               Pxy[jj] = 0.0f;
             }
 
             // loop over all sigma points
-            for (jj = 0; jj < (DIM_FILTER + 2); jj++)
-            {
-              for (ii = 0; ii < DIM_FILTER; ii++)
-              {
+            for (jj = 0; jj < (DIM_FILTER + 2); jj++) {
+              for (ii = 0; ii < DIM_FILTER; ii++) {
                 tmpSigmaVec[ii] = sigmaPoints[ii][jj];
               }
               computeOutputFlow_y(&outTmp, &tmpSigmaVec[0], &m.data.flow, gyroAverage);
               Pyy = Pyy + weights[jj] * (outTmp - observation) * (outTmp - observation);
 
-              for (kk = 0; kk < DIM_FILTER; kk++)
-              {
+              for (kk = 0; kk < DIM_FILTER; kk++) {
                 Pxy[kk] = Pxy[kk] + weights[jj] * (tmpSigmaVec[kk] - xEst[kk]) * (outTmp - observation);
               }
             }
@@ -1050,13 +1015,10 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
           // UKF update - Baro
           //_________________________________________________________________________________
           // compute mean tdoa observation
-          if (initializedNav)
-          {
+          if (initializedNav) {
             observation = 0.0f;
-            for (jj = 0; jj < (DIM_FILTER + 2); jj++)
-            {
-              for (ii = 0; ii < DIM_FILTER; ii++)
-              {
+            for (jj = 0; jj < (DIM_FILTER + 2); jj++) {
+              for (ii = 0; ii < DIM_FILTER; ii++) {
                 tmpSigmaVec[ii] = sigmaPoints[ii][jj];
               }
               computeOutputBaro(&outTmp, &tmpSigmaVec[0]);
@@ -1065,23 +1027,19 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
 
             // initialize measurement and cross covariance
             Pyy = 0.0f;
-            for (jj = 0; jj < DIM_FILTER; jj++)
-            {
+            for (jj = 0; jj < DIM_FILTER; jj++) {
               Pxy[jj] = 0.0f;
             }
 
             // loop over all sigma points
-            for (jj = 0; jj < (DIM_FILTER + 2); jj++)
-            {
-              for (ii = 0; ii < DIM_FILTER; ii++)
-              {
+            for (jj = 0; jj < (DIM_FILTER + 2); jj++) {
+              for (ii = 0; ii < DIM_FILTER; ii++) {
                 tmpSigmaVec[ii] = sigmaPoints[ii][jj];
               }
               computeOutputBaro(&outTmp, &tmpSigmaVec[0]);
               Pyy = Pyy + weights[jj] * (outTmp - observation) * (outTmp - observation);
 
-              for (kk = 0; kk < DIM_FILTER; kk++)
-              {
+              for (kk = 0; kk < DIM_FILTER; kk++) {
                 Pxy[kk] = Pxy[kk] + weights[jj] * (tmpSigmaVec[kk] - xEst[kk]) * (outTmp - observation);
               }
             }
@@ -1089,11 +1047,10 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
             // Add Baronoise R
             Pyy = Pyy + measNoiseBaro;
 
-            innovation = (m.data.barometer.baro.asl-baroAslBias) - observation;
+            innovation = (m.data.barometer.baro.asl - baroAslBias) - observation;
             innoCheck = innovation * innovation / Pyy;
 
-            if (innoCheck < qualGateBaro)
-            {
+            if (innoCheck < qualGateBaro) {
               ukfUpdate(&Pxy[0], &Pyy, innovation);
             }
           }
@@ -1106,17 +1063,14 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
 
           const float tan_t = tanf(m.data.sweepAngle.t);
           const float z_tan_t = xyz[2] * tan_t;
-          const float qNum = r * r - z_tan_t * z_tan_t;
+          const float qNum = r * r - z_tan_t *z_tan_t;
 
           // Avoid singularity
-          if (qNum > 0.0001f)
-          {
+          if (qNum > 0.0001f) {
             // compute mean tdoa observation
             observation = 0.0f;
-            for (jj = 0; jj < (DIM_FILTER + 2); jj++)
-            {
-              for (ii = 0; ii < DIM_FILTER; ii++)
-              {
+            for (jj = 0; jj < (DIM_FILTER + 2); jj++) {
+              for (ii = 0; ii < DIM_FILTER; ii++) {
                 tmpSigmaVec[ii] = sigmaPoints[ii][jj];
               }
               computeOutputSweep(&outTmp, &tmpSigmaVec[0], &m.data.sweepAngle, &xyz[0]);
@@ -1125,23 +1079,19 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
 
             // initialize measurement and cross covariance
             Pyy = 0.0f;
-            for (jj = 0; jj < DIM_FILTER; jj++)
-            {
+            for (jj = 0; jj < DIM_FILTER; jj++) {
               Pxy[jj] = 0.0f;
             }
 
             // loop over all sigma points
-            for (jj = 0; jj < (DIM_FILTER + 2); jj++)
-            {
-              for (ii = 0; ii < DIM_FILTER; ii++)
-              {
+            for (jj = 0; jj < (DIM_FILTER + 2); jj++) {
+              for (ii = 0; ii < DIM_FILTER; ii++) {
                 tmpSigmaVec[ii] = sigmaPoints[ii][jj];
               }
               computeOutputSweep(&outTmp, &tmpSigmaVec[0], &m.data.sweepAngle, &xyz[0]);
               Pyy = Pyy + weights[jj] * (outTmp - observation) * (outTmp - observation);
 
-              for (kk = 0; kk < DIM_FILTER; kk++)
-              {
+              for (kk = 0; kk < DIM_FILTER; kk++) {
                 Pxy[kk] = Pxy[kk] + weights[jj] * (tmpSigmaVec[kk] - xEst[kk]) * (outTmp - observation);
               }
             }
@@ -1150,8 +1100,7 @@ static bool updateQueuedMeasurements(const uint32_t tick, Axis3f *gyroAverage)
             innovation = m.data.sweepAngle.measuredSweepAngle - observation;
 
             innoCheck = innovation * innovation / Pyy;
-            if (outlierFilterLighthouseValidateSweep(&sweepOutlierFilterState, r, innovation, tick))
-            {
+            if (outlierFilterLighthouseValidateSweep(&sweepOutlierFilterState, r, innovation, tick)) {
               //if(innoCheck<qualGateSweep){
               ukfUpdate(&Pxy[0], &Pyy, innovation);
               //	}
@@ -1178,7 +1127,8 @@ static void computeOutputTof(float *output, float *state)
   output[0] = (stateNav[2] + state[2]) / dcm[2][2];
 }
 
-static void computeOutputFlow_x(float *output, float *state, flowMeasurement_t *flow, Axis3f *omegaBody)
+static void computeOutputFlow_x(float *output, float *state, flowMeasurement_t *flow,
+                                Axis3f *omegaBody)
 {
   float thetapix = DEG_TO_RAD * 4.2f;
   float Npix = 30.0f; // [pixels] (same in x and y)
@@ -1186,21 +1136,21 @@ static void computeOutputFlow_x(float *output, float *state, flowMeasurement_t *
   float h_g;
   float omegaFactor = 1.25f;
 
-  velocityBody_x = dcm[0][0] * (stateNav[3] + state[3]) + dcm[0][1] * (stateNav[4] + state[4]) + dcm[0][2] * (stateNav[5] + state[5]);
+  velocityBody_x = dcm[0][0] * (stateNav[3] + state[3]) + dcm[0][1] * (stateNav[4] + state[4]) +
+                   dcm[0][2] * (stateNav[5] + state[5]);
 
-  if (stateNav[2] < 0.1f)
-  {
+  if (stateNav[2] < 0.1f) {
     h_g = 0.1f;
-  }
-  else
-  {
+  } else {
     h_g = stateNav[2] + state[2];
   }
 
-  output[0] = (flow->dt * Npix / thetapix) * ((velocityBody_x / h_g * dcm[2][2]) - omegaFactor * omegaBody->y);
+  output[0] = (flow->dt * Npix / thetapix) * ((velocityBody_x / h_g * dcm[2][2]) - omegaFactor *
+              omegaBody->y);
 }
 
-static void computeOutputFlow_y(float *output, float *state, flowMeasurement_t *flow, Axis3f *omegaBody)
+static void computeOutputFlow_y(float *output, float *state, flowMeasurement_t *flow,
+                                Axis3f *omegaBody)
 {
   float thetapix = DEG_TO_RAD * 4.2f;
   float Npix = 30.0f; // [pixels] (same in x and y)
@@ -1208,18 +1158,17 @@ static void computeOutputFlow_y(float *output, float *state, flowMeasurement_t *
   float h_g;
   float omegaFactor = 1.25f;
 
-  velocityBody_y = dcm[1][0] * (stateNav[3] + state[3]) + dcm[1][1] * (stateNav[4] + state[4]) + dcm[1][2] * (stateNav[5] + state[5]);
+  velocityBody_y = dcm[1][0] * (stateNav[3] + state[3]) + dcm[1][1] * (stateNav[4] + state[4]) +
+                   dcm[1][2] * (stateNav[5] + state[5]);
 
-  if (stateNav[2] < 0.1f)
-  {
+  if (stateNav[2] < 0.1f) {
     h_g = 0.1f;
-  }
-  else
-  {
+  } else {
     h_g = stateNav[2] + state[2];
   }
 
-  output[0] = (flow->dt * Npix / thetapix) * ((velocityBody_y / h_g * dcm[2][2]) + omegaFactor * omegaBody->x);
+  output[0] = (flow->dt * Npix / thetapix) * ((velocityBody_y / h_g * dcm[2][2]) + omegaFactor *
+              omegaBody->x);
 }
 
 static void computeOutputTdoa(float *output, float *state, tdoaMeasurement_t *tdoa)
@@ -1230,8 +1179,10 @@ static void computeOutputTdoa(float *output, float *state, tdoaMeasurement_t *td
   float z = stateNav[2] + state[2];
 
   // rephrase in north east down coordinate frame?
-  float x1 = tdoa->anchorPositions[1].x, y1 = tdoa->anchorPositions[1].y, z1 = tdoa->anchorPositions[1].z;
-  float x0 = tdoa->anchorPositions[0].x, y0 = tdoa->anchorPositions[0].y, z0 = tdoa->anchorPositions[0].z;
+  float x1 = tdoa->anchorPositions[1].x, y1 = tdoa->anchorPositions[1].y,
+        z1 = tdoa->anchorPositions[1].z;
+  float x0 = tdoa->anchorPositions[0].x, y0 = tdoa->anchorPositions[0].y,
+        z0 = tdoa->anchorPositions[0].z;
 
   float dx1 = x - x1;
   float dy1 = y - y1;
@@ -1247,14 +1198,18 @@ static void computeOutputTdoa(float *output, float *state, tdoaMeasurement_t *td
   output[0] = d1 - d0;
 }
 
-static void computeOutputSweep(float *output, float *state, sweepAngleMeasurement_t *sweepInfo, float *xyz)
+static void computeOutputSweep(float *output, float *state, sweepAngleMeasurement_t *sweepInfo,
+                               float *xyz)
 {
   float posSensor[3];
   // Rotate the sensor position from CF reference frame to global reference frame,
   // using the CF roatation matrix
-  posSensor[0] = dcmTp[0][0] * ((float32_t)(*sweepInfo->sensorPos)[0]) + dcmTp[0][1] * ((float32_t)(*sweepInfo->sensorPos)[1]) + dcmTp[0][2] * ((float32_t)(*sweepInfo->sensorPos)[2]);
-  posSensor[1] = dcmTp[1][0] * ((float32_t)(*sweepInfo->sensorPos)[0]) + dcmTp[1][1] * ((float32_t)(*sweepInfo->sensorPos)[1]) + dcmTp[1][2] * ((float32_t)(*sweepInfo->sensorPos)[2]);
-  posSensor[2] = dcmTp[2][0] * ((float32_t)(*sweepInfo->sensorPos)[0]) + dcmTp[2][1] * ((float32_t)(*sweepInfo->sensorPos)[1]) + dcmTp[2][2] * ((float32_t)(*sweepInfo->sensorPos)[2]);
+  posSensor[0] = dcmTp[0][0] * ((float32_t)(*sweepInfo->sensorPos)[0]) + dcmTp[0][1] * ((float32_t)(
+                   *sweepInfo->sensorPos)[1]) + dcmTp[0][2] * ((float32_t)(*sweepInfo->sensorPos)[2]);
+  posSensor[1] = dcmTp[1][0] * ((float32_t)(*sweepInfo->sensorPos)[0]) + dcmTp[1][1] * ((float32_t)(
+                   *sweepInfo->sensorPos)[1]) + dcmTp[1][2] * ((float32_t)(*sweepInfo->sensorPos)[2]);
+  posSensor[2] = dcmTp[2][0] * ((float32_t)(*sweepInfo->sensorPos)[0]) + dcmTp[2][1] * ((float32_t)(
+                   *sweepInfo->sensorPos)[1]) + dcmTp[2][2] * ((float32_t)(*sweepInfo->sensorPos)[2]);
 
   // Get the current state values of the position of the crazyflie (global reference frame) and add the relative sensor pos
   vec3d pcf = {stateNav[0] + state[0] + posSensor[0], stateNav[1] + state[1] + posSensor[1], stateNav[2] + state[2] + posSensor[2]};
@@ -1282,7 +1237,7 @@ static void computeOutputSweep(float *output, float *state, sweepAngleMeasuremen
 
   // alternate implementation for LH 2
   float ax = atan2f(xyz[1], xyz[0]);
-  float r  = arm_sqrt( xyz[0]*xyz[0]+ xyz[1]*xyz[1]);
+  float r  = arm_sqrt(xyz[0] * xyz[0] + xyz[1] * xyz[1]);
 
   float base = ax + asinf(clip1(xyz[2] * tanf(sweepInfo->t - sweepInfo->calib->tilt) / r));
   float compGib = -sweepInfo->calib->gibmag * arm_cos_f32(ax + sweepInfo->calib->gibphase);
@@ -1297,21 +1252,16 @@ static void computeSigmaPoints(void)
 
   cholesky(&covNavFilter[0][0], &L[0][0], DIM_FILTER);
 
-  for (jj = 0; jj < (DIM_FILTER + 2); jj++)
-  {
-    for (ii = 0; ii < DIM_FILTER; ii++)
-    {
+  for (jj = 0; jj < (DIM_FILTER + 2); jj++) {
+    for (ii = 0; ii < DIM_FILTER; ii++) {
       sigmaPoints[ii][jj] = 0.0f;
     }
   }
   // Compute actual sigma points taking into account current estimate and covariance
-  for (jj = 0; jj < (DIM_FILTER + 2); jj++)
-  {
-    for (ii = 0; ii < DIM_FILTER; ii++)
-    {
+  for (jj = 0; jj < (DIM_FILTER + 2); jj++) {
+    for (ii = 0; ii < DIM_FILTER; ii++) {
 
-      for (kk = 0; kk < DIM_FILTER; kk++)
-      {
+      for (kk = 0; kk < DIM_FILTER; kk++) {
         sigmaPoints[ii][jj] = sigmaPoints[ii][jj] + L[ii][kk] * sigmaPointsTempl[kk][jj];
       }
       sigmaPoints[ii][jj] = sigmaPoints[ii][jj] + xEst[ii];
@@ -1327,37 +1277,29 @@ static bool ukfUpdate(float *Pxy, float *Pyy, float innovation)
   float KkRKkTp[DIM_FILTER][DIM_FILTER] = {0};
   bool doneUpdate = false;
 
-  for (ii = 0; ii < DIM_FILTER; ii++)
-  {
-    for (jj = 0; jj < DIM_FILTER; jj++)
-    {
+  for (ii = 0; ii < DIM_FILTER; ii++) {
+    for (jj = 0; jj < DIM_FILTER; jj++) {
       covNew[ii][jj] = covNavFilter[ii][jj];
     }
   }
 
-  for (ii = 0; ii < DIM_FILTER; ii++)
-  {
+  for (ii = 0; ii < DIM_FILTER; ii++) {
     Kk[ii] = Pxy[ii] / Pyy[0];
     xEst[ii] = xEst[ii] + Kk[ii] * innovation;
   }
-  for (ii = 0; ii < DIM_FILTER; ii++)
-  {
-    for (jj = 0; jj < DIM_FILTER; jj++)
-    {
+  for (ii = 0; ii < DIM_FILTER; ii++) {
+    for (jj = 0; jj < DIM_FILTER; jj++) {
       KkRKkTp[ii][jj] = Kk[ii] * Kk[jj] * Pyy[0];
       covNew[ii][jj] = covNew[ii][jj] - KkRKkTp[ii][jj];
     }
   }
-  for (ii = 0; ii < DIM_FILTER; ii++)
-  {
-    for (jj = 0; jj < DIM_FILTER; jj++)
-    {
+  for (ii = 0; ii < DIM_FILTER; ii++) {
+    for (jj = 0; jj < DIM_FILTER; jj++) {
       covNavFilter[ii][jj] = 0.5f * covNew[ii][jj] + 0.5f * covNew[jj][ii];
     }
   }
 
-  if (useNavigationFilter)
-  {
+  if (useNavigationFilter) {
     resetNavigationStates();
     doneUpdate = true;
   }
@@ -1377,32 +1319,25 @@ static void resetNavigationStates()
       (isnan(xEst[2])) || (isnan(xEst[3])) ||
       (isnan(xEst[4])) || (isnan(xEst[5])) ||
       (isnan(xEst[6])) || (isnan(xEst[7])) ||
-      (isnan(xEst[8])))
-  {
-    for (ii = 0; ii < DIM_FILTER; ii++)
-    {
+      (isnan(xEst[8]))) {
+    for (ii = 0; ii < DIM_FILTER; ii++) {
       xEst[ii] = 0.0f;
     }
     nanCounterFilter++;
-  }
-  else
-  {
+  } else {
     // update position and velocity state
-    for (ii = 0; ii < 6; ii++)
-    {
+    for (ii = 0; ii < 6; ii++) {
       stateNav[ii] = stateNav[ii] + xEst[ii];
     }
 
     quatFromAtt(&attVec[0], &attQuat[0]);
     multQuat(&quatNav[0], &attQuat[0], &quatRes[0]);
 
-    for (ii = 6; ii < 10; ii++)
-    {
+    for (ii = 6; ii < 10; ii++) {
       stateNav[ii] = quatRes[ii - 6];
     }
 
-    for (ii = 0; ii < DIM_FILTER; ii++)
-    {
+    for (ii = 0; ii < DIM_FILTER; ii++) {
       xEst[ii] = 0.0f;
     }
 
@@ -1414,13 +1349,12 @@ static void resetNavigationStates()
 
 static uint8_t cholesky(float *A, float *L, uint8_t n)
 {
-  for (uint8_t i = 0; i < n; i++)
-  {
-    for (uint8_t j = 0; j < (i + 1); j++)
-    {
+  for (uint8_t i = 0; i < n; i++) {
+    for (uint8_t j = 0; j < (i + 1); j++) {
       float s = 0.0f;
-      for (uint8_t k = 0; k < j; k++)
+      for (uint8_t k = 0; k < j; k++) {
         s += L[i * n + k] * L[j * n + k];
+      }
       L[i * n + j] = (i == j) ? sqrtf(A[i * n + i] - s) : (1.0f / L[j * n + j] * (A[i * n + j] - s));
     }
   }
@@ -1480,22 +1414,16 @@ static void quatToEuler(float *quat, float *eulerAngles)
   float ele33 = q0_2 - q1_2 - q2_2 + q3_2;
 
   //compute eulerAngles
-  if ((ele32 == 0) & (ele33 == 0))
-  {
+  if ((ele32 == 0) & (ele33 == 0)) {
     eulerAngles[0] = 0;
-  }
-  else
-  {
+  } else {
     eulerAngles[0] = atan2f(ele32, ele33);
   }
   eulerAngles[1] = asinf(-ele31);
 
-  if ((ele21 == 0) & (ele11 == 0))
-  {
+  if ((ele21 == 0) & (ele11 == 0)) {
     eulerAngles[2] = 0;
-  }
-  else
-  {
+  } else {
     eulerAngles[2] = atan2f(ele21, ele11);
   }
 }
@@ -1526,21 +1454,21 @@ static void quatFromAtt(float *attVec, float *quat)
 }
 
 
- #ifdef CONFIG_DEBUG
-  /**
-  * Temporary development log groups from the UKF Filter (experimental)
-  */
+#ifdef CONFIG_DEBUG
+/**
+* Temporary development log groups from the UKF Filter (experimental)
+*/
 LOG_GROUP_START(nav_ukf_states)
-  //LOG_ADD(LOG_FLOAT, ox, &coreData.S[KC_STATE_X])
-  //LOG_ADD(LOG_FLOAT, oy, &coreData.S[KC_STATE_Y])
-  //LOG_ADD(LOG_FLOAT, vx, &coreData.S[KC_STATE_PX])
-  //LOG_ADD(LOG_FLOAT, vy, &coreData.S[KC_STATE_PY])
+//LOG_ADD(LOG_FLOAT, ox, &coreData.S[KC_STATE_X])
+//LOG_ADD(LOG_FLOAT, oy, &coreData.S[KC_STATE_Y])
+//LOG_ADD(LOG_FLOAT, vx, &coreData.S[KC_STATE_PX])
+//LOG_ADD(LOG_FLOAT, vy, &coreData.S[KC_STATE_PY])
 LOG_GROUP_STOP(nav_ukf_states)
 #endif
 
- /**
-  * Log groups for the navigation filter associated with the error-state Unscented Kalman Filter (experimental)
-  */
+/**
+ * Log groups for the navigation filter associated with the error-state Unscented Kalman Filter (experimental)
+ */
 LOG_GROUP_START(navFilter)
 LOG_ADD(LOG_FLOAT, posX, &stateNav[0])
 LOG_ADD(LOG_FLOAT, posY, &stateNav[1])
@@ -1563,9 +1491,9 @@ LOG_ADD(LOG_FLOAT, procTimeFilter, &procTime)
 LOG_ADD(LOG_UINT8, recAnchorId, &receivedAnchor)
 LOG_GROUP_STOP(navFilter)
 
- /**
-  * Log groups for error-state Unscented Kalman Filter (experimental)
-  */
+/**
+ * Log groups for error-state Unscented Kalman Filter (experimental)
+ */
 LOG_GROUP_START(sensorFilter)
 LOG_ADD(LOG_FLOAT, dxPx, &meas_NX)
 LOG_ADD(LOG_FLOAT, dyPx, &meas_NY)
@@ -1580,9 +1508,9 @@ LOG_ADD(LOG_FLOAT, innoChTof, &innoCheckTof)
 LOG_ADD(LOG_FLOAT, distTWR, &distanceTWR)
 LOG_GROUP_STOP(sensorFilter)
 
- /**
-  * Log groups different rates for the UKF (experimental)
-  */
+/**
+ * Log groups different rates for the UKF (experimental)
+ */
 LOG_GROUP_START(ukf)
 STATS_CNT_RATE_LOG_ADD(rtUpdate, &updateCounter)
 STATS_CNT_RATE_LOG_ADD(rtPred, &predictionCounter)
@@ -1592,9 +1520,9 @@ STATS_CNT_RATE_LOG_ADD(rtApnd, &measurementAppendedCounter)
 STATS_CNT_RATE_LOG_ADD(rtRej, &measurementNotAppendedCounter)
 LOG_GROUP_STOP(ukf)
 
- /**
-  * Parameter values used for tuning the Unscented Kalman Filter (experimental)
-  */
+/**
+ * Parameter values used for tuning the Unscented Kalman Filter (experimental)
+ */
 PARAM_GROUP_START(ukf)
 PARAM_ADD(PARAM_UINT8, resetEstimation, &resetNavigation)
 PARAM_ADD(PARAM_UINT8, useNavFilter, &useNavigationFilter)

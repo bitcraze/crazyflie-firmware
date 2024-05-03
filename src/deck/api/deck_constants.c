@@ -28,32 +28,32 @@
 
 /* Mapping between Deck Pin number, real GPIO and ADC channel */
 deckGPIOMapping_t deckGPIOMapping[13] = {
-  {.periph= RCC_AHB1Periph_GPIOC, .port= GPIOC, .pin=GPIO_Pin_11, .adcCh=-1},            /* RX1 */
-  {.periph= RCC_AHB1Periph_GPIOC, .port= GPIOC, .pin=GPIO_Pin_10, .adcCh=-1},            /* TX1 */
-  {.periph= RCC_AHB1Periph_GPIOB, .port= GPIOB, .pin=GPIO_Pin_7,  .adcCh=-1},            /* SDA */
-  {.periph= RCC_AHB1Periph_GPIOB, .port= GPIOB, .pin=GPIO_Pin_6,  .adcCh=-1},            /* SCL */
-  {.periph= RCC_AHB1Periph_GPIOB, .port= GPIOB, .pin=GPIO_Pin_8,  .adcCh=-1},            /* IO1 */
-  {.periph= RCC_AHB1Periph_GPIOB, .port= GPIOB, .pin=GPIO_Pin_5,  .adcCh=-1},            /* IO2 */
-  {.periph= RCC_AHB1Periph_GPIOB, .port= GPIOB, .pin=GPIO_Pin_4,  .adcCh=-1},            /* IO3 */
-  {.periph= RCC_AHB1Periph_GPIOC, .port= GPIOC, .pin=GPIO_Pin_12, .adcCh=-1},            /* IO4 */
-  {.periph= RCC_AHB1Periph_GPIOA, .port= GPIOA, .pin=GPIO_Pin_2,  .adcCh=ADC_Channel_2}, /* TX2 */
-  {.periph= RCC_AHB1Periph_GPIOA, .port= GPIOA, .pin=GPIO_Pin_3,  .adcCh=ADC_Channel_3}, /* RX2 */
-  {.periph= RCC_AHB1Periph_GPIOA, .port= GPIOA, .pin=GPIO_Pin_5,  .adcCh=ADC_Channel_5}, /* SCK */
-  {.periph= RCC_AHB1Periph_GPIOA, .port= GPIOA, .pin=GPIO_Pin_6,  .adcCh=ADC_Channel_6}, /* MISO */
-  {.periph= RCC_AHB1Periph_GPIOA, .port= GPIOA, .pin=GPIO_Pin_7,  .adcCh=ADC_Channel_7}, /* MOSI */
+  {.periph = RCC_AHB1Periph_GPIOC, .port = GPIOC, .pin = GPIO_Pin_11, .adcCh = -1},      /* RX1 */
+  {.periph = RCC_AHB1Periph_GPIOC, .port = GPIOC, .pin = GPIO_Pin_10, .adcCh = -1},      /* TX1 */
+  {.periph = RCC_AHB1Periph_GPIOB, .port = GPIOB, .pin = GPIO_Pin_7,  .adcCh = -1},      /* SDA */
+  {.periph = RCC_AHB1Periph_GPIOB, .port = GPIOB, .pin = GPIO_Pin_6,  .adcCh = -1},      /* SCL */
+  {.periph = RCC_AHB1Periph_GPIOB, .port = GPIOB, .pin = GPIO_Pin_8,  .adcCh = -1},      /* IO1 */
+  {.periph = RCC_AHB1Periph_GPIOB, .port = GPIOB, .pin = GPIO_Pin_5,  .adcCh = -1},      /* IO2 */
+  {.periph = RCC_AHB1Periph_GPIOB, .port = GPIOB, .pin = GPIO_Pin_4,  .adcCh = -1},      /* IO3 */
+  {.periph = RCC_AHB1Periph_GPIOC, .port = GPIOC, .pin = GPIO_Pin_12, .adcCh = -1},      /* IO4 */
+  {.periph = RCC_AHB1Periph_GPIOA, .port = GPIOA, .pin = GPIO_Pin_2,  .adcCh = ADC_Channel_2}, /* TX2 */
+  {.periph = RCC_AHB1Periph_GPIOA, .port = GPIOA, .pin = GPIO_Pin_3,  .adcCh = ADC_Channel_3}, /* RX2 */
+  {.periph = RCC_AHB1Periph_GPIOA, .port = GPIOA, .pin = GPIO_Pin_5,  .adcCh = ADC_Channel_5}, /* SCK */
+  {.periph = RCC_AHB1Periph_GPIOA, .port = GPIOA, .pin = GPIO_Pin_6,  .adcCh = ADC_Channel_6}, /* MISO */
+  {.periph = RCC_AHB1Periph_GPIOA, .port = GPIOA, .pin = GPIO_Pin_7,  .adcCh = ADC_Channel_7}, /* MOSI */
 };
 
 // Pin definitions
-const deckPin_t DECK_GPIO_RX1 = {.id=0};
-const deckPin_t DECK_GPIO_TX1 = {.id=1};
-const deckPin_t DECK_GPIO_SDA = {.id=2};
-const deckPin_t DECK_GPIO_SCL = {.id=3};
-const deckPin_t DECK_GPIO_IO1 = {.id=4};
-const deckPin_t DECK_GPIO_IO2 = {.id=5};
-const deckPin_t DECK_GPIO_IO3 = {.id=6};
-const deckPin_t DECK_GPIO_IO4 = {.id=7};
-const deckPin_t DECK_GPIO_TX2 = {.id=8};
-const deckPin_t DECK_GPIO_RX2 = {.id=9};
-const deckPin_t DECK_GPIO_SCK = {.id=10};
-const deckPin_t DECK_GPIO_MISO = {.id=11};
-const deckPin_t DECK_GPIO_MOSI = {.id=12};
+const deckPin_t DECK_GPIO_RX1 = {.id = 0};
+const deckPin_t DECK_GPIO_TX1 = {.id = 1};
+const deckPin_t DECK_GPIO_SDA = {.id = 2};
+const deckPin_t DECK_GPIO_SCL = {.id = 3};
+const deckPin_t DECK_GPIO_IO1 = {.id = 4};
+const deckPin_t DECK_GPIO_IO2 = {.id = 5};
+const deckPin_t DECK_GPIO_IO3 = {.id = 6};
+const deckPin_t DECK_GPIO_IO4 = {.id = 7};
+const deckPin_t DECK_GPIO_TX2 = {.id = 8};
+const deckPin_t DECK_GPIO_RX2 = {.id = 9};
+const deckPin_t DECK_GPIO_SCK = {.id = 10};
+const deckPin_t DECK_GPIO_MISO = {.id = 11};
+const deckPin_t DECK_GPIO_MOSI = {.id = 12};

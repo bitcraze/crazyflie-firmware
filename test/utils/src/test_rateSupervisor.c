@@ -38,108 +38,118 @@ static uint32_t evaluationIntervall = 1000;
 static uint32_t minCount = 2;
 static uint32_t maxCount = 4;
 
-void setUp(void) {
-    rateSupervisorInit(&context, startTime, evaluationIntervall, minCount, maxCount, 0);
+void setUp(void)
+{
+  rateSupervisorInit(&context, startTime, evaluationIntervall, minCount, maxCount, 0);
 }
 
-void tearDown(void) {
+void tearDown(void)
+{
   // Empty
 }
 
-void testThatValidationPassesBeforeEvaluation() {
-    // Fixture
-    // Test
-    bool actual = rateSupervisorValidate(&context, startTime + 100);
+void testThatValidationPassesBeforeEvaluation()
+{
+  // Fixture
+  // Test
+  bool actual = rateSupervisorValidate(&context, startTime + 100);
 
-    // Assert
-    TEST_ASSERT_TRUE(actual);
+  // Assert
+  TEST_ASSERT_TRUE(actual);
 }
 
-void testThatValidationPassesWhenCountIsWithinInterval() {
-    // Fixture
-    rateSupervisorValidate(&context, startTime + 400);
-    rateSupervisorValidate(&context, startTime + 800);
+void testThatValidationPassesWhenCountIsWithinInterval()
+{
+  // Fixture
+  rateSupervisorValidate(&context, startTime + 400);
+  rateSupervisorValidate(&context, startTime + 800);
 
-    // Test
-    bool actual = rateSupervisorValidate(&context, startTime + 1200);
+  // Test
+  bool actual = rateSupervisorValidate(&context, startTime + 1200);
 
-    // Assert
-    TEST_ASSERT_TRUE(actual);
+  // Assert
+  TEST_ASSERT_TRUE(actual);
 }
 
-void testThatValidationFailesWhenCountIsTooLow() {
-    // Fixture
+void testThatValidationFailesWhenCountIsTooLow()
+{
+  // Fixture
 
-    // Test
-    bool actual = rateSupervisorValidate(&context, startTime + 1200);
+  // Test
+  bool actual = rateSupervisorValidate(&context, startTime + 1200);
 
-    // Assert
-    TEST_ASSERT_FALSE(actual);
+  // Assert
+  TEST_ASSERT_FALSE(actual);
 }
 
-void testThatValidationPassesWhenCountIsTooHigh() {
-    // Fixture
-    rateSupervisorValidate(&context, startTime + 400);
-    rateSupervisorValidate(&context, startTime + 500);
-    rateSupervisorValidate(&context, startTime + 600);
-    rateSupervisorValidate(&context, startTime + 700);
+void testThatValidationPassesWhenCountIsTooHigh()
+{
+  // Fixture
+  rateSupervisorValidate(&context, startTime + 400);
+  rateSupervisorValidate(&context, startTime + 500);
+  rateSupervisorValidate(&context, startTime + 600);
+  rateSupervisorValidate(&context, startTime + 700);
 
-    // Test
-    bool actual = rateSupervisorValidate(&context, startTime + 1200);
+  // Test
+  bool actual = rateSupervisorValidate(&context, startTime + 1200);
 
-    // Assert
-    TEST_ASSERT_FALSE(actual);
+  // Assert
+  TEST_ASSERT_FALSE(actual);
 }
 
-void testThatCounterIsResetAtEvaluation() {
-    // Fixture
-    rateSupervisorValidate(&context, startTime + 400);
-    rateSupervisorValidate(&context, startTime + 700);
-    rateSupervisorValidate(&context, startTime + 1200);
-    // An evaluation should be triggered by the last call and counter reset
+void testThatCounterIsResetAtEvaluation()
+{
+  // Fixture
+  rateSupervisorValidate(&context, startTime + 400);
+  rateSupervisorValidate(&context, startTime + 700);
+  rateSupervisorValidate(&context, startTime + 1200);
+  // An evaluation should be triggered by the last call and counter reset
 
-    // Test
-    bool actual = rateSupervisorValidate(&context, startTime + 1200 + 1100);
+  // Test
+  bool actual = rateSupervisorValidate(&context, startTime + 1200 + 1100);
 
-    // Assert
-    // The test call should trigger a second evaluation, and since the counter was
-    // reset, the validation should return false
-    TEST_ASSERT_FALSE(actual);
+  // Assert
+  // The test call should trigger a second evaluation, and since the counter was
+  // reset, the validation should return false
+  TEST_ASSERT_FALSE(actual);
 }
 
-void testThatLatestCountIsStored() {
-    // Fixture
-    rateSupervisorValidate(&context, startTime + 1200);
-    uint32_t expected = 1;
+void testThatLatestCountIsStored()
+{
+  // Fixture
+  rateSupervisorValidate(&context, startTime + 1200);
+  uint32_t expected = 1;
 
-    // Test
-    uint32_t actual = rateSupervisorLatestCount(&context);
+  // Test
+  uint32_t actual = rateSupervisorLatestCount(&context);
 
-    // Assert
-    TEST_ASSERT_EQUAL_UINT32(expected, actual);
+  // Assert
+  TEST_ASSERT_EQUAL_UINT32(expected, actual);
 }
 
-void testThatValidationPassesWithSkip() {
-    // Fixture
-    uint32_t skip = 1;
-    rateSupervisorInit(&context, startTime, evaluationIntervall, minCount, maxCount, skip);
+void testThatValidationPassesWithSkip()
+{
+  // Fixture
+  uint32_t skip = 1;
+  rateSupervisorInit(&context, startTime, evaluationIntervall, minCount, maxCount, skip);
 
-    // Test
-    bool actual = rateSupervisorValidate(&context, startTime + 1200);
+  // Test
+  bool actual = rateSupervisorValidate(&context, startTime + 1200);
 
-    // Assert
-    TEST_ASSERT_TRUE(actual);
+  // Assert
+  TEST_ASSERT_TRUE(actual);
 }
 
-void testThatValidationFailesAfterSkip() {
-    // Fixture
-    uint32_t skip = 1;
-    rateSupervisorInit(&context, startTime, evaluationIntervall, minCount, maxCount, skip);
-    rateSupervisorValidate(&context, startTime + 1200);
+void testThatValidationFailesAfterSkip()
+{
+  // Fixture
+  uint32_t skip = 1;
+  rateSupervisorInit(&context, startTime, evaluationIntervall, minCount, maxCount, skip);
+  rateSupervisorValidate(&context, startTime + 1200);
 
-    // Test
-    bool actual = rateSupervisorValidate(&context, startTime + 1200 + 1100);
+  // Test
+  bool actual = rateSupervisorValidate(&context, startTime + 1200 + 1100);
 
-    // Assert
-    TEST_ASSERT_FALSE(actual);
+  // Assert
+  TEST_ASSERT_FALSE(actual);
 }

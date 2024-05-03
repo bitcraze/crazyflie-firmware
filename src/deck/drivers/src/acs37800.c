@@ -103,7 +103,7 @@ static int16_t pBatMW;
 static uint16_t currZtrim, currZtrimOld;
 static uint8_t writeTrim;
 
-static void asc37800Task(void* prm);
+static void asc37800Task(void *prm);
 
 /*
  * Sign extend a bitfield which if right justified
@@ -115,17 +115,16 @@ static void asc37800Task(void* prm);
 int32_t signExtendBitfield(uint32_t data, uint16_t width)
 {
   // If the bitfield is the width of the variable, don't bother trying to sign extend (it already is)
-    if (width == 32)
-    {
-        return (int32_t)data;
-    }
+  if (width == 32) {
+    return (int32_t)data;
+  }
 
-    int32_t x = (int32_t)data;
-    int32_t mask = 1L << (width - 1);
+  int32_t x = (int32_t)data;
+  int32_t mask = 1L << (width - 1);
 
-    x = x & ((1 << width) - 1); // make sure the upper bits are zero
+  x = x & ((1 << width) - 1); // make sure the upper bits are zero
 
-    return (int32_t)((x ^ mask) - mask);
+  return (int32_t)((x ^ mask) - mask);
 }
 
 /*
@@ -138,18 +137,15 @@ int32_t signExtendBitfield(uint32_t data, uint16_t width)
  */
 float convertUnsignedFixedPoint(uint32_t inputValue, uint16_t binaryPoint, uint16_t width)
 {
-    uint32_t mask;
+  uint32_t mask;
 
-    if (width == 32)
-    {
-        mask = 0xFFFFFFFF;
-    }
-    else
-    {
-        mask = (1UL << width) - 1UL;
-    }
+  if (width == 32) {
+    mask = 0xFFFFFFFF;
+  } else {
+    mask = (1UL << width) - 1UL;
+  }
 
-    return (float)(inputValue & mask) / (float)(1L << binaryPoint);
+  return (float)(inputValue & mask) / (float)(1L << binaryPoint);
 }
 
 /*
@@ -162,8 +158,8 @@ float convertUnsignedFixedPoint(uint32_t inputValue, uint16_t binaryPoint, uint1
  */
 float convertSignedFixedPoint(uint32_t inputValue, uint16_t binaryPoint, uint16_t width)
 {
-    int32_t signedValue = signExtendBitfield(inputValue, width);
-    return (float)signedValue / (float)(1L << binaryPoint);
+  int32_t signedValue = signExtendBitfield(inputValue, width);
+  return (float)signedValue / (float)(1L << binaryPoint);
 }
 
 static bool asc37800Read32(uint8_t reg, uint32_t *data32)
@@ -181,18 +177,17 @@ static void ascFindAndSetAddress(void)
   uint8_t startAddr;
   uint32_t dummy = 0;
 
-  for (startAddr = 96; startAddr <= 110; startAddr++)
-  {
+  for (startAddr = 96; startAddr <= 110; startAddr++) {
     bool isReplying = i2cdevWrite(I2C1_DEV, startAddr, 1, (uint8_t *)&dummy);
 
-    if (isReplying)
-    {
+    if (isReplying) {
       // Unlock EEPROM
       dummy = ACS_ACCESS_CODE;
       i2cdevWriteReg8(I2C1_DEV, startAddr, ACSREG_ACCESS_CODE, 4, (uint8_t *)&dummy);
       // EEPROM: write and lock i2c address to 0x7F;
       i2cdevReadReg8(I2C1_DEV, startAddr, ACSREG_E_IO_SEL, 4, (uint8_t *)&dummy);
-      DEBUG_PRINT("ACS37800 A:0x%.2X R:0x%.2X:%X\n", (unsigned int)startAddr, (unsigned int)ACSREG_E_IO_SEL, (unsigned int)dummy);
+      DEBUG_PRINT("ACS37800 A:0x%.2X R:0x%.2X:%X\n", (unsigned int)startAddr,
+                  (unsigned int)ACSREG_E_IO_SEL, (unsigned int)dummy);
 
       dummy = (0x7F << 2) | (0x01 << 9);
       i2cdevWriteReg8(I2C1_DEV, startAddr, ACSREG_E_IO_SEL, 4, (uint8_t *)&dummy);
@@ -213,18 +208,15 @@ static void asc37800Init(DeckInfo *info)
     return;
   }
 
-  if (i2cdevWrite(I2C1_DEV, ACS_I2C_ADDR, 1, (uint8_t *)&dummy))
-  {
+  if (i2cdevWrite(I2C1_DEV, ACS_I2C_ADDR, 1, (uint8_t *)&dummy)) {
     asc37800Write32(ACSREG_ACCESS_CODE, ACS_ACCESS_CODE);
     DEBUG_PRINT("ACS37800 I2C [OK]\n");
-  }
-  else
-  {
+  } else {
     ascFindAndSetAddress();
   }
 
   // Enable bypass in shadow reg and set N to 32.
-  asc37800Write32(ACSREG_S_IO_SEL, (1 << 24) | (32 << 14) | (0x01 << 9) |  (0x7F << 2));
+  asc37800Write32(ACSREG_S_IO_SEL, (1 << 24) | (32 << 14) | (0x01 << 9) | (0x7F << 2));
   // Set current and power for averaging and keep device specific (trim) settings.
   asc37800Read32(ACSREG_S_TRIM, &val);
   currZtrim = currZtrimOld = val & 0xFF;
@@ -233,31 +225,30 @@ static void asc37800Init(DeckInfo *info)
   asc37800Write32(ACSREG_S_OFFS_AVG, ((10 << 7) | (10 << 0)));
 
   DEBUG_PRINT("---------------\n");
-  for (int reg = 0x0B; reg <= 0x0F; reg++)
-  {
+  for (int reg = 0x0B; reg <= 0x0F; reg++) {
     bool res;
 
     res = asc37800Read32(reg, &val);
     DEBUG_PRINT("%d:R:0x%.2X:%X\n", (unsigned int)res, (unsigned int)reg, (unsigned int)val);
-    res = asc37800Read32(reg+0x10, &val);
-    DEBUG_PRINT("%d:R:0x%.2X:%X\n\n", (unsigned int)res, (unsigned int)reg+0x10, (unsigned int)val);
+    res = asc37800Read32(reg + 0x10, &val);
+    DEBUG_PRINT("%d:R:0x%.2X:%X\n\n", (unsigned int)res, (unsigned int)reg + 0x10, (unsigned int)val);
   }
 
 
   xTaskCreate(asc37800Task, "asc37800",
-              2*configMINIMAL_STACK_SIZE, NULL,
+              2 * configMINIMAL_STACK_SIZE, NULL,
               /*priority*/2, NULL);
 
   isInit = true;
 }
 
-static void asc37800Task(void* prm)
+static void asc37800Task(void *prm)
 {
   systemWaitStart();
 
   TickType_t lastWakeTime = xTaskGetTickCount();
 
-  while(1) {
+  while (1) {
     vTaskDelayUntil(&lastWakeTime, M2T(10));
 
     asc37800Read32(ACSREG_I_V_CODES, &viBatRaw);
@@ -280,8 +271,7 @@ static void asc37800Task(void* prm)
     pBatMW = (int16_t)(pavgBat * 1000);
 
     // Code so tuning can be done through cfclient parameters
-    if (currZtrimOld != currZtrim)
-    {
+    if (currZtrimOld != currZtrim) {
       uint32_t val;
       asc37800Read32(ACSREG_S_TRIM, &val);
       DEBUG_PRINT("%X ->", (unsigned int)val);
@@ -291,8 +281,7 @@ static void asc37800Task(void* prm)
       currZtrimOld = currZtrim;
     }
 
-    if (writeTrim != 0)
-    {
+    if (writeTrim != 0) {
       uint32_t val;
       writeTrim = 0;
       // Enable EEPROM Writing

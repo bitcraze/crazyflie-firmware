@@ -231,15 +231,18 @@ const uint8_t frame_compressed_pieces[] = {
   0x46, 0x00, 0x15, 0xf4, 0x01, 0xb8, 0x0b, 0x58, 0x1b, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-void setUp(void) {
+void setUp(void)
+{
   // Empty
 }
 
-void tearDown(void) {
+void tearDown(void)
+{
   // Empty
 }
 
-void testFigure8Evaluation(void) {
+void testFigure8Evaluation(void)
+{
   // Fixture
   struct piecewise_traj traj;
   float duration, t;
@@ -275,7 +278,8 @@ void testFigure8Evaluation(void) {
   // Assert
 }
 
-void testCompressedFigure8Evaluation(void) {
+void testCompressedFigure8Evaluation(void)
+{
   // Fixture
   struct piecewise_traj_compressed traj;
   float duration, t;
@@ -308,7 +312,8 @@ void testCompressedFigure8Evaluation(void) {
   // Assert
 }
 
-void testCompressedFrameEvaluation(void) {
+void testCompressedFrameEvaluation(void)
+{
   // Fixture
   struct piecewise_traj_compressed traj;
   float duration, t;
@@ -341,7 +346,8 @@ void testCompressedFrameEvaluation(void) {
   // Assert
 }
 
-void testCompressedSimplifiedFigure8Evaluation(void) {
+void testCompressedSimplifiedFigure8Evaluation(void)
+{
   // Fixture
   struct piecewise_traj_compressed traj;
   float duration, t;
@@ -375,7 +381,8 @@ void testCompressedSimplifiedFigure8Evaluation(void) {
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
-void testCompressedFigure8RandomOrderQueries(void) {
+void testCompressedFigure8RandomOrderQueries(void)
+{
   // Fixture
   struct piecewise_traj traj;
   struct piecewise_traj_compressed ctraj;
@@ -398,7 +405,8 @@ void testCompressedFigure8RandomOrderQueries(void) {
 #ifdef SHOW_OUTPUT
   printf("t\tdiff\tx\ty\tz\tyaw\texp_x\texp_y\texp_z\texp_yaw\tvx\tvy\tvz\tax\tay\taz\n");
 #endif
-  i = 1000; maxdiff = 0.0;
+  i = 1000;
+  maxdiff = 0.0;
   for (i = 0; i < 10; i++) {
     struct traj_eval actual, expected;
 

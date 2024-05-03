@@ -7,54 +7,59 @@
 
 static size_t min(size_t a, size_t b)
 {
-    if (a < b) {
-        return a;
-    } else {
-        return b;
-    }
+  if (a < b) {
+    return a;
+  } else {
+    return b;
+  }
 }
 
 char memory[TEST_MEMORY_SIZE];
 char cacheMemory[TEST_MEMORY_SIZE];
 
-size_t kvememoryRead(size_t address, void* data, size_t length) {
-    if(address > TEST_MEMORY_SIZE) {
-        return 0;
-    }
-    size_t toRead = min(length, TEST_MEMORY_SIZE - address);
-    memcpy(data, &memory[address], toRead);
+size_t kvememoryRead(size_t address, void *data, size_t length)
+{
+  if (address > TEST_MEMORY_SIZE) {
+    return 0;
+  }
+  size_t toRead = min(length, TEST_MEMORY_SIZE - address);
+  memcpy(data, &memory[address], toRead);
 
-    return toRead;
+  return toRead;
 }
 
-size_t kvememoryWrite(size_t address, const void* data, size_t length) {
-    if(address > TEST_MEMORY_SIZE) {
-        return 0;
-    }
-    size_t toWrite = min(length, TEST_MEMORY_SIZE - address);
-    memcpy(&cacheMemory[address], data, toWrite);
+size_t kvememoryWrite(size_t address, const void *data, size_t length)
+{
+  if (address > TEST_MEMORY_SIZE) {
+    return 0;
+  }
+  size_t toWrite = min(length, TEST_MEMORY_SIZE - address);
+  memcpy(&cacheMemory[address], data, toWrite);
 
-    return toWrite;
+  return toWrite;
 }
 
-void kvememoryFlush() {
-    memcpy(memory, cacheMemory, TEST_MEMORY_SIZE);
+void kvememoryFlush()
+{
+  memcpy(memory, cacheMemory, TEST_MEMORY_SIZE);
 }
 
 kveMemory_t kveMemory = {
-    .memorySize = TEST_MEMORY_SIZE,
-    .read = kvememoryRead,
-    .write = kvememoryWrite,
-    .flush = kvememoryFlush,
+  .memorySize = TEST_MEMORY_SIZE,
+  .read = kvememoryRead,
+  .write = kvememoryWrite,
+  .flush = kvememoryFlush,
 };
 
-void setUp(void) {
-    // The full memory is initialized to the characted 'a'
-    memset(memory, 'a', TEST_MEMORY_SIZE);
-    memset(cacheMemory, 'a', TEST_MEMORY_SIZE);
+void setUp(void)
+{
+  // The full memory is initialized to the characted 'a'
+  memset(memory, 'a', TEST_MEMORY_SIZE);
+  memset(cacheMemory, 'a', TEST_MEMORY_SIZE);
 }
 
-void testThatWriteItemDoesWriteTheItemAtTheRightAddress() {
+void testThatWriteItemDoesWriteTheItemAtTheRightAddress()
+{
   // Fixture
   size_t address = 42;
   char *key = "hello";
@@ -70,10 +75,11 @@ void testThatWriteItemDoesWriteTheItemAtTheRightAddress() {
 
   // Assert
   TEST_ASSERT_EQUAL(expectedItemSize, itemSize);
-  TEST_ASSERT_EQUAL_MEMORY(expectedItemInMemory, &memory[address-1], expectedItemSize+2);
+  TEST_ASSERT_EQUAL_MEMORY(expectedItemInMemory, &memory[address - 1], expectedItemSize + 2);
 }
 
-void testThatWriteHoleDoesWriteAHoleAtTheRightAddress() {
+void testThatWriteHoleDoesWriteAHoleAtTheRightAddress()
+{
   // Fixture
   memset(memory, 'a', TEST_MEMORY_SIZE);
 
@@ -92,7 +98,8 @@ void testThatWriteHoleDoesWriteAHoleAtTheRightAddress() {
   TEST_ASSERT_EQUAL_MEMORY(expectedItemInMemory, &memory[address - 1], expectedItemSize + 1);
 }
 
-void testThatWriteEndDoesWriteTheEndAtTheRightAddress() {
+void testThatWriteEndDoesWriteTheEndAtTheRightAddress()
+{
   // Fixture
   memset(memory, 'a', TEST_MEMORY_SIZE);
 
@@ -110,7 +117,8 @@ void testThatWriteEndDoesWriteTheEndAtTheRightAddress() {
   TEST_ASSERT_EQUAL_MEMORY(expectedItemInMemory, &memory[address - 1], expectedItemSize + 2);
 }
 
-void testThatMoveMemoryDoesMoveAnItem() {
+void testThatMoveMemoryDoesMoveAnItem()
+{
   // Fixture
   size_t address = 42;
   size_t newAddress = 7;
@@ -130,7 +138,8 @@ void testThatMoveMemoryDoesMoveAnItem() {
   TEST_ASSERT_EQUAL_MEMORY(expectedItemInMemory, &memory[newAddress], itemSize);
 }
 
-void testThatFindItemByKeyFindsAnItem() {
+void testThatFindItemByKeyFindsAnItem()
+{
   // Fixture
   size_t hello_address = 0;
   size_t world_address = 13;
@@ -145,7 +154,8 @@ void testThatFindItemByKeyFindsAnItem() {
   TEST_ASSERT_EQUAL(world_address, found_address);
 }
 
-void testThatFindItemByKeyDoNotFindAnItemWhenSearchingAfterIt() {
+void testThatFindItemByKeyDoNotFindAnItemWhenSearchingAfterIt()
+{
   // Fixture
   size_t hello_address = 0;
   size_t world_address = 13;
@@ -162,7 +172,8 @@ void testThatFindItemByKeyDoNotFindAnItemWhenSearchingAfterIt() {
   TEST_ASSERT_FALSE(KVE_STORAGE_IS_VALID(found_address));
 }
 
-void testThatFindItemByPrefixFindsAnItem() {
+void testThatFindItemByPrefixFindsAnItem()
+{
   // Fixture
   size_t hello_address = 0;
   size_t world_address = 17;
@@ -182,7 +193,8 @@ void testThatFindItemByPrefixFindsAnItem() {
   TEST_ASSERT_EQUAL_UINT32(17, size);
 }
 
-void testThatFindItemByPrefixFindsNextItem() {
+void testThatFindItemByPrefixFindsNextItem()
+{
   // Fixture
   size_t hello_address = 0;
   size_t world_address = 17;
@@ -205,7 +217,8 @@ void testThatFindItemByPrefixFindsNextItem() {
 
 
 
-void testThatFindEndFindsTheEnd() {
+void testThatFindEndFindsTheEnd()
+{
   // Fixture
   size_t hello_address = 0;
   size_t world_address = 13;
@@ -222,7 +235,8 @@ void testThatFindEndFindsTheEnd() {
   TEST_ASSERT_EQUAL(end_address, found_address);
 }
 
-void testThatFindEndReturnInvalidAddressIfNoEnd() {
+void testThatFindEndReturnInvalidAddressIfNoEnd()
+{
   // Fixture
   size_t hello_address = 0;
   size_t world_address = 13;
@@ -237,7 +251,8 @@ void testThatFindEndReturnInvalidAddressIfNoEnd() {
   TEST_ASSERT_FALSE(KVE_STORAGE_IS_VALID(found_address));
 }
 
-void testThatFindNextItemFindsTheNextItem() {
+void testThatFindNextItemFindsTheNextItem()
+{
   // Fixture
   size_t hello_address = 0;
   size_t world_address = 13;
@@ -254,7 +269,8 @@ void testThatFindNextItemFindsTheNextItem() {
   TEST_ASSERT_EQUAL(world_address, found_address);
 }
 
-void testThatFindNextItemReturnInvalidAddressIfNoMoreItem() {
+void testThatFindNextItemReturnInvalidAddressIfNoMoreItem()
+{
   // Fixture
   size_t hello_address = 0;
   size_t world_address = 13;
@@ -271,7 +287,8 @@ void testThatFindNextItemReturnInvalidAddressIfNoMoreItem() {
   TEST_ASSERT_FALSE(KVE_STORAGE_IS_VALID(found_address));
 }
 
-void testThatFindNextItemJumpsOverHoles() {
+void testThatFindNextItemJumpsOverHoles()
+{
   // Fixture
   size_t hello_address = 0;
   size_t hole_address = 13;

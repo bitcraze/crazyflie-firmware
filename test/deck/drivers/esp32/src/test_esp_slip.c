@@ -117,7 +117,8 @@ void testExtractCorrectReceivePcktCommands()
   mockGetCharBuf[13] = 0xC0; // end byte
 
   // Test
-  bool actual = espSlipExchange(&sendBuffer[0], &receiverPckt, &senderPckt, mockPutChar, mockGetChar, 100);
+  bool actual = espSlipExchange(&sendBuffer[0], &receiverPckt, &senderPckt, mockPutChar, mockGetChar,
+                                100);
 
   // Assert
   TEST_ASSERT_EQUAL_INT8(0x17, receiverPckt.command);
@@ -223,7 +224,8 @@ void testWrongCommandRaisesError()
   mockGetCharBuf[18] = 0xC0; // end byte
 
   // Test
-  bool actual = espSlipExchange(&sendBuffer[0], &receiverPckt, &senderPckt, mockPutChar, mockGetChar, 100);
+  bool actual = espSlipExchange(&sendBuffer[0], &receiverPckt, &senderPckt, mockPutChar, mockGetChar,
+                                100);
 
   // Assert
   TEST_ASSERT_FALSE(actual);
@@ -298,7 +300,8 @@ void testThatWeDetectMissingEndMarker()
   mockGetCharBuf[18] = 0x00; // Missing end marker
 
   // Test
-  bool actual = espSlipExchange(&sendBuffer[0], &receiverPckt, &senderPckt, mockPutChar, mockGetChar, 100);
+  bool actual = espSlipExchange(&sendBuffer[0], &receiverPckt, &senderPckt, mockPutChar, mockGetChar,
+                                100);
 
   // Assert
   TEST_ASSERT_FALSE(actual);
@@ -340,16 +343,12 @@ static void mockPutChar(uint32_t size, uint8_t *data)
 
 static bool mockGetChar(uint8_t *c, const uint32_t timeoutTicks)
 {
-  if (mockGetCharHasReceivedSend)
-  {
+  if (mockGetCharHasReceivedSend) {
     *c = mockGetCharBuf[mockGetCharBufIndex++];
 
     return true;
-  }
-  else
-  {
-    if (mockGetCharDirtCounter == 0)
-    {
+  } else {
+    if (mockGetCharDirtCounter == 0) {
       return false;
     }
 

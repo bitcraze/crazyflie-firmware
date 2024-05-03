@@ -31,23 +31,26 @@
 #include <string.h>
 
 static int putcMock(int c);
-static void verifyStdio(char* format, ...);
-static void verify(char* expected, char* format, ...);
+static void verifyStdio(char *format, ...);
+static void verify(char *expected, char *format, ...);
 static char actual[100];
 
-static void reset() {
+static void reset()
+{
   memset(actual, 0, sizeof(actual));
 }
 
-void setUp(void) {
+void setUp(void)
+{
   reset();
 }
 
 void tearDown(void) {}
 
-void testThatTextIsPrinted() {
+void testThatTextIsPrinted()
+{
   // Fixture
-  char* expected = "Some text\n";
+  char *expected = "Some text\n";
 
   // Test
   eprintf(putcMock, "Some text\n");
@@ -56,7 +59,8 @@ void testThatTextIsPrinted() {
   TEST_ASSERT_EQUAL_STRING(expected, actual);
 }
 
-void testThatTheNumberOfCharactersIsReturned() {
+void testThatTheNumberOfCharactersIsReturned()
+{
   // Fixture
   int expected = 10;
 
@@ -67,14 +71,16 @@ void testThatTheNumberOfCharactersIsReturned() {
   TEST_ASSERT_EQUAL_INT(expected, actual);
 }
 
-void testThatStringIsPrinted() {
+void testThatStringIsPrinted()
+{
   // Fixture
   // Test
   // Assert
   verifyStdio("Some %s text", "extra");
 }
 
-void testThatIntIsPrinted() {
+void testThatIntIsPrinted()
+{
   // Fixture
   int val = -456;
 
@@ -83,7 +89,8 @@ void testThatIntIsPrinted() {
   verifyStdio("Some %i text", val);
 }
 
-void testThatIntIsPrinted2() {
+void testThatIntIsPrinted2()
+{
   // Fixture
   int val = 123;
 
@@ -92,7 +99,8 @@ void testThatIntIsPrinted2() {
   verifyStdio("Some %d text", val);
 }
 
-void testThatLongIntIsPrinted() {
+void testThatLongIntIsPrinted()
+{
   // Fixture
   long int val = -456123434;
 
@@ -101,7 +109,8 @@ void testThatLongIntIsPrinted() {
   verifyStdio("Some %ld text", val);
 }
 
-void testThatLongLongIntIsPrinted() {
+void testThatLongLongIntIsPrinted()
+{
   // Fixture
   long long int val = -4561234345345;
 
@@ -110,7 +119,8 @@ void testThatLongLongIntIsPrinted() {
   verifyStdio("Some %lld text", val);
 }
 
-void testThatUnsignedIntIsPrinted() {
+void testThatUnsignedIntIsPrinted()
+{
   // Fixture
   unsigned int val = 10;
 
@@ -119,7 +129,8 @@ void testThatUnsignedIntIsPrinted() {
   verifyStdio("Some %u text", val);
 }
 
-void testThatLongUnsignedIntIsPrinted() {
+void testThatLongUnsignedIntIsPrinted()
+{
   // Fixture
   long unsigned int val = 1234567890;
 
@@ -128,7 +139,8 @@ void testThatLongUnsignedIntIsPrinted() {
   verifyStdio("Some %lu text", val);
 }
 
-void testThatLongLongUnsignedIntIsPrinted() {
+void testThatLongLongUnsignedIntIsPrinted()
+{
   // Fixture
   long long unsigned int val = 9223372036854775807;
 
@@ -137,12 +149,13 @@ void testThatLongLongUnsignedIntIsPrinted() {
   verifyStdio("Some %llu text", val);
 }
 
-void testThatHexIsPrinted() {
+void testThatHexIsPrinted()
+{
   // Fixture
   int val = 0xABCD;
 
   // Note: Not behaving as sprintf() that generates "Some abcd text"
-  char* expected = "Some ABCD text";
+  char *expected = "Some ABCD text";
 
   // Test
   eprintf(putcMock, "Some %x text", val);
@@ -151,7 +164,8 @@ void testThatHexIsPrinted() {
   TEST_ASSERT_EQUAL_STRING(expected, actual);
 }
 
-void testThatHexIsPrinted2() {
+void testThatHexIsPrinted2()
+{
   // Fixture
   unsigned int val = 0xABCD;
 
@@ -160,7 +174,8 @@ void testThatHexIsPrinted2() {
   verifyStdio("Some %X text", val);
 }
 
-void testThatLongHexIsPrinted() {
+void testThatLongHexIsPrinted()
+{
   // Fixture
   long int val = 0xABCD;
 
@@ -170,7 +185,8 @@ void testThatLongHexIsPrinted() {
 }
 
 
-void testThatLongLongHexIsPrinted() {
+void testThatLongLongHexIsPrinted()
+{
   // Fixture
   long long int val = 0xABCD98768FEDC098;
 
@@ -179,7 +195,8 @@ void testThatLongLongHexIsPrinted() {
   verifyStdio("Some %llX text", val);
 }
 
-void testThatHexWithWidthIsPrinted() {
+void testThatHexWithWidthIsPrinted()
+{
   // Fixture
   int val = 0xab;
 
@@ -188,17 +205,19 @@ void testThatHexWithWidthIsPrinted() {
   verifyStdio("Some %4X text", val);
 }
 
-void testThatDoubleIsPrintedWithRoundingErrors() {
+void testThatDoubleIsPrintedWithRoundingErrors()
+{
   // Fixture
   double val = -1234.12;
-  char* expected = "Implementaion has rounding errors, -1234.119995";
+  char *expected = "Implementaion has rounding errors, -1234.119995";
 
   // Test
   // Assert
   verify(expected, "Implementaion has rounding errors, %f", val);
 }
 
-void testThatHexWithZeroPaddedWidthIsPrinted() {
+void testThatHexWithZeroPaddedWidthIsPrinted()
+{
   // Fixture
   int val = 0xab;
 
@@ -207,7 +226,8 @@ void testThatHexWithZeroPaddedWidthIsPrinted() {
   verifyStdio("Some %08X text", val);
 }
 
-void testThatDoubleWithPrecisionIsPrinted() {
+void testThatDoubleWithPrecisionIsPrinted()
+{
   // Fixture
   double val = -1234.1234;
 
@@ -216,7 +236,8 @@ void testThatDoubleWithPrecisionIsPrinted() {
   verifyStdio("Some %.2f text", val);
 }
 
-void testThatCharIsPrinted() {
+void testThatCharIsPrinted()
+{
   // Fixture
   char val1 = 'z';
   char val2 = 'c';
@@ -226,7 +247,8 @@ void testThatCharIsPrinted() {
   verifyStdio("Bitcra%ce ro%cks!", val1, val2);
 }
 
-void testThatMultipleParamsArePrinted() {
+void testThatMultipleParamsArePrinted()
+{
   // Fixture
 
   // Test
@@ -234,7 +256,8 @@ void testThatMultipleParamsArePrinted() {
   verifyStdio("Bla %i %d text %s %03x %5x", 10, 20, "hello", 4, 5);
 }
 
-void testThatAllIntTypesArePrinted() {
+void testThatAllIntTypesArePrinted()
+{
   // Fixture
   // Test
   // Assert
@@ -258,7 +281,8 @@ void testThatAllIntTypesArePrinted() {
   verify("FFFFFFFFFFFFFFFF", "%llX", (uint64_t)0xFFFFFFFFFFFFFFFF);
 }
 
-void testThatPercentIsPrinted() {
+void testThatPercentIsPrinted()
+{
   // Fixture
   // Test
   // Assert
@@ -267,22 +291,24 @@ void testThatPercentIsPrinted() {
 
 //////////////////////////////
 
-static int putcMock(int c) {
+static int putcMock(int c)
+{
   uint32_t i = 0;
   for (; actual[i] != 0 && i < sizeof(actual); i++) {}
   actual[i] = (char)c;
   return 1;
 }
 
-static void verifyStdio(char* format, ...) {
+static void verifyStdio(char *format, ...)
+{
   // Fixture
   reset();
   va_list ap;
-  char* expected[100];
+  char *expected[100];
 
   // Trust sprintf() to be correct
   va_start(ap, format);
-  int expected_len = vsprintf((char*)expected, format, ap);
+  int expected_len = vsprintf((char *)expected, format, ap);
   va_end(ap);
 
   // Test
@@ -295,7 +321,8 @@ static void verifyStdio(char* format, ...) {
   TEST_ASSERT_EQUAL_INT(expected_len, actual_len);
 }
 
-static void verify(char* expected, char* format, ...) {
+static void verify(char *expected, char *format, ...)
+{
   reset();
   va_list ap;
 

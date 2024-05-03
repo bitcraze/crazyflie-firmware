@@ -31,7 +31,7 @@
 #include "debug.h"
 
 
-static bool isDistanceDiffSmallerThanDistanceBetweenAnchors(const tdoaMeasurement_t* tdoa);
+static bool isDistanceDiffSmallerThanDistanceBetweenAnchors(const tdoaMeasurement_t *tdoa);
 
 
 // The step TDoA outlier filter is deprecated and will be removed
@@ -61,13 +61,18 @@ filterLevel_t filterLevels[FILTER_LEVELS] = {
 };
 
 
-static float distanceSq(const point_t* a, const point_t* b);
-static float sq(float a) {return a * a;}
-static void addToBucket(filterLevel_t* filter);
-static void removeFromBucket(filterLevel_t* filter);
+static float distanceSq(const point_t *a, const point_t *b);
+static float sq(float a)
+{
+  return a * a;
+}
+static void addToBucket(filterLevel_t *filter);
+static void removeFromBucket(filterLevel_t *filter);
 static int updateBuckets(float errorDistance);
 
-bool outlierFilterTdoaValidateSteps(const tdoaMeasurement_t* tdoa, const float error, const vector_t* jacobian, const point_t* estPos) {
+bool outlierFilterTdoaValidateSteps(const tdoaMeasurement_t *tdoa, const float error,
+                                    const vector_t *jacobian, const point_t *estPos)
+{
   bool sampleIsGood = false;
 
   if (isDistanceDiffSmallerThanDistanceBetweenAnchors(tdoa)) {
@@ -102,34 +107,39 @@ bool outlierFilterTdoaValidateSteps(const tdoaMeasurement_t* tdoa, const float e
 }
 
 
-static bool isDistanceDiffSmallerThanDistanceBetweenAnchors(const tdoaMeasurement_t* tdoa) {
+static bool isDistanceDiffSmallerThanDistanceBetweenAnchors(const tdoaMeasurement_t *tdoa)
+{
   float anchorDistanceSq = distanceSq(&tdoa->anchorPositions[0], &tdoa->anchorPositions[1]);
   float distanceDiffSq = sq(tdoa->distanceDiff);
   return (distanceDiffSq < anchorDistanceSq);
 }
 
-static float distanceSq(const point_t* a, const point_t* b) {
+static float distanceSq(const point_t *a, const point_t *b)
+{
   return sq(a->x - b->x) + sq(a->y - b->y) + sq(a->z - b->z);
 }
 
 
-static void addToBucket(filterLevel_t* filter) {
+static void addToBucket(filterLevel_t *filter)
+{
   if (filter->bucket < MAX_BUCKET_FILL) {
     filter->bucket++;
   }
 }
 
-static void removeFromBucket(filterLevel_t* filter) {
+static void removeFromBucket(filterLevel_t *filter)
+{
   if (filter->bucket > 0) {
     filter->bucket--;
   }
 }
 
-static int updateBuckets(float errorDistance) {
+static int updateBuckets(float errorDistance)
+{
   int filterIndex = FILTER_NONE;
 
   for (int i = FILTER_LEVELS - 1; i >= 0; i--) {
-    filterLevel_t* filter = &filterLevels[i];
+    filterLevel_t *filter = &filterLevels[i];
 
     if (errorDistance < filter->acceptanceLevel) {
       removeFromBucket(filter);
@@ -146,11 +156,11 @@ static int updateBuckets(float errorDistance) {
 }
 
 LOG_GROUP_START(outlierf)
-  LOG_ADD(LOG_INT32, bucket0, &filterLevels[0].bucket)
-  LOG_ADD(LOG_INT32, bucket1, &filterLevels[1].bucket)
-  LOG_ADD(LOG_INT32, bucket2, &filterLevels[2].bucket)
-  LOG_ADD(LOG_INT32, bucket3, &filterLevels[3].bucket)
-  LOG_ADD(LOG_INT32, bucket4, &filterLevels[4].bucket)
-  LOG_ADD(LOG_FLOAT, accLev, &acceptanceLevel)
-  LOG_ADD(LOG_FLOAT, errD, &errorDistance)
+LOG_ADD(LOG_INT32, bucket0, &filterLevels[0].bucket)
+LOG_ADD(LOG_INT32, bucket1, &filterLevels[1].bucket)
+LOG_ADD(LOG_INT32, bucket2, &filterLevels[2].bucket)
+LOG_ADD(LOG_INT32, bucket3, &filterLevels[3].bucket)
+LOG_ADD(LOG_INT32, bucket4, &filterLevels[4].bucket)
+LOG_ADD(LOG_FLOAT, accLev, &acceptanceLevel)
+LOG_ADD(LOG_FLOAT, errD, &errorDistance)
 LOG_GROUP_STOP(outlierf)

@@ -13,7 +13,7 @@
 
 uint8_t kveData[KVE_PARTITION_LENGTH];
 
-static size_t read(size_t address, void* data, size_t length)
+static size_t read(size_t address, void *data, size_t length)
 {
   if ((length == 0) || (address + length > KVE_PARTITION_LENGTH)) {
     return 0;
@@ -24,7 +24,7 @@ static size_t read(size_t address, void* data, size_t length)
   return length;
 }
 
-static size_t write(size_t address, const void* data, size_t length)
+static size_t write(size_t address, const void *data, size_t length)
 {
   if ((length == 0) || (address + length > KVE_PARTITION_LENGTH)) {
     return 0;
@@ -89,11 +89,9 @@ static void fillKveMemory(void)
   int i;
   char keyString[30];
   // Fill memory
-  for (i = 0; i < (KVE_PARTITION_LENGTH / 10); i++)
-  {
+  for (i = 0; i < (KVE_PARTITION_LENGTH / 10); i++) {
     sprintf(keyString, "prm/test.value%i", i);
-    if (!kveStore(&kve, keyString, &i, sizeof(i)))
-    {
+    if (!kveStore(&kve, keyString, &i, sizeof(i))) {
       break;
     }
   }
@@ -102,17 +100,20 @@ static void fillKveMemory(void)
 
 //-----------------------------Test cases -------------------------------- //
 
-void setUp(void) {
+void setUp(void)
+{
   // The full memory is initialized to zero
   memset(kveData, 0, KVE_PARTITION_LENGTH);
   kveFormat(&kve);
 }
 
-void tearDown(void) {
+void tearDown(void)
+{
   // Empty
 }
 
-void testSetupKve(void) {
+void testSetupKve(void)
+{
   // Fixture
   // Test
   bool actual = kveCheck(&kve);
@@ -121,7 +122,8 @@ void testSetupKve(void) {
   TEST_ASSERT_EQUAL(true, actual);
 }
 
-void testFetchEmpty(void) {
+void testFetchEmpty(void)
+{
   // Fixture
   uint8_t buffer[8];
   // Test
@@ -131,7 +133,8 @@ void testFetchEmpty(void) {
   TEST_ASSERT_EQUAL(false, actual);
 }
 
-void testStoreAndReadFirstKeyValue(void) {
+void testStoreAndReadFirstKeyValue(void)
+{
   // Fixture
   bool expectedStore = true;
   int expectedRead = 4;
@@ -149,7 +152,8 @@ void testStoreAndReadFirstKeyValue(void) {
   TEST_ASSERT_EQUAL_UINT32(u32Store, u32Read);
 }
 
-void testOneStoredForEach(void) {
+void testOneStoredForEach(void)
+{
   // Fixture
   uint32_t u32Store = 0xBEAF;
 
@@ -162,7 +166,8 @@ void testOneStoredForEach(void) {
   TEST_ASSERT_EQUAL(true, actual);
 }
 
-void testFullStorageForEach(void) {
+void testFullStorageForEach(void)
+{
   // Fixture
   uint32_t u32Store = 0xBEAF;
   // Fill memory
@@ -174,7 +179,8 @@ void testFullStorageForEach(void) {
   TEST_ASSERT_EQUAL(true, actual);
 }
 
-void testStoreWhenMemoryIsFull(void) {
+void testStoreWhenMemoryIsFull(void)
+{
   // Fixture
   bool expected = false;
   uint32_t u32Store = 0xBEAF;
@@ -186,7 +192,8 @@ void testStoreWhenMemoryIsFull(void) {
   TEST_ASSERT_EQUAL(expected, actual);
 }
 
-void testRemoveAndStoreWhenMemoryIsFull(void) {
+void testRemoveAndStoreWhenMemoryIsFull(void)
+{
   // Fixture
   uint32_t u32Store = 0xBEAF;
   // Fill memory
@@ -199,7 +206,8 @@ void testRemoveAndStoreWhenMemoryIsFull(void) {
   TEST_ASSERT_EQUAL(true, actualStore);
 }
 
-void testRemoveAndStoreBiggerWhenMemoryIsFull(void) {
+void testRemoveAndStoreBiggerWhenMemoryIsFull(void)
+{
   // Fixture
   uint32_t u32Store = 0xBEAF;
   // Fill memory
@@ -214,7 +222,8 @@ void testRemoveAndStoreBiggerWhenMemoryIsFull(void) {
   TEST_ASSERT_EQUAL(false, actualStore);
 }
 
-void testStorageStatistics(void) {
+void testStorageStatistics(void)
+{
   // Fixture
   // Fill memory
   char *name = "hello";
@@ -235,7 +244,8 @@ void testStorageStatistics(void) {
   TEST_ASSERT_EQUAL(strlen(name) + sizeof(i) + 3, stats.totalSize - stats.spaceLeftUntilForcedDefrag);
 }
 
-void testFragmentationStatisticsIncreaseWhenFragmented(void) {
+void testFragmentationStatisticsIncreaseWhenFragmented(void)
+{
   // Fixture
   // Fill memory
   char data[128];

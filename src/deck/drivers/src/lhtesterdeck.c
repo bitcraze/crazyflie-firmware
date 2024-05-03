@@ -80,12 +80,14 @@ static void timerFcn(xTimerHandle xTimer)
   }
 }
 
-static void startSwTimer() {
+static void startSwTimer()
+{
   xTimerHandle timer = xTimerCreate("lhTesterTimer", M2T(1), pdTRUE, 0, timerFcn);
   xTimerStart(timer, 0);
 }
 
-static void setUpHwTimer(){
+static void setUpHwTimer()
+{
   //Init structures
   GPIO_InitTypeDef GPIO_InitStructure;
   TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;

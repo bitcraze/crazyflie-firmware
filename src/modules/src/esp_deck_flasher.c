@@ -50,13 +50,14 @@ static uint8_t overshoot;
 static uint32_t sendBufferIndex;
 
 
-static bool initialize() {
-  if (!espRomBootloaderSync(&sendBuffer[0])){
+static bool initialize()
+{
+  if (!espRomBootloaderSync(&sendBuffer[0])) {
     DEBUG_PRINT("Write failed - cannot sync with bootloader\n");
     return false;
   }
 
-  if (!espRomBootloaderSpiAttach(&sendBuffer[0])){
+  if (!espRomBootloaderSpiAttach(&sendBuffer[0])) {
     DEBUG_PRINT("Write failed - cannot attach SPI flash\n");
     return false;
   }
@@ -65,7 +66,8 @@ static bool initialize() {
   // It should be possible to send the actual binary size to the ESP but we get flashing errors sometimes for
   // the last (smaller) buffer. Solve it by sending full buffers.
   const uint32_t quantizedSize = numberOfFlashBuffers * ESP_SLIP_MTU;
-  if (!espRomBootloaderFlashBegin(&sendBuffer[0], numberOfFlashBuffers, quantizedSize, ESP_FW_ADDRESS)) {
+  if (!espRomBootloaderFlashBegin(&sendBuffer[0], numberOfFlashBuffers, quantizedSize,
+                                  ESP_FW_ADDRESS)) {
     DEBUG_PRINT("Failed to start flashing\n");
     return false;
   }
@@ -76,7 +78,8 @@ static bool initialize() {
   return true;
 }
 
-static void appendToSendBuffer(const uint8_t writeLen, const uint8_t *buffer) {
+static void appendToSendBuffer(const uint8_t writeLen, const uint8_t *buffer)
+{
   const uint32_t tail = ESP_SLIP_DATA_START + sendBufferIndex;
 
   const uint32_t newIndex = sendBufferIndex + writeLen;
@@ -90,7 +93,8 @@ static void appendToSendBuffer(const uint8_t writeLen, const uint8_t *buffer) {
   }
 }
 
-static void appendOvershootToSendBuffer(const uint8_t writeLen, const uint8_t *buffer) {
+static void appendOvershootToSendBuffer(const uint8_t writeLen, const uint8_t *buffer)
+{
   // put overshoot into send buffer for next send & update sendBufferIndex
   if (overshoot) {
     memcpy(&sendBuffer[ESP_SLIP_DATA_START], &buffer[writeLen - overshoot], overshoot);
@@ -100,7 +104,9 @@ static void appendOvershootToSendBuffer(const uint8_t writeLen, const uint8_t *b
 }
 
 
-bool espDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t *buffer, const DeckMemDef_t* memDef) {
+bool espDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t *buffer,
+                         const DeckMemDef_t *memDef)
+{
   if (memAddr == 0) {
     if (!initialize()) {
       return false;

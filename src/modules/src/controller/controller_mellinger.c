@@ -90,7 +90,7 @@ static controllerMellinger_t g_self = {
 };
 
 
-void controllerMellingerReset(controllerMellinger_t* self)
+void controllerMellingerReset(controllerMellinger_t *self)
 {
   self->i_error_x = 0;
   self->i_error_y = 0;
@@ -100,7 +100,7 @@ void controllerMellingerReset(controllerMellinger_t* self)
   self->i_error_m_z = 0;
 }
 
-void controllerMellingerInit(controllerMellinger_t* self)
+void controllerMellingerInit(controllerMellinger_t *self)
 {
   // copy default values (bindings), or does nothing (firmware)
   *self = g_self;
@@ -108,15 +108,16 @@ void controllerMellingerInit(controllerMellinger_t* self)
   controllerMellingerReset(self);
 }
 
-bool controllerMellingerTest(controllerMellinger_t* self)
+bool controllerMellingerTest(controllerMellinger_t *self)
 {
   return true;
 }
 
-void controllerMellinger(controllerMellinger_t* self, control_t *control, const setpoint_t *setpoint,
-                                         const sensorData_t *sensors,
-                                         const state_t *state,
-                                         const stabilizerStep_t stabilizerStep)
+void controllerMellinger(controllerMellinger_t *self, control_t *control,
+                         const setpoint_t *setpoint,
+                         const sensorData_t *sensors,
+                         const state_t *state,
+                         const stabilizerStep_t stabilizerStep)
 {
   struct vec r_error;
   struct vec v_error;
@@ -136,7 +137,7 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
     return;
   }
 
-  dt = (float)(1.0f/ATTITUDE_RATE);
+  dt = (float)(1.0f / ATTITUDE_RATE);
   struct vec setpointPos = mkvec(setpoint->position.x, setpoint->position.y, setpoint->position.z);
   struct vec setpointVel = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);
   struct vec statePos = mkvec(state->position.x, state->position.y, state->position.z);
@@ -160,16 +161,20 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
 
   // Desired thrust [F_des]
   if (setpoint->mode.x == modeAbs) {
-    target_thrust.x = self->mass * setpoint->acceleration.x                       + self->kp_xy * r_error.x + self->kd_xy * v_error.x + self->ki_xy * self->i_error_x;
-    target_thrust.y = self->mass * setpoint->acceleration.y                       + self->kp_xy * r_error.y + self->kd_xy * v_error.y + self->ki_xy * self->i_error_y;
-    target_thrust.z = self->mass * (setpoint->acceleration.z + GRAVITY_MAGNITUDE) + self->kp_z  * r_error.z + self->kd_z  * v_error.z + self->ki_z  * self->i_error_z;
+    target_thrust.x = self->mass * setpoint->acceleration.x                       + self->kp_xy *
+                      r_error.x + self->kd_xy * v_error.x + self->ki_xy * self->i_error_x;
+    target_thrust.y = self->mass * setpoint->acceleration.y                       + self->kp_xy *
+                      r_error.y + self->kd_xy * v_error.y + self->ki_xy * self->i_error_y;
+    target_thrust.z = self->mass * (setpoint->acceleration.z + GRAVITY_MAGNITUDE) + self->kp_z  *
+                      r_error.z + self->kd_z  * v_error.z + self->ki_z  * self->i_error_z;
   } else {
     target_thrust.x = -sinf(radians(setpoint->attitude.pitch));
     target_thrust.y = -sinf(radians(setpoint->attitude.roll));
     // In case of a timeout, the commander tries to level, ie. x/y are disabled, but z will use the previous setting
     // In that case we ignore the last feedforward term for acceleration
     if (setpoint->mode.z == modeAbs) {
-      target_thrust.z = self->mass * GRAVITY_MAGNITUDE + self->kp_z  * r_error.z + self->kd_z  * v_error.z + self->ki_z  * self->i_error_z;
+      target_thrust.z = self->mass * GRAVITY_MAGNITUDE + self->kp_z  * r_error.z + self->kd_z  * v_error.z
+                        + self->ki_z  * self->i_error_z;
     } else {
       target_thrust.z = 1;
     }
@@ -181,13 +186,15 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   } else if (setpoint->mode.yaw == modeAbs) {
     desiredYaw = setpoint->attitude.yaw;
   } else if (setpoint->mode.quat == modeAbs) {
-    struct quat setpoint_quat = mkquat(setpoint->attitudeQuaternion.x, setpoint->attitudeQuaternion.y, setpoint->attitudeQuaternion.z, setpoint->attitudeQuaternion.w);
+    struct quat setpoint_quat = mkquat(setpoint->attitudeQuaternion.x, setpoint->attitudeQuaternion.y,
+                                       setpoint->attitudeQuaternion.z, setpoint->attitudeQuaternion.w);
     struct vec rpy = quat2rpy(setpoint_quat);
     desiredYaw = degrees(rpy.z);
   }
 
   // Z-Axis [zB]
-  struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
+  struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y,
+                         state->attitudeQuaternion.z, state->attitudeQuaternion.w);
   struct mat33 R = quat2rotmat(q);
   z_axis = mcolumn(R, 2);
 
@@ -238,9 +245,20 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   float y = q.y;
   float z = q.z;
   float w = q.w;
-  eR.x = (-1 + 2*fsqr(x) + 2*fsqr(y))*y_axis_desired.z + self->z_axis_desired.y - 2*(x*y_axis_desired.x*z + y*y_axis_desired.y*z - x*y*self->z_axis_desired.x + fsqr(x)*self->z_axis_desired.y + fsqr(z)*self->z_axis_desired.y - y*z*self->z_axis_desired.z) +    2*w*(-(y*y_axis_desired.x) - z*self->z_axis_desired.x + x*(y_axis_desired.y + self->z_axis_desired.z));
-  eR.y = x_axis_desired.z - self->z_axis_desired.x - 2*(fsqr(x)*x_axis_desired.z + y*(x_axis_desired.z*y - x_axis_desired.y*z) - (fsqr(y) + fsqr(z))*self->z_axis_desired.x + x*(-(x_axis_desired.x*z) + y*self->z_axis_desired.y + z*self->z_axis_desired.z) + w*(x*x_axis_desired.y + z*self->z_axis_desired.y - y*(x_axis_desired.x + self->z_axis_desired.z)));
-  eR.z = y_axis_desired.x - 2*(y*(x*x_axis_desired.x + y*y_axis_desired.x - x*y_axis_desired.y) + w*(x*x_axis_desired.z + y*y_axis_desired.z)) + 2*(-(x_axis_desired.z*y) + w*(x_axis_desired.x + y_axis_desired.y) + x*y_axis_desired.z)*z - 2*y_axis_desired.x*fsqr(z) + x_axis_desired.y*(-1 + 2*fsqr(x) + 2*fsqr(z));
+  eR.x = (-1 + 2 * fsqr(x) + 2 * fsqr(y)) * y_axis_desired.z + self->z_axis_desired.y - 2 *
+         (x * y_axis_desired.x * z + y * y_axis_desired.y * z - x * y * self->z_axis_desired.x + fsqr(
+            x) * self->z_axis_desired.y + fsqr(z) * self->z_axis_desired.y - y * z * self->z_axis_desired.z) +
+         2 * w * (-(y * y_axis_desired.x) - z * self->z_axis_desired.x + x * (y_axis_desired.y +
+                  self->z_axis_desired.z));
+  eR.y = x_axis_desired.z - self->z_axis_desired.x - 2 * (fsqr(x) * x_axis_desired.z + y *
+         (x_axis_desired.z * y - x_axis_desired.y * z) - (fsqr(y) + fsqr(z)) * self->z_axis_desired.x + x *
+         (-(x_axis_desired.x * z) + y * self->z_axis_desired.y + z * self->z_axis_desired.z) + w *
+         (x * x_axis_desired.y + z * self->z_axis_desired.y - y * (x_axis_desired.x +
+             self->z_axis_desired.z)));
+  eR.z = y_axis_desired.x - 2 * (y * (x * x_axis_desired.x + y * y_axis_desired.x - x *
+                                      y_axis_desired.y) + w * (x * x_axis_desired.z + y * y_axis_desired.z)) + 2 * (-
+                                          (x_axis_desired.z * y) + w * (x_axis_desired.x + y_axis_desired.y) + x * y_axis_desired.z) * z - 2 *
+         y_axis_desired.x * fsqr(z) + x_axis_desired.y * (-1 + 2 * fsqr(x) + 2 * fsqr(z));
 
   // Account for Crazyflie coordinate system
   eR.y = -eR.y;
@@ -257,8 +275,10 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   ew.y = -radians(setpoint->attitudeRate.pitch) - stateAttitudeRatePitch;
   ew.z = radians(setpoint->attitudeRate.yaw) - stateAttitudeRateYaw;
   if (self->prev_omega_roll == self->prev_omega_roll) { /*d part initialized*/
-    err_d_roll = ((radians(setpoint->attitudeRate.roll) - self->prev_setpoint_omega_roll) - (stateAttitudeRateRoll - self->prev_omega_roll)) / dt;
-    err_d_pitch = (-(radians(setpoint->attitudeRate.pitch) - self->prev_setpoint_omega_pitch) - (stateAttitudeRatePitch - self->prev_omega_pitch)) / dt;
+    err_d_roll = ((radians(setpoint->attitudeRate.roll) - self->prev_setpoint_omega_roll) -
+                  (stateAttitudeRateRoll - self->prev_omega_roll)) / dt;
+    err_d_pitch = (-(radians(setpoint->attitudeRate.pitch) - self->prev_setpoint_omega_pitch) -
+                   (stateAttitudeRatePitch - self->prev_omega_pitch)) / dt;
   }
   self->prev_omega_roll = stateAttitudeRateRoll;
   self->prev_omega_pitch = stateAttitudeRatePitch;
@@ -276,8 +296,10 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   self->i_error_m_z = clamp(self->i_error_m_z, -self->i_range_m_z, self->i_range_m_z);
 
   // Moment:
-  M.x = -self->kR_xy * eR.x + self->kw_xy * ew.x + self->ki_m_xy * self->i_error_m_x + self->kd_omega_rp * err_d_roll;
-  M.y = -self->kR_xy * eR.y + self->kw_xy * ew.y + self->ki_m_xy * self->i_error_m_y + self->kd_omega_rp * err_d_pitch;
+  M.x = -self->kR_xy * eR.x + self->kw_xy * ew.x + self->ki_m_xy * self->i_error_m_x +
+        self->kd_omega_rp * err_d_roll;
+  M.y = -self->kR_xy * eR.y + self->kw_xy * ew.y + self->ki_m_xy * self->i_error_m_y +
+        self->kd_omega_rp * err_d_pitch;
   M.z = -self->kR_z  * eR.z + self->kw_z  * ew.z + self->ki_m_z  * self->i_error_m_z;
 
   // Output
@@ -327,9 +349,9 @@ bool controllerMellingerFirmwareTest(void)
 }
 
 void controllerMellingerFirmware(control_t *control, const setpoint_t *setpoint,
-                                         const sensorData_t *sensors,
-                                         const state_t *state,
-                                         const stabilizerStep_t stabilizerStep)
+                                 const sensorData_t *sensors,
+                                 const state_t *state,
+                                 const stabilizerStep_t stabilizerStep)
 {
   controllerMellinger(&g_self, control, setpoint, sensors, state, stabilizerStep);
 }

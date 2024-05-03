@@ -53,7 +53,8 @@ void adcInit(void)
 
   /* init ADCs in independent mode, div clock by two */
   ADC_CommonInitStructure.ADC_Mode = ADC_Mode_Independent;
-  ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div2; /* HCLK = 168MHz, PCLK2 = 84MHz, ADCCLK = 42MHz (when using ADC_Prescaler_Div2) */
+  ADC_CommonInitStructure.ADC_Prescaler =
+    ADC_Prescaler_Div2; /* HCLK = 168MHz, PCLK2 = 84MHz, ADCCLK = 42MHz (when using ADC_Prescaler_Div2) */
   ADC_CommonInitStructure.ADC_DMAAccessMode = ADC_DMAAccessMode_Disabled;
   ADC_CommonInitStructure.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_5Cycles;
   ADC_CommonInit(&ADC_CommonInitStructure);
@@ -74,7 +75,7 @@ static uint16_t analogReadChannel(uint8_t channel)
   ADC_SoftwareStartConv(ADC2);
 
   /* Wait until conversion completion */
-  while(ADC_GetFlagStatus(ADC2, ADC_FLAG_EOC) == RESET);
+  while (ADC_GetFlagStatus(ADC2, ADC_FLAG_EOC) == RESET);
 
   /* Get the conversion value */
   return ADC_GetConversionValue(ADC2);
@@ -122,13 +123,22 @@ void analogReadResolution(uint8_t bits)
   assert_param((bits >= 6) && (bits <= 12));
 
   adcRange = 1 << bits;
-  switch (bits)
-  {
-    case 12: stregResolution = ADC_Resolution_12b; break;
-    case 10: stregResolution = ADC_Resolution_10b; break;
-    case 8:  stregResolution = ADC_Resolution_8b; break;
-    case 6:  stregResolution = ADC_Resolution_6b; break;
-    default: stregResolution = ADC_Resolution_12b; break;
+  switch (bits) {
+    case 12:
+      stregResolution = ADC_Resolution_12b;
+      break;
+    case 10:
+      stregResolution = ADC_Resolution_10b;
+      break;
+    case 8:
+      stregResolution = ADC_Resolution_8b;
+      break;
+    case 6:
+      stregResolution = ADC_Resolution_6b;
+      break;
+    default:
+      stregResolution = ADC_Resolution_12b;
+      break;
   }
 
   /* Init ADC2 witch new resolution */

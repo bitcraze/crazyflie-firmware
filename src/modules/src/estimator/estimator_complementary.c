@@ -68,30 +68,29 @@ void estimatorComplementary(state_t *state, const stabilizerStep_t stabilizerSte
   // Pull the latest sensors values of interest; discard the rest
   measurement_t m;
   while (estimatorDequeue(&m)) {
-    switch (m.type)
-    {
-    case MeasurementTypeGyroscope:
-      gyro = m.data.gyroscope.gyro;
-      break;
-    case MeasurementTypeAcceleration:
-      acc = m.data.acceleration.acc;
-      break;
-    case MeasurementTypeBarometer:
-      baro = m.data.barometer.baro;
-      break;
-    case MeasurementTypeTOF:
-      tof = m.data.tof;
-      break;
-    default:
-      break;
+    switch (m.type) {
+      case MeasurementTypeGyroscope:
+        gyro = m.data.gyroscope.gyro;
+        break;
+      case MeasurementTypeAcceleration:
+        acc = m.data.acceleration.acc;
+        break;
+      case MeasurementTypeBarometer:
+        baro = m.data.barometer.baro;
+        break;
+      case MeasurementTypeTOF:
+        tof = m.data.tof;
+        break;
+      default:
+        break;
     }
   }
 
   // Update filter
   if (RATE_DO_EXECUTE(ATTITUDE_UPDATE_RATE, stabilizerStep)) {
     sensfusion6UpdateQ(gyro.x, gyro.y, gyro.z,
-                        acc.x, acc.y, acc.z,
-                        ATTITUDE_UPDATE_DT);
+                       acc.x, acc.y, acc.z,
+                       ATTITUDE_UPDATE_DT);
 
     // Save attitude, adjusted for the legacy CF2 body coordinate system
     sensfusion6GetEulerRPY(&state->attitude.roll, &state->attitude.pitch, &state->attitude.yaw);
@@ -105,8 +104,8 @@ void estimatorComplementary(state_t *state, const stabilizerStep_t stabilizerSte
       &state->attitudeQuaternion.w);
 
     state->acc.z = sensfusion6GetAccZWithoutGravity(acc.x,
-                                                    acc.y,
-                                                    acc.z);
+                   acc.y,
+                   acc.z);
 
     positionUpdateVelocity(state->acc.z, ATTITUDE_UPDATE_DT);
   }

@@ -26,7 +26,8 @@
 #include "mm_distance.h"
 
 // Measurement model where the measurement is the distance to a known point in space
-void kalmanCoreUpdateWithDistance(kalmanCoreData_t* this, distanceMeasurement_t* d) {
+void kalmanCoreUpdateWithDistance(kalmanCoreData_t *this, distanceMeasurement_t *d)
+{
   // a measurement of distance to point (x, y, z)
   float h[KC_STATE_DIM] = {0};
   arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
@@ -40,9 +41,9 @@ void kalmanCoreUpdateWithDistance(kalmanCoreData_t* this, distanceMeasurement_t*
   float predictedDistance = arm_sqrt(powf(dx, 2) + powf(dy, 2) + powf(dz, 2));
   if (predictedDistance != 0.0f) {
     // The measurement is: z = sqrt(dx^2 + dy^2 + dz^2). The derivative dz/dX gives h.
-    h[KC_STATE_X] = dx/predictedDistance;
-    h[KC_STATE_Y] = dy/predictedDistance;
-    h[KC_STATE_Z] = dz/predictedDistance;
+    h[KC_STATE_X] = dx / predictedDistance;
+    h[KC_STATE_Y] = dy / predictedDistance;
+    h[KC_STATE_Z] = dz / predictedDistance;
   } else {
     // Avoid divide by zero
     h[KC_STATE_X] = 1.0f;
@@ -50,5 +51,5 @@ void kalmanCoreUpdateWithDistance(kalmanCoreData_t* this, distanceMeasurement_t*
     h[KC_STATE_Z] = 0.0f;
   }
 
-  kalmanCoreScalarUpdate(this, &H, measuredDistance-predictedDistance, d->stdDev);
+  kalmanCoreScalarUpdate(this, &H, measuredDistance - predictedDistance, d->stdDev);
 }

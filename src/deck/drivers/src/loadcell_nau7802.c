@@ -22,7 +22,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * loadcell.c - Deck driver for NAU7802 load cell
- * See 
+ * See
  *  * https://learn.sparkfun.com/tutorials/qwiic-scale-hookup-guide
  *  * Code based on https://github.com/sparkfun/SparkFun_Qwiic_Scale_NAU7802_Arduino_Library
  */
@@ -66,12 +66,11 @@ static STATS_CNT_RATE_DEFINE(rate, 1000);
 static xSemaphoreHandle dataReady;
 static StaticSemaphore_t dataReadyBuffer;
 
-static void loadcellTask(void* prm);
+static void loadcellTask(void *prm);
 
 ////////////////////////////
 
-typedef struct
-{
+typedef struct {
   uint8_t pu_ctrl;
   uint8_t ctrl1;
   uint8_t ctrl2;
@@ -79,8 +78,7 @@ typedef struct
 static nau7802_t nau7802;
 
 //Register Map
-typedef enum
-{
+typedef enum {
   NAU7802_PU_CTRL = 0x00,
   NAU7802_CTRL1,
   NAU7802_CTRL2,
@@ -111,8 +109,7 @@ typedef enum
 } Scale_Registers;
 
 //Bits within the PU_CTRL register
-typedef enum
-{
+typedef enum {
   NAU7802_PU_CTRL_RR = 0,
   NAU7802_PU_CTRL_PUD,
   NAU7802_PU_CTRL_PUA,
@@ -124,8 +121,7 @@ typedef enum
 } PU_CTRL_Bits;
 
 //Bits within the CTRL1 register
-typedef enum
-{
+typedef enum {
   NAU7802_CTRL1_GAIN = 2,
   NAU7802_CTRL1_VLDO = 5,
   NAU7802_CTRL1_DRDY_SEL = 6,
@@ -133,8 +129,7 @@ typedef enum
 } CTRL1_Bits;
 
 //Bits within the CTRL2 register
-typedef enum
-{
+typedef enum {
   NAU7802_CTRL2_CALMOD = 0,
   NAU7802_CTRL2_CALS = 2,
   NAU7802_CTRL2_CAL_ERROR = 3,
@@ -143,8 +138,7 @@ typedef enum
 } CTRL2_Bits;
 
 //Bits within the PGA register
-typedef enum
-{
+typedef enum {
   NAU7802_PGA_CHP_DIS = 0,
   NAU7802_PGA_INV = 3,
   NAU7802_PGA_BYPASS_EN,
@@ -154,8 +148,7 @@ typedef enum
 } PGA_Bits;
 
 //Bits within the PGA PWR register
-typedef enum
-{
+typedef enum {
   NAU7802_PGA_PWR_PGA_CURR = 0,
   NAU7802_PGA_PWR_ADC_CURR = 2,
   NAU7802_PGA_PWR_MSTR_BIAS_CURR = 4,
@@ -163,8 +156,7 @@ typedef enum
 } PGA_PWR_Bits;
 
 //Allowed Low drop out regulator voltages
-typedef enum
-{
+typedef enum {
   NAU7802_LDO_2V4 = 0b111,
   NAU7802_LDO_2V7 = 0b110,
   NAU7802_LDO_3V0 = 0b101,
@@ -176,8 +168,7 @@ typedef enum
 } NAU7802_LDO_Values;
 
 //Allowed gains
-typedef enum
-{
+typedef enum {
   NAU7802_GAIN_128 = 0b111,
   NAU7802_GAIN_64 = 0b110,
   NAU7802_GAIN_32 = 0b101,
@@ -189,8 +180,7 @@ typedef enum
 } NAU7802_Gain_Values;
 
 //Allowed samples per second
-typedef enum
-{
+typedef enum {
   NAU7802_SPS_320 = 0b111,
   NAU7802_SPS_80 = 0b011,
   NAU7802_SPS_40 = 0b010,
@@ -199,21 +189,19 @@ typedef enum
 } NAU7802_SPS_Values;
 
 //Select between channel values
-typedef enum
-{
+typedef enum {
   NAU7802_CHANNEL_1 = 0,
   NAU7802_CHANNEL_2 = 1,
 } NAU7802_Channels;
 
 //Calibration state
-typedef enum
-{
+typedef enum {
   NAU7802_CAL_SUCCESS = 0,
   NAU7802_CAL_IN_PROGRESS = 1,
   NAU7802_CAL_FAILURE = 2,
 } NAU7802_Cal_Status;
 
-void nau7802_init(nau7802_t* ctx)
+void nau7802_init(nau7802_t *ctx)
 {
   ctx->pu_ctrl = 0;
   ctx->ctrl1 = 0;
@@ -281,7 +269,7 @@ bool nau7802_setGain(nau7802_t *ctx, NAU7802_Gain_Values gainValue)
 }
 
 //Set the readings per second
-bool nau7802_setSampleRate(nau7802_t* ctx, NAU7802_SPS_Values rate)
+bool nau7802_setSampleRate(nau7802_t *ctx, NAU7802_SPS_Values rate)
 {
   bool result = true;
   ctx->ctrl2 &= 0b10001111; // Clear CRS bits
@@ -355,12 +343,12 @@ bool nau7802_getMeasurement(nau7802_t *ctx, int32_t *measurement)
   bool result = true;
 
   uint8_t data[3];
-  result &= i2cdevReadReg8(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_ADCO_B2, 3, (uint8_t*)&data);
+  result &= i2cdevReadReg8(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_ADCO_B2, 3, (uint8_t *)&data);
   // DEBUG_PRINT("M: %d %d, %d, %d\n", result, data[0], data[1], data[2]);
 
   int32_t valueRaw = ((int32_t)data[0] << 16) |
-                      ((int32_t)data[1] << 8) |
-                      ((int32_t)data[2] << 0);
+                     ((int32_t)data[1] << 8) |
+                     ((int32_t)data[2] << 0);
   // recover the sign
   int32_t valueShifted = (valueRaw << 8);
   int32_t value = (valueShifted >> 8);
@@ -412,7 +400,7 @@ void __attribute__((used)) EXTI8_Callback(void)
 static void loadcellInit(DeckInfo *info)
 {
   // if (isInit) {
-    // return;
+  // return;
   // }
 
   isInit = true;
@@ -443,7 +431,8 @@ static void loadcellInit(DeckInfo *info)
     isInit &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_ADC, 0x30);
     DEBUG_PRINT("CLK_CHP [%d]\n", isInit);
     // Enable 330pF decoupling cap on chan 2. From 9.14 application circuit note.
-    isInit &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PGA_PWR, NAU7802_PGA_PWR_PGA_CAP_EN, 1);
+    isInit &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PGA_PWR, NAU7802_PGA_PWR_PGA_CAP_EN,
+                             1);
     DEBUG_PRINT("CAP [%d]\n", isInit);
     // calibrate
     isInit &= nau7802_calibrateAFE(&nau7802);
@@ -469,12 +458,11 @@ static void loadcellInit(DeckInfo *info)
   }
 }
 
-static void loadcellTask(void* prm)
+static void loadcellTask(void *prm)
 {
   while (1) {
     BaseType_t semResult = xSemaphoreTake(dataReady, M2T(500));
-    if (semResult == pdTRUE || digitalRead(DATA_READY_PIN))
-    {
+    if (semResult == pdTRUE || digitalRead(DATA_READY_PIN)) {
       int32_t measurement;
       bool result = nau7802_getMeasurement(&nau7802, &measurement);
       if (result) {
@@ -498,14 +486,13 @@ static void loadcellTask(void* prm)
         case NAU7802_SPS_80:
         case NAU7802_SPS_40:
         case NAU7802_SPS_20:
-        case NAU7802_SPS_10:
-          {
-            bool result = nau7802_setSampleRate(&nau7802, sampleRateDesired);
-            if (result) {
-              DEBUG_PRINT("switched sample rate!\n");
-            }
+        case NAU7802_SPS_10: {
+          bool result = nau7802_setSampleRate(&nau7802, sampleRateDesired);
+          if (result) {
+            DEBUG_PRINT("switched sample rate!\n");
           }
-          break;
+        }
+        break;
         default:
           DEBUG_PRINT("Unknown sample rate!\n");
           break;
@@ -515,16 +502,14 @@ static void loadcellTask(void* prm)
     if (channel != channelDesired) {
       switch (channelDesired) {
         case NAU7802_CHANNEL_1:
-        case NAU7802_CHANNEL_2:
-          {
-            bool result = nau7802_setChannel(&nau7802, channelDesired);
-            result &= nau7802_calibrateAFE(&nau7802);
-            if (result)
-            {
-              DEBUG_PRINT("switched and calibrated channel!\n");
-            }
+        case NAU7802_CHANNEL_2: {
+          bool result = nau7802_setChannel(&nau7802, channelDesired);
+          result &= nau7802_calibrateAFE(&nau7802);
+          if (result) {
+            DEBUG_PRINT("switched and calibrated channel!\n");
           }
-          break;
+        }
+        break;
         default:
           DEBUG_PRINT("Unknown channel!\n");
           break;
@@ -537,13 +522,13 @@ static void loadcellTask(void* prm)
 }
 
 static const DeckDriver loadcell_deck = {
-    .vid = 0x00,
-    .pid = 0x00,
-    .name = "bcLoadcell",
+  .vid = 0x00,
+  .pid = 0x00,
+  .name = "bcLoadcell",
 
-    .usedGpio = DECK_USING_IO_1,
+  .usedGpio = DECK_USING_IO_1,
 
-    .init = loadcellInit,
+  .init = loadcellInit,
 };
 
 DECK_DRIVER(loadcell_deck);

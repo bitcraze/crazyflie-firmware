@@ -37,43 +37,43 @@ extern eventtrigger _eventtrigger_stop;
 
 uint16_t eventtriggerGetId(const eventtrigger *event)
 {
-    // const eventtrigger* start = &_eventtrigger_start;
-    return event - &_eventtrigger_start;
-    return 0;
+  // const eventtrigger* start = &_eventtrigger_start;
+  return event - &_eventtrigger_start;
+  return 0;
 }
 
 const eventtrigger *eventtriggerGetById(uint16_t id)
 {
-    const eventtrigger *result = &_eventtrigger_start;
-    int numEventtriggers = &_eventtrigger_stop - &_eventtrigger_start;
-    if (id < numEventtriggers) {
-        return &result[id];
-    }
-    return 0;
+  const eventtrigger *result = &_eventtrigger_start;
+  int numEventtriggers = &_eventtrigger_stop - &_eventtrigger_start;
+  if (id < numEventtriggers) {
+    return &result[id];
+  }
+  return 0;
 }
 
-const eventtrigger* eventtriggerGetByName(const char *name)
+const eventtrigger *eventtriggerGetByName(const char *name)
 {
-    const eventtrigger* result = &_eventtrigger_start;
-    int numEventtriggers = &_eventtrigger_stop - &_eventtrigger_start;
-    for (int i = 0; i < numEventtriggers; ++i) {
-        if (strcmp(result[i].name, name) == 0) {
-            return &result[i];
-        }
+  const eventtrigger *result = &_eventtrigger_start;
+  int numEventtriggers = &_eventtrigger_stop - &_eventtrigger_start;
+  for (int i = 0; i < numEventtriggers; ++i) {
+    if (strcmp(result[i].name, name) == 0) {
+      return &result[i];
     }
-    return 0;
+  }
+  return 0;
 }
 
 void eventTrigger(const eventtrigger *event)
 {
-    for (int i = 0; i < eventtriggerHandler_Count; ++i) {
-        if (callbacks[i]) {
-            callbacks[i](event);
-        }
+  for (int i = 0; i < eventtriggerHandler_Count; ++i) {
+    if (callbacks[i]) {
+      callbacks[i](event);
     }
+  }
 }
 
 void eventtriggerRegisterCallback(enum eventtriggerHandler_e handler, eventtriggerCallback cb)
 {
-    callbacks[handler] = cb;
+  callbacks[handler] = cb;
 }

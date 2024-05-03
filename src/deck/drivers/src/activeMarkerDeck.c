@@ -93,9 +93,10 @@ enum version_e deckFwVersion = versionUndefined;
 
 static char versionString[VERSION_STRING_LEN + 1];
 
-static void task(void* param);
+static void task(void *param);
 
-static void activeMarkerDeckInit(DeckInfo *info) {
+static void activeMarkerDeckInit(DeckInfo *info)
+{
   if (isInit) {
     return;
   }
@@ -105,14 +106,16 @@ static void activeMarkerDeckInit(DeckInfo *info) {
 
 #ifndef ACTIVE_MARKER_DECK_TEST
   memset(versionString, 0, VERSION_STRING_LEN + 1);
-  i2cOk = i2cdevReadReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_VER, VERSION_STRING_LEN, (uint8_t*)versionString);
+  i2cOk = i2cdevReadReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_VER, VERSION_STRING_LEN,
+                         (uint8_t *)versionString);
   DEBUG_PRINT("Deck FW %s\n", versionString);
 #endif
 
   isInit = true;
 }
 
-static bool activeMarkerDeckTest() {
+static bool activeMarkerDeckTest()
+{
   if (!isInit) {
     return false;
   }
@@ -136,7 +139,8 @@ static bool activeMarkerDeckTest() {
   return isVerified;
 }
 
-static void handleIdUpdate() {
+static void handleIdUpdate()
+{
   bool isDifferent = false;
   for (int led = 0; led < LED_COUNT; led++) {
     if (currentId[led] != requestedId[led]) {
@@ -146,11 +150,12 @@ static void handleIdUpdate() {
   }
 
   if (isDifferent) {
-      i2cdevWriteReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_LED, LED_COUNT, currentId);
+    i2cdevWriteReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_LED, LED_COUNT, currentId);
   }
 }
 
-static void handleModeUpdate() {
+static void handleModeUpdate()
+{
   if (currentDeckMode != requestedDeckMode) {
     currentDeckMode = requestedDeckMode;
     i2cdevWriteReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_MODE, 1, &currentDeckMode);
@@ -160,7 +165,8 @@ static void handleModeUpdate() {
   }
 }
 
-static void handleButtonSensorRead() {
+static void handleButtonSensorRead()
+{
   if (doPollDeckButtonSensor) {
     uint32_t now = xTaskGetTickCount();
     if (now > nextPollTime) {
@@ -170,14 +176,16 @@ static void handleButtonSensorRead() {
   }
 }
 
-static void task(void *param) {
+static void task(void *param)
+{
   systemWaitStart();
 
 #ifdef ACTIVE_MARKER_DECK_TEST
   while (!activeMarkerDeckCanStart) {
     vTaskDelay(100);
   }
-  i2cOk = i2cdevReadReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_VER, VERSION_STRING_LEN, (uint8_t*)versionString);
+  i2cOk = i2cdevReadReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_VER, VERSION_STRING_LEN,
+                         (uint8_t *)versionString);
 #endif
 
   while (1) {

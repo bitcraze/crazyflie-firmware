@@ -63,14 +63,17 @@ static volatile cpxAppMessageHandlerCallback_t appMessageHandlerCallback;
 #define CPX_ENABLE_CRTP_BRIDGE    0x21
 #define CPX_SET_CLIENT_CONNECTED  0x20
 
-void cpxInitRoute(const CPXTarget_t source, const CPXTarget_t destination, const CPXFunction_t function, CPXRouting_t* route) {
-    route->source = source;
-    route->destination = destination;
-    route->function = function;
-    route->version = CPX_VERSION;
+void cpxInitRoute(const CPXTarget_t source, const CPXTarget_t destination,
+                  const CPXFunction_t function, CPXRouting_t *route)
+{
+  route->source = source;
+  route->destination = destination;
+  route->function = function;
+  route->version = CPX_VERSION;
 }
 
-bool cpxCheckVersion(const uint8_t version) {
+bool cpxCheckVersion(const uint8_t version)
+{
   static bool hasLoggedVersionMismatch = false;
 
   // Version mismatch is generally handled by ignoring messages and logging the problem once.
@@ -88,11 +91,13 @@ bool cpxCheckVersion(const uint8_t version) {
   return isVersionOk;
 }
 
-void cpxRegisterAppMessageHandler(cpxAppMessageHandlerCallback_t callback) {
+void cpxRegisterAppMessageHandler(cpxAppMessageHandlerCallback_t callback)
+{
   appMessageHandlerCallback = callback;
 }
 
-static void cpx(void* _param) {
+static void cpx(void *_param)
+{
   systemWaitStart();
   while (1) {
     cpxInternalRouterReceiveOthers(&cpxRx);
@@ -102,11 +107,11 @@ static void cpx(void* _param) {
     switch (cpxRx.route.function) {
       case CPX_F_WIFI_CTRL:
         if (cpxRx.data[0] == WIFI_AP_CONNECTED_CMD) {
-            DEBUG_PRINT("WiFi connected to ip: %u.%u.%u.%u\n",
-                        cpxRx.data[1],
-                        cpxRx.data[2],
-                        cpxRx.data[3],
-                        cpxRx.data[4]);
+          DEBUG_PRINT("WiFi connected to ip: %u.%u.%u.%u\n",
+                      cpxRx.data[1],
+                      cpxRx.data[2],
+                      cpxRx.data[3],
+                      cpxRx.data[4]);
         }
         if (cpxRx.data[0] == WIFI_CLIENT_CONNECTED_CMD) {
           if (cpxRx.data[1] == 0x00) {
@@ -157,11 +162,13 @@ static void cpx(void* _param) {
         }
         break;
       default:
-        DEBUG_PRINT("Not handling function [0x%02X] from [0x%02X]\n", cpxRx.route.function, cpxRx.route.source);
+        DEBUG_PRINT("Not handling function [0x%02X] from [0x%02X]\n", cpxRx.route.function,
+                    cpxRx.route.source);
     }
   }
 }
 
-void cpxInit() {
+void cpxInit()
+{
   xTaskCreate(cpx, CPX_TASK_NAME, AI_DECK_TASK_STACKSIZE, NULL, AI_DECK_TASK_PRI, NULL);
 }

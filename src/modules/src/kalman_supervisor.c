@@ -34,7 +34,8 @@
 float maxPosition = 100; //meters
 float maxVelocity = 10; //meters per second
 
-bool kalmanSupervisorIsStateWithinBounds(const kalmanCoreData_t* this) {
+bool kalmanSupervisorIsStateWithinBounds(const kalmanCoreData_t *this)
+{
   for (int i = 0; i < 3; i++) {
     if (maxPosition > 0.0f) {
       if (this->S[KC_STATE_X + i] > maxPosition) {
@@ -61,10 +62,10 @@ PARAM_GROUP_START(kalman)
  * @brief Maximum accepted coordinate before kalman supervisor
  * resets estimator
  */
-  PARAM_ADD_CORE(PARAM_FLOAT, maxPos, &maxPosition)
-  /**
- * @brief Maximum accepted velocity before kalman supervisor
- * resets estimator
- */
-  PARAM_ADD_CORE(PARAM_FLOAT, maxVel, &maxVelocity)
+PARAM_ADD_CORE(PARAM_FLOAT, maxPos, &maxPosition)
+/**
+* @brief Maximum accepted velocity before kalman supervisor
+* resets estimator
+*/
+PARAM_ADD_CORE(PARAM_FLOAT, maxVel, &maxVelocity)
 PARAM_GROUP_STOP(kalman)

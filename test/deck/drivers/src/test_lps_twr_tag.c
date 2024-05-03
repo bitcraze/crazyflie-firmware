@@ -16,8 +16,14 @@
 // The mocking FW can not handle the cf_math.h/arm_math.h file, it crashes while parsing it. We have to use manual mocks instead.
 // Temporarily fix to make tests pass, add test code for the estimator part of rxcallback()
 #include "cf_math.h"
-void arm_std_f32(const float32_t * pSrc, uint32_t blockSize, float32_t * pResult) { *pResult = 0.0; }
-void arm_mean_f32(const float32_t * pSrc, uint32_t blockSize, float32_t * pResult) { *pResult = 0.0; }
+void arm_std_f32(const float32_t *pSrc, uint32_t blockSize, float32_t *pResult)
+{
+  *pResult = 0.0;
+}
+void arm_mean_f32(const float32_t *pSrc, uint32_t blockSize, float32_t *pResult)
+{
+  *pResult = 0.0;
+}
 
 #include "mock_estimator.h"
 
@@ -26,17 +32,21 @@ void arm_mean_f32(const float32_t * pSrc, uint32_t blockSize, float32_t * pResul
 static dwDevice_t dev;
 static lpsTwrAlgoOptions_t options;
 
-static void setTime(uint8_t* data, const dwTime_t* time);
-static void populatePacket(packet_t* packet, uint8_t seqNr, uint8_t type, locoAddress_t sourceAddress, locoAddress_t destinationAddress);
-static void populateLppPacket(packet_t* packet, char *data, int length, locoAddress_t sourceAddress, locoAddress_t destinationAddress);
+static void setTime(uint8_t *data, const dwTime_t *time);
+static void populatePacket(packet_t *packet, uint8_t seqNr, uint8_t type,
+                           locoAddress_t sourceAddress, locoAddress_t destinationAddress);
+static void populateLppPacket(packet_t *packet, char *data, int length, locoAddress_t sourceAddress,
+                              locoAddress_t destinationAddress);
 
-static void mockEventTimeoutHandling(const packet_t* expectedTxPacket);
-static void mockEventPacketSendHandling(dwTime_t* departureTime);
-static void mockEventPacketReceivedAnswerHandling(int dataLength, const packet_t* rxPacket, const dwTime_t* answerArrivalTagTime, const packet_t* expectedTxPacket);
-static void mockEventPacketReceivedReportHandling(int dataLength, const packet_t* rxPacket);
-static void mockSendLppShortHandling(const packet_t* expectedTxPacket, int datalength);
+static void mockEventTimeoutHandling(const packet_t *expectedTxPacket);
+static void mockEventPacketSendHandling(dwTime_t *departureTime);
+static void mockEventPacketReceivedAnswerHandling(int dataLength, const packet_t *rxPacket,
+    const dwTime_t *answerArrivalTagTime, const packet_t *expectedTxPacket);
+static void mockEventPacketReceivedReportHandling(int dataLength, const packet_t *rxPacket);
+static void mockSendLppShortHandling(const packet_t *expectedTxPacket, int datalength);
 
-static bool lpsGetLppShortCallbackForLppShortPacketSent(lpsLppShortPacket_t* shortPacket, int cmock_num_calls);
+static bool lpsGetLppShortCallbackForLppShortPacketSent(lpsLppShortPacket_t *shortPacket,
+    int cmock_num_calls);
 
 static lpsTwrAlgoOptions_t defaultOptions = {
   .tagAddress = 0xbccf000000000008,
@@ -53,11 +63,12 @@ static lpsTwrAlgoOptions_t defaultOptions = {
   .combinedAnchorPositionOk = false
 };
 
-static char * lppShortPacketData = "hello";
+static char *lppShortPacketData = "hello";
 static int lppShortPacketLength = 5;
 static int lppShortPacketDest = 3;
 
-void setUp(void) {
+void setUp(void)
+{
   dwGetData_resetMock();
   dwGetTransmitTimestamp_resetMock();
   dwGetReceiveTimestamp_resetMock();
@@ -76,7 +87,8 @@ void setUp(void) {
   locoDeckSetRangingState_Ignore();
 }
 
-void testNormalMessageSequenceShouldGenerateDistance() {
+void testNormalMessageSequenceShouldGenerateDistance()
+{
   // Fixture
   const int dataLength = sizeof(packet_t);
   const uint8_t expectedSeqNr = 1;
@@ -94,7 +106,8 @@ void testNormalMessageSequenceShouldGenerateDistance() {
 
   // eventTimeout
   packet_t expectedTxPacket1;
-  populatePacket(&expectedTxPacket1, expectedSeqNr, LPS_TWR_POLL, defaultOptions.tagAddress, defaultOptions.anchorAddress[expectedAnchor]);
+  populatePacket(&expectedTxPacket1, expectedSeqNr, LPS_TWR_POLL, defaultOptions.tagAddress,
+                 defaultOptions.anchorAddress[expectedAnchor]);
   mockEventTimeoutHandling(&expectedTxPacket1);
   lpsGetLppShort_IgnoreAndReturn(false);
 
@@ -103,17 +116,21 @@ void testNormalMessageSequenceShouldGenerateDistance() {
 
   // eventPacketReceived (ANSWER)
   packet_t rxPacket1;
-  populatePacket(&rxPacket1, expectedSeqNr, LPS_TWR_ANSWER, defaultOptions.anchorAddress[expectedAnchor], defaultOptions.tagAddress);
+  populatePacket(&rxPacket1, expectedSeqNr, LPS_TWR_ANSWER,
+                 defaultOptions.anchorAddress[expectedAnchor], defaultOptions.tagAddress);
   packet_t expectedTxPacket2;
-  populatePacket(&expectedTxPacket2, expectedSeqNr, LPS_TWR_FINAL, defaultOptions.tagAddress, defaultOptions.anchorAddress[expectedAnchor]);
-  mockEventPacketReceivedAnswerHandling(dataLength, &rxPacket1, &answerArrivalTagTime, &expectedTxPacket2);
+  populatePacket(&expectedTxPacket2, expectedSeqNr, LPS_TWR_FINAL, defaultOptions.tagAddress,
+                 defaultOptions.anchorAddress[expectedAnchor]);
+  mockEventPacketReceivedAnswerHandling(dataLength, &rxPacket1, &answerArrivalTagTime,
+                                        &expectedTxPacket2);
 
   // eventPacketSent (FINAL)
   mockEventPacketSendHandling(&finalDepartureTagTime);
 
   // eventPacketReceived (REPORT)
   packet_t rxPacket2;
-  populatePacket(&rxPacket2, expectedSeqNr, LPS_TWR_REPORT, defaultOptions.anchorAddress[expectedAnchor], defaultOptions.tagAddress);
+  populatePacket(&rxPacket2, expectedSeqNr, LPS_TWR_REPORT,
+                 defaultOptions.anchorAddress[expectedAnchor], defaultOptions.tagAddress);
   lpsTwrTagReportPayload_t *report = (lpsTwrTagReportPayload_t *)(rxPacket2.payload + 2);
   setTime(report->pollRx, &pollArrivalAnchorTime);
   setTime(report->answerTx, &answerDepartureAnchorTime);
@@ -138,7 +155,8 @@ void testNormalMessageSequenceShouldGenerateDistance() {
   TEST_ASSERT_FLOAT_WITHIN(0.01, expectedDistance, actualDistance);
 }
 
-void testEventReceiveFailedShouldBeIgnored() {
+void testEventReceiveFailedShouldBeIgnored()
+{
   // Fixture
 
   // Test
@@ -149,7 +167,8 @@ void testEventReceiveFailedShouldBeIgnored() {
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 }
 
-void testEventReceiveTimeoutShouldBeIgnored() {
+void testEventReceiveTimeoutShouldBeIgnored()
+{
   // Fixture
 
   // Test
@@ -160,7 +179,8 @@ void testEventReceiveTimeoutShouldBeIgnored() {
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 }
 
-void testEventPacketReceivedWithZeroDataLengthShouldBeIgnored() {
+void testEventPacketReceivedWithZeroDataLengthShouldBeIgnored()
+{
   // Fixture
   dwGetDataLength_ExpectAndReturn(&dev, 0);
 
@@ -172,7 +192,8 @@ void testEventPacketReceivedWithZeroDataLengthShouldBeIgnored() {
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 }
 
-void testEventPacketReceivedWithWrongDestinationAddressShouldPrepareForReceptionOfNewPacket() {
+void testEventPacketReceivedWithWrongDestinationAddressShouldPrepareForReceptionOfNewPacket()
+{
   // Fixture
   packet_t rxPacket = {.destAddress = 0x4711471147114711};
   const int dataLength = sizeof(rxPacket);
@@ -192,7 +213,8 @@ void testEventPacketReceivedWithWrongDestinationAddressShouldPrepareForReception
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 }
 
-void testEventPacketReceivedWithTypeAnswerAndWrongSeqNrShouldReturn0() {
+void testEventPacketReceivedWithTypeAnswerAndWrongSeqNrShouldReturn0()
+{
   // Fixture
   packet_t rxPacket;
   rxPacket.destAddress = defaultOptions.tagAddress;
@@ -213,7 +235,8 @@ void testEventPacketReceivedWithTypeAnswerAndWrongSeqNrShouldReturn0() {
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 }
 
-void testEventPacketReceivedWithTypeReportAndWrongSeqNrShouldReturn0() {
+void testEventPacketReceivedWithTypeReportAndWrongSeqNrShouldReturn0()
+{
   // Fixture
   packet_t rxPacket;
   rxPacket.destAddress = defaultOptions.tagAddress;
@@ -234,12 +257,14 @@ void testEventPacketReceivedWithTypeReportAndWrongSeqNrShouldReturn0() {
   TEST_ASSERT_EQUAL_UINT32(expected, actual);
 }
 
-void testThatLppShortPacketIsSentWhenAvailable() {
+void testThatLppShortPacketIsSentWhenAvailable()
+{
   // Fixture
   lpsGetLppShort_StubWithCallback(lpsGetLppShortCallbackForLppShortPacketSent);
 
   packet_t expectedTxPacket;
-  populateLppPacket(&expectedTxPacket, lppShortPacketData, lppShortPacketLength, defaultOptions.tagAddress, defaultOptions.anchorAddress[lppShortPacketDest]);
+  populateLppPacket(&expectedTxPacket, lppShortPacketData, lppShortPacketLength,
+                    defaultOptions.tagAddress, defaultOptions.anchorAddress[lppShortPacketDest]);
 
   mockSendLppShortHandling(&expectedTxPacket, lppShortPacketLength);
 
@@ -257,7 +282,8 @@ void testThatLppShortPacketIsSentWhenAvailable() {
   TEST_ASSERT_EQUAL_UINT32(expected2, actual2);
 }
 
-void testThatInitiallyNoRangingAreReportedToBeOk() {
+void testThatInitiallyNoRangingAreReportedToBeOk()
+{
   // Test
   // Nothing there, there has been no rangings
 
@@ -265,7 +291,8 @@ void testThatInitiallyNoRangingAreReportedToBeOk() {
   TEST_ASSERT_FALSE(uwbTwrTagAlgorithm.isRangingOk());
 }
 
-void testThatWhenARangingHasHappenRangingIsReportedToBeOk() {
+void testThatWhenARangingHasHappenRangingIsReportedToBeOk()
+{
   // Fixture, setup a simple ranging
   const int dataLength = sizeof(packet_t);
   const uint8_t expectedSeqNr = 1;
@@ -283,7 +310,8 @@ void testThatWhenARangingHasHappenRangingIsReportedToBeOk() {
 
   // eventTimeout
   packet_t expectedTxPacket1;
-  populatePacket(&expectedTxPacket1, expectedSeqNr, LPS_TWR_POLL, defaultOptions.tagAddress, defaultOptions.anchorAddress[expectedAnchor]);
+  populatePacket(&expectedTxPacket1, expectedSeqNr, LPS_TWR_POLL, defaultOptions.tagAddress,
+                 defaultOptions.anchorAddress[expectedAnchor]);
   mockEventTimeoutHandling(&expectedTxPacket1);
   lpsGetLppShort_IgnoreAndReturn(false);
 
@@ -292,17 +320,21 @@ void testThatWhenARangingHasHappenRangingIsReportedToBeOk() {
 
   // eventPacketReceived (ANSWER)
   packet_t rxPacket1;
-  populatePacket(&rxPacket1, expectedSeqNr, LPS_TWR_ANSWER, defaultOptions.anchorAddress[expectedAnchor], defaultOptions.tagAddress);
+  populatePacket(&rxPacket1, expectedSeqNr, LPS_TWR_ANSWER,
+                 defaultOptions.anchorAddress[expectedAnchor], defaultOptions.tagAddress);
   packet_t expectedTxPacket2;
-  populatePacket(&expectedTxPacket2, expectedSeqNr, LPS_TWR_FINAL, defaultOptions.tagAddress, defaultOptions.anchorAddress[expectedAnchor]);
-  mockEventPacketReceivedAnswerHandling(dataLength, &rxPacket1, &answerArrivalTagTime, &expectedTxPacket2);
+  populatePacket(&expectedTxPacket2, expectedSeqNr, LPS_TWR_FINAL, defaultOptions.tagAddress,
+                 defaultOptions.anchorAddress[expectedAnchor]);
+  mockEventPacketReceivedAnswerHandling(dataLength, &rxPacket1, &answerArrivalTagTime,
+                                        &expectedTxPacket2);
 
   // eventPacketSent (FINAL)
   mockEventPacketSendHandling(&finalDepartureTagTime);
 
   // eventPacketReceived (REPORT)
   packet_t rxPacket2;
-  populatePacket(&rxPacket2, expectedSeqNr, LPS_TWR_REPORT, defaultOptions.anchorAddress[expectedAnchor], defaultOptions.tagAddress);
+  populatePacket(&rxPacket2, expectedSeqNr, LPS_TWR_REPORT,
+                 defaultOptions.anchorAddress[expectedAnchor], defaultOptions.tagAddress);
   lpsTwrTagReportPayload_t *report = (lpsTwrTagReportPayload_t *)(rxPacket2.payload + 2);
   setTime(report->pollRx, &pollArrivalAnchorTime);
   setTime(report->answerTx, &answerDepartureAnchorTime);
@@ -323,11 +355,14 @@ void testThatWhenARangingHasHappenRangingIsReportedToBeOk() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static void setTime(uint8_t* data, const dwTime_t* time) {
+static void setTime(uint8_t *data, const dwTime_t *time)
+{
   memcpy(data, time, sizeof(dwTime_t));
 }
 
-static void populatePacket(packet_t* packet, uint8_t seqNr, uint8_t type, locoAddress_t sourceAddress, locoAddress_t destinationAddress) {
+static void populatePacket(packet_t *packet, uint8_t seqNr, uint8_t type,
+                           locoAddress_t sourceAddress, locoAddress_t destinationAddress)
+{
   memset(packet, 0, sizeof(packet_t));
 
   MAC80215_PACKET_INIT((*packet), MAC802154_TYPE_DATA);
@@ -338,7 +373,9 @@ static void populatePacket(packet_t* packet, uint8_t seqNr, uint8_t type, locoAd
   packet->destAddress = destinationAddress;
 }
 
-static void populateLppPacket(packet_t* packet, char *data, int length, locoAddress_t sourceAddress, locoAddress_t destinationAddress) {
+static void populateLppPacket(packet_t *packet, char *data, int length, locoAddress_t sourceAddress,
+                              locoAddress_t destinationAddress)
+{
   memset(packet, 0, sizeof(packet_t));
 
   MAC80215_PACKET_INIT((*packet), MAC802154_TYPE_DATA);
@@ -349,44 +386,55 @@ static void populateLppPacket(packet_t* packet, char *data, int length, locoAddr
   packet->destAddress = destinationAddress;
 }
 
-static void mockEventTimeoutHandling(const packet_t* expectedTxPacket) {
+static void mockEventTimeoutHandling(const packet_t *expectedTxPacket)
+{
   dwIdle_Expect(&dev);
   dwNewTransmit_Expect(&dev);
   dwSetDefaults_Expect(&dev);
-  dwSetData_ExpectWithArray(&dev, 1, (uint8_t*)expectedTxPacket, sizeof(packet_t), MAC802154_HEADER_LENGTH + 2);
+  dwSetData_ExpectWithArray(&dev, 1, (uint8_t *)expectedTxPacket, sizeof(packet_t),
+                            MAC802154_HEADER_LENGTH + 2);
   dwWaitForResponse_Expect(&dev, true);
   dwStartTransmit_Expect(&dev);
 }
 
-static void mockSendLppShortHandling(const packet_t* expectedTxPacket, int length) {
+static void mockSendLppShortHandling(const packet_t *expectedTxPacket, int length)
+{
   dwIdle_Expect(&dev);
   dwNewTransmit_Expect(&dev);
   dwSetDefaults_Expect(&dev);
-  dwSetData_ExpectWithArray(&dev, 1, (uint8_t*)expectedTxPacket, sizeof(packet_t), MAC802154_HEADER_LENGTH + 1 + length);
+  dwSetData_ExpectWithArray(&dev, 1, (uint8_t *)expectedTxPacket, sizeof(packet_t),
+                            MAC802154_HEADER_LENGTH + 1 + length);
   dwWaitForResponse_Expect(&dev, false);
   dwStartTransmit_Expect(&dev);
 }
 
-static void mockEventPacketSendHandling(dwTime_t* departureTime) {
+static void mockEventPacketSendHandling(dwTime_t *departureTime)
+{
   dwGetTransmitTimestamp_ExpectAndCopyData(&dev, departureTime);
 }
 
-static void mockEventPacketReceivedAnswerHandling(int dataLength, const packet_t* rxPacket, const dwTime_t* answerArrivalTagTime, const packet_t* expectedTxPacket) {
+static void mockEventPacketReceivedAnswerHandling(int dataLength, const packet_t *rxPacket,
+    const dwTime_t *answerArrivalTagTime, const packet_t *expectedTxPacket)
+{
   dwGetDataLength_ExpectAndReturn(&dev, dataLength);
   dwGetData_ExpectAndCopyData(&dev, rxPacket, dataLength);
   dwGetReceiveTimestamp_ExpectAndCopyData(&dev, answerArrivalTagTime);
   dwNewTransmit_Expect(&dev);
-  dwSetData_ExpectWithArray(&dev, 1, (uint8_t*)expectedTxPacket, sizeof(packet_t), MAC802154_HEADER_LENGTH + 2);
+  dwSetData_ExpectWithArray(&dev, 1, (uint8_t *)expectedTxPacket, sizeof(packet_t),
+                            MAC802154_HEADER_LENGTH + 2);
   dwWaitForResponse_Expect(&dev, true);
   dwStartTransmit_Expect(&dev);
 }
 
-static void mockEventPacketReceivedReportHandling(int dataLength, const packet_t* rxPacket) {
+static void mockEventPacketReceivedReportHandling(int dataLength, const packet_t *rxPacket)
+{
   dwGetDataLength_ExpectAndReturn(&dev, dataLength);
   dwGetData_ExpectAndCopyData(&dev, rxPacket, dataLength);
 }
 
-static bool lpsGetLppShortCallbackForLppShortPacketSent(lpsLppShortPacket_t* shortPacket, int cmock_num_calls) {
+static bool lpsGetLppShortCallbackForLppShortPacketSent(lpsLppShortPacket_t *shortPacket,
+    int cmock_num_calls)
+{
   memcpy(shortPacket->data, lppShortPacketData, lppShortPacketLength);
   shortPacket->dest = lppShortPacketDest;
   shortPacket->length = lppShortPacketLength;

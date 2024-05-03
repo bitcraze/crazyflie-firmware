@@ -5,26 +5,29 @@
 
 Axis3fSubSampler_t subSampler;
 
-const Axis3f sample1 = {.x=1.0, .y=2.0, .z=3.0};
-const Axis3f sample2 = {.x=4.0, .y=5.0, .z=6.0};
-const Axis3f sample3 = {.x=7.0, .y=8.0, .z=9.0};
+const Axis3f sample1 = {.x = 1.0, .y = 2.0, .z = 3.0};
+const Axis3f sample2 = {.x = 4.0, .y = 5.0, .z = 6.0};
+const Axis3f sample3 = {.x = 7.0, .y = 8.0, .z = 9.0};
 
-void setUp(void) {
+void setUp(void)
+{
 }
 
-void tearDown(void) {
+void tearDown(void)
+{
   // Empty
 }
 
 
-void testThatOneSampleIsUnchanged() {
+void testThatOneSampleIsUnchanged()
+{
   // Fixture
   axis3fSubSamplerInit(&subSampler, 1.0);
 
   axis3fSubSamplerAccumulate(&subSampler, &sample1);
 
   // Test
-  Axis3f* actual = axis3fSubSamplerFinalize(&subSampler);
+  Axis3f *actual = axis3fSubSamplerFinalize(&subSampler);
 
   // Assert
   TEST_ASSERT_EQUAL_FLOAT(sample1.x, actual->x);
@@ -33,7 +36,8 @@ void testThatOneSampleIsUnchanged() {
 }
 
 
-void testThatSamplesAreAveraged() {
+void testThatSamplesAreAveraged()
+{
   // Fixture
   axis3fSubSamplerInit(&subSampler, 1.0);
 
@@ -42,7 +46,7 @@ void testThatSamplesAreAveraged() {
   axis3fSubSamplerAccumulate(&subSampler, &sample3);
 
   // Test
-  Axis3f* actual = axis3fSubSamplerFinalize(&subSampler);
+  Axis3f *actual = axis3fSubSamplerFinalize(&subSampler);
 
   // Assert
   TEST_ASSERT_EQUAL_FLOAT(4.0, actual->x);
@@ -51,7 +55,8 @@ void testThatSamplesAreAveraged() {
 }
 
 
-void testThatResultIsUnchangedWhenNoNewSamplesAreAccumulated() {
+void testThatResultIsUnchangedWhenNoNewSamplesAreAccumulated()
+{
   // Fixture
   axis3fSubSamplerInit(&subSampler, 1.0);
   axis3fSubSamplerAccumulate(&subSampler, &sample1);
@@ -59,7 +64,7 @@ void testThatResultIsUnchangedWhenNoNewSamplesAreAccumulated() {
   // The sub sampler has now been finalized
 
   // Test
-  Axis3f* actual = axis3fSubSamplerFinalize(&subSampler);
+  Axis3f *actual = axis3fSubSamplerFinalize(&subSampler);
 
   // Assert
   TEST_ASSERT_EQUAL_FLOAT(sample1.x, actual->x);
@@ -67,7 +72,8 @@ void testThatResultIsUnchangedWhenNoNewSamplesAreAccumulated() {
   TEST_ASSERT_EQUAL_FLOAT(sample1.z, actual->z);
 }
 
-void testThatResultIsUpdatedWhenNewSamplesAreAccumulated() {
+void testThatResultIsUpdatedWhenNewSamplesAreAccumulated()
+{
   // Fixture
   axis3fSubSamplerInit(&subSampler, 1.0);
   axis3fSubSamplerAccumulate(&subSampler, &sample1);
@@ -76,7 +82,7 @@ void testThatResultIsUpdatedWhenNewSamplesAreAccumulated() {
 
   // Test
   axis3fSubSamplerAccumulate(&subSampler, &sample2);
-  Axis3f* actual = axis3fSubSamplerFinalize(&subSampler);
+  Axis3f *actual = axis3fSubSamplerFinalize(&subSampler);
 
   // Assert
   TEST_ASSERT_EQUAL_FLOAT(sample2.x, actual->x);
@@ -84,14 +90,15 @@ void testThatResultIsUpdatedWhenNewSamplesAreAccumulated() {
   TEST_ASSERT_EQUAL_FLOAT(sample2.z, actual->z);
 }
 
-void testThatResultIsMultipliedWithConversionFactor() {
+void testThatResultIsMultipliedWithConversionFactor()
+{
   // Fixture
   axis3fSubSamplerInit(&subSampler, 3.0);
 
   axis3fSubSamplerAccumulate(&subSampler, &sample1);
 
   // Test
-  Axis3f* actual = axis3fSubSamplerFinalize(&subSampler);
+  Axis3f *actual = axis3fSubSamplerFinalize(&subSampler);
 
   // Assert
   TEST_ASSERT_EQUAL_FLOAT(sample1.x * 3.0f, actual->x);

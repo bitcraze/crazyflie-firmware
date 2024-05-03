@@ -38,7 +38,8 @@ EVENTTRIGGER(estTOF)
 EVENTTRIGGER(estAbsoluteHeight)
 EVENTTRIGGER(estFlow)
 EVENTTRIGGER(estYawError, float, yawError)
-EVENTTRIGGER(estSweepAngle, uint8, sensorId, uint8, baseStationId, uint8, sweepId, float, t, float, sweepAngle)
+EVENTTRIGGER(estSweepAngle, uint8, sensorId, uint8, baseStationId, uint8, sweepId, float, t, float,
+             sweepAngle)
 EVENTTRIGGER(estGyroscope)
 EVENTTRIGGER(estAcceleration)
 EVENTTRIGGER(estBarometer)
@@ -51,61 +52,63 @@ typedef struct {
   void (*deinit)(void);
   bool (*test)(void);
   void (*update)(state_t *state, const stabilizerStep_t stabilizerStep);
-  const char* name;
+  const char *name;
 } EstimatorFcns;
 
 #define NOT_IMPLEMENTED ((void*)0)
 
 static EstimatorFcns estimatorFunctions[] = {
-    {
-        .init = NOT_IMPLEMENTED,
-        .deinit = NOT_IMPLEMENTED,
-        .test = NOT_IMPLEMENTED,
-        .update = NOT_IMPLEMENTED,
-        .name = "None",
-    }, // Any estimator
-    {
-        .init = estimatorComplementaryInit,
-        .deinit = NOT_IMPLEMENTED,
-        .test = estimatorComplementaryTest,
-        .update = estimatorComplementary,
-        .name = "Complementary",
-    },
+  {
+    .init = NOT_IMPLEMENTED,
+    .deinit = NOT_IMPLEMENTED,
+    .test = NOT_IMPLEMENTED,
+    .update = NOT_IMPLEMENTED,
+    .name = "None",
+  }, // Any estimator
+  {
+    .init = estimatorComplementaryInit,
+    .deinit = NOT_IMPLEMENTED,
+    .test = estimatorComplementaryTest,
+    .update = estimatorComplementary,
+    .name = "Complementary",
+  },
 #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
-    {
-        .init = estimatorKalmanInit,
-        .deinit = NOT_IMPLEMENTED,
-        .test = estimatorKalmanTest,
-        .update = estimatorKalman,
-        .name = "Kalman",
-    },
+  {
+    .init = estimatorKalmanInit,
+    .deinit = NOT_IMPLEMENTED,
+    .test = estimatorKalmanTest,
+    .update = estimatorKalman,
+    .name = "Kalman",
+  },
 #endif
 #ifdef CONFIG_ESTIMATOR_UKF_ENABLE
-    {
-	    .init = errorEstimatorUkfInit,
-	    .deinit = NOT_IMPLEMENTED,
-	    .test = errorEstimatorUkfTest,
-	    .update = errorEstimatorUkf,
-	    .name = "Error State UKF",
-	},
+  {
+    .init = errorEstimatorUkfInit,
+    .deinit = NOT_IMPLEMENTED,
+    .test = errorEstimatorUkfTest,
+    .update = errorEstimatorUkf,
+    .name = "Error State UKF",
+  },
 #endif
 #ifdef CONFIG_ESTIMATOR_OOT
-    {
-        .init = estimatorOutOfTreeInit,
-        .deinit = NOT_IMPLEMENTED,
-        .test = estimatorOutOfTreeTest,
-        .update = estimatorOutOfTree,
-        .name = "OutOfTree",
-    },
+  {
+    .init = estimatorOutOfTreeInit,
+    .deinit = NOT_IMPLEMENTED,
+    .test = estimatorOutOfTreeTest,
+    .update = estimatorOutOfTree,
+    .name = "OutOfTree",
+  },
 #endif
 };
 
-void stateEstimatorInit(StateEstimatorType estimator) {
+void stateEstimatorInit(StateEstimatorType estimator)
+{
   measurementsQueue = STATIC_MEM_QUEUE_CREATE(measurementsQueue);
   stateEstimatorSwitchTo(estimator);
 }
 
-void stateEstimatorSwitchTo(StateEstimatorType estimator) {
+void stateEstimatorSwitchTo(StateEstimatorType estimator)
+{
   if (estimator < 0 || estimator >= StateEstimatorType_COUNT) {
     return;
   }
@@ -116,15 +119,15 @@ void stateEstimatorSwitchTo(StateEstimatorType estimator) {
     newEstimator = DEFAULT_ESTIMATOR;
   }
 
-  #if defined(CONFIG_ESTIMATOR_KALMAN)
-    #define ESTIMATOR StateEstimatorTypeKalman
-  #elif defined(CONFIG_UKF_KALMAN)
-    #define ESTIMATOR StateEstimatorTypeUkf
-  #elif defined(CONFIG_ESTIMATOR_COMPLEMENTARY)
-    #define ESTIMATOR StateEstimatorTypeComplementary
-  #else
-    #define ESTIMATOR StateEstimatorTypeAutoSelect
-  #endif
+#if defined(CONFIG_ESTIMATOR_KALMAN)
+#define ESTIMATOR StateEstimatorTypeKalman
+#elif defined(CONFIG_UKF_KALMAN)
+#define ESTIMATOR StateEstimatorTypeUkf
+#elif defined(CONFIG_ESTIMATOR_COMPLEMENTARY)
+#define ESTIMATOR StateEstimatorTypeComplementary
+#else
+#define ESTIMATOR StateEstimatorTypeAutoSelect
+#endif
 
   StateEstimatorType forcedEstimator = ESTIMATOR;
   if (forcedEstimator != StateEstimatorTypeAutoSelect) {
@@ -140,36 +143,43 @@ void stateEstimatorSwitchTo(StateEstimatorType estimator) {
   DEBUG_PRINT("Using %s (%d) estimator\n", stateEstimatorGetName(), currentEstimator);
 }
 
-StateEstimatorType stateEstimatorGetType(void) {
+StateEstimatorType stateEstimatorGetType(void)
+{
   return currentEstimator;
 }
 
-static void initEstimator(const StateEstimatorType estimator) {
+static void initEstimator(const StateEstimatorType estimator)
+{
   if (estimatorFunctions[estimator].init) {
     estimatorFunctions[estimator].init();
   }
 }
 
-static void deinitEstimator(const StateEstimatorType estimator) {
+static void deinitEstimator(const StateEstimatorType estimator)
+{
   if (estimatorFunctions[estimator].deinit) {
     estimatorFunctions[estimator].deinit();
   }
 }
 
-bool stateEstimatorTest(void) {
+bool stateEstimatorTest(void)
+{
   return estimatorFunctions[currentEstimator].test();
 }
 
-void stateEstimator(state_t *state, const stabilizerStep_t tick) {
+void stateEstimator(state_t *state, const stabilizerStep_t tick)
+{
   estimatorFunctions[currentEstimator].update(state, tick);
 }
 
-const char* stateEstimatorGetName() {
+const char *stateEstimatorGetName()
+{
   return estimatorFunctions[currentEstimator].name;
 }
 
 
-void estimatorEnqueue(const measurement_t *measurement) {
+void estimatorEnqueue(const measurement_t *measurement)
+{
   if (!measurementsQueue) {
     return;
   }
@@ -255,11 +265,12 @@ void estimatorEnqueue(const measurement_t *measurement) {
   }
 }
 
-bool estimatorDequeue(measurement_t *measurement) {
+bool estimatorDequeue(measurement_t *measurement)
+{
   return pdTRUE == xQueueReceive(measurementsQueue, measurement, 0);
 }
 
 LOG_GROUP_START(estimator)
-  STATS_CNT_RATE_LOG_ADD(rtApnd, &measurementAppendedCounter)
-  STATS_CNT_RATE_LOG_ADD(rtRej, &measurementNotAppendedCounter)
+STATS_CNT_RATE_LOG_ADD(rtApnd, &measurementAppendedCounter)
+STATS_CNT_RATE_LOG_ADD(rtRej, &measurementNotAppendedCounter)
 LOG_GROUP_STOP(estimator)

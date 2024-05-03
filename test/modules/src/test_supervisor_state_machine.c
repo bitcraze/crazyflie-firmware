@@ -7,26 +7,35 @@
 #include "unity.h"
 
 // Function under test
-supervisorState_t findTransition(const supervisorState_t currentState, const supervisorConditionBits_t triggerBitField, const SupervisorStateTransitionList_t* transitions);
+supervisorState_t findTransition(const supervisorState_t currentState,
+                                 const supervisorConditionBits_t triggerBitField,
+                                 const SupervisorStateTransitionList_t *transitions);
 
 // Helpers
 static void assertStateTransition(supervisorConditionBits_t conditions,
-  supervisorConditionBits_t triggers, supervisorConditionBits_t negatedTriggers, SupervisorConditionCombiner_t triggerCombiner,
-  supervisorConditionBits_t blockers, supervisorConditionBits_t negatedBlockers, SupervisorConditionCombiner_t blockerCombiner);
+                                  supervisorConditionBits_t triggers, supervisorConditionBits_t negatedTriggers,
+                                  SupervisorConditionCombiner_t triggerCombiner,
+                                  supervisorConditionBits_t blockers, supervisorConditionBits_t negatedBlockers,
+                                  SupervisorConditionCombiner_t blockerCombiner);
 
 static void assertNoStateTransition(supervisorConditionBits_t conditions,
-  supervisorConditionBits_t triggers, supervisorConditionBits_t negatedTriggers, SupervisorConditionCombiner_t triggerCombiner,
-  supervisorConditionBits_t blockers, supervisorConditionBits_t negatedBlockers, SupervisorConditionCombiner_t blockerCombiner);
+                                    supervisorConditionBits_t triggers, supervisorConditionBits_t negatedTriggers,
+                                    SupervisorConditionCombiner_t triggerCombiner,
+                                    supervisorConditionBits_t blockers, supervisorConditionBits_t negatedBlockers,
+                                    SupervisorConditionCombiner_t blockerCombiner);
 
-void setUp(void) {
+void setUp(void)
+{
   // Empty
 }
 
-void tearDown(void) {
+void tearDown(void)
+{
   // Empty
 }
 
-void testTransitionWithNoConditionsTriggerAlways(void) {
+void testTransitionWithNoConditionsTriggerAlways(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = 123;
 
@@ -40,10 +49,12 @@ void testTransitionWithNoConditionsTriggerAlways(void) {
 
   // Test
   // Assert
-  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                        negatedBlockers, blockerCombiner);
 }
 
-void testTransitionWithNoConditionsTriggerNever(void) {
+void testTransitionWithNoConditionsTriggerNever(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = 123;
 
@@ -57,10 +68,12 @@ void testTransitionWithNoConditionsTriggerNever(void) {
 
   // Test
   // Assert
-  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                          negatedBlockers, blockerCombiner);
 }
 
-void testTransitionWithNoConditionsBlockAlways(void) {
+void testTransitionWithNoConditionsBlockAlways(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = 123;
 
@@ -74,10 +87,12 @@ void testTransitionWithNoConditionsBlockAlways(void) {
 
   // Test
   // Assert
-  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                          negatedBlockers, blockerCombiner);
 }
 
-void testTransitionOneRequiredConditionMet(void) {
+void testTransitionOneRequiredConditionMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING;
 
@@ -91,10 +106,12 @@ void testTransitionOneRequiredConditionMet(void) {
 
   // Test
   // Assert
-  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                        negatedBlockers, blockerCombiner);
 }
 
-void testTransitionOneRequiredConditionNotMet(void) {
+void testTransitionOneRequiredConditionNotMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_ARMED;
 
@@ -108,10 +125,12 @@ void testTransitionOneRequiredConditionNotMet(void) {
 
   // Test
   // Assert
-  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                          negatedBlockers, blockerCombiner);
 }
 
-void testTransitionOneNegatedRequiredConditionNotMet(void) {
+void testTransitionOneNegatedRequiredConditionNotMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING;
 
@@ -125,10 +144,12 @@ void testTransitionOneNegatedRequiredConditionNotMet(void) {
 
   // Test
   // Assert
-  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                          negatedBlockers, blockerCombiner);
 }
 
-void testTransitionOneNegatedRequiredConditionMet(void) {
+void testTransitionOneNegatedRequiredConditionMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = 0;
 
@@ -142,10 +163,12 @@ void testTransitionOneNegatedRequiredConditionMet(void) {
 
   // Test
   // Assert
-  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                        negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiRequiredConditionsMet(void) {
+void testTransitionMultiRequiredConditionsMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
 
@@ -159,12 +182,15 @@ void testTransitionMultiRequiredConditionsMet(void) {
 
   // Test
   // Assert
-  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                        negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiRequiredConditionsMetWithOtherBitsSet(void) {
+void testTransitionMultiRequiredConditionsMetWithOtherBitsSet(void)
+{
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED | SUPERVISOR_CB_EMERGENCY_STOP;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED |
+                                         SUPERVISOR_CB_EMERGENCY_STOP;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
@@ -176,10 +202,12 @@ void testTransitionMultiRequiredConditionsMetWithOtherBitsSet(void) {
 
   // Test
   // Assert
-  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                        negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiRequiredConditionsOneMissing(void) {
+void testTransitionMultiRequiredConditionsOneMissing(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING;
 
@@ -193,10 +221,12 @@ void testTransitionMultiRequiredConditionsOneMissing(void) {
 
   // Test
   // Assert
-  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                          negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiRequiredConditionsOneMet(void) {
+void testTransitionMultiRequiredConditionsOneMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING;
 
@@ -210,10 +240,12 @@ void testTransitionMultiRequiredConditionsOneMet(void) {
 
   // Test
   // Assert
-  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                        negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiRequiredConditionsNoneMet(void) {
+void testTransitionMultiRequiredConditionsNoneMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = 0;
 
@@ -227,15 +259,18 @@ void testTransitionMultiRequiredConditionsNoneMet(void) {
 
   // Test
   // Assert
-  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                          negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiNegatedRequiredConditionOneNotMet(void) {
+void testTransitionMultiNegatedRequiredConditionOneNotMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_ARMED;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_NONE;
-  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING |
+      SUPERVISOR_CB_ARMED;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
@@ -244,15 +279,18 @@ void testTransitionMultiNegatedRequiredConditionOneNotMet(void) {
 
   // Test
   // Assert
-  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                          negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiNegatedRequiredConditionsMet(void) {
+void testTransitionMultiNegatedRequiredConditionsMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = 0;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_NONE;
-  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING |
+      SUPERVISOR_CB_ARMED;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
@@ -261,15 +299,19 @@ void testTransitionMultiNegatedRequiredConditionsMet(void) {
 
   // Test
   // Assert
-  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                        negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiMixedRequiredConditionsAllMet(void) {
+void testTransitionMultiMixedRequiredConditionsAllMet(void)
+{
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT |
+                                         SUPERVISOR_CB_IS_TUMBLED;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED;
-  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING |
+      SUPERVISOR_CB_ARMED;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
@@ -278,15 +320,18 @@ void testTransitionMultiMixedRequiredConditionsAllMet(void) {
 
   // Test
   // Assert
-  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                        negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiMixedRequiredConditionsOnePositiveNotMet(void) {
+void testTransitionMultiMixedRequiredConditionsOnePositiveNotMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED;
-  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING |
+      SUPERVISOR_CB_ARMED;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
@@ -295,15 +340,19 @@ void testTransitionMultiMixedRequiredConditionsOnePositiveNotMet(void) {
 
   // Test
   // Assert
-  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                          negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiMixedRequiredConditionsOneNegativeNotMet(void) {
+void testTransitionMultiMixedRequiredConditionsOneNegativeNotMet(void)
+{
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_COMMANDER_WDT_WARNING;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT |
+                                         SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_COMMANDER_WDT_WARNING;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED;
-  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING |
+      SUPERVISOR_CB_ARMED;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
@@ -312,15 +361,19 @@ void testTransitionMultiMixedRequiredConditionsOneNegativeNotMet(void) {
 
   // Test
   // Assert
-  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                          negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiMixedOnePositiveRequirementMet(void) {
+void testTransitionMultiMixedOnePositiveRequirementMet(void)
+{
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_TUMBLED |
+                                         SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED;
-  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
+  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING |
+      SUPERVISOR_CB_ARMED;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAny;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
@@ -329,15 +382,19 @@ void testTransitionMultiMixedOnePositiveRequirementMet(void) {
 
   // Test
   // Assert
-  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                        negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiMixedNoRequirementMet(void) {
+void testTransitionMultiMixedNoRequirementMet(void)
+{
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_FLYING | SUPERVISOR_CB_ARMED | SUPERVISOR_CB_COMMANDER_WDT_WARNING;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_FLYING | SUPERVISOR_CB_ARMED |
+                                         SUPERVISOR_CB_COMMANDER_WDT_WARNING;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED;
-  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_IS_FLYING | SUPERVISOR_CB_ARMED | SUPERVISOR_CB_COMMANDER_WDT_WARNING;
+  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_IS_FLYING | SUPERVISOR_CB_ARMED |
+      SUPERVISOR_CB_COMMANDER_WDT_WARNING;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAny;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
@@ -346,15 +403,19 @@ void testTransitionMultiMixedNoRequirementMet(void) {
 
   // Test
   // Assert
-  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                          negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiMixedOneNegativeRequirementMet(void) {
+void testTransitionMultiMixedOneNegativeRequirementMet(void)
+{
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_FLYING | SUPERVISOR_CB_COMMANDER_WDT_WARNING;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_FLYING |
+                                         SUPERVISOR_CB_COMMANDER_WDT_WARNING;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED;
-  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_IS_FLYING | SUPERVISOR_CB_ARMED | SUPERVISOR_CB_COMMANDER_WDT_WARNING;
+  supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_IS_FLYING | SUPERVISOR_CB_ARMED |
+      SUPERVISOR_CB_COMMANDER_WDT_WARNING;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAny;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
@@ -363,12 +424,15 @@ void testTransitionMultiMixedOneNegativeRequirementMet(void) {
 
   // Test
   // Assert
-  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                        negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiRequiredConditionsOneMissingButOtherBitsSet(void) {
+void testTransitionMultiRequiredConditionsOneMissingButOtherBitsSet(void)
+{
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING |
+                                         SUPERVISOR_CB_IS_TUMBLED;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_ARMED;
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
@@ -380,10 +444,12 @@ void testTransitionMultiRequiredConditionsOneMissingButOtherBitsSet(void) {
 
   // Test
   // Assert
-  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                          negatedBlockers, blockerCombiner);
 }
 
-void testTransitionOneProhibitedConditionMet(void) {
+void testTransitionOneProhibitedConditionMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = 0;
 
@@ -397,10 +463,12 @@ void testTransitionOneProhibitedConditionMet(void) {
 
   // Test
   // Assert
-  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                        negatedBlockers, blockerCombiner);
 }
 
-void testTransitionOneProhibitedConditionNotMet(void) {
+void testTransitionOneProhibitedConditionNotMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING;
 
@@ -414,12 +482,15 @@ void testTransitionOneProhibitedConditionNotMet(void) {
 
   // Test
   // Assert
-  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                          negatedBlockers, blockerCombiner);
 }
 
-void testTransitionOneProhibitedConditionNotMetWithOtherBitsSet(void) {
+void testTransitionOneProhibitedConditionNotMetWithOtherBitsSet(void)
+{
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING |
+                                         SUPERVISOR_CB_IS_TUMBLED;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_NONE;
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
@@ -431,10 +502,12 @@ void testTransitionOneProhibitedConditionNotMetWithOtherBitsSet(void) {
 
   // Test
   // Assert
-  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                          negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiProhibitedConditionsMet(void) {
+void testTransitionMultiProhibitedConditionsMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = 0;
 
@@ -448,10 +521,12 @@ void testTransitionMultiProhibitedConditionsMet(void) {
 
   // Test
   // Assert
-  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                        negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiProhibitedConditionsOneNotMet(void) {
+void testTransitionMultiProhibitedConditionsOneNotMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_TUMBLED;
 
@@ -465,10 +540,12 @@ void testTransitionMultiProhibitedConditionsOneNotMet(void) {
 
   // Test
   // Assert
-  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                          negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiProhibitedConditionsAllNotMet(void) {
+void testTransitionMultiProhibitedConditionsAllNotMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING;
 
@@ -482,12 +559,15 @@ void testTransitionMultiProhibitedConditionsAllNotMet(void) {
 
   // Test
   // Assert
-  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                        negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiProhibitedConditionsAllMet(void) {
+void testTransitionMultiProhibitedConditionsAllMet(void)
+{
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING |
+                                         SUPERVISOR_CB_IS_TUMBLED;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_NONE;
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
@@ -499,27 +579,33 @@ void testTransitionMultiProhibitedConditionsAllMet(void) {
 
   // Test
   // Assert
-  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                          negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiNegativeProhibitedConditionsNoneMet(void) {
+void testTransitionMultiNegativeProhibitedConditionsNoneMet(void)
+{
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_COMMANDER_WDT_WARNING |
+                                         SUPERVISOR_CB_IS_TUMBLED;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_NONE;
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAlways;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
-  supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING |
+      SUPERVISOR_CB_IS_TUMBLED;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAny;
 
   // Test
   // Assert
-  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                        negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiNegativeProhibitedConditionsOneMet(void) {
+void testTransitionMultiNegativeProhibitedConditionsOneMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_TUMBLED;
 
@@ -528,15 +614,18 @@ void testTransitionMultiNegativeProhibitedConditionsOneMet(void) {
   SupervisorConditionCombiner_t triggerCombiner = supervisorAlways;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
-  supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING |
+      SUPERVISOR_CB_IS_TUMBLED;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAny;
 
   // Test
   // Assert
-  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                          negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiNegativeProhibitedConditionsOneNotMet(void) {
+void testTransitionMultiNegativeProhibitedConditionsOneNotMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_TUMBLED;
 
@@ -545,15 +634,18 @@ void testTransitionMultiNegativeProhibitedConditionsOneNotMet(void) {
   SupervisorConditionCombiner_t triggerCombiner = supervisorAlways;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
-  supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING |
+      SUPERVISOR_CB_IS_TUMBLED;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAll;
 
   // Test
   // Assert
-  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                        negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiNegativeProhibitedConditionsAllMet(void) {
+void testTransitionMultiNegativeProhibitedConditionsAllMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = 0;
 
@@ -562,15 +654,18 @@ void testTransitionMultiNegativeProhibitedConditionsAllMet(void) {
   SupervisorConditionCombiner_t triggerCombiner = supervisorAlways;
 
   supervisorConditionBits_t blockers = SUPERVISOR_CB_NONE;
-  supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_IS_TUMBLED;
+  supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING |
+      SUPERVISOR_CB_IS_TUMBLED;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAll;
 
   // Test
   // Assert
-  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                          negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiRequiredAndProhibitedConditionsMet(void) {
+void testTransitionMultiRequiredAndProhibitedConditionsMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_ARMED | SUPERVISOR_CB_IS_TUMBLED;
 
@@ -578,16 +673,19 @@ void testTransitionMultiRequiredAndProhibitedConditionsMet(void) {
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
-  supervisorConditionBits_t blockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_EMERGENCY_STOP;
+  supervisorConditionBits_t blockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING |
+                                       SUPERVISOR_CB_EMERGENCY_STOP;
   supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAny;
 
   // Test
   // Assert
-  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                        negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiRequiredAndProhibitedConditionsOneRequiredNotMet(void) {
+void testTransitionMultiRequiredAndProhibitedConditionsOneRequiredNotMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_ARMED;
 
@@ -595,33 +693,40 @@ void testTransitionMultiRequiredAndProhibitedConditionsOneRequiredNotMet(void) {
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
-  supervisorConditionBits_t blockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_EMERGENCY_STOP;
+  supervisorConditionBits_t blockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING |
+                                       SUPERVISOR_CB_EMERGENCY_STOP;
   supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAny;
 
   // Test
   // Assert
-  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                          negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiRequiredAndProhibitedConditionsOneProhibitedNotMet(void) {
+void testTransitionMultiRequiredAndProhibitedConditionsOneProhibitedNotMet(void)
+{
   // Fixture
-  supervisorConditionBits_t conditions = SUPERVISOR_CB_ARMED | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP;
+  supervisorConditionBits_t conditions = SUPERVISOR_CB_ARMED | SUPERVISOR_CB_IS_TUMBLED |
+                                         SUPERVISOR_CB_EMERGENCY_STOP;
 
   supervisorConditionBits_t triggers = SUPERVISOR_CB_ARMED | SUPERVISOR_CB_IS_TUMBLED;
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
-  supervisorConditionBits_t blockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_EMERGENCY_STOP;
+  supervisorConditionBits_t blockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING |
+                                       SUPERVISOR_CB_EMERGENCY_STOP;
   supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAny;
 
   // Test
   // Assert
-  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                          negatedBlockers, blockerCombiner);
 }
 
-void testTransitionMultiRequiredAndProhibitedConditionsMultipleNotMet(void) {
+void testTransitionMultiRequiredAndProhibitedConditionsMultipleNotMet(void)
+{
   // Fixture
   supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP;
 
@@ -629,18 +734,22 @@ void testTransitionMultiRequiredAndProhibitedConditionsMultipleNotMet(void) {
   supervisorConditionBits_t negatedTriggers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t triggerCombiner = supervisorAll;
 
-  supervisorConditionBits_t blockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING | SUPERVISOR_CB_EMERGENCY_STOP;
+  supervisorConditionBits_t blockers = SUPERVISOR_CB_COMMANDER_WDT_WARNING |
+                                       SUPERVISOR_CB_EMERGENCY_STOP;
   supervisorConditionBits_t negatedBlockers = SUPERVISOR_CB_NONE;
   SupervisorConditionCombiner_t blockerCombiner = supervisorAny;
 
   // Test
   // Assert
-  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner);
+  assertNoStateTransition(conditions, triggers, negatedTriggers, triggerCombiner, blockers,
+                          negatedBlockers, blockerCombiner);
 }
 
-void testFirstValidTransitionIsChosen(void) {
-    // Fixture
-  const supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP;
+void testFirstValidTransitionIsChosen(void)
+{
+  // Fixture
+  const supervisorConditionBits_t conditions = SUPERVISOR_CB_IS_TUMBLED |
+      SUPERVISOR_CB_EMERGENCY_STOP;
 
   const supervisorState_t currentState = supervisorStateFlying;
   const supervisorState_t expected = supervisorStateExceptFreeFall;
@@ -657,7 +766,8 @@ void testFirstValidTransitionIsChosen(void) {
       .negatedBlockers = SUPERVISOR_CB_NONE,
       .blockerCombiner = supervisorAny,
     },
-    { // We expect this state to be chosen
+    {
+      // We expect this state to be chosen
       .newState = expected,
 
       .triggers = SUPERVISOR_CB_IS_TUMBLED,
@@ -689,8 +799,11 @@ void testFirstValidTransitionIsChosen(void) {
 // Helpers ////////////////////////////////////////////////
 
 static bool check_state_transition(supervisorConditionBits_t conditions,
-  supervisorConditionBits_t triggers, supervisorConditionBits_t negatedTriggers, SupervisorConditionCombiner_t triggerCombiner,
-  supervisorConditionBits_t blockers, supervisorConditionBits_t negatedBlockers, SupervisorConditionCombiner_t blockerCombiner) {
+                                   supervisorConditionBits_t triggers, supervisorConditionBits_t negatedTriggers,
+                                   SupervisorConditionCombiner_t triggerCombiner,
+                                   supervisorConditionBits_t blockers, supervisorConditionBits_t negatedBlockers,
+                                   SupervisorConditionCombiner_t blockerCombiner)
+{
 
   // Fixture
   const supervisorState_t currentState = supervisorStateFlying;
@@ -719,13 +832,21 @@ static bool check_state_transition(supervisorConditionBits_t conditions,
 }
 
 static void assertStateTransition(supervisorConditionBits_t conditions,
-  supervisorConditionBits_t triggers, supervisorConditionBits_t negatedTriggers, SupervisorConditionCombiner_t triggerCombiner,
-  supervisorConditionBits_t blockers, supervisorConditionBits_t negatedBlockers, SupervisorConditionCombiner_t blockerCombiner) {
-  TEST_ASSERT_TRUE(check_state_transition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner));
+                                  supervisorConditionBits_t triggers, supervisorConditionBits_t negatedTriggers,
+                                  SupervisorConditionCombiner_t triggerCombiner,
+                                  supervisorConditionBits_t blockers, supervisorConditionBits_t negatedBlockers,
+                                  SupervisorConditionCombiner_t blockerCombiner)
+{
+  TEST_ASSERT_TRUE(check_state_transition(conditions, triggers, negatedTriggers, triggerCombiner,
+                                          blockers, negatedBlockers, blockerCombiner));
 }
 
 static void assertNoStateTransition(supervisorConditionBits_t conditions,
-  supervisorConditionBits_t triggers, supervisorConditionBits_t negatedTriggers, SupervisorConditionCombiner_t triggerCombiner,
-  supervisorConditionBits_t blockers, supervisorConditionBits_t negatedBlockers, SupervisorConditionCombiner_t blockerCombiner) {
-  TEST_ASSERT_FALSE(check_state_transition(conditions, triggers, negatedTriggers, triggerCombiner, blockers, negatedBlockers, blockerCombiner));
+                                    supervisorConditionBits_t triggers, supervisorConditionBits_t negatedTriggers,
+                                    SupervisorConditionCombiner_t triggerCombiner,
+                                    supervisorConditionBits_t blockers, supervisorConditionBits_t negatedBlockers,
+                                    SupervisorConditionCombiner_t blockerCombiner)
+{
+  TEST_ASSERT_FALSE(check_state_transition(conditions, triggers, negatedTriggers, triggerCombiner,
+                    blockers, negatedBlockers, blockerCombiner));
 }

@@ -26,12 +26,14 @@
 #include "mm_sweep_angles.h"
 
 
-void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasurement_t *sweepInfo, const uint32_t nowMs, OutlierFilterLhState_t* sweepOutlierFilterState) {
+void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasurement_t *sweepInfo,
+                                     const uint32_t nowMs, OutlierFilterLhState_t *sweepOutlierFilterState)
+{
   // Rotate the sensor position from CF reference frame to global reference frame,
   // using the CF roatation matrix
   vec3d s;
   arm_matrix_instance_f32 Rcf_ = {3, 3, (float32_t *)this->R};
-  arm_matrix_instance_f32 scf_ = {3, 1, (float32_t *)*sweepInfo->sensorPos};
+  arm_matrix_instance_f32 scf_ = {3, 1, (float32_t *) *sweepInfo->sensorPos};
   arm_matrix_instance_f32 s_ = {3, 1, s};
   mat_mult(&Rcf_, &scf_, &s_);
 
@@ -39,7 +41,7 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
   vec3d pcf = {this->S[KC_STATE_X] + s[0], this->S[KC_STATE_Y] + s[1], this->S[KC_STATE_Z] + s[2]};
 
   // Calculate the difference between the rotor and the sensor on the CF (global reference frame)
-  const vec3d* pr = sweepInfo->rotorPos;
+  const vec3d *pr = sweepInfo->rotorPos;
   vec3d stmp = {pcf[0] - (*pr)[0], pcf[1] - (*pr)[1], pcf[2] - (*pr)[2]};
   arm_matrix_instance_f32 stmp_ = {3, 1, stmp};
 
@@ -60,18 +62,19 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
   const float r2 = x * x + y * y;
   const float r = arm_sqrt(r2);
 
-  const float predictedSweepAngle = sweepInfo->calibrationMeasurementModel(x, y, z, t, sweepInfo->calib);
+  const float predictedSweepAngle = sweepInfo->calibrationMeasurementModel(x, y, z, t,
+                                    sweepInfo->calib);
   const float measuredSweepAngle = sweepInfo->measuredSweepAngle;
   const float error = measuredSweepAngle - predictedSweepAngle;
 
   if (outlierFilterLighthouseValidateSweep(sweepOutlierFilterState, r, error, nowMs)) {
     // Calculate H vector (in the rotor reference frame)
     const float z_tan_t = z * tan_t;
-    const float qNum = r2 - z_tan_t * z_tan_t;
+    const float qNum = r2 - z_tan_t *z_tan_t;
     // Avoid singularity
     if (qNum > 0.0001f) {
       const float q = tan_t / arm_sqrt(qNum);
-      vec3d gr = {(-y - x * z * q) / r2, (x - y * z * q) / r2 , q};
+      vec3d gr = {(-y - x *z * q) / r2, (x - y *z * q) / r2, q};
 
       // gr is in the rotor reference frame, rotate back to the global
       // reference frame using the rotor rotation matrix

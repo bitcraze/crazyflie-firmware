@@ -72,26 +72,24 @@
 #define ET_NBR_PINS         11
 #define ET_IO4_PIN          (ET_NBR_PINS - 1)
 
-typedef struct _etGpio
-{
+typedef struct _etGpio {
   GPIO_TypeDef     *port;
   uint16_t          pin;
   char              name[6];
 } EtGpio;
 
-static EtGpio etGpioIn[ET_NBR_PINS] =
-{
-    {ET_GPIO_PORT_TX1,  ET_GPIO_PIN_TX1, "TX1"},
-    {ET_GPIO_PORT_RX1,  ET_GPIO_PIN_RX1, "RX1"},
-    {ET_GPIO_PORT_TX2,  ET_GPIO_PIN_TX2, "TX2"},
-    {ET_GPIO_PORT_RX2,  ET_GPIO_PIN_RX2, "RX2"},
-    {ET_GPIO_PORT_SCK,  ET_GPIO_PIN_SCK, "SCK"},
-    {ET_GPIO_PORT_MOSI, ET_GPIO_PIN_MOSI, "MOSI"},
-    {ET_GPIO_PORT_MISO, ET_GPIO_PIN_MISO, "MISO"},
-    {ET_GPIO_PORT_IO1,  ET_GPIO_PIN_IO1, "IO1"},
-    {ET_GPIO_PORT_IO2,  ET_GPIO_PIN_IO2, "IO2"},
-    {ET_GPIO_PORT_IO3,  ET_GPIO_PIN_IO3, "IO3"},
-    {ET_GPIO_PORT_IO4,  ET_GPIO_PIN_IO4, "IO4"}
+static EtGpio etGpioIn[ET_NBR_PINS] = {
+  {ET_GPIO_PORT_TX1,  ET_GPIO_PIN_TX1, "TX1"},
+  {ET_GPIO_PORT_RX1,  ET_GPIO_PIN_RX1, "RX1"},
+  {ET_GPIO_PORT_TX2,  ET_GPIO_PIN_TX2, "TX2"},
+  {ET_GPIO_PORT_RX2,  ET_GPIO_PIN_RX2, "RX2"},
+  {ET_GPIO_PORT_SCK,  ET_GPIO_PIN_SCK, "SCK"},
+  {ET_GPIO_PORT_MOSI, ET_GPIO_PIN_MOSI, "MOSI"},
+  {ET_GPIO_PORT_MISO, ET_GPIO_PIN_MISO, "MISO"},
+  {ET_GPIO_PORT_IO1,  ET_GPIO_PIN_IO1, "IO1"},
+  {ET_GPIO_PORT_IO2,  ET_GPIO_PIN_IO2, "IO2"},
+  {ET_GPIO_PORT_IO3,  ET_GPIO_PIN_IO3, "IO3"},
+  {ET_GPIO_PORT_IO4,  ET_GPIO_PIN_IO4, "IO4"}
 };
 
 static EtGpio etGpioSDA = {ET_GPIO_PORT_SDA,  ET_GPIO_PIN_SDA, "SDA"};
@@ -120,8 +118,7 @@ static bool exptestRun(void)
 
   decktestSaveGPIOStatesABC(&gpioSaved);
 
-  for (i = 0; i < ET_NBR_PINS; i++)
-  {
+  for (i = 0; i < ET_NBR_PINS; i++) {
     //Initialize the pins as inputs
     GPIO_InitStructure.GPIO_Pin = etGpioIn[i].pin;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
@@ -131,8 +128,7 @@ static bool exptestRun(void)
     GPIO_Init(etGpioIn[i].port, &GPIO_InitStructure);
   }
 
-  for (i = 0; i < ET_NBR_PINS && status; i++)
-  {
+  for (i = 0; i < ET_NBR_PINS && status; i++) {
     // Configure pin as output to poke others
     GPIO_InitStructure.GPIO_Pin = etGpioIn[i].pin;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
@@ -143,16 +139,14 @@ static bool exptestRun(void)
     // Test high
     GPIO_SetBits(etGpioIn[i].port, etGpioIn[i].pin);
     for (delay = 0; delay < 1000; delay++);
-    if (!exptestTestAllPins(1))
-    {
+    if (!exptestTestAllPins(1)) {
       status = false;
     }
 
     // Test low
     GPIO_ResetBits(etGpioIn[i].port, etGpioIn[i].pin);
     for (delay = 0; delay < 1000; delay++);
-    if (!exptestTestAllPins(0))
-    {
+    if (!exptestTestAllPins(0)) {
       status = false;
     }
 
@@ -163,8 +157,7 @@ static bool exptestRun(void)
 
   decktestRestoreGPIOStatesABC(&gpioSaved);
 
-  if (status)
-  {
+  if (status) {
     // Configure SDA & SCL to turn on OK leds
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
@@ -187,10 +180,8 @@ static bool exptestTestAllPins(bool test)
   int i;
   bool status = true;
 
-  for (i = 0; i < ET_NBR_PINS; i++)
-  {
-    if (!exptestTestPin(&etGpioIn[i], test))
-    {
+  for (i = 0; i < ET_NBR_PINS; i++) {
+    if (!exptestTestPin(&etGpioIn[i], test)) {
       status = false;
     }
   }
@@ -200,12 +191,9 @@ static bool exptestTestAllPins(bool test)
 
 static bool exptestTestPin(EtGpio *etPin, bool test)
 {
-  if (test == GPIO_ReadInputDataBit(etPin->port, etPin->pin))
-  {
+  if (test == GPIO_ReadInputDataBit(etPin->port, etPin->pin)) {
     return true;
-  }
-  else
-  {
+  } else {
     DEBUG_PRINT("Pin:%s != %d [FAIL]\n", etPin->name, test);
     return false;
   }

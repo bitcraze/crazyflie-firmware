@@ -10,10 +10,12 @@
 // Build the arm dsp math lib and use the "real thing" instead of mocking calls to it
 // @BUILD_LIB ARM_DSP_MATH
 
-void setUp(void) {
+void setUp(void)
+{
 }
 
-void testThatBaseStationPositionIsExtracted() {
+void testThatBaseStationPositionIsExtracted()
+{
   // Fixture
   vec3d actual;
   baseStationGeometry_t baseStationGeometry = {.origin = {1.0,  1.0,  3.0, }};
@@ -27,7 +29,8 @@ void testThatBaseStationPositionIsExtracted() {
   TEST_ASSERT_EQUAL_FLOAT_ARRAY(expected, actual, vec3d_size);
 }
 
-void testThatRayIsCalculatedFromNonRotatedBaseStation() {
+void testThatRayIsCalculatedFromNonRotatedBaseStation()
+{
   // Fixture
   baseStationGeometry_t bsGeo = {.mat = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};
 
@@ -44,7 +47,8 @@ void testThatRayIsCalculatedFromNonRotatedBaseStation() {
   TEST_ASSERT_EQUAL_FLOAT_ARRAY(expected, actual, vec3d_size);
 }
 
-void testThatRayIsCalculatedFromRotatedBaseStation() {
+void testThatRayIsCalculatedFromRotatedBaseStation()
+{
   // Fixture
 
   // Rotation about Y-axis
@@ -64,7 +68,8 @@ void testThatRayIsCalculatedFromRotatedBaseStation() {
   TEST_ASSERT_EQUAL_FLOAT_ARRAY(expected, actual, vec3d_size);
 }
 
-void testThatRayIsCalculatedFromNonRotatedBaseStationWithHorizontalSweepAngle() {
+void testThatRayIsCalculatedFromNonRotatedBaseStationWithHorizontalSweepAngle()
+{
   // Fixture
   baseStationGeometry_t bsGeo = {.mat = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};
 
@@ -81,7 +86,8 @@ void testThatRayIsCalculatedFromNonRotatedBaseStationWithHorizontalSweepAngle() 
   TEST_ASSERT_EQUAL_FLOAT_ARRAY(expected, actual, vec3d_size);
 }
 
-void testThatRayIsCalculatedFromNonRotatedBaseStationWithVerticalSweepAngle() {
+void testThatRayIsCalculatedFromNonRotatedBaseStationWithVerticalSweepAngle()
+{
   // Fixture
   baseStationGeometry_t bsGeo = {.mat = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};
 
@@ -98,7 +104,8 @@ void testThatRayIsCalculatedFromNonRotatedBaseStationWithVerticalSweepAngle() {
   TEST_ASSERT_EQUAL_FLOAT_ARRAY(expected, actual, vec3d_size);
 }
 
-void testThatIntersectionPointIsFoundForLinePerpendicularToPlane() {
+void testThatIntersectionPointIsFoundForLinePerpendicularToPlane()
+{
   // Fixture
   vec3d linePoint = {1, 1, 2};
   vec3d lineVec = {0, 0, -1};
@@ -110,14 +117,16 @@ void testThatIntersectionPointIsFoundForLinePerpendicularToPlane() {
   vec3d expected = {1, 1, 1};
 
   // Test
-  bool actualFound = lighthouseGeometryIntersectionPlaneVector(linePoint, lineVec, planePoint, planeNormal, actualIntersecionPoint);
+  bool actualFound = lighthouseGeometryIntersectionPlaneVector(linePoint, lineVec, planePoint,
+                     planeNormal, actualIntersecionPoint);
 
   // Assert
   TEST_ASSERT_TRUE(actualFound);
   TEST_ASSERT_EQUAL_FLOAT_ARRAY(expected, actualIntersecionPoint, vec3d_size);
 }
 
-void testThatNoIntersectionPointIsFoundForLineParallelToPlane() {
+void testThatNoIntersectionPointIsFoundForLineParallelToPlane()
+{
   // Fixture
   vec3d linePoint = {1, 1, 2};
   vec3d lineVec = {1, 1, 0};
@@ -127,19 +136,21 @@ void testThatNoIntersectionPointIsFoundForLineParallelToPlane() {
   vec3d actualIntersecionPoint;
 
   // Test
-  bool actualFound = lighthouseGeometryIntersectionPlaneVector(linePoint, lineVec, planePoint, planeNormal, actualIntersecionPoint);
+  bool actualFound = lighthouseGeometryIntersectionPlaneVector(linePoint, lineVec, planePoint,
+                     planeNormal, actualIntersecionPoint);
 
   // Assert
   TEST_ASSERT_FALSE(actualFound);
 }
 
-void testThatSensorPositionIsTranslated() {
+void testThatSensorPositionIsTranslated()
+{
   // Fixture
   vec3d cfPos = {1, 2, 3};
   vec3d sensorPos = {-0.015, -0.0075, 0.0};
 
   float r[3][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-  arm_matrix_instance_f32 R = {3, 3, (float*)r};
+  arm_matrix_instance_f32 R = {3, 3, (float *)r};
 
   // Sensor 1 is in the right back corner of the deck
   vec3d expected = {1 - 0.015, 2 - 0.0075, 3};
@@ -153,14 +164,15 @@ void testThatSensorPositionIsTranslated() {
   TEST_ASSERT_EQUAL_FLOAT_ARRAY(expected, actual, vec3d_size);
 }
 
-void testThatSensorPositionIsRotated() {
+void testThatSensorPositionIsRotated()
+{
   // Fixture
   vec3d cfPos = {1, 2, 3};
   vec3d sensorPos = {-0.015, -0.0075, 0.0};
 
   // Rotate 90 degrees about the Y-axis
   float r[3][3] = {{0, 0, 1}, {0, 1, 0}, {-1, 0, 0}};
-  arm_matrix_instance_f32 R = {3, 3, (float*)r};
+  arm_matrix_instance_f32 R = {3, 3, (float *)r};
 
   // Sensor 1 is in the right back corner of the deck
   vec3d expected = {1, 2 - 0.0075, 3 + 0.015};
@@ -174,7 +186,8 @@ void testThatSensorPositionIsRotated() {
   TEST_ASSERT_EQUAL_FLOAT_ARRAY(expected, actual, vec3d_size);
 }
 
-void testThatYawDeltaIsCalculatedForZeroAngle() {
+void testThatYawDeltaIsCalculatedForZeroAngle()
+{
   // Fixture
   vec3d ipv = {0, 1, 1};
   vec3d spv = {0, 2, 2};
@@ -191,7 +204,8 @@ void testThatYawDeltaIsCalculatedForZeroAngle() {
   TEST_ASSERT_EQUAL_FLOAT(expected, actualAngle);
 }
 
-void testThatYawDeltaIsCalculatedForPiAngle() {
+void testThatYawDeltaIsCalculatedForPiAngle()
+{
   // Fixture
   vec3d ipv = {0, 1, 1};
   vec3d spv = {0, -2, -2};
@@ -208,7 +222,8 @@ void testThatYawDeltaIsCalculatedForPiAngle() {
   TEST_ASSERT_EQUAL_FLOAT(expected, actualAngle);
 }
 
-void testThatYawDeltaIsCalculatedForPerpendicularVectors() {
+void testThatYawDeltaIsCalculatedForPerpendicularVectors()
+{
   // Fixture
   vec3d ipv = {0, 1, 1};
   vec3d spv = {0, 2, -2};
@@ -225,7 +240,8 @@ void testThatYawDeltaIsCalculatedForPerpendicularVectors() {
   TEST_ASSERT_EQUAL_FLOAT(expected, actualAngle);
 }
 
-void testThatYawDeltaIsCalculatedForPerpendicularVectorsWithNegativeAngle() {
+void testThatYawDeltaIsCalculatedForPerpendicularVectorsWithNegativeAngle()
+{
   // Fixture
   vec3d ipv = {0, 1, -1};
   vec3d spv = {0, 2, 2};
@@ -242,7 +258,8 @@ void testThatYawDeltaIsCalculatedForPerpendicularVectorsWithNegativeAngle() {
   TEST_ASSERT_EQUAL_FLOAT(expected, actualAngle);
 }
 
-void testThatYawDeltaIsNotCalculatedForSmallIntersectionPointVector() {
+void testThatYawDeltaIsNotCalculatedForSmallIntersectionPointVector()
+{
   // Fixture
   vec3d ipv = {0, 0.00001, -0.00001};
   vec3d spv = {0, 2, 2};

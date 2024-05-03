@@ -26,7 +26,8 @@
 #include "mm_absolute_height.h"
 
 // Measurement model where the measurement is the absolute height
-void kalmanCoreUpdateWithAbsoluteHeight(kalmanCoreData_t* this, heightMeasurement_t* height) {
+void kalmanCoreUpdateWithAbsoluteHeight(kalmanCoreData_t *this, heightMeasurement_t *height)
+{
   float h[KC_STATE_DIM] = {0};
   arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
   h[KC_STATE_Z] = 1;

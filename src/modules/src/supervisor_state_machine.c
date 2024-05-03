@@ -36,7 +36,7 @@
 #include "cfassert.h"
 #endif
 
-static const char* const stateNames[] = {
+static const char *const stateNames[] = {
   "Not initialized",
   "Pre-flight checks not passed",
   "Pre-flight checks passed",
@@ -51,7 +51,7 @@ static const char* const stateNames[] = {
 };
 static_assert(sizeof(stateNames) / sizeof(stateNames[0]) == supervisorState_NrOfStates);
 
-static const char* const conditionNames[] = {
+static const char *const conditionNames[] = {
   "armed",
   "isFlying",
   "isTumbled",
@@ -61,12 +61,13 @@ static const char* const conditionNames[] = {
   "isCrashed",
   "landingTimeout",
 };
-static_assert(sizeof(conditionNames) / sizeof(conditionNames[0]) == supervisorCondition_NrOfConditions);
+static_assert(sizeof(conditionNames) / sizeof(conditionNames[0]) ==
+              supervisorCondition_NrOfConditions);
 
 #if SUPERVISOR_TUMBLE_CHECK_ENABLE
-  #define SUPERVISOR_CB_CONF_IS_TUMBLED (SUPERVISOR_CB_IS_TUMBLED)
+#define SUPERVISOR_CB_CONF_IS_TUMBLED (SUPERVISOR_CB_IS_TUMBLED)
 #else
-  #define SUPERVISOR_CB_CONF_IS_TUMBLED (SUPERVISOR_CB_NONE)
+#define SUPERVISOR_CB_CONF_IS_TUMBLED (SUPERVISOR_CB_NONE)
 #endif
 
 // State transition definitions
@@ -310,7 +311,8 @@ SupervisorStateTransitionList_t transitionLists[] = {
 static_assert(sizeof(transitionLists) / sizeof(transitionLists[0]) == supervisorState_NrOfStates);
 
 
-bool supervisorStateMachineInit() {
+bool supervisorStateMachineInit()
+{
   if (sizeof(supervisorState_t) != sizeof(transitionLists)) {
     return false;
   }
@@ -318,18 +320,25 @@ bool supervisorStateMachineInit() {
   return true;
 }
 
-static bool areAllSet(const supervisorConditionBits_t conditions, const supervisorConditionBits_t requirements) {
-    return (~conditions & requirements) == 0;
+static bool areAllSet(const supervisorConditionBits_t conditions,
+                      const supervisorConditionBits_t requirements)
+{
+  return (~conditions & requirements) == 0;
 }
 
-static bool isAnySet(const supervisorConditionBits_t conditions, const supervisorConditionBits_t requirements) {
-    return (conditions & requirements) != 0;
+static bool isAnySet(const supervisorConditionBits_t conditions,
+                     const supervisorConditionBits_t requirements)
+{
+  return (conditions & requirements) != 0;
 }
 
-static bool areConditionsMet(const supervisorConditionBits_t conditions, const supervisorConditionBits_t requirements, const supervisorConditionBits_t negRequirements, const SupervisorConditionCombiner_t combiner) {
+static bool areConditionsMet(const supervisorConditionBits_t conditions,
+                             const supervisorConditionBits_t requirements, const supervisorConditionBits_t negRequirements,
+                             const SupervisorConditionCombiner_t combiner)
+{
   bool result = false;
 
-  switch(combiner) {
+  switch (combiner) {
     case supervisorAll:
       result = areAllSet(conditions, requirements) && !isAnySet(conditions, negRequirements);
       break;
@@ -349,13 +358,17 @@ static bool areConditionsMet(const supervisorConditionBits_t conditions, const s
   return result;
 }
 
-TESTABLE_STATIC supervisorState_t findTransition(const supervisorState_t currentState, const supervisorConditionBits_t conditions, const SupervisorStateTransitionList_t* transitions) {
+TESTABLE_STATIC supervisorState_t findTransition(const supervisorState_t currentState,
+    const supervisorConditionBits_t conditions, const SupervisorStateTransitionList_t *transitions)
+{
   supervisorState_t newState = currentState;
   for (int i = 0; i < transitions->length; i++) {
-    const SupervisorStateTransition_t* transitionDef = &transitions->transitionList[i];
+    const SupervisorStateTransition_t *transitionDef = &transitions->transitionList[i];
 
-    const bool isTriggerMatch = areConditionsMet(conditions, transitionDef->triggers, transitionDef->negatedTriggers, transitionDef->triggerCombiner);
-    const bool isBlockerMatch = areConditionsMet(conditions, transitionDef->blockers, transitionDef->negatedBlockers, transitionDef->blockerCombiner);
+    const bool isTriggerMatch = areConditionsMet(conditions, transitionDef->triggers,
+                                transitionDef->negatedTriggers, transitionDef->triggerCombiner);
+    const bool isBlockerMatch = areConditionsMet(conditions, transitionDef->blockers,
+                                transitionDef->negatedBlockers, transitionDef->blockerCombiner);
 
     const bool isStateTransitionValid = isTriggerMatch && !isBlockerMatch;
     if (isStateTransitionValid) {
@@ -366,30 +379,34 @@ TESTABLE_STATIC supervisorState_t findTransition(const supervisorState_t current
   return newState;
 }
 
-supervisorState_t supervisorStateUpdate(const supervisorState_t currentState, const supervisorConditionBits_t conditions) {
-  #ifdef DEBUG_ME
+supervisorState_t supervisorStateUpdate(const supervisorState_t currentState,
+                                        const supervisorConditionBits_t conditions)
+{
+#ifdef DEBUG_ME
   ASSERT(currentState < supervisorState_NrOfStates);
-  #endif
+#endif
 
-  const SupervisorStateTransitionList_t* transitions = &transitionLists[currentState];
+  const SupervisorStateTransitionList_t *transitions = &transitionLists[currentState];
   const supervisorState_t newState = findTransition(currentState, conditions, transitions);
 
-  #ifdef DEBUG_ME
+#ifdef DEBUG_ME
   ASSERT(currentState < supervisorState_NrOfStates);
   ASSERT(newState < supervisorState_NrOfStates);
 
   if (newState != currentState) {
     DEBUG_PRINT("Enter %s -> %s\n", stateNames[currentState], stateNames[newState]);
   }
-  #endif
+#endif
 
   return newState;
 }
 
-const char* supervisorGetStateName(const supervisorState_t state) {
+const char *supervisorGetStateName(const supervisorState_t state)
+{
   return stateNames[state];
 }
 
-const char* supervisorGetConditionName(const supervisorState_t condition) {
+const char *supervisorGetConditionName(const supervisorState_t condition)
+{
   return conditionNames[condition];
 }

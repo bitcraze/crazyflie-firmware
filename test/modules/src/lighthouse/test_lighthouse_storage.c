@@ -20,18 +20,22 @@ void lighthouseStorageInitializeCalibDataFromStorage();
 
 pulseProcessor_t lighthouseCoreState;
 
-void setUp(void) {
+void setUp(void)
+{
   // Empty
 }
 
-void tearDown(void) {
+void tearDown(void)
+{
   // Empty
 }
 
 
-void testThatGeoDataIsWrittenToStorage() {
+void testThatGeoDataIsWrittenToStorage()
+{
   // Fixture
-  storageStore_ExpectAndReturn("lh/sys/0/geo/1", &lighthouseCoreState.bsGeometry[1], sizeof(baseStationGeometry_t), true);
+  storageStore_ExpectAndReturn("lh/sys/0/geo/1", &lighthouseCoreState.bsGeometry[1],
+                               sizeof(baseStationGeometry_t), true);
 
   // Test
   bool actual = lighthouseStoragePersistData(1, true, false);
@@ -40,7 +44,8 @@ void testThatGeoDataIsWrittenToStorage() {
   TEST_ASSERT_TRUE(actual);
 }
 
-void testThatFailedGeoDataWriteToStorageReturnsFailure() {
+void testThatFailedGeoDataWriteToStorageReturnsFailure()
+{
   // Fixture
   storageStore_IgnoreAndReturn(false);
 
@@ -51,9 +56,11 @@ void testThatFailedGeoDataWriteToStorageReturnsFailure() {
   TEST_ASSERT_FALSE(actual);
 }
 
-void testThatCalibDataIsWrittenToStorage() {
+void testThatCalibDataIsWrittenToStorage()
+{
   // Fixture
-  storageStore_ExpectAndReturn("lh/sys/0/cal/1", &lighthouseCoreState.bsCalibration[1], sizeof(lighthouseCalibration_t), true);
+  storageStore_ExpectAndReturn("lh/sys/0/cal/1", &lighthouseCoreState.bsCalibration[1],
+                               sizeof(lighthouseCalibration_t), true);
 
   // Test
   bool actual = lighthouseStoragePersistData(1, false, true);
@@ -62,7 +69,8 @@ void testThatCalibDataIsWrittenToStorage() {
   TEST_ASSERT_TRUE(actual);
 }
 
-void testThatFailedCalibDataWriteToStorageReturnsFailure() {
+void testThatFailedCalibDataWriteToStorageReturnsFailure()
+{
   // Fixture
   storageStore_IgnoreAndReturn(false);
 
@@ -73,7 +81,8 @@ void testThatFailedCalibDataWriteToStorageReturnsFailure() {
   TEST_ASSERT_FALSE(actual);
 }
 
-void testThatNoInitializationOfGeoIsDoneWhenStorageIsEmpty() {
+void testThatNoInitializationOfGeoIsDoneWhenStorageIsEmpty()
+{
   // Fixture
   storageFetch_IgnoreAndReturn(0);
 
@@ -84,10 +93,11 @@ void testThatNoInitializationOfGeoIsDoneWhenStorageIsEmpty() {
   // Verified in mocks
 }
 
-void testInitializationOfGeoIsDoneFromStorage() {
+void testInitializationOfGeoIsDoneFromStorage()
+{
   // Fixture
   int geoSize = sizeof(baseStationGeometry_t);
-  const void* ignored = 0;
+  const void *ignored = 0;
 
   for (int i = 0; i < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; i++) {
     storageFetch_ExpectAndReturn("Ignored", ignored, geoSize, geoSize);
@@ -105,7 +115,8 @@ void testInitializationOfGeoIsDoneFromStorage() {
   // Verified in mocks
 }
 
-void testThatNoInitializationOfCalibIsDoneWhenStorageIsEmpty() {
+void testThatNoInitializationOfCalibIsDoneWhenStorageIsEmpty()
+{
   // Fixture
   storageFetch_IgnoreAndReturn(0);
 
@@ -116,10 +127,11 @@ void testThatNoInitializationOfCalibIsDoneWhenStorageIsEmpty() {
   // Verified in mocks
 }
 
-void testInitializationOfCalibIsDoneFromStorage() {
+void testInitializationOfCalibIsDoneFromStorage()
+{
   // Fixture
   int calibSize = sizeof(lighthouseCalibration_t);
-  const void* ignored = 0;
+  const void *ignored = 0;
 
   for (int i = 0; i < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; i++) {
     storageFetch_ExpectAndReturn("Ignored", ignored, calibSize, calibSize);
