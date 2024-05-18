@@ -257,9 +257,10 @@ void collisionAvoidanceUpdateSetpointCore(
 // Everything below this comment will only be compiled in a firware build made
 // with the standard Makefile. Everything depending on FreeRTOS, ARM, params,
 // etc. must go here.
-//
-#ifdef CRAZYFLIE_FW
+// \\cond
 
+#ifdef CRAZYFLIE_FW
+// \endcond
 #include "FreeRTOS.h"
 #include "task.h"
 
@@ -427,4 +428,6 @@ PARAM_GROUP_START(colAv)
   PARAM_ADD(PARAM_INT32, vorIters, &params.voronoiProjectionMaxIters)
 PARAM_GROUP_STOP(colAv)
 
+// \\cond
 #endif  // CRAZYFLIE_FW
+// \\endcond

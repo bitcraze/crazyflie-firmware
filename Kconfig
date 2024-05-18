@@ -66,21 +66,21 @@ choice
 
 config PLATFORM_CF2
     bool "Build for CF2"
-    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_BMP3XX
     select SENSORS_MPU9250_LPS25H
 
 config PLATFORM_BOLT
     bool "Build for Bolt"
-    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_BMP3XX
     select SENSORS_BMI088_SPI
 
 config PLATFORM_TAG
     bool "Build for the roadrunner"
-    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_BMP3XX
 
 config PLATFORM_FLAPPER
     bool "Build for Flapper Nimble+"
-    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_BMP3XX
     select SENSORS_BMI088_SPI
 
 endchoice
@@ -125,15 +125,15 @@ config SENSORS_MPU9250_LPS25H
     bool "Support for mpu9250 and lps25h sensors"
     default n
     help
-        Include support for the Bosch bmi088 inertial and bmp388
+        Include support for the Bosch bmi088 inertial and bmp3xx
         barometric sensors
 
-config SENSORS_BMI088_BMP388
-    bool "Support for bmi088 and bmp388 sensors"
+config SENSORS_BMI088_BMP3XX
+    bool "Support for bmi088 and bmp3xx sensors"
     default n
     select SENSORS_BMI088_I2C
     help
-        Include support for the Bosch bmi088 inertial and bmp388
+        Include support for the Bosch bmi088 inertial and bmp3xx
         barometric sensors
 
 config SENSORS_BOSCH
@@ -142,19 +142,19 @@ config SENSORS_BOSCH
 
 config SENSORS_IGNORE_BAROMETER_FAIL
     bool "Ignore failure from barometer"
-    depends on SENSORS_BMI088_BMP388
+    depends on SENSORS_BMI088_BMP3XX
     default n
 
 config SENSORS_BMI088_SPI
     bool "Support for SPI communincation with the bmi088 sensor"
-    depends on SENSORS_BMI088_BMP388
+    depends on SENSORS_BMI088_BMP3XX
     default n
     help
         Include support using SPI with the Bosch bmi088 inertial sensor
 
 config SENSORS_BMI088_I2C
     bool "Support for I2C communincation with the bmi088 sensor"
-    depends on SENSORS_BMI088_BMP388
+    depends on SENSORS_BMI088_BMP3XX
     default n
     help
         Include support using I2C with the Bosch bmi088 inertial sensor

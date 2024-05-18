@@ -239,4 +239,12 @@ config PARAM_SILENT_UPDATES
         about parameter updates, so this option should be enabled if you know
         what you are doing.
 
+config DEFRAG_STORAGE_ON_STARTUP
+    bool "Defrag_on_startup"
+    default y
+    help
+        This enables defragmentation of parameter storage memory everytime the
+        CPU is started. It increases startup time, depending on
+        fragmentation level.
+
 endmenu

@@ -245,10 +245,13 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
 
     // Configure the GPIO for CF-BL ESC RST
     GPIO_StructInit(&GPIO_InitStructure);
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+    GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_15;
     GPIO_Init(GPIOC, &GPIO_InitStructure);
+    // Hold reset for all CF-BL ESC:s by pulling low.
+    GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_RESET);
 
     // Configure the GPIO for the timer output
     GPIO_StructInit(&GPIO_InitStructure);
@@ -293,6 +296,9 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
 
   // Output zero power
   motorsStop();
+  // Release reset for all CF-BL ESC:s after motor signal is activated
+  GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_SET);
+
 }
 
 void motorsDeInit(const MotorPerifDef** motorMapSelect)

@@ -36,11 +36,11 @@
 #include "debug.h"
 
 static platformConfig_t configs[] = {
-#ifdef CONFIG_SENSORS_BMI088_BMP388
+#ifdef CONFIG_SENSORS_BMI088_BMP3XX
   {
     .deviceType = "CF21",
     .deviceTypeName = "Flapper (CF 2.1)",
-    .sensorImplementation = SensorImplementation_bmi088_bmp388,
+    .sensorImplementation = SensorImplementation_bmi088_bmp3xx,
     .physicalLayoutAntennasAreClose = true,
     .motorMap = motorMapDefaltConBrushless,
   },
@@ -49,14 +49,14 @@ static platformConfig_t configs[] = {
   {
     .deviceType = "CB10",
     .deviceTypeName = "Flapper (Bolt 1.0)",
-    .sensorImplementation = SensorImplementation_bmi088_spi_bmp388,
+    .sensorImplementation = SensorImplementation_bmi088_spi_bmp3xx,
     .physicalLayoutAntennasAreClose = false,
     .motorMap = motorMapBoltBrushless,
   },
   {
     .deviceType = "CB11",
     .deviceTypeName = "Flapper (Bolt 1.1)",
-    .sensorImplementation = SensorImplementation_bmi088_spi_bmp388,
+    .sensorImplementation = SensorImplementation_bmi088_spi_bmp3xx,
     .physicalLayoutAntennasAreClose = false,
     .motorMap = motorMapBolt11Brushless,
   }

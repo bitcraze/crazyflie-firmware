@@ -114,7 +114,8 @@
 #define BMP3_I2C_ADDR_SEC	UINT8_C(0x77)
 
 /**\name BMP3 chip identifier */
-#define BMP3_CHIP_ID  UINT8_C(0x50)
+#define BMP388_CHIP_ID  UINT8_C(0x50)
+#define BMP390_CHIP_ID  UINT8_C(0x60)
 /**\name BMP3 pressure settling time (micro secs)*/
 #define BMP3_PRESS_SETTLE_TIME	UINT16_C(392)
 /**\name BMP3 temperature settling time (micro secs) */

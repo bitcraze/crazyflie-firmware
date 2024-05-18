@@ -69,4 +69,11 @@ uint16_t powerDistributionStopRatio(uint32_t id);
  */
 uint32_t powerDistributionGetIdleThrust();
 
+/**
+ * @brief Compute the maximum thrust
+ *
+ * @return float The maximum thrust of the robot [N]
+ */
+float powerDistributionGetMaxThrust();
+
 #endif //__POWER_DISTRIBUTION_H__

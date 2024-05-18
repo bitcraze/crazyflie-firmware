@@ -309,7 +309,7 @@ struct traj_eval poly4d_eval(struct poly4d const *p, float t)
 
 	// 3rd derivative
 	polyder4d(deriv);
-	struct vec jerk = polyval_xyz(deriv, t);
+	out.jerk = polyval_xyz(deriv, t);
 
 	struct vec thrust = vadd(out.acc, mkvec(0, 0, GRAV));
 	// float thrust_mag = mass * vmag(thrust);
@@ -319,7 +319,7 @@ struct traj_eval poly4d_eval(struct poly4d const *p, float t)
 	struct vec y_body = vnormalize(vcross(z_body, x_world));
 	struct vec x_body = vcross(y_body, z_body);
 
-	struct vec jerk_orth_zbody = vorthunit(jerk, z_body);
+	struct vec jerk_orth_zbody = vorthunit(out.jerk, z_body);
 	struct vec h_w = vscl(1.0f / vmag(thrust), jerk_orth_zbody);
 
 	out.omega.x = -vdot(h_w, y_body);
@@ -383,6 +383,7 @@ struct traj_eval piecewise_eval(
 	// ev.yaw = normalize_radians(ev.yaw + traj->shift_yaw);
 	ev.vel = vzero();
 	ev.acc = vzero();
+	ev.jerk = vzero();
 	ev.omega = vzero();
 	return ev;
 }
@@ -414,6 +415,7 @@ struct traj_eval piecewise_eval_reversed(
 	ev.yaw = normalize_radians(ev.yaw + traj->shift_yaw);
 	ev.vel = vzero();
 	ev.acc = vzero();
+	ev.jerk = vzero();
 	ev.omega = vzero();
 	return ev;
 }

@@ -21,14 +21,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * sensors_bmi088_bmp388.c: IMU sensor driver for the *88 bosch sensors
+ * sensors_bmi088_bmp3xx.c: IMU sensor driver for the *88 bosch sensors
  */
 
 #define DEBUG_MODULE "IMU"
 
 #include <math.h>
 
-#include "sensors_bmi088_bmp388.h"
+#include "sensors_bmi088_bmp3xx.h"
 #include "stm32fxxx.h"
 
 #include "imu.h"
@@ -104,7 +104,7 @@ typedef struct
 
 /* initialize necessary variables */
 static struct bmi088_dev bmi088Dev;
-static struct bmp3_dev   bmp388Dev;
+static struct bmp3_dev   bmp3xxDev;
 
 static xQueueHandle accelerometerDataQueue;
 STATIC_MEM_QUEUE_ALLOC(accelerometerDataQueue, 1, sizeof(Axis3f));
@@ -250,27 +250,27 @@ static void sensorsScaleBaro(baro_t* baroScaled, float pressure,
       - 1.0f) * (25.0f + 273.15f)) / 0.0065f;
 }
 
-bool sensorsBmi088Bmp388ReadGyro(Axis3f *gyro)
+bool sensorsBmi088Bmp3xxReadGyro(Axis3f *gyro)
 {
   return (pdTRUE == xQueueReceive(gyroDataQueue, gyro, 0));
 }
 
-bool sensorsBmi088Bmp388ReadAcc(Axis3f *acc)
+bool sensorsBmi088Bmp3xxReadAcc(Axis3f *acc)
 {
   return (pdTRUE == xQueueReceive(accelerometerDataQueue, acc, 0));
 }
 
-bool sensorsBmi088Bmp388ReadMag(Axis3f *mag)
+bool sensorsBmi088Bmp3xxReadMag(Axis3f *mag)
 {
   return (pdTRUE == xQueueReceive(magnetometerDataQueue, mag, 0));
 }
 
-bool sensorsBmi088Bmp388ReadBaro(baro_t *baro)
+bool sensorsBmi088Bmp3xxReadBaro(baro_t *baro)
 {
   return (pdTRUE == xQueueReceive(barometerDataQueue, baro, 0));
 }
 
-void sensorsBmi088Bmp388Acquire(sensorData_t *sensors)
+void sensorsBmi088Bmp3xxAcquire(sensorData_t *sensors)
 {
   sensorsReadGyro(&sensors->gyro);
   sensorsReadAcc(&sensors->acc);
@@ -279,7 +279,7 @@ void sensorsBmi088Bmp388Acquire(sensorData_t *sensors)
   sensors->interruptTimestamp = sensorData.interruptTimestamp;
 }
 
-bool sensorsBmi088Bmp388AreCalibrated()
+bool sensorsBmi088Bmp3xxAreCalibrated()
 {
   return gyroBiasFound;
 }
@@ -350,7 +350,7 @@ static void sensorsTask(void *param)
         struct bmp3_data data;
         baro_t* baro388 = &sensorData.baro;
         /* Temperature and Pressure data are read and stored in the bmp3_data instance */
-        bmp3_get_sensor_data(sensor_comp, &data, &bmp388Dev);
+        bmp3_get_sensor_data(sensor_comp, &data, &bmp3xxDev);
         sensorsScaleBaro(baro388, data.pressure, data.temperature);
 
         measurement.type = MeasurementTypeBarometer;
@@ -371,7 +371,7 @@ static void sensorsTask(void *param)
   }
 }
 
-void sensorsBmi088Bmp388WaitDataReady(void)
+void sensorsBmi088Bmp3xxWaitDataReady(void)
 {
   xSemaphoreTake(dataReady, portMAX_DELAY);
 }
@@ -458,44 +458,54 @@ static void sensorsDeviceInit(void)
 #endif
   }
 
-  /* BMP388 */
-  bmp388Dev.dev_id = BMP3_I2C_ADDR_SEC;
-  bmp388Dev.intf = BMP3_I2C_INTF;
-  bmp388Dev.read = bmi088_burst_read;
-  bmp388Dev.write = bmi088_burst_write;
-  bmp388Dev.delay_ms = bmi088_ms_delay;
+  /* BMP388 || BMP390 */
+  bmp3xxDev.dev_id = BMP3_I2C_ADDR_SEC;
+  bmp3xxDev.intf = BMP3_I2C_INTF;
+  bmp3xxDev.read = bmi088_burst_read;
+  bmp3xxDev.write = bmi088_burst_write;
+  bmp3xxDev.delay_ms = bmi088_ms_delay;
 
   int i = 3;
   do {
-    bmp388Dev.delay_ms(1);
+    bmp3xxDev.delay_ms(1);
     // For some reason it often doesn't work first time
-    rslt = bmp3_init(&bmp388Dev);
+    rslt = bmp3_init(&bmp3xxDev);
   } while (rslt != BMP3_OK && i-- > 0);
 
   if (rslt == BMP3_OK)
   {
     isBarometerPresent = true;
-    DEBUG_PRINT("BMP388 I2C connection [OK]\n");
+    if (bmp3_chip_id == BMP388_CHIP_ID){
+      DEBUG_PRINT("BMP388 I2C connection [OK]\n");
+    }
+    else if (bmp3_chip_id == BMP390_CHIP_ID){
+      DEBUG_PRINT("BMP390 I2C connection [OK]\n");
+    }
+    else{
+      DEBUG_PRINT("BMP3XX I2C connection [FAIL]\n");
+      isInit = false;
+      return;
+    }
     /* Used to select the settings user needs to change */
     uint16_t settings_sel;
     /* Select the pressure and temperature sensor to be enabled */
-    bmp388Dev.settings.press_en = BMP3_ENABLE;
-    bmp388Dev.settings.temp_en = BMP3_ENABLE;
+    bmp3xxDev.settings.press_en = BMP3_ENABLE;
+    bmp3xxDev.settings.temp_en = BMP3_ENABLE;
     /* Select the output data rate and oversampling settings for pressure and temperature */
-    bmp388Dev.settings.odr_filter.press_os = BMP3_OVERSAMPLING_8X;
-    bmp388Dev.settings.odr_filter.temp_os = BMP3_NO_OVERSAMPLING;
-    bmp388Dev.settings.odr_filter.odr = BMP3_ODR_50_HZ;
-    bmp388Dev.settings.odr_filter.iir_filter = BMP3_IIR_FILTER_COEFF_3;
+    bmp3xxDev.settings.odr_filter.press_os = BMP3_OVERSAMPLING_8X;
+    bmp3xxDev.settings.odr_filter.temp_os = BMP3_NO_OVERSAMPLING;
+    bmp3xxDev.settings.odr_filter.odr = BMP3_ODR_50_HZ;
+    bmp3xxDev.settings.odr_filter.iir_filter = BMP3_IIR_FILTER_COEFF_3;
     /* Assign the settings which needs to be set in the sensor */
     settings_sel = BMP3_PRESS_EN_SEL | BMP3_TEMP_EN_SEL | BMP3_PRESS_OS_SEL | BMP3_TEMP_OS_SEL | BMP3_ODR_SEL | BMP3_IIR_FILTER_SEL;
-    rslt = bmp3_set_sensor_settings(settings_sel, &bmp388Dev);
+    rslt = bmp3_set_sensor_settings(settings_sel, &bmp3xxDev);
 
     /* Set the power mode to normal mode */
-    bmp388Dev.settings.op_mode = BMP3_NORMAL_MODE;
-    rslt = bmp3_set_op_mode(&bmp388Dev);
+    bmp3xxDev.settings.op_mode = BMP3_NORMAL_MODE;
+    rslt = bmp3_set_op_mode(&bmp3xxDev);
 
 
-    bmp388Dev.delay_ms(20); // wait before first read out
+    bmp3xxDev.delay_ms(20); // wait before first read out
     // read out data
     /* Variable used to select the sensor component */
     uint8_t sensor_comp;
@@ -505,16 +515,21 @@ static void sensorsDeviceInit(void)
     /* Sensor component selection */
     sensor_comp = BMP3_PRESS | BMP3_TEMP;
     /* Temperature and Pressure data are read and stored in the bmp3_data instance */
-    rslt = bmp3_get_sensor_data(sensor_comp, &data, &bmp388Dev);
+    rslt = bmp3_get_sensor_data(sensor_comp, &data, &bmp3xxDev);
 
     /* Print the temperature and pressure data */
+    if (bmp3_chip_id == BMP388_CHIP_ID){
 //    DEBUG_PRINT("BMP388 T:%0.2f  P:%0.2f\n",data.temperature, data.pressure/100.0f);
+    }
+    else if (bmp3_chip_id == BMP390_CHIP_ID){
+//    DEBUG_PRINT("BMP390 T:%0.2f  P:%0.2f\n",data.temperature, data.pressure/100.0f);
+    }
     baroMeasDelayMin = SENSORS_DELAY_BARO;
   }
   else
   {
 #ifndef CONFIG_SENSORS_IGNORE_BAROMETER_FAIL
-    DEBUG_PRINT("BMP388 I2C connection [FAIL]\n");
+    DEBUG_PRINT("BMP3XX I2C connection [FAIL]\n");
     isInit = false;
     return;
 #endif
@@ -571,7 +586,7 @@ static void sensorsInterruptInit(void)
   portENABLE_INTERRUPTS();
 }
 
-static void sensorsBmi088Bmp388Init(void)
+static void sensorsBmi088Bmp3xxInit(void)
 {
   sensorsBiasObjInit(&gyroBiasRunning);
   sensorsDeviceInit();
@@ -579,7 +594,7 @@ static void sensorsBmi088Bmp388Init(void)
   sensorsTaskInit();
 }
 
-void sensorsBmi088Bmp388Init_SPI(void)
+void sensorsBmi088Bmp3xxInit_SPI(void)
 {
   if (isInit)
     {
@@ -588,10 +603,10 @@ void sensorsBmi088Bmp388Init_SPI(void)
 
     DEBUG_PRINT("BMI088: Using SPI interface.\n");
     sensorsBmi088_SPI_deviceInit(&bmi088Dev);
-    sensorsBmi088Bmp388Init();
+    sensorsBmi088Bmp3xxInit();
 }
 
-void sensorsBmi088Bmp388Init_I2C(void)
+void sensorsBmi088Bmp3xxInit_I2C(void)
 {
   if (isInit)
   {
@@ -600,7 +615,7 @@ void sensorsBmi088Bmp388Init_I2C(void)
 
   DEBUG_PRINT("BMI088: Using I2C interface.\n");
   sensorsBmi088_I2C_deviceInit(&bmi088Dev);
-  sensorsBmi088Bmp388Init();
+  sensorsBmi088Bmp3xxInit();
 }
 
 static bool gyroSelftest()
@@ -635,7 +650,7 @@ static bool gyroSelftest()
   return testStatus;
 }
 
-bool sensorsBmi088Bmp388Test(void)
+bool sensorsBmi088Bmp3xxTest(void)
 {
   bool testStatus = true;
 
@@ -850,7 +865,7 @@ static bool sensorsFindBiasValue(BiasObj* bias)
   return foundBias;
 }
 
-bool sensorsBmi088Bmp388ManufacturingTest(void)
+bool sensorsBmi088Bmp3xxManufacturingTest(void)
 {
   bool testStatus = true;
   if (! gyroSelftest())
@@ -928,7 +943,7 @@ static void sensorsAccAlignToGravity(Axis3f* in, Axis3f* out)
   out->z = ry.z;
 }
 
-void sensorsBmi088Bmp388SetAccMode(accModes accMode)
+void sensorsBmi088Bmp3xxSetAccMode(accModes accMode)
 {
   switch (accMode)
   {
@@ -972,7 +987,7 @@ static void applyAxis3fLpf(lpf2pData *data, Axis3f* in)
   }
 }
 
-void sensorsBmi088Bmp388DataAvailableCallback(void)
+void sensorsBmi088Bmp3xxDataAvailableCallback(void)
 {
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
   imuIntTimestamp = usecTimestamp();
@@ -998,9 +1013,9 @@ LOG_GROUP_STOP(gyro)
 PARAM_GROUP_START(imu_sensors)
 
 /**
- * @brief Nonzero if BMP388 barometer is present
+ * @brief Nonzero if BMP3XX barometer is present
  */
-PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, BMP388, &isBarometerPresent)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, BMP3XX, &isBarometerPresent)
 
 /**
  * @brief Euler angle Phi defining IMU orientation on the airframe (in degrees)

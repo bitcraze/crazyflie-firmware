@@ -541,7 +541,7 @@ void testReadFromPrimaryDeckMemory() {
     TEST_ASSERT_TRUE(read_isCalled);
     TEST_ASSERT_EQUAL_UINT32(100, read_vAddr);
     TEST_ASSERT_EQUAL_UINT8(30, read_len);
-    TEST_ASSERT_TRUE(actual)
+    TEST_ASSERT_TRUE(actual);
 }
 
 void testReadFromSecondaryDeckMemory() {
@@ -559,7 +559,7 @@ void testReadFromSecondaryDeckMemory() {
     TEST_ASSERT_TRUE(read_isCalled);
     TEST_ASSERT_EQUAL_UINT32(100, read_vAddr);
     TEST_ASSERT_EQUAL_UINT8(30, read_len);
-    TEST_ASSERT_TRUE(actual)
+    TEST_ASSERT_TRUE(actual);
 }
 
 void testReadFromDeckWithoutReadFunction() {
@@ -603,7 +603,7 @@ void testWriteToPrimaryDeckMemory() {
     TEST_ASSERT_TRUE(write_isCalled);
     TEST_ASSERT_EQUAL_UINT32(100, write_vAddr);
     TEST_ASSERT_EQUAL_UINT8(30, write_len);
-    TEST_ASSERT_TRUE(actual)
+    TEST_ASSERT_TRUE(actual);
 }
 
 void testWriteToSecondaryDeckMemory() {
@@ -621,7 +621,7 @@ void testWriteToSecondaryDeckMemory() {
     TEST_ASSERT_TRUE(write_isCalled);
     TEST_ASSERT_EQUAL_UINT32(100, write_vAddr);
     TEST_ASSERT_EQUAL_UINT8(30, write_len);
-    TEST_ASSERT_TRUE(actual)
+    TEST_ASSERT_TRUE(actual);
 }
 
 void testWriteToSecondaryDeckMemoryPassesInMemDef() {

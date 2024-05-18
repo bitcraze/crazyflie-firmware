@@ -44,6 +44,16 @@ used in the unit tests as well. In some cases unit tests must be disabled based 
 if a particular file is not included in the build. A unit test file can be disabled based on configuration by using
 an annotation like this:
 
+## AddressSanitizer
+If you are facing issues running the unit tests locally and ending up in an endless loop of
+
+        Addressanitizer:DEADLY SIGNAL
+
+This is due to a incompatibility between TSan vesion and the high number of entropy bits used for randomization in recent Ubuntu versions.
+Solutions for this (until a fix is in place) is to run the tests with the toolbelt or temporarily bump your systems entropy bits down to 28 using; 
+
+`sudo sysctl vm.mmap_rnd_bits=28`
+
 ``` c
 // @IGNORE_IF_NOT CONFIG_DECK_LIGHTHOUSE
 ```

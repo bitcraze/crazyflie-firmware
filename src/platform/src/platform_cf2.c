@@ -43,18 +43,18 @@ static platformConfig_t configs[] = {
     .motorMap = motorMapDefaultBrushed,
   },
 #endif
-#ifdef CONFIG_SENSORS_BMI088_BMP388
+#ifdef CONFIG_SENSORS_BMI088_BMP3XX
   {
     .deviceType = "CF21",
     .deviceTypeName = "Crazyflie 2.1",
-    .sensorImplementation = SensorImplementation_bmi088_bmp388,
+    .sensorImplementation = SensorImplementation_bmi088_bmp3xx,
     .physicalLayoutAntennasAreClose = true,
     .motorMap = motorMapDefaultBrushed,
   },
   {
     .deviceType = "C21B",
     .deviceTypeName = "Crazyflie 2.1 Brushless",
-    .sensorImplementation = SensorImplementation_bmi088_bmp388,
+    .sensorImplementation = SensorImplementation_bmi088_bmp3xx,
     .physicalLayoutAntennasAreClose = true,
     .motorMap = motorMapCF21Brushless,
   },

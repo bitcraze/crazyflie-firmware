@@ -57,6 +57,7 @@
 /* Header includes */
 #include "bmp3_defs.h"
 
+extern uint8_t bmp3_chip_id;
 
 /*!
  *  @brief This API is the entry point.
