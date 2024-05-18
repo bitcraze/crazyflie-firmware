@@ -652,7 +652,7 @@ int start_trajectory(const struct data_start_trajectory* data)
             &trajectories_memory[trajDesc->trajectoryIdentifier.mem.offset]
           );
           compressed_trajectory.t_begin = t;
-          result = plan_start_compressed_trajectory(&planner, &compressed_trajectory, data->relative, pos, yaw);
+          result = plan_start_compressed_trajectory(&planner, &compressed_trajectory, data->relative, pos);
           xSemaphoreGive(lockTraj);
         }
       }

@@ -349,13 +349,6 @@ void traj_eval_transform(struct traj_eval *ev, struct vec shift, float rotation)
 struct traj_eval piecewise_eval(
   struct piecewise_traj const *traj, float t)
 {
-	//TODO: rotate trajectory before translating it by traj->shift
-	/* This must be done after the polynomial evaluation since we cannot rotate
-	the polynomial itself before evaluation. As such, we will also need to shift
-	after evaluation, instead of baking the shift into the polynomial. At that
-	point do we still need to include yaw in the shift?
-	*/
-
 	int cursor = 0;
 	t = t - traj->t_begin;
 	while (cursor < traj->n_pieces) {
@@ -397,7 +390,7 @@ struct traj_eval piecewise_eval_reversed(
 		struct poly4d const *piece = &(traj->pieces[cursor]);
 		if (t <= piece->duration * traj->timescale) {
 			poly4d_tmp = *piece;
-			poly4d_shift(&poly4d_tmp, traj->shift.x, traj->shift.y, traj->shift.z, traj->shift_yaw);
+			poly4d_shift(&poly4d_tmp, traj->shift.x, traj->shift.y, traj->shift.z, 0);
 			poly4d_stretchtime(&poly4d_tmp, traj->timescale);
 			for (int i = 0; i < 4; ++i) {
 				polyreflect(poly4d_tmp.p[i]);
@@ -412,7 +405,6 @@ struct traj_eval piecewise_eval_reversed(
 	struct poly4d const *end_piece = &(traj->pieces[0]);
 	struct traj_eval ev = poly4d_eval(end_piece, 0.0f);
 	ev.pos = vadd(ev.pos, traj->shift);
-	ev.yaw = normalize_radians(ev.yaw + traj->shift_yaw);
 	ev.vel = vzero();
 	ev.acc = vzero();
 	ev.jerk = vzero();
@@ -430,7 +422,6 @@ void piecewise_plan_5th_order(struct piecewise_traj *pp, float duration,
 	p->duration = duration;
 	pp->timescale = 1.0;
 	pp->shift = vzero();
-	pp->shift_yaw = 0;
 	pp->n_pieces = 1;
 	poly5(p->p[0], duration, p0.x, v0.x, a0.x, p1.x, v1.x, a1.x);
 	poly5(p->p[1], duration, p0.y, v0.y, a0.y, p1.y, v1.y, a1.y);
@@ -447,7 +438,6 @@ void piecewise_plan_7th_order_no_jerk(struct piecewise_traj *pp, float duration,
 	p->duration = duration;
 	pp->timescale = 1.0;
 	pp->shift = vzero();
-	pp->shift_yaw = 0;
 	pp->n_pieces = 1;
 	poly7_nojerk(p->p[0], duration, p0.x, v0.x, a0.x, p1.x, v1.x, a1.x);
 	poly7_nojerk(p->p[1], duration, p0.y, v0.y, a0.y, p1.y, v1.y, a1.y);

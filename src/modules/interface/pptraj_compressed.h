@@ -46,7 +46,6 @@ struct piecewise_traj_compressed
 	float duration;
 	float timescale;
 	struct vec shift;
-	float shift_yaw;
 	const void* data;
 
 	// mutable part of the data structure. We plan to mess around with this part
