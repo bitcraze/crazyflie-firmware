@@ -82,7 +82,7 @@ static uint16_t m3rpm;
 static uint16_t m4rpm;
 
 
-static void rpmInit(DeckInfo *info)
+static void rpmTestInit(DeckInfo *info)
 {
   int i;
   isInit = true;
@@ -313,7 +313,7 @@ static const DeckDriver rpm_deck = {
 
   .usedGpio = DECK_USING_IO_2 | DECK_USING_IO_3 | DECK_USING_PA2 | DECK_USING_PA3,
 
-  .init = rpmInit,
+  .init = rpmTestInit,
 };
 
 DECK_DRIVER(rpm_deck);
