@@ -194,7 +194,7 @@ static bool expCfBlTestRun(void)
 
 
 static const DeckDriver expCfBltest_deck = {
-  .vid = 0xBC,
+  .vid = 0xFF,
   .pid = 0xFF,
   .name = "bcExpTest_Cf_Bl",
 

@@ -33,6 +33,11 @@
 #include "deck.h"
 #include "debug.h"
 #include "log.h"
+#include "motors.h"
+
+//FreeRTOS includes
+#include "FreeRTOS.h"
+#include "task.h"
 
 //Hardware configuration
 #define ET_GPIO_PERIF   (RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOC)
@@ -47,6 +52,11 @@
 #define ET_GPIO_PIN_IO3   GPIO_Pin_4
 
 #define ER_NBR_PINS         4
+
+#define RPM_TEST_LOWER_LIMIT 10000
+#define MOTOR_TEST_PWM (UINT16_MAX/4)
+#define MOTOR_TEST_TIME_MILLIS 30000
+#define MOTOR_FEED_SIGNAL_INTVL 50
 
 typedef struct _etGpio
 {
@@ -81,6 +91,31 @@ static uint16_t m2rpm;
 static uint16_t m3rpm;
 static uint16_t m4rpm;
 
+static uint16_t getMotorRpm(uint16_t motorIdx)
+{
+  switch (motorIdx)
+  {
+  case MOTOR_M1:
+    return m1rpm;
+    break;
+
+  case MOTOR_M2:
+    return m2rpm;
+    break;
+
+  case MOTOR_M3:
+    return m3rpm;
+    break;
+
+  case MOTOR_M4:
+    return m4rpm;
+    break;
+
+  default:
+    return 0xFF;
+    break;
+  }
+}
 
 static void rpmTestInit(DeckInfo *info)
 {
@@ -153,6 +188,27 @@ static void rpmTestInit(DeckInfo *info)
   TIM_ITConfig(TIM3, TIM_IT_CC1, ENABLE);
   TIM_ITConfig(TIM3, TIM_IT_CC2, ENABLE);
   TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);
+
+  motorsInit(platformConfigGetMotorMapping());
+}
+
+static bool rpmTestRun(void)
+{
+  bool passed = false;
+  for(uint16_t i =0; i< NBR_OF_MOTORS; i++)
+  {
+    uint16_t testTime = MOTOR_TEST_TIME_MILLIS;
+
+    while(testTime) {
+      motorsSetRatio(i, MOTOR_TEST_PWM);
+      vTaskDelay(M2T(MOTOR_FEED_SIGNAL_INTVL));
+      testTime -= MOTOR_FEED_SIGNAL_INTVL;
+    }
+
+    passed &= (getMotorRpm(i) > RPM_TEST_LOWER_LIMIT);
+    motorsSetRatio(i, 0);
+  }
+  return passed;
 }
 
 static uint16_t calcRPM(uint32_t t1, uint32_t t2)
@@ -314,6 +370,7 @@ static const DeckDriver rpm_deck = {
   .usedGpio = DECK_USING_IO_2 | DECK_USING_IO_3 | DECK_USING_PA2 | DECK_USING_PA3,
 
   .init = rpmTestInit,
+  .test = rpmTestRun
 };
 
 DECK_DRIVER(rpm_deck);
