@@ -195,19 +195,23 @@ static void rpmTestInit(DeckInfo *info)
 static bool rpmTestRun(void)
 {
   bool passed = true;
-  for(uint16_t i =0; i< NBR_OF_MOTORS; i++)
-  {
+
     uint16_t testTime = MOTOR_TEST_TIME_MILLIS;
 
     while(testTime) {
-      motorsSetRatio(i, MOTOR_TEST_PWM);
+      for(uint16_t i =0; i< NBR_OF_MOTORS; i++)
+      {
+        motorsSetRatio(i, MOTOR_TEST_PWM);
+      }
       vTaskDelay(M2T(MOTOR_FEED_SIGNAL_INTVL));
       testTime -= MOTOR_FEED_SIGNAL_INTVL;
     }
-    DEBUG_PRINT("Motor; %d RPM; %d\n", i, getMotorRpm(i));
-    passed &= (getMotorRpm(i) > RPM_TEST_LOWER_LIMIT);
-    motorsSetRatio(i, 0);
-  }
+    for(uint16_t i =0; i< NBR_OF_MOTORS; i++)
+    {
+      DEBUG_PRINT("Motor; %d RPM; %d\n", i, getMotorRpm(i));
+      passed &= (getMotorRpm(i) > RPM_TEST_LOWER_LIMIT);
+      motorsSetRatio(i, 0);
+    }
   return passed;
 }
 
