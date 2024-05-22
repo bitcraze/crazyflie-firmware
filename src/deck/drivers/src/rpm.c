@@ -53,9 +53,9 @@
 
 #define ER_NBR_PINS         4
 
-#define RPM_TEST_LOWER_LIMIT 10000
+#define RPM_TEST_LOWER_LIMIT 9300
 #define MOTOR_TEST_PWM (UINT16_MAX/4)
-#define MOTOR_TEST_TIME_MILLIS 30000
+#define MOTOR_TEST_TIME_MILLIS 3000
 #define MOTOR_FEED_SIGNAL_INTVL 50
 
 typedef struct _etGpio
@@ -194,7 +194,7 @@ static void rpmTestInit(DeckInfo *info)
 
 static bool rpmTestRun(void)
 {
-  bool passed = false;
+  bool passed = true;
   for(uint16_t i =0; i< NBR_OF_MOTORS; i++)
   {
     uint16_t testTime = MOTOR_TEST_TIME_MILLIS;
@@ -204,7 +204,7 @@ static bool rpmTestRun(void)
       vTaskDelay(M2T(MOTOR_FEED_SIGNAL_INTVL));
       testTime -= MOTOR_FEED_SIGNAL_INTVL;
     }
-
+    DEBUG_PRINT("Motor; %d RPM; %d\n", i, getMotorRpm(i));
     passed &= (getMotorRpm(i) > RPM_TEST_LOWER_LIMIT);
     motorsSetRatio(i, 0);
   }

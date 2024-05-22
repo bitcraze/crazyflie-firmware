@@ -165,7 +165,7 @@ static bool expCfBlTestRun(void)
     bcRpm->init(NULL);
     }
     if(bcRpm != NULL && bcRpm->test != NULL) {
-      bcRpm->test();
+      status &= bcRpm->test();
     }
   }
 
