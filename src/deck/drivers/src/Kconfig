@@ -485,7 +485,7 @@ config DECK_ACS37800
       
 config DECK_RPM
     bool "Support the rpm deck"
-    default n
+    default y
     help
         Enables the rpm deck that can be usfull in testing.
       
