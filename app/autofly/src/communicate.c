@@ -121,11 +121,17 @@ bool sendMappingRequest(mapping_req_packet_t* mappingReqPacket)
     packet.size = Autofly_packet.length;
     // Send the P2P packet
     if(radiolinkSendP2PPacketBroadcast(&packet)){
-        DEBUG_PRINT("Send mapping request successfully!,destinationId:%d,seq=%d\n",destinationId,mappingReqPacket->seq);
+        // DEBUG_PRINT("Send mapping request successfully!,destinationId:%d,seq=%d\n",destinationId,mappingReqPacket->seq);
+        mapping_req_payload_t *mappingReqPayload = (mapping_req_payload_t*)mappingReqPacket->mappingRequestPayload;
+        DEBUG_PRINT("(%d,%d,%d) ", mappingReqPayload->startPoint.x, mappingReqPayload->startPoint.y, mappingReqPayload->startPoint.z);
+        for(int i = 0; i < mappingReqPayload->len; i++){
+            DEBUG_PRINT("(%d,%d,%d) ", mappingReqPayload->endPoint[i].x, mappingReqPayload->endPoint[i].y, mappingReqPayload->endPoint[i].z);
+        }
+        DEBUG_PRINT("\n");
         return true;
     }
     else{
-        DEBUG_PRINT("Send mapping request failed!,destinationId:%d,seq=%d\n",destinationId,mappingReqPacket->seq);
+        // DEBUG_PRINT("Send mapping request failed!,destinationId:%d,seq=%d\n",destinationId,mappingReqPacket->seq);
         return false;
     }
 }
