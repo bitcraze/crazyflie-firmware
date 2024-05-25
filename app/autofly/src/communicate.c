@@ -25,6 +25,8 @@ void processExploreResp(explore_resp_packet_t* exploreRespPacket);
 void processPathResp();
 void processClusterResp();
 
+uint16_t mappingRequestSeq = 0;
+uint16_t exploreRequestSeq = 0;
 static bool flag_exploreResp;
 static uint8_t destinationId = AIDECK_ID;
 static bool IsCluster = false;

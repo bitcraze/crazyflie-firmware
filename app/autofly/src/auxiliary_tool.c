@@ -84,7 +84,10 @@ double caldistance(coordinate_t *A, coordinate_t *B)
 }
 
 bool ReliabilityTest(coordinateF_t* last, coordinateF_t* cur){
-   static bool first = true;
+    static bool first = true;
+    #ifndef ENABLE_RELAIBILITY_TEST
+        return true;
+    #endif
     if( (abs(last->x-cur->x)+abs(last->y-cur->y)+abs(last->z-cur->z) < RELIABILITY_DISTANCE || first)
         && (abs(cur->x) <= WIDTH_X)
         && (abs(cur->y) <= WIDTH_Y)

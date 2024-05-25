@@ -82,8 +82,8 @@ typedef struct
     uint8_t data[AUTOFLY_PACKET_MUT];
 } Autofly_packet_t;   // 60
 
-uint16_t mappingRequestSeq;
-uint16_t exploreRequestSeq;
+extern uint16_t mappingRequestSeq;
+extern uint16_t exploreRequestSeq;
 uavRange_t* uavRange;
 
 void CommunicateInit();

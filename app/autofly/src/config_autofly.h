@@ -1,6 +1,6 @@
 // Autofly_Main config
-#define OFFSET_X 50
-#define OFFSET_Y 50
+#define OFFSET_X 0
+#define OFFSET_Y 0
 #define OFFSET_Z 0
 #define TOP 65 //obstacle top
 #define BOTTOM 25 //obstacle bottom
@@ -14,7 +14,7 @@
 #define MAXRUN 200
 #define RELIABILITY_DISTANCE 24
 
-#define WAIT_DELAY 300
+#define WAIT_DELAY 100
 #define LOOP_DELAY 50
 #define PROBABILITY_MEM(octomap) (double)octomap->octoNodeSet->length / NODE_SET_SIZE
 #define PRESENT_JUMP 2
@@ -35,7 +35,7 @@
 #define WIDTH_Z TREE_CENTER_Z * 2
 #define TREE_RESOLUTION 4
 #define TREE_MAX_DEPTH 6
-#define NODE_SET_SIZE 3000
+#define NODE_SET_SIZE 400
 
 #define LOG_ODDS_OCCUPIED 6
 #define LOG_ODDS_FREE 0

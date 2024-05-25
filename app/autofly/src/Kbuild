@@ -9,4 +9,4 @@ obj-y += coordinateQueue.o
 obj-y += auxiliary_tool.o
 obj-y += control_tool.o
 obj-y += communicate.o
-obj-y += Autofly_Main.o
+obj-y += autoflyMainMul.o
