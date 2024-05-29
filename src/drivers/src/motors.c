@@ -49,7 +49,7 @@
 
 static uint8_t motorSetEnable = 0;
 static uint16_t motorPowerSet[] = {0, 0, 0, 0}; // user-requested PWM signals (overrides)
-static uint32_t motor_ratios[] = {0, 0, 0, 0};  // actual PWM signals
+static uint16_t motor_ratios[] = {0, 0, 0, 0};  // actual PWM signals
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
 static DMA_InitTypeDef DMA_InitStructureShare;
@@ -584,7 +584,7 @@ int motorsESCIsLo(uint32_t id)
   return GPIO_ReadInputDataBit(motorMap[id]->gpioPort, motorMap[id]->gpioPin) == Bit_RESET;
 }
 
-int motorsGetRatio(uint32_t id)
+uint16_t motorsGetRatio(uint32_t id)
 {
   ASSERT(id < NBR_OF_MOTORS);
 

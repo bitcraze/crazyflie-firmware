@@ -322,9 +322,9 @@ void motorsBurstDshot();
 void motorsSetRatio(uint32_t id, uint16_t ratio);
 
 /**
- * Get the PWM ratio of the motor 'id'. Return -1 if wrong ID.
+ * Get the PWM ratio of the motor 'id'.
  */
-int motorsGetRatio(uint32_t id);
+uint16_t motorsGetRatio(uint32_t id);
 
 /**
  * FreeRTOS Task to test the Motors driver
