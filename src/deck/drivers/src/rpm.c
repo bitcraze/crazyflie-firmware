@@ -34,6 +34,7 @@
 #include "debug.h"
 #include "log.h"
 #include "motors.h"
+#include "platform.h"
 
 //FreeRTOS includes
 #include "FreeRTOS.h"
@@ -53,10 +54,11 @@
 
 #define ER_NBR_PINS         4
 
-#define RPM_TEST_LOWER_LIMIT 9300
-#define MOTOR_TEST_PWM (UINT16_MAX/4)
-#define MOTOR_TEST_TIME_MILLIS 3000
-#define MOTOR_FEED_SIGNAL_INTVL 50
+#define RPM_TEST_LOWER_LIMIT 13000
+#define MOTOR_TEST_PWM (UINT16_MAX/2)
+#define MOTOR_TEST_TIME_MILLIS 2000
+#define MOTOR_FEED_SIGNAL_INTVL 1
+#define MOTOR_RPM_NBR_SAMPLES (MOTOR_TEST_TIME_MILLIS/MOTOR_FEED_SIGNAL_INTVL)
 
 typedef struct _etGpio
 {
@@ -93,8 +95,7 @@ static uint16_t m4rpm;
 
 static uint16_t getMotorRpm(uint16_t motorIdx)
 {
-  switch (motorIdx)
-  {
+  switch (motorIdx) {
   case MOTOR_M1:
     return m1rpm;
     break;
@@ -115,6 +116,21 @@ static uint16_t getMotorRpm(uint16_t motorIdx)
     return 0xFF;
     break;
   }
+}
+
+static void setMotorsPwm(uint32_t pwm)
+{
+  for (int i = 0; i<NBR_OF_MOTORS; i++) {
+    motorsSetRatio(i, pwm);
+  }
+}
+
+static void runMotors()
+{
+      #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
+    motorsBurstDshot();
+    #endif
+    vTaskDelay(MOTOR_FEED_SIGNAL_INTVL);
 }
 
 static void rpmTestInit(DeckInfo *info)
@@ -195,23 +211,30 @@ static void rpmTestInit(DeckInfo *info)
 static bool rpmTestRun(void)
 {
   bool passed = true;
+  uint16_t testTime = MOTOR_TEST_TIME_MILLIS;
+  int32_t waitTime = MOTOR_TEST_TIME_MILLIS;
+  int32_t rpmSamples[] = {0,0,0,0};
+  setMotorsPwm(0);
+  while (waitTime) { //We need to wait until all ESCs are started. We need to feed a signal continuosly so they dont go to sleep
+    runMotors();
+    waitTime -= MOTOR_FEED_SIGNAL_INTVL;
+  }
 
-    uint16_t testTime = MOTOR_TEST_TIME_MILLIS;
+  setMotorsPwm(MOTOR_TEST_PWM);
+  while(testTime) {
+    runMotors();
+    testTime -= MOTOR_FEED_SIGNAL_INTVL;
+    for (int i = 0; i<NBR_OF_MOTORS; i++) {
+      rpmSamples[i] += getMotorRpm(i);
+    }
+  }
 
-    while(testTime) {
-      for(uint16_t i =0; i< NBR_OF_MOTORS; i++)
-      {
-        motorsSetRatio(i, MOTOR_TEST_PWM);
-      }
-      vTaskDelay(M2T(MOTOR_FEED_SIGNAL_INTVL));
-      testTime -= MOTOR_FEED_SIGNAL_INTVL;
-    }
-    for(uint16_t i =0; i< NBR_OF_MOTORS; i++)
-    {
-      DEBUG_PRINT("Motor; %d RPM; %d\n", i, getMotorRpm(i));
-      passed &= (getMotorRpm(i) > RPM_TEST_LOWER_LIMIT);
-      motorsSetRatio(i, 0);
-    }
+  setMotorsPwm(0);
+  for (int i = 0; i<NBR_OF_MOTORS; i++) {
+    int rpmAvg = rpmSamples[i] / MOTOR_RPM_NBR_SAMPLES;
+    DEBUG_PRINT("Motor; %d RPM; %d\n", i, rpmAvg);
+    passed &= (rpmAvg > RPM_TEST_LOWER_LIMIT);
+  }
   return passed;
 }
 
