@@ -137,6 +137,7 @@ bool is_traj_eval_valid(struct traj_eval const *ev);
 // evaluate a single polynomial piece
 struct traj_eval poly4d_eval(struct poly4d const *p, float t);
 
+// rotate and then translate a traj_eval object
 void traj_eval_transform(struct traj_eval *ev, struct vec shift, float rotation);
 
 // ----------------------------------//

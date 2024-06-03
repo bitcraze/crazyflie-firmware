@@ -331,10 +331,12 @@ struct traj_eval poly4d_eval(struct poly4d const *p, float t)
 
 void traj_eval_transform(struct traj_eval *ev, struct vec shift, float rotation)
 {
+	struct mat33 rotator = mrotz(normalize_radians(rotation));
+
 	// rotate position, velocity, acceleration
-	ev->pos = mvmul(mrotz(normalize_radians(rotation)), ev->pos);
-	ev->vel = mvmul(mrotz(normalize_radians(rotation)), ev->vel);
-	ev->acc = mvmul(mrotz(normalize_radians(rotation)), ev->acc);
+	ev->pos = mvmul(rotator, ev->pos);
+	ev->vel = mvmul(rotator, ev->vel);
+	ev->acc = mvmul(rotator, ev->acc);
 
 	// shift
 	ev->yaw += normalize_radians(rotation);
