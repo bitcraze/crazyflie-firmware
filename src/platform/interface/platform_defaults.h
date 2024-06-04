@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2022 Bitcraze AB
+ * Copyright (C) 2022-2024 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,6 +33,9 @@
 
 #ifdef CONFIG_PLATFORM_CF2
     #include "platform_defaults_cf2.h"
+#endif
+#ifdef CONFIG_PLATFORM_CF21BL
+    #include "platform_defaults_cf21bl.h"
 #endif
 #ifdef CONFIG_PLATFORM_BOLT
     #include "platform_defaults_bolt.h"

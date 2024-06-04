@@ -95,6 +95,10 @@ unquoted = $(patsubst "%",%,$(CONFIG_DECK_LOCO_2D_POSITION_HEIGHT))
 ARCH_CFLAGS += -DDECK_LOCO_2D_POSITION_HEIGHT=$(unquoted)
 endif
 
+ifeq ($(CONFIG_PLATFORM_CF21BL), y)
+PLATFORM = cf21bl
+endif
+
 ifeq ($(CONFIG_PLATFORM_TAG),y)
 PLATFORM = tag
 endif

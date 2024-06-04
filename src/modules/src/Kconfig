@@ -150,16 +150,6 @@ config MOTORS_REQUIRE_ARMING
         When enabled, system must be armed to be able to take off. Arming can
         be done in several ways, e.g. though cfclient or external transmitter.
 
-config MOTORS_DEFAULT_IDLE_THRUST
-    int "Default idle thrust for motors in armed state"
-    range 0 65535
-    default 0
-    depends on MOTORS_REQUIRE_ARMING
-    help
-        Default thrust for motors when idling in armed state, expressed as an
-        integer in the range 0 to 65535. This can be overridden with parameters;
-        the value specified here applies to the case when the persistent storage
-        does not contain an idle thrust value.
 
 config MOTORS_DEFAULT_PROP_TEST_PWM_RATIO
     int "Override default PWM ratio to use during motor tests"
@@ -192,7 +182,7 @@ choice
 
 config POWER_DISTRIBUTION_QUADROTOR
     bool "Quadrotor power distribution"
-    depends on PLATFORM_CF2 || PLATFORM_BOLT || PLATFORM_TAG
+    depends on PLATFORM_CF2 || PLATFORM_CF21BL|| PLATFORM_BOLT || PLATFORM_TAG
     help
         Power distribution function for quadrotors
 config POWER_DISTRIBUTION_FLAPPER
