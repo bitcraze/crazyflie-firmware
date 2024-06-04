@@ -168,14 +168,14 @@ static void populateDeckMemoryInfos(uint8_t buffer[], const int deckNr) {
 
     const DeckMemDef_t* deckMemDef = info->driver->memoryDef;
     if (deckMemDef) {
-        uint32_t baseAddress = (deckNr + 1) * DECK_MEM_MAX_SIZE;
+        uint32_t baseAddress = (2 * deckNr + 1) * DECK_MEM_MAX_SIZE;
         populateDeckMemoryInfoBuffer(deckMemDef, info->driver->name,
                                      baseAddress, buffer);
     }
 
     const DeckMemDef_t* deckMemDefSecondary = info->driver->memoryDefSecondary;
     if (deckMemDefSecondary) {
-        uint32_t baseAddress = (deckNr + 2) * DECK_MEM_MAX_SIZE;
+        uint32_t baseAddress = (2 * deckNr + 2) * DECK_MEM_MAX_SIZE;
         populateDeckMemoryInfoBuffer(deckMemDefSecondary, info->driver->name,
                                      baseAddress, buffer + DECK_MEMORY_INFO_SIZE);
     }
@@ -234,7 +234,7 @@ static bool handleDeckSectionRead(const uint32_t memAddr, const uint8_t readLen,
 
     if (deckMemDef) {
         if (deckMemDef->read) {
-            uint32_t baseAddress = (deckNr + 1) * DECK_MEM_MAX_SIZE + selector * DECK_MEM_MAX_SIZE;
+            uint32_t baseAddress = (2 * deckNr + 1) * DECK_MEM_MAX_SIZE + selector * DECK_MEM_MAX_SIZE;
             uint32_t deckAddress = memAddr - baseAddress;
             result = deckMemDef->read(deckAddress, readLen, buffer);
         }
@@ -295,7 +295,7 @@ static bool handleDeckSectionWrite(const uint32_t memAddr, const uint8_t writeLe
 
     if (deckMemDef) {
         if (deckMemDef->write) {
-            uint32_t baseAddress = (deckNr + 1) * DECK_MEM_MAX_SIZE + selector * DECK_MEM_MAX_SIZE;
+            uint32_t baseAddress = (deckNr * 2 + 1) * DECK_MEM_MAX_SIZE + selector * DECK_MEM_MAX_SIZE;
             uint32_t deckAddress = memAddr - baseAddress;
             result = deckMemDef->write(deckAddress, writeLen, buffer, deckMemDef);
         }
