@@ -171,6 +171,7 @@ bindings_python : Build the python bindings for firmware wrappers
 menuconfig      : Open up a terminal user interface to set configuration options
 defconfig       : Generate a `.config` with the default configuration options
 cf2_defconfig   : Merge configuration options from `configs/cf2_defconfig` with default
+cf21bl_defconfig: Merge configuration options from `configs/cf21bl_defconfig` with default
 tag_defconfig   : Merge configuration options from `configs/tag_defconfig` with default
 bolt_defconfig   : Merge configuration options from `configs/bolt_defconfig` with default
 allyesconfig    : Generate a `.config` with the all configuration options enabled

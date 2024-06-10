@@ -69,6 +69,11 @@ config PLATFORM_CF2
     select SENSORS_BMI088_BMP3XX
     select SENSORS_MPU9250_LPS25H
 
+config PLATFORM_CF21BL
+    bool "Build for CF2.1 brushless"
+    select SENSORS_BMI088_BMP3XX
+    select MOTORS_REQUIRE_ARMING
+
 config PLATFORM_BOLT
     bool "Build for Bolt"
     select SENSORS_BMI088_BMP3XX

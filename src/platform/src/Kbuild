@@ -1,5 +1,6 @@
 obj-$(CONFIG_PLATFORM_BOLT) += platform_bolt.o
 obj-$(CONFIG_PLATFORM_CF2) += platform_cf2.o
+obj-$(CONFIG_PLATFORM_CF21BL) += platform_cf21bl.o
 obj-$(CONFIG_PLATFORM_TAG) += platform_tag.o
 obj-$(CONFIG_PLATFORM_FLAPPER) += platform_flapper.o
 obj-y += platform.o

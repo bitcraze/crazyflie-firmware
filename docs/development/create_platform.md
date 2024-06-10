@@ -81,6 +81,7 @@ We need to add a entry point for your platform. The way the build system determi
 ```Makefile
 obj-$(CONFIG_PLATFORM_BOLT) += platform_bolt.o
 obj-$(CONFIG_PLATFORM_CF2) += platform_cf2.o
+obj-$(CONFIG_PLATFORM_CF21BL) += platform_cf21bl.o
 obj-$(CONFIG_PLATFORM_TAG) += platform_tag.o
 obj-y += platform.o
 obj-y += platform_stm32f4.o
@@ -92,6 +93,7 @@ Let's add `RINCEWIND`:
 ```Makefile
 obj-$(CONFIG_PLATFORM_BOLT) += platform_bolt.o
 obj-$(CONFIG_PLATFORM_CF2) += platform_cf2.o
+obj-$(CONFIG_PLATFORM_CF21BL) += platform_cf21bl.o
 obj-$(CONFIG_PLATFORM_TAG) += platform_tag.o
 obj-$(CONFIG_PLATFORM_RINCEWIND) += platform_rincewind.o
 obj-y += platform.o
@@ -156,6 +158,9 @@ Your platform need to define suitable default values to (persistent) parameters.
 #ifdef CONFIG_PLATFORM_CF2
     #include "platform_defaults_cf2.h"
 #endif
+#ifdef CONFIG_PLATFORM_CF21BL
+    #include "platform_defaults_cf21bl.h"
+#endif
 #ifdef CONFIG_PLATFORM_BOLT
     #include "platform_defaults_bolt.h"
 #endif
@@ -174,6 +179,9 @@ Becomes:
 
 #ifdef CONFIG_PLATFORM_CF2
     #include "platform_defaults_cf2.h"
+#endif
+#ifdef CONFIG_PLATFORM_CF21BL
+    #include "platform_defaults_cf21bl.h"
 #endif
 #ifdef CONFIG_PLATFORM_BOLT
     #include "platform_defaults_bolt.h"
