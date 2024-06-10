@@ -32,7 +32,15 @@
 #include "debug.h"
 #include "deck.h"
 #include "deck_test.h"
+#include "motors.h"
+#include "platform.h"
 
+//FreeRTOS includes
+#include "FreeRTOS.h"
+#include "task.h"
+
+#include "log.h"
+#include "param.h"
 #include "sensors.h"
 
 //Hardware configuration
@@ -42,11 +50,6 @@
 #define ET_GPIO_PIN_TX1   GPIO_Pin_10
 #define ET_GPIO_PORT_RX1  GPIOC
 #define ET_GPIO_PIN_RX1   GPIO_Pin_11
-
-#define ET_GPIO_PORT_TX2  GPIOA
-#define ET_GPIO_PIN_TX2   GPIO_Pin_2
-#define ET_GPIO_PORT_RX2  GPIOA
-#define ET_GPIO_PIN_RX2   GPIO_Pin_3
 
 #define ET_GPIO_PORT_SCK  GPIOA
 #define ET_GPIO_PIN_SCK   GPIO_Pin_5
@@ -62,21 +65,29 @@
 
 #define ET_GPIO_PORT_IO1  GPIOB
 #define ET_GPIO_PIN_IO1   GPIO_Pin_8
-#define ET_GPIO_PORT_IO2  GPIOB
-#define ET_GPIO_PIN_IO2   GPIO_Pin_5
-#define ET_GPIO_PORT_IO3  GPIOB
-#define ET_GPIO_PIN_IO3   GPIO_Pin_4
 #define ET_GPIO_PORT_IO4  GPIOC
 #define ET_GPIO_PIN_IO4   GPIO_Pin_12
 
-#define ET_NBR_PINS         11
-#define ET_IO4_PIN          (ET_NBR_PINS - 1)
+#define ET_NBR_PINS         7
+
+#define RPM_TEST_LOWER_LIMIT 12000
+#define MOTOR_TEST_PWM (UINT16_MAX/2)
+#define MOTOR_TEST_TIME_MILLIS 2000
+#define MOTOR_FEED_SIGNAL_INTVL 1
+#define MOTOR_RPM_NBR_SAMPLES (MOTOR_TEST_TIME_MILLIS/MOTOR_FEED_SIGNAL_INTVL)
 
 typedef struct _etGpio {
   GPIO_TypeDef     *port;
   uint16_t          pin;
   char              name[6];
 } EtGpio;
+
+typedef struct {
+  logVarId_t m1;
+  logVarId_t m2;
+  logVarId_t m3;
+  logVarId_t m4;
+} motorRpmParams_t;
 
 static EtGpio etGpioIn[ET_NBR_PINS] = {
   {ET_GPIO_PORT_TX1,  ET_GPIO_PIN_TX1, "TX1"},
@@ -93,6 +104,7 @@ static EtGpio etGpioSCL = {ET_GPIO_PORT_SCL,  ET_GPIO_PIN_SCL, "SCL"};
 
 static bool isInit;
 const DeckDriver *bcRpm = NULL;
+static motorRpmParams_t motorRpm = {0};
 
 static void expCfBlTestInit(DeckInfo *info)
 {
@@ -103,7 +115,85 @@ static void expCfBlTestInit(DeckInfo *info)
 
   // Initialize the VL53L0 sensor using the zRanger deck driver
   bcRpm = deckFindDriverByName("bcRpm");
+  motorsInit(platformConfigGetMotorMapping());
+  motorRpm.m1 = logGetVarId("rpm", "m1");
+  motorRpm.m2 = logGetVarId("rpm", "m2");
+  motorRpm.m3 = logGetVarId("rpm", "m3");
+  motorRpm.m4 = logGetVarId("rpm", "m4");
   isInit = true;
+}
+
+static int getMotorRpm(uint16_t motorIdx)
+{
+  uint16_t ret = 0xFF;
+  switch (motorIdx) {
+    case MOTOR_M1:
+      ret =  logGetInt(motorRpm.m1);
+      break;
+
+    case MOTOR_M2:
+      ret =  logGetInt(motorRpm.m2);
+      break;
+
+    case MOTOR_M3:
+      ret = logGetInt(motorRpm.m3);
+      break;
+
+    case MOTOR_M4:
+      ret = logGetInt(motorRpm.m4);
+      break;
+
+    default:
+      break;
+    }
+  return ret;
+}
+
+static void setMotorsPwm(uint32_t pwm)
+{
+  for (int i = 0; i<NBR_OF_MOTORS; i++) {
+    motorsSetRatio(i, pwm);
+  }
+}
+
+static void runMotors()
+{
+    #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
+    motorsBurstDshot();
+    #endif
+    vTaskDelay(MOTOR_FEED_SIGNAL_INTVL);
+}
+
+
+
+static bool rpmTestRun(void)
+{
+  bool passed = true;
+  uint16_t testTime = MOTOR_TEST_TIME_MILLIS;
+  int32_t waitTime = MOTOR_TEST_TIME_MILLIS;
+  int32_t rpmSamples[] = {0,0,0,0};
+  setMotorsPwm(0);
+  while (waitTime) { //We need to wait until all ESCs are started. We need to feed a signal continuosly so they dont go to sleep
+    runMotors();
+    waitTime -= MOTOR_FEED_SIGNAL_INTVL;
+  }
+
+  setMotorsPwm(MOTOR_TEST_PWM);
+  while(testTime) {
+    runMotors();
+    testTime -= MOTOR_FEED_SIGNAL_INTVL;
+    for (int i = 0; i<NBR_OF_MOTORS; i++) {
+      rpmSamples[i] += getMotorRpm(i);
+    }
+  }
+
+  setMotorsPwm(0);
+  for (int i = 0; i<NBR_OF_MOTORS; i++) {
+    int rpmAvg = rpmSamples[i] / MOTOR_RPM_NBR_SAMPLES;
+    DEBUG_PRINT("Motor; %d RPM; %d\n", i, rpmAvg);
+    passed &= (rpmAvg > RPM_TEST_LOWER_LIMIT);
+  }
+  return passed;
 }
 
 static bool expCfBlTestRun(void)
@@ -164,9 +254,8 @@ static bool expCfBlTestRun(void)
     if(bcRpm->init) {
     bcRpm->init(NULL);
     }
-    if(bcRpm != NULL && bcRpm->test != NULL) {
-      status &= bcRpm->test();
-    }
+
+    rpmTestRun();
   }
 
   if (status) {
@@ -192,7 +281,7 @@ static bool expCfBlTestRun(void)
 static const DeckDriver expCfBltest_deck = {
   .vid = 0xFF,
   .pid = 0xFF,
-  .name = "bcExpTest_Cf_Bl",
+  .name = "bcExpTestCfBl",
 
   .usedGpio = 0xFFFFFFFF,
 

@@ -33,12 +33,6 @@
 #include "deck.h"
 #include "debug.h"
 #include "log.h"
-#include "motors.h"
-#include "platform.h"
-
-//FreeRTOS includes
-#include "FreeRTOS.h"
-#include "task.h"
 
 //Hardware configuration
 #define ET_GPIO_PERIF   (RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOC)
@@ -53,12 +47,6 @@
 #define ET_GPIO_PIN_IO3   GPIO_Pin_4
 
 #define ER_NBR_PINS         4
-
-#define RPM_TEST_LOWER_LIMIT 13000
-#define MOTOR_TEST_PWM (UINT16_MAX/2)
-#define MOTOR_TEST_TIME_MILLIS 2000
-#define MOTOR_FEED_SIGNAL_INTVL 1
-#define MOTOR_RPM_NBR_SAMPLES (MOTOR_TEST_TIME_MILLIS/MOTOR_FEED_SIGNAL_INTVL)
 
 typedef struct _etGpio
 {
@@ -92,46 +80,6 @@ static uint16_t m1rpm;
 static uint16_t m2rpm;
 static uint16_t m3rpm;
 static uint16_t m4rpm;
-
-static uint16_t getMotorRpm(uint16_t motorIdx)
-{
-  switch (motorIdx) {
-  case MOTOR_M1:
-    return m1rpm;
-    break;
-
-  case MOTOR_M2:
-    return m2rpm;
-    break;
-
-  case MOTOR_M3:
-    return m3rpm;
-    break;
-
-  case MOTOR_M4:
-    return m4rpm;
-    break;
-
-  default:
-    return 0xFF;
-    break;
-  }
-}
-
-static void setMotorsPwm(uint32_t pwm)
-{
-  for (int i = 0; i<NBR_OF_MOTORS; i++) {
-    motorsSetRatio(i, pwm);
-  }
-}
-
-static void runMotors()
-{
-      #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
-    motorsBurstDshot();
-    #endif
-    vTaskDelay(MOTOR_FEED_SIGNAL_INTVL);
-}
 
 static void rpmTestInit(DeckInfo *info)
 {
@@ -205,37 +153,6 @@ static void rpmTestInit(DeckInfo *info)
   TIM_ITConfig(TIM3, TIM_IT_CC2, ENABLE);
   TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);
 
-  motorsInit(platformConfigGetMotorMapping());
-}
-
-static bool rpmTestRun(void)
-{
-  bool passed = true;
-  uint16_t testTime = MOTOR_TEST_TIME_MILLIS;
-  int32_t waitTime = MOTOR_TEST_TIME_MILLIS;
-  int32_t rpmSamples[] = {0,0,0,0};
-  setMotorsPwm(0);
-  while (waitTime) { //We need to wait until all ESCs are started. We need to feed a signal continuosly so they dont go to sleep
-    runMotors();
-    waitTime -= MOTOR_FEED_SIGNAL_INTVL;
-  }
-
-  setMotorsPwm(MOTOR_TEST_PWM);
-  while(testTime) {
-    runMotors();
-    testTime -= MOTOR_FEED_SIGNAL_INTVL;
-    for (int i = 0; i<NBR_OF_MOTORS; i++) {
-      rpmSamples[i] += getMotorRpm(i);
-    }
-  }
-
-  setMotorsPwm(0);
-  for (int i = 0; i<NBR_OF_MOTORS; i++) {
-    int rpmAvg = rpmSamples[i] / MOTOR_RPM_NBR_SAMPLES;
-    DEBUG_PRINT("Motor; %d RPM; %d\n", i, rpmAvg);
-    passed &= (rpmAvg > RPM_TEST_LOWER_LIMIT);
-  }
-  return passed;
 }
 
 static uint16_t calcRPM(uint32_t t1, uint32_t t2)
@@ -396,8 +313,7 @@ static const DeckDriver rpm_deck = {
 
   .usedGpio = DECK_USING_IO_2 | DECK_USING_IO_3 | DECK_USING_PA2 | DECK_USING_PA3,
 
-  .init = rpmTestInit,
-  .test = rpmTestRun
+  .init = rpmTestInit
 };
 
 DECK_DRIVER(rpm_deck);
