@@ -24,9 +24,11 @@
  * power_distribution_quadrotor.c - Crazyflie stock power distribution code
  */
 
+
 #include "power_distribution.h"
 
 #include <string.h>
+#include "debug.h"
 #include "log.h"
 #include "param.h"
 #include "num.h"
@@ -66,6 +68,11 @@ uint16_t powerDistributionStopRatio(uint32_t id)
 
 void powerDistributionInit(void)
 {
+  #if (!defined(CONFIG_MOTORS_REQUIRE_ARMING) || (CONFIG_MOTORS_REQUIRE_ARMING == 0))
+  if(idleThrust > 0) {
+    DEBUG_PRINT("WARNING: idle thrust will be overridden with value 0. Autoarming can not be on while idle thrust is higher than 0. If you want to use idle thust please use use arming\n");
+  }
+  #endif
 }
 
 bool powerDistributionTest(void)
@@ -166,14 +173,19 @@ bool powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUnca
   for (int motorIndex = 0; motorIndex < STABILIZER_NR_OF_MOTORS; motorIndex++)
   {
     int32_t thrustCappedUpper = motorThrustBatCompUncapped->list[motorIndex] - reduction;
-    motorPwm->list[motorIndex] = capMinThrust(thrustCappedUpper, idleThrust);
+    motorPwm->list[motorIndex] = capMinThrust(thrustCappedUpper, powerDistributionGetIdleThrust());
   }
 
   return isCapped;
 }
 
-uint32_t powerDistributionGetIdleThrust() {
-  return idleThrust;
+uint32_t powerDistributionGetIdleThrust()
+{
+  int32_t thrust = idleThrust;
+  #if (!defined(CONFIG_MOTORS_REQUIRE_ARMING) || (CONFIG_MOTORS_REQUIRE_ARMING == 0))
+    thrust = 0;
+  #endif
+  return thrust;
 }
 
 float powerDistributionGetMaxThrust() {
