@@ -26,13 +26,11 @@ Here is an overview of the types of controllers there are per level:
 
 We will now explain per controller how exactly they are being implemented in the [crazyflie-firmware](https://github.com/bitcraze/crazyflie-firmware/).
 
-
-
 ## Cascaded PID controller
 
+By default, the Crazyflie firmware utilizes [proportional integral derivative (PID)](https://en.wikipedia.org/wiki/PID_controller) control to manage the drone's state. The firmware employs distinct PID controllers for each control level: position, velocity, attitude, and attitude rate. The output of each controller feeds into the input of the next, lower level controller, forming a cascaded PID structure. Depending on the [control mode](/docs/functional-areas/sensor-to-control/commanders_setpoints/#setpoint-structure), different setpoints can be fed into the system, influencing which PID controllers are activated. For instance, when using attitude rate setpoints, only the attitude rate PID controller is active; for attitude setpoints, both the attitude and attitude rate PID controllers are used; and so on for velocity and position setpoints. Ultimately, regardless of the control mode, the angle rate controller translates the desired angle rates into PWM commands for the motors.
 
-So the default settings in the Crazyflie firmware is the [proportional integral derivative (PID)](https://en.wikipedia.org/wiki/PID_controller) control for all desired state aspects. So the High Level Commander (HLC) or position will send desired position set-points to the PID position controller. These result in desired pitch and roll angles, which are sent directly to the attitude PID controller. These determine the desired angle rates which is send to the angle rate controller. This is also called Cascaded PID controller. That results in the desired thrusts for the roll pitch yaw and height that will be handled by the power distribution by the motors.
-
+To enhance control stability and prevent issues during significant setpoint changes, we have implemented a workaround to avoid derivative kick—a sudden spike in control output caused by changes in the setpoint. This workaround calculates the derivative term using the rate of change of the measured process variable rather than the rate of change of the error. By preventing derivative kick, particularly during large setpoint changes, this approach ensures smoother and more reliable control.
 
 Here is a block schematics of how the PID controllers are implemented.
 
