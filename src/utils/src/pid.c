@@ -66,6 +66,13 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
   pid->outP = pid->kp * pid->error;
   output += pid->outP;
 
+  /*
+  * Note: The derivative term in this PID controller is implemented based on the
+  * derivative of the measured process variable instead of the error.
+  * This approach avoids derivative kick, which can occur due to sudden changes
+  * in the setpoint. By using the process variable for the derivative calculation, we achieve
+  * smoother and more stable control during setpoint changes.
+  */
   float deriv = -(measured - pid->prevMeasured) / pid->dt;
   
   #if CONFIG_CONTROLLER_PID_FILTER_ALL
