@@ -295,7 +295,7 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
   // Start the timers
   for (i = 0; i < NBR_OF_MOTORS; i++)
   {
-    TIM_Cmd(motorMap[MOTOR_M1]->tim, ENABLE);
+    TIM_Cmd(motorMap[i]->tim, ENABLE);
   }
 
   isInit = true;
@@ -303,7 +303,7 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
   // Output zero power
   motorsStop();
 
-  if (motorMap[0]->hasPC15ESCReset)
+  if (motorMap[MOTOR_M1]->hasPC15ESCReset)
   {
     // Release reset for all CF-BL ESC:s after motor signal is activated
     GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_SET);
