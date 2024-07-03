@@ -223,6 +223,7 @@ typedef struct
   uint32_t      gpioPowerswitchPerif;
   GPIO_TypeDef* gpioPowerswitchPort;
   uint16_t      gpioPowerswitchPin;
+  bool          hasPC15ESCReset;
   uint32_t      timPerif;
   TIM_TypeDef*  tim;
   uint16_t      timPolarity;
