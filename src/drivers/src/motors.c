@@ -224,6 +224,20 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
 
   DEBUG_PRINT("Using %s motor driver\n", motorMap[0]->drvType == BRUSHED ? "brushed" : "brushless");
 
+  if (motorMap[MOTOR_M1]->hasPC15ESCReset)
+  {
+    MOTORS_RCC_GPIO_CMD(RCC_AHB1Periph_GPIOC, ENABLE);
+    // Configure the GPIO for CF-BL ESC RST
+    GPIO_StructInit(&GPIO_InitStructure);
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+    GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_15;
+    GPIO_Init(GPIOC, &GPIO_InitStructure);
+    // Hold reset for all CF-BL ESC:s by pulling low.
+    GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_RESET);
+  }
+
   for (i = 0; i < NBR_OF_MOTORS; i++)
   {
     //Clock the gpio and the timers
@@ -242,16 +256,6 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
       GPIO_Init(motorMap[i]->gpioPowerswitchPort, &GPIO_InitStructure);
       GPIO_WriteBit(motorMap[i]->gpioPowerswitchPort, motorMap[i]->gpioPowerswitchPin, 1);
     }
-
-    // Configure the GPIO for CF-BL ESC RST
-    GPIO_StructInit(&GPIO_InitStructure);
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-    GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_15;
-    GPIO_Init(GPIOC, &GPIO_InitStructure);
-    // Hold reset for all CF-BL ESC:s by pulling low.
-    GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_RESET);
 
     // Configure the GPIO for the timer output
     GPIO_StructInit(&GPIO_InitStructure);
@@ -283,9 +287,11 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
     motorMap[i]->ocInit(motorMap[i]->tim, &TIM_OCInitStructure);
     motorMap[i]->preloadConfig(motorMap[i]->tim, TIM_OCPreload_Enable);
   }
+
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
   motorsDshotDMASetup();
 #endif
+
   // Start the timers
   for (i = 0; i < NBR_OF_MOTORS; i++)
   {
@@ -296,9 +302,12 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
 
   // Output zero power
   motorsStop();
-  // Release reset for all CF-BL ESC:s after motor signal is activated
-  GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_SET);
 
+  if (motorMap[MOTOR_M1]->hasPC15ESCReset)
+  {
+    // Release reset for all CF-BL ESC:s after motor signal is activated
+    GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_SET);
+  }
 }
 
 void motorsDeInit(const MotorPerifDef** motorMapSelect)
