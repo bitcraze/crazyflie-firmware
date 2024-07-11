@@ -45,9 +45,6 @@ void appMain() {
 
   while(1) {
     vTaskDelay(M2T(2000));
-
-    // Remove the DEBUG_PRINT.
-    // DEBUG_PRINT("Hello World!\n");
   }
 }
 
