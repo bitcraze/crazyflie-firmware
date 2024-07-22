@@ -46,7 +46,7 @@ Header file for high-level commander that computes smooth setpoints based on hig
 
 #include "stabilizer_types.h"
 
-#define NUM_TRAJECTORY_DEFINITIONS 10
+#define NUM_TRAJECTORY_DEFINITIONS 31
 
 typedef enum {
   CRTP_CHL_TRAJECTORY_TYPE_POLY4D = 0, // struct poly4d, see pptraj.h
