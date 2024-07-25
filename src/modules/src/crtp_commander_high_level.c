@@ -637,7 +637,7 @@ int start_trajectory(const struct data_start_trajectory* data)
         trajectory.timescale = data->timescale;
         trajectory.n_pieces = trajDesc->trajectoryIdentifier.mem.n_pieces;
         trajectory.pieces = (struct poly4d*)&trajectories_memory[trajDesc->trajectoryIdentifier.mem.offset];
-        result = plan_start_trajectory(&planner, &trajectory, data->reversed, data->relative, pos);
+        result = plan_start_trajectory(&planner, &trajectory, data->reversed, data->relative, pos, yaw);
         xSemaphoreGive(lockTraj);
       } else if (trajDesc->trajectoryLocation == TRAJECTORY_LOCATION_MEM
           && trajDesc->trajectoryType == CRTP_CHL_TRAJECTORY_TYPE_POLY4D_COMPRESSED) {
