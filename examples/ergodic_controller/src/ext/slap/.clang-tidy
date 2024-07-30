@@ -1,0 +1,24 @@
+---
+Checks:
+  'clang-diagnostic-*,
+  clang-analyzer-*,
+  bugprone-*,
+  google-*,
+  readability-*,
+  performance*,
+  portability-*, 
+  cert-*,
+  -readability-avoid-const-params-in-decls,
+  -bugprone-easily-swappable-parameters'
+WarningsAsErrors: ''
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+FormatStyle:     none
+User:            brian
+CheckOptions:
+  - key:             readability-identifier-length.MinimumParameterNameLength
+    value:           '1'
+  - key:             readability-identifier-length.MinimumVariableNameLength
+    value:           '1'
+...
+
