@@ -90,37 +90,43 @@ $ git submodule update
 
 ### Building the default firmware
 
-Before you can build the firmware, you will need to configure it. To get the default configuration you can write:
+Before you can build the firmware, you will need to configure it. To build the firmware with a platform default configuration, run the following command:
 
+{% tabgroup %}
+{% tab Crazyflie 2.x %}
 ```bash
 $ make cf2_defconfig
-$ make -j 12
+$ make -j$(nproc)
 ```
-
-or with the toolbelt:
-
+{% endtab %}
+{% tab Crazyflie 2.1 Brushless %}
 ```bash
-$ tb make cf2_defconfig
-$ tb make
+$ make cf21bl_defconfig
+$ make -j$(nproc)
 ```
-
-Build artifacts, including binaries, will end up in the `build` directory.
-
-### Bolt and Roadrunner
-We have some ready-to-go config files in the `configs/` directory. So, for example, if you want to build the Roadrunner (tag) you can go:
-
-```bash
-$ make tag_defconfig
-$ make -j 12
-```
-
-Or for the bolt you can go:
-
+{% endtab %}
+{% tab Crazyflie Bolt %}
 ```bash
 $ make bolt_defconfig
-$ make -j 12
+$ make -j$(nproc)
+```
+{% endtab %}
+{% endtabgroup %}
+
+Then build the firmware with:
+
+```bash
+$ make -j$(nproc)
 ```
 
+>  Alternatively, to configure and build with the toolbelt, prepend `tb` to the make commands as follows:
+>  
+>  ```bash
+>  $ tb make cf2_defconfig
+>  $ tb make -j$(nproc)
+>  ```
+
+Build artifacts, including binaries, will end up in the `build` directory.
 
 ### Customize the firmware with kbuild (Advanced)
 
