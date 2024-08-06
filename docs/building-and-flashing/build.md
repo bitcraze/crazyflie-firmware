@@ -92,40 +92,46 @@ $ git submodule update
 
 ### Building the default firmware
 
-Before you can build the firmware, you will need to configure it. To build the firmware with a platform default configuration, run the following command:
+Before you can build the firmware, you will need to configure it. To use a platform default configuration, run the following command:
 
 {% tabgroup %}
 {% tab Crazyflie 2.x %}
 ```
 $ make cf2_defconfig
-$ make -j$(nproc)
 ```
 {% endtab %}
 {% tab Crazyflie 2.1 Brushless %}
 ```
 $ make cf21bl_defconfig
-$ make -j$(nproc)
 ```
 {% endtab %}
 {% tab Crazyflie Bolt %}
 ```
 $ make bolt_defconfig
-$ make -j$(nproc)
 ```
 {% endtab %}
 {% endtabgroup %}
 
 Then build the firmware with:
 
+{% tabgroup %}
+{% tab Linux/WSL %}
 ```
 $ make -j$(nproc)
 ```
+{% endtab %}
+{% tab MacOS %}
+```
+$ make -j$(sysctl -n hw.ncpu)
+```
+{% endtab %}
+{% endtabgroup %}
 
 >  Alternatively, to configure and build with the toolbelt, prepend `tb` to the make commands as follows:
 >  
 >  ```
 >  $ tb make cf2_defconfig
->  $ tb make -j$(nproc)
+>  $ tb make
 >  ```
 
 Build artifacts, including binaries, will end up in the `build` directory.
