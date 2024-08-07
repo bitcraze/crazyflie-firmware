@@ -200,7 +200,7 @@ menu "Expansion deck configuration"
 
 config DECK_FORCE
     string "Force load specified custom deck driver"
-    default "none"
+    default "bcRadioTest"
     help
         A colon seperated list of custom drivers to force load or "none".
 
