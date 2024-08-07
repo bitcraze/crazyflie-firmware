@@ -118,6 +118,7 @@ def test_power_distribution_cap_when_in_range():
     input.motors.m4 = 4000
 
     actual = cffirmware.motors_thrust_pwm_t()
+    idle_thrust = cffirmware.powerDistributionGetIdleThrust()
 
     # Test
     isCapped = cffirmware.powerDistributionCap(input, actual)
@@ -125,10 +126,10 @@ def test_power_distribution_cap_when_in_range():
     # Assert
     # control.thrust will be at a (tuned) hover-state
     assert not isCapped
-    assert actual.motors.m1 == input.motors.m1
-    assert actual.motors.m2 == input.motors.m2
-    assert actual.motors.m3 == input.motors.m3
-    assert actual.motors.m4 == input.motors.m4
+    assert actual.motors.m1 == max(input.motors.m1, idle_thrust)
+    assert actual.motors.m2 == max(input.motors.m2, idle_thrust)
+    assert actual.motors.m3 == max(input.motors.m3, idle_thrust)
+    assert actual.motors.m4 == max(input.motors.m4, idle_thrust)
 
 
 def test_power_distribution_cap_when_all_negative():
@@ -140,16 +141,17 @@ def test_power_distribution_cap_when_all_negative():
     input.motors.m4 = -4000
 
     actual = cffirmware.motors_thrust_pwm_t()
+    idle_thrust = cffirmware.powerDistributionGetIdleThrust()
 
     # Test
     isCapped = cffirmware.powerDistributionCap(input, actual)
 
     # Assert
     assert not isCapped
-    assert actual.motors.m1 == 0
-    assert actual.motors.m2 == 0
-    assert actual.motors.m3 == 0
-    assert actual.motors.m4 == 0
+    assert actual.motors.m1 == max(0, idle_thrust)
+    assert actual.motors.m2 == max(0, idle_thrust)
+    assert actual.motors.m3 == max(0, idle_thrust)
+    assert actual.motors.m4 == max(0, idle_thrust)
 
 
 def test_power_distribution_cap_when_all_above_range():
@@ -203,13 +205,14 @@ def test_power_distribution_cap_reduces_thrust_equally_much_with_lower_cap():
     input.motors.m4 = 0xffff + 10
 
     actual = cffirmware.motors_thrust_pwm_t()
+    idle_thrust = cffirmware.powerDistributionGetIdleThrust()
 
     # Test
     isCapped = cffirmware.powerDistributionCap(input, actual)
 
     # Assert
     assert isCapped
-    assert actual.motors.m1 == 0
-    assert actual.motors.m2 == 0
-    assert actual.motors.m3 == 1000 - 10
-    assert actual.motors.m4 == 0xffff
+    assert actual.motors.m1 == max(0, idle_thrust)
+    assert actual.motors.m2 == max(0, idle_thrust)
+    assert actual.motors.m3 == max(1000 - 10, idle_thrust)
+    assert actual.motors.m4 == max(0xffff, idle_thrust)
