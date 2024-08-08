@@ -50,7 +50,7 @@ If you have header files in another folder, use `EXTRA_CFLAGS` in the Makefile t
 EXTRA_CFLAGS += -I$(PWD)/src/inc
 ```
 
-And since you are providing a config file by way of `$(OOT_CONFIG)` you do not need to run any make command to create a config like `make menuconfig` or `make defconfig`. Just a simple `make` will suffice.
+OOT builds can be configured with [Kbuild](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/development/kbuild/) using terminal interfaces like `make menuconfig` or by loading a default configuration, such as with `make cf2_defconfig`. Any definitions in $(OOT_CONFIG) will override conflicting settings.
 
 ## OOT estimators
 The `config` file needs to enable ESTIMATOR_OOT, and can also set other config options:

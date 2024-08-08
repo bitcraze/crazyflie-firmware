@@ -60,6 +60,10 @@ obj-y += your-app.o
 
 You can look at the applications in the `examples/` folder of the firmware repository.
 
+## Configuring the app layer
+
+The app layer can be configured with [Kbuild](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/development/kbuild/). Default configurations can be loaded by running `make cf2_defconfig` in the app directory.  Terminal based user interfaces ('menuconfig', 'nconfig', 'gconfig', 'xconfig') can be used to configure the app layer by e.g. running `make menuconfig` in the app directory. Note that if there are any conflicting settings, the values defined in `app-config` will take priority.
+
 ## Building the app layer
 
 In order to build the app layer, go to the root folder of the app example and run:
