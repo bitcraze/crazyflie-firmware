@@ -35,7 +35,7 @@ all:
 	fi
 	@if [ -f $(OOT_CONFIG) ]; then \
         echo "Merging $(OOT_CONFIG) into .config"; \
-        ../../scripts/kconfig/merge_config.sh -O $(OOT)/build -m $(OOT)/build/.config $(OOT_CONFIG); \
+        $(CRAZYFLIE_BASE)/scripts/kconfig/merge_config.sh -O $(OOT)/build -m $(OOT)/build/.config $(OOT_CONFIG); \
     else \
         echo "$(OOT_CONFIG) does not exist"; \
     fi
