@@ -47,7 +47,9 @@ void controllerInit(ControllerType controller) {
     currentController = DEFAULT_CONTROLLER;
   }
 
-  #if defined(CONFIG_CONTROLLER_PID)
+  #if defined(CONFIG_CONTROLLER_OOT)
+    #define CONTROLLER ControllerTypeOot
+  #elif defined(CONFIG_CONTROLLER_PID)
     #define CONTROLLER ControllerTypePID
   #elif defined(CONFIG_CONTROLLER_INDI)
     #define CONTROLLER ControllerTypeINDI
@@ -57,8 +59,6 @@ void controllerInit(ControllerType controller) {
     #define CONTROLLER ControllerTypeBrescianini
   #elif defined(CONFIG_CONTROLLER_LEE)
     #define CONTROLLER ControllerTypeLee
-  #elif defined(CONFIG_CONTROLLER_OOT)
-    #define CONTROLLER ControllerTypeOot
   #else
     #define CONTROLLER ControllerTypeAutoSelect
   #endif
