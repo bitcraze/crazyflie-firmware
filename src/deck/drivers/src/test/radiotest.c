@@ -39,6 +39,16 @@
 #include "param.h"
 #include "platform_defaults.h"
 
+
+#define SHOULD_SPIN_MOTORS 0
+
+#ifdef CONFIG_MOTORS_DEFAULT_IDLE_THRUST
+#define MOTOR_SPEED CONFIG_MOTORS_DEFAULT_IDLE_THRUST
+#else
+#define MOTOR_SPEED  7000
+#endif
+
+
 //Hardware configuration
 static bool isInit;
 static uint8_t channel = 80;
@@ -55,7 +65,7 @@ static void spinMotorsTask(void *param)
   paramVarId_t motorPowerSetEnableParam = paramGetVarId("motorPowerSet", "enable");
   paramVarId_t motorParams = paramGetVarId("motorPowerSet", "m1");
   paramSetInt(motorPowerSetEnableParam, 2);
-  paramSetInt(motorParams, CONFIG_MOTORS_DEFAULT_IDLE_THRUST);
+  paramSetInt(motorParams, MOTOR_SPEED);
 
   vTaskDelete(NULL);
 }
@@ -106,7 +116,9 @@ static void radiotestInit(DeckInfo *info)
     return;
 
   xTaskCreate(radiotestTask, "RADIOTEST", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
-  xTaskCreate(spinMotorsTask, "spinMotors", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+  if (SHOULD_SPIN_MOTORS) {
+    xTaskCreate(spinMotorsTask, "spinMotors", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+  }
   isInit = true;
 }
 
