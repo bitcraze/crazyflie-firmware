@@ -37,6 +37,7 @@
 #include "deck.h"
 #include "syslink.h"
 #include "param.h"
+#include "platform_defaults.h"
 
 //Hardware configuration
 static bool isInit;
@@ -46,6 +47,18 @@ static uint8_t contwave = 0;
 static uint8_t old_channel;
 static int8_t old_power;
 static uint8_t old_contwave;
+
+static void spinMotorsTask(void *param)
+{
+  vTaskDelay(M2T(4000)); // Wait for the ESCs to be ready to recieve signals
+
+  paramVarId_t motorPowerSetEnableParam = paramGetVarId("motorPowerSet", "enable");
+  paramVarId_t motorParams = paramGetVarId("motorPowerSet", "m1");
+  paramSetInt(motorPowerSetEnableParam, 2);
+  paramSetInt(motorParams, CONFIG_MOTORS_DEFAULT_IDLE_THRUST);
+
+  vTaskDelete(NULL);
+}
 
 static void radiotestTask(void *param)
 {
@@ -93,7 +106,7 @@ static void radiotestInit(DeckInfo *info)
     return;
 
   xTaskCreate(radiotestTask, "RADIOTEST", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
-
+  xTaskCreate(spinMotorsTask, "spinMotors", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
   isInit = true;
 }
 
