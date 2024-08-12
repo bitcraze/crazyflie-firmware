@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   read_targets_from_file:
-    uses: bitcraze/workflows/.github/workflows/read_build_targets.yml@dfbc8c23a8ec6d4925d01deb20277839ad1235f1
+    uses: bitcraze/workflows/.github/workflows/read_build_targets.yml@cc82f0e5999c39eff964dd73ce9363e94d5b5b76
     with:
       target_file: './build_targets.json'
 
