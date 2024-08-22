@@ -144,8 +144,12 @@
     #define IMU_PSI                   180.0f
 #endif
 
-// Disable tumble check //
-//////////////////////////
-#define SUPERVISOR_TUMBLE_CHECK_ENABLE false
+// Tumble check settings //
+///////////////////////////
+#define SUPERVISOR_TUMBLE_CHECK_ENABLE true
+#define SUPERVISOR_TUMBLE_CHECK_ACCEPTED_TILT_ACCZ 0.0f
+#define SUPERVISOR_TUMBLE_CHECK_ACCEPTED_TILT_TIME 2000
+#define SUPERVISOR_TUMBLE_CHECK_ACCEPTED_UPSIDEDOWN_ACCZ -0.5f
+#define SUPERVISOR_TUMBLE_CHECK_ACCEPTED_UPSIDEDOWN_TIME 200
 
 #define YAW_MAX_DELTA 30.0
