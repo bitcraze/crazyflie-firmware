@@ -184,7 +184,7 @@ static float runPid(float input, struct pidAxis_s *axis, float setpoint, float d
   axis->setpoint = setpoint;
 
   pidSetDesired(&axis->pid, axis->setpoint);
-  return pidUpdate(&axis->pid, input, true);
+  return pidUpdate(&axis->pid, input, false);
 }
 
 
@@ -266,14 +266,14 @@ void velocityController(float* thrust, attitude_t *attitude, const Axis3f* setpo
   *thrust = constrain(*thrust, 0, UINT16_MAX);
 }
 
-void positionControllerResetAllPID()
+void positionControllerResetAllPID(float xActual, float yActual, float zActual)
 {
-  pidReset(&this.pidX.pid);
-  pidReset(&this.pidY.pid);
-  pidReset(&this.pidZ.pid);
-  pidReset(&this.pidVX.pid);
-  pidReset(&this.pidVY.pid);
-  pidReset(&this.pidVZ.pid);
+  pidReset(&this.pidX.pid, xActual);
+  pidReset(&this.pidY.pid, yActual);
+  pidReset(&this.pidZ.pid, zActual);
+  pidReset(&this.pidVX.pid, 0);
+  pidReset(&this.pidVY.pid, 0);
+  pidReset(&this.pidVZ.pid, 0);
 }
 
 void positionControllerResetAllfilters() {

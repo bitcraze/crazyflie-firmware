@@ -140,7 +140,7 @@ void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
   if (altHoldMode) {
     if (!modeSet) {             //Reset filter and PID values on first initiation of assist mode to prevent sudden reactions.
       modeSet = true;
-      positionControllerResetAllPID();
+      positionControllerResetAllPID(0, 0, 0); // TODO: initialize with actual x, y, z position
       positionControllerResetAllfilters();
     }
     setpoint->thrust = 0;

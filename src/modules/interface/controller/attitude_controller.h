@@ -56,17 +56,17 @@ void attitudeControllerCorrectRatePID(
 /**
  * Reset controller roll attitude PID
  */
-void attitudeControllerResetRollAttitudePID(void);
+void attitudeControllerResetRollAttitudePID(float rollActual);
 
 /**
  * Reset controller pitch attitude PID
  */
-void attitudeControllerResetPitchAttitudePID(void);
+void attitudeControllerResetPitchAttitudePID(float pitchActual);
 
 /**
  * Reset controller roll, pitch and yaw PID's.
  */
-void attitudeControllerResetAllPID(void);
+void attitudeControllerResetAllPID(float rollActual, float pitchActual, float yawActual);
 
 /**
  * Get the actuator output.
