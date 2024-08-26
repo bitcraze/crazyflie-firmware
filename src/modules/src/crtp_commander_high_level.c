@@ -140,6 +140,7 @@ enum TrajectoryCommand_e {
   COMMAND_LAND_2                  = 8,
   COMMAND_TAKEOFF_WITH_VELOCITY   = 9,
   COMMAND_LAND_WITH_VELOCITY      = 10,
+  COMMAND_SPIRAL                  = 11,
 };
 
 struct data_set_group_mask {
@@ -211,10 +212,23 @@ struct data_stop {
 struct data_go_to {
   uint8_t groupMask; // mask for which CFs this should apply to
   uint8_t relative;  // set to true, if position/yaw are relative to current setpoint
+  uint8_t linear;  // set to true for linear interpolation instead of smooth polynomial
   float x; // m
   float y; // m
   float z; // m
   float yaw; // rad
+  float duration; // sec
+} __attribute__((packed));
+
+// "fly along a spiral"
+struct data_spiral {
+  uint8_t groupMask; // mask for which CFs this should apply to
+  uint8_t sideways;  // set to true, if crazyfly should spiral sideways instead of forward
+  uint8_t clockwise; // set to true, if crazyfly should spiral clockwise instead of counter-clockwise
+  float phi; // rad
+  float r0; // m
+  float rf; // m
+  float dz; // m
   float duration; // sec
 } __attribute__((packed));
 
@@ -245,6 +259,7 @@ static int takeoff_with_velocity(const struct data_takeoff_with_velocity* data);
 static int land_with_velocity(const struct data_land_with_velocity* data);
 static int stop(const struct data_stop* data);
 static int go_to(const struct data_go_to* data);
+static int spiral(const struct data_spiral* data);
 static int start_trajectory(const struct data_start_trajectory* data);
 static int define_trajectory(const struct data_define_trajectory* data);
 
@@ -402,6 +417,9 @@ static int handleCommand(const enum TrajectoryCommand_e command, const uint8_t* 
       break;
     case COMMAND_GO_TO:
       ret = go_to((const struct data_go_to*)data);
+      break;
+    case COMMAND_SPIRAL:
+      ret = spiral((const struct data_spiral*)data);
       break;
     case COMMAND_START_TRAJECTORY:
       ret = start_trajectory((const struct data_start_trajectory*)data);
@@ -609,11 +627,36 @@ int go_to(const struct data_go_to* data)
       ev.pos = pos;
       ev.vel = vel;
       ev.yaw = yaw;
-      result = plan_go_to_from(&planner, &ev, data->relative, hover_pos, data->yaw, data->duration, t);
+      result = plan_go_to_from(&planner, &ev, data->relative, data->linear, hover_pos, data->yaw, data->duration, t);
     }
     else {
-      result = plan_go_to(&planner, data->relative, hover_pos, data->yaw, data->duration, t);
+      result = plan_go_to(&planner, data->relative, data->linear, hover_pos, data->yaw, data->duration, t);
     }
+    xSemaphoreGive(lockTraj);
+  }
+  return result;
+}
+
+int spiral(const struct data_spiral* data)
+{
+  static struct traj_eval ev = {
+    // pos, vel, yaw will be filled before using
+    .acc = {0.0f, 0.0f, 0.0f},
+    .omega = {0.0f, 0.0f, 0.0f},
+  };
+  
+  if (isBlocked) {
+    return EBUSY;
+  }
+
+  int result = 0;
+  if (isInGroup(data->groupMask)) {
+    xSemaphoreTake(lockTraj, portMAX_DELAY);
+    float t = usecTimestamp() / 1e6;
+    ev.pos = pos;
+    ev.vel = vel;
+    ev.yaw = yaw;
+    result = plan_spiral_from(&planner, &ev, data->sideways, data->clockwise, data->phi, data->r0, data->rf, data->dz, data->duration, t);
     xSemaphoreGive(lockTraj);
   }
   return result;
@@ -804,7 +847,7 @@ bool crtpCommanderHighLevelIsBlocked()
   return isBlocked;
 }
 
-int crtpCommanderHighLevelGoTo(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative)
+int crtpCommanderHighLevelGoTo(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative, const bool linear)
 {
   struct data_go_to data =
   {
@@ -814,10 +857,27 @@ int crtpCommanderHighLevelGoTo(const float x, const float y, const float z, cons
     .yaw = yaw,
     .duration = duration_s,
     .relative = relative,
+    .linear = linear,
     .groupMask = ALL_GROUPS,
   };
 
   return handleCommand(COMMAND_GO_TO, (const uint8_t*)&data);
+}
+
+int crtpCommanderHighLevelSpiral(const float phi, const float r0, const float rf, const float dz, const float duration_s, const bool sideways)
+{
+  struct data_spiral data =
+  {
+    .phi = phi,
+    .r0 = r0,
+    .rf = rf,
+    .dz = dz,
+    .duration = duration_s,
+    .sideways = sideways,
+    .groupMask = ALL_GROUPS,
+  };
+
+  return handleCommand(COMMAND_SPIRAL, (const uint8_t*)&data);
 }
 
 bool crtpCommanderHighLevelIsTrajectoryDefined(uint8_t trajectoryId)

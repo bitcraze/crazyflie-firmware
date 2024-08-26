@@ -193,9 +193,24 @@ bool crtpCommanderHighLevelIsBlocked();
  * @param yaw        yaw (rad)
  * @param duration_s time it should take to reach the position (s)
  * @param relative   true if x, y, z is relative to the current position
+ * @param linear     true if linear interpolation should be used instead of a smooth polynomial
  * @return zero if the command succeeded, an error code otherwise
  */
-int crtpCommanderHighLevelGoTo(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative);
+int crtpCommanderHighLevelGoTo(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative, const bool linear);
+
+/**
+ * @brief Follow a spiral segment (spline approximation of and arc for <= 90-degree segments)
+ *
+ * @param phi         spiral angle (rad), positive for left turn, negative for right turn
+ * @param r0          initial radius (m)
+ * @param rf          final radius (m)
+ * @param dz          altitude gain (m)
+ * @param duration_s  time it should take to reach the end of the spiral (s)
+ * @param sideways    true if crazyflie should spiral sideways instead of forward
+ * @param clockwise   true if crazyflie should spiral clockwise instead of counter-clockwise
+ * @return zero if the command succeeded, an error code otherwise
+ */
+int crtpCommanderHighLevelSpiral(const float phi, const float r0, const float rf, const float dz, const float duration_s, const bool sideways);
 
 /**
  * @brief Returns whether the trajectory with the given ID is defined
