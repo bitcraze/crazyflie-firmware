@@ -73,21 +73,21 @@
 #define PID_PITCH_KFF 0.0
 #define PID_PITCH_INTEGRATION_LIMIT   20.0
 
-#define PID_YAW_KP  30.0
+#define PID_YAW_KP  8.0
 #define PID_YAW_KI  0.0
-#define PID_YAW_KD  1.0
+#define PID_YAW_KD  0.35
 #define PID_YAW_KFF 0.0
 #define PID_YAW_INTEGRATION_LIMIT     360.0
 
-#define PID_VEL_X_KP 25.0f
+#define PID_VEL_X_KP 15.0f
 #define PID_VEL_X_KI 1.0f
 #define PID_VEL_X_KD 0.0f
-#define PID_VEL_X_KFF 10.0f
+#define PID_VEL_X_KFF 15.0f
 
-#define PID_VEL_Y_KP 15.0f
+#define PID_VEL_Y_KP 10.0f
 #define PID_VEL_Y_KI 1.0f
 #define PID_VEL_Y_KD 0.0f
-#define PID_VEL_Y_KFF 5.0f
+#define PID_VEL_Y_KFF 8.0f
 
 #define PID_VEL_Z_KP 12.5f
 #define PID_VEL_Z_KI 0.5f
@@ -99,8 +99,8 @@
 #define PID_VEL_Z_KD_BARO_Z_HOLD 1.0f
 #define PID_VEL_Z_KFF_BARO_Z_HOLD 0.0f
 
-#define PID_VEL_ROLL_MAX 20.0f
-#define PID_VEL_PITCH_MAX 20.0f
+#define PID_VEL_ROLL_MAX 30.0f
+#define PID_VEL_PITCH_MAX 30.0f
 #define PID_VEL_THRUST_BASE 40000.0f
 #define PID_VEL_THRUST_BASE_BARO_Z_HOLD 40000.0f
 #define PID_VEL_THRUST_MIN 20000.0f
@@ -120,14 +120,14 @@
 #define PID_POS_Z_KD 0.0f
 #define PID_POS_Z_KFF 0.0f
 
-#define PID_POS_VEL_X_MAX 1.0f
-#define PID_POS_VEL_Y_MAX 1.0f
+#define PID_POS_VEL_X_MAX 2.0f
+#define PID_POS_VEL_Y_MAX 2.0f
 #define PID_POS_VEL_Z_MAX 1.0f
 
 // PID filter configuration
-#define ATTITUDE_ROLL_RATE_LPF_CUTOFF_FREQ 12.5f
-#define ATTITUDE_PITCH_RATE_LPF_CUTOFF_FREQ 12.5f
-#define ATTITUDE_YAW_RATE_LPF_CUTOFF_FREQ 3.0f
+#define ATTITUDE_ROLL_RATE_LPF_CUTOFF_FREQ 20.0f
+#define ATTITUDE_PITCH_RATE_LPF_CUTOFF_FREQ 20.0f
+#define ATTITUDE_YAW_RATE_LPF_CUTOFF_FREQ 5.0f
 #define ATTITUDE_RATE_LPF_ENABLE true
 #define PID_VEL_XY_FILT_CUTOFF 10.0f
 #define PID_VEL_Z_FILT_CUTOFF 10.0f
