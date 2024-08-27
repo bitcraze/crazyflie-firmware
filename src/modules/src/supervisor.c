@@ -297,6 +297,8 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
   }
 }
 
+uint8_t tumbleCheckEnabled = 1;
+
 static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* this, const sensorData_t *sensors, const setpoint_t* setpoint, const uint32_t currentTick) {
   supervisorConditionBits_t conditions = 0;
 
@@ -311,7 +313,10 @@ static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* th
 
   const bool isTumbled = isTumbledCheck(this, sensors, currentTick);
   if (isTumbled) {
-    conditions |= SUPERVISOR_CB_IS_TUMBLED;
+    if (tumbleCheckEnabled)
+    {
+      conditions |= SUPERVISOR_CB_IS_TUMBLED;
+    }
   }
 
   const uint32_t setpointAge = currentTick - setpoint->timestamp;
@@ -533,5 +538,10 @@ PARAM_ADD(PARAM_UINT8, infdmp, &supervisorMem.doinfodump)
  * @brief Landing timeout duration (ms)
  */
 PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, landedTimeout, &landingTimeoutDuration)
+
+/**
+ * @brief Set to zero to disable tumble check
+ */
+PARAM_ADD(PARAM_UINT8 | PARAM_PERSISTENT, tmblChckEn, &tumbleCheckEnabled)
 
 PARAM_GROUP_STOP(supervisor)
