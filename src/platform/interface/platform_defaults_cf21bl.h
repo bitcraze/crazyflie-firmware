@@ -35,7 +35,7 @@
 
 // Default values for battery limits
 #define DEFAULT_BAT_LOW_VOLTAGE 3.35f
-#define DEFAULT_BAT_CRITICAL_LOW_VOLTAGE 3.3f
+#define DEFAULT_BAT_CRITICAL_LOW_VOLTAGE 3.0f
 #define DEFAULT_BAT_LOW_DURATION_TO_TRIGGER_SEC 5
 
 // Default value for system shutdown in minutes after radio silence.
