@@ -3,6 +3,7 @@ menu "Controllers and Estimators"
 choice
     prompt "Default controller"
     default CONFIG_CONTROLLER_AUTO_SELECT
+    depends on !CONTROLLER_OOT
 
 config CONTROLLER_AUTO_SELECT
     bool "Auto select Controller"
