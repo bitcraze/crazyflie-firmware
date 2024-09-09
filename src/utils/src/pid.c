@@ -29,6 +29,7 @@
 #include "num.h"
 #include <math.h>
 #include <float.h>
+#include "autoconf.h"
 
 void pidInit(PidObject* pid, const float desired, const float kp,
              const float ki, const float kd, const float kff, const float dt,
