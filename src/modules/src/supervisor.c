@@ -297,7 +297,7 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
   }
 }
 
-uint8_t tumbleCheckEnabled = 1;
+uint8_t tumbleCheckEnabled = SUPERVISOR_TUMBLE_CHECK_ENABLE;
 
 static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* this, const sensorData_t *sensors, const setpoint_t* setpoint, const uint32_t currentTick) {
   supervisorConditionBits_t conditions = 0;
