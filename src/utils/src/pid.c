@@ -80,6 +80,7 @@ float pidUpdate(PidObject* pid, const float measured, const bool isYawAngle)
   */
   float delta = -(measured - pid->prevMeasured);
 
+  // For yaw measurements, take care of spikes when crossing 180deg <-> -180deg  
   if (isYawAngle){
     if (delta > 180.0f){
       delta -= 360.0f;
