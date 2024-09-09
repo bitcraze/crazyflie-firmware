@@ -86,21 +86,20 @@ void pidSetIntegralLimit(PidObject* pid, const float limit);
 /**
  * Reset the PID error values
  *
- * @param[in] pid   A pointer to the pid object.
- * @param[in] limit Pid integral swing limit.
+ * @param[in] pid    A pointer to the pid object.
+ * @param[in] initial Initial value of the controlled state.
  */
-void pidReset(PidObject* pid);
+void pidReset(PidObject* pid, float initial);
 
 /**
  * Update the PID parameters.
  *
  * @param[in] pid         A pointer to the pid object.
  * @param[in] measured    The measured value
- * @param[in] updateError Set to TRUE if error should be calculated.
- *                        Set to False if pidSetError() has been used.
+ * @param[in] isYawAngle  Set to TRUE if it is a PID on yaw angle, set to false otherwise
  * @return PID algorithm output
  */
-float pidUpdate(PidObject* pid, const float measured, const bool updateError);
+float pidUpdate(PidObject* pid, const float measured, const bool isYawAngle);
 
 /**
  * Set a new set point for the PID to track.
@@ -121,14 +120,6 @@ float pidGetDesired(PidObject* pid);
  * @return TRUE if active, FALSE otherwise
  */
 bool pidIsActive(PidObject* pid);
-
-/**
- * Set a new error. Use if a special error calculation is needed.
- *
- * @param[in] pid   A pointer to the pid object.
- * @param[in] error The new error
- */
-void pidSetError(PidObject* pid, const float error);
 
 /**
  * Set a new proportional gain for the PID.

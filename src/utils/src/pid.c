@@ -54,15 +54,20 @@ void pidInit(PidObject* pid, const float desired, const float kp,
   }
 }
 
-float pidUpdate(PidObject* pid, const float measured, const bool updateError)
+float pidUpdate(PidObject* pid, const float measured, const bool isYawAngle)
 {
   float output = 0.0f;
 
-  if (updateError)
-  {
-      pid->error = pid->desired - measured;
+  pid->error = pid->desired - measured;
+  
+  if (isYawAngle){
+    if (pid->error > 180.0f){
+      pid->error -= 360.0f;
+    } else if (pid->error < -180.0f){
+      pid->error += 360.0f;
+    }
   }
-
+  
   pid->outP = pid->kp * pid->error;
   output += pid->outP;
 
@@ -73,15 +78,24 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
   * in the setpoint. By using the process variable for the derivative calculation, we achieve
   * smoother and more stable control during setpoint changes.
   */
-  float deriv = -(measured - pid->prevMeasured) / pid->dt;
+  float delta = -(measured - pid->prevMeasured);
+
+  // For yaw measurements, take care of spikes when crossing 180deg <-> -180deg  
+  if (isYawAngle){
+    if (delta > 180.0f){
+      delta -= 360.0f;
+    } else if (delta < -180.0f){
+      delta += 360.0f;
+    }
+  }
   
   #if CONFIG_CONTROLLER_PID_FILTER_ALL
-    pid->deriv = deriv;
+    pid->deriv = delta / pid->dt;
   #else
     if (pid->enableDFilter){
-      pid->deriv = lpf2pApply(&pid->dFilter, deriv);
+      pid->deriv = lpf2pApply(&pid->dFilter, delta / pid->dt);
     } else {
-      pid->deriv = deriv;
+      pid->deriv = delta / pid->dt;
     }
   #endif
   if (isnan(pid->deriv)) {
@@ -116,7 +130,7 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
     if (isnan(output)) {
       output = 0;
     }
-    #endif
+  #endif
 
   // Constrain the total PID output (unless the outputLimit is zero)
   if(pid->outputLimit != 0)
@@ -133,17 +147,12 @@ void pidSetIntegralLimit(PidObject* pid, const float limit) {
     pid->iLimit = limit;
 }
 
-void pidReset(PidObject* pid)
+void pidReset(PidObject* pid, const float actual)
 {
   pid->error        = 0;
-  pid->prevMeasured = 0;
+  pid->prevMeasured = actual;
   pid->integ        = 0;
   pid->deriv        = 0;
-}
-
-void pidSetError(PidObject* pid, const float error)
-{
-  pid->error = error;
 }
 
 void pidSetDesired(PidObject* pid, const float desired)
