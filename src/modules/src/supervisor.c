@@ -205,11 +205,11 @@ static bool isFlyingCheck(SupervisorMem_t* this, const uint32_t tick) {
 static bool isTumbledCheck(SupervisorMem_t* this, const sensorData_t *data, const uint32_t tick) {
   const float freeFallThreshold = 0.1;
 
-  const float acceptedTiltAccZ = 0.5;  // 60 degrees tilt (when stationary)
-  const uint32_t maxTiltTime = M2T(1000);
+  const float acceptedTiltAccZ = SUPERVISOR_TUMBLE_CHECK_ACCEPTED_TILT_ACCZ;  // 60 degrees tilt (when stationary)
+  const uint32_t maxTiltTime = M2T(SUPERVISOR_TUMBLE_CHECK_ACCEPTED_TILT_TIME);
 
-  const float acceptedUpsideDownAccZ = -0.2;
-  const uint32_t maxUpsideDownTime = M2T(100);
+  const float acceptedUpsideDownAccZ = SUPERVISOR_TUMBLE_CHECK_ACCEPTED_UPSIDEDOWN_ACCZ;
+  const uint32_t maxUpsideDownTime = M2T(SUPERVISOR_TUMBLE_CHECK_ACCEPTED_UPSIDEDOWN_TIME);
 
   const bool isFreeFalling = (fabsf(data->acc.z) < freeFallThreshold && fabsf(data->acc.y) < freeFallThreshold && fabsf(data->acc.x) < freeFallThreshold);
   if (isFreeFalling) {
@@ -297,6 +297,8 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
   }
 }
 
+uint8_t tumbleCheckEnabled = SUPERVISOR_TUMBLE_CHECK_ENABLE;
+
 static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* this, const sensorData_t *sensors, const setpoint_t* setpoint, const uint32_t currentTick) {
   supervisorConditionBits_t conditions = 0;
 
@@ -311,7 +313,10 @@ static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* th
 
   const bool isTumbled = isTumbledCheck(this, sensors, currentTick);
   if (isTumbled) {
-    conditions |= SUPERVISOR_CB_IS_TUMBLED;
+    if (tumbleCheckEnabled)
+    {
+      conditions |= SUPERVISOR_CB_IS_TUMBLED;
+    }
   }
 
   const uint32_t setpointAge = currentTick - setpoint->timestamp;
@@ -533,5 +538,10 @@ PARAM_ADD(PARAM_UINT8, infdmp, &supervisorMem.doinfodump)
  * @brief Landing timeout duration (ms)
  */
 PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, landedTimeout, &landingTimeoutDuration)
+
+/**
+ * @brief Set to zero to disable tumble check
+ */
+PARAM_ADD(PARAM_UINT8 | PARAM_PERSISTENT, tmblChckEn, &tumbleCheckEnabled)
 
 PARAM_GROUP_STOP(supervisor)
