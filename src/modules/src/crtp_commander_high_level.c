@@ -133,7 +133,7 @@ enum TrajectoryCommand_e {
   COMMAND_TAKEOFF                 = 1, // Deprecated (removed after August 2023), use COMMAND_TAKEOFF_2
   COMMAND_LAND                    = 2, // Deprecated (removed after August 2023), use COMMAND_LAND_2
   COMMAND_STOP                    = 3,
-  COMMAND_GO_TO                   = 4,
+  COMMAND_GO_TO                   = 4, // Deprecated (removed after TBD), use COMMAND_GO_TO_2
   COMMAND_START_TRAJECTORY        = 5,
   COMMAND_DEFINE_TRAJECTORY       = 6,
   COMMAND_TAKEOFF_2               = 7,
@@ -141,6 +141,7 @@ enum TrajectoryCommand_e {
   COMMAND_TAKEOFF_WITH_VELOCITY   = 9,
   COMMAND_LAND_WITH_VELOCITY      = 10,
   COMMAND_SPIRAL                  = 11,
+  COMMAND_GO_TO_2                 = 12,
 };
 
 struct data_set_group_mask {
@@ -212,6 +213,17 @@ struct data_stop {
 struct data_go_to {
   uint8_t groupMask; // mask for which CFs this should apply to
   uint8_t relative;  // set to true, if position/yaw are relative to current setpoint
+  float x; // m
+  float y; // m
+  float z; // m
+  float yaw; // rad
+  float duration; // sec
+} __attribute__((packed));
+
+// "take this much time to go here, then hover"
+struct data_go_to_2 {
+  uint8_t groupMask; // mask for which CFs this should apply to
+  uint8_t relative;  // set to true, if position/yaw are relative to current setpoint
   uint8_t linear;  // set to true for linear interpolation instead of smooth polynomial
   float x; // m
   float y; // m
@@ -259,6 +271,7 @@ static int takeoff_with_velocity(const struct data_takeoff_with_velocity* data);
 static int land_with_velocity(const struct data_land_with_velocity* data);
 static int stop(const struct data_stop* data);
 static int go_to(const struct data_go_to* data);
+static int go_to2(const struct data_go_to_2* data);
 static int spiral(const struct data_spiral* data);
 static int start_trajectory(const struct data_start_trajectory* data);
 static int define_trajectory(const struct data_define_trajectory* data);
@@ -417,6 +430,9 @@ static int handleCommand(const enum TrajectoryCommand_e command, const uint8_t* 
       break;
     case COMMAND_GO_TO:
       ret = go_to((const struct data_go_to*)data);
+      break;
+    case COMMAND_GO_TO_2:
+      ret = go_to2((const struct data_go_to_2*)data);
       break;
     case COMMAND_SPIRAL:
       ret = spiral((const struct data_spiral*)data);
@@ -607,6 +623,37 @@ int stop(const struct data_stop* data)
 }
 
 int go_to(const struct data_go_to* data)
+{
+  static struct traj_eval ev = {
+    // pos, vel, yaw will be filled before using
+    .acc = {0.0f, 0.0f, 0.0f},
+    .omega = {0.0f, 0.0f, 0.0f},
+  };
+
+  if (isBlocked) {
+    return EBUSY;
+  }
+
+  int result = 0;
+  if (isInGroup(data->groupMask)) {
+    struct vec hover_pos = mkvec(data->x, data->y, data->z);
+    xSemaphoreTake(lockTraj, portMAX_DELAY);
+    float t = usecTimestamp() / 1e6;
+    if (plan_is_disabled(&planner) || plan_is_stopped(&planner)) {
+      ev.pos = pos;
+      ev.vel = vel;
+      ev.yaw = yaw;
+      result = plan_go_to_from(&planner, &ev, data->relative, false, hover_pos, data->yaw, data->duration, t);
+    }
+    else {
+      result = plan_go_to(&planner, data->relative, false, hover_pos, data->yaw, data->duration, t);
+    }
+    xSemaphoreGive(lockTraj);
+  }
+  return result;
+}
+
+int go_to2(const struct data_go_to_2* data)
 {
   static struct traj_eval ev = {
     // pos, vel, yaw will be filled before using
@@ -847,9 +894,25 @@ bool crtpCommanderHighLevelIsBlocked()
   return isBlocked;
 }
 
-int crtpCommanderHighLevelGoTo(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative, const bool linear)
+int crtpCommanderHighLevelGoTo(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative)
 {
   struct data_go_to data =
+  {
+    .x = x,
+    .y = y,
+    .z = z,
+    .yaw = yaw,
+    .duration = duration_s,
+    .relative = relative,
+    .groupMask = ALL_GROUPS,
+  };
+
+  return handleCommand(COMMAND_GO_TO, (const uint8_t*)&data);
+}
+
+int crtpCommanderHighLevelGoTo2(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative, const bool linear)
+{
+  struct data_go_to_2 data =
   {
     .x = x,
     .y = y,
@@ -861,7 +924,7 @@ int crtpCommanderHighLevelGoTo(const float x, const float y, const float z, cons
     .groupMask = ALL_GROUPS,
   };
 
-  return handleCommand(COMMAND_GO_TO, (const uint8_t*)&data);
+  return handleCommand(COMMAND_GO_TO_2, (const uint8_t*)&data);
 }
 
 int crtpCommanderHighLevelSpiral(const float phi, const float r0, const float rf, const float dz, const float duration_s, const bool sideways)

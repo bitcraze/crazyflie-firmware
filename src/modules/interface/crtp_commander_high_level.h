@@ -185,6 +185,19 @@ int crtpCommanderBlock(bool doBlock);
 bool crtpCommanderHighLevelIsBlocked();
 
 /**
+ * @brief Go to an absolute or relative position (will be deprecated on TBD, use crtpCommanderHighLevelGoTo2)
+ *
+ * @param x          x (m)
+ * @param y          y (m)
+ * @param z          z (m)
+ * @param yaw        yaw (rad)
+ * @param duration_s time it should take to reach the position (s)
+ * @param relative   true if x, y, z is relative to the current position
+ * @return zero if the command succeeded, an error code otherwise
+ */
+int crtpCommanderHighLevelGoTo(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative);
+
+/**
  * @brief Go to an absolute or relative position
  *
  * @param x          x (m)
@@ -196,7 +209,7 @@ bool crtpCommanderHighLevelIsBlocked();
  * @param linear     true if linear interpolation should be used instead of a smooth polynomial
  * @return zero if the command succeeded, an error code otherwise
  */
-int crtpCommanderHighLevelGoTo(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative, const bool linear);
+int crtpCommanderHighLevelGoTo2(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative, const bool linear);
 
 /**
  * @brief Follow a spiral segment (spline approximation of and arc for <= 90-degree segments)
