@@ -16,8 +16,7 @@ Our policy for toolchain is to follow what is available in the oldest [Ubuntu Lo
 
 This means that if the firmware can not be compiled using gcc 6.3, **or anything newer**, it should be considered a bug.
 
-{% tabgroup %}
-{% tab Ubuntu %}
+##### Ubuntu
 For Ubuntu 20.04 and 22.04:
 ```
 $ sudo apt-get install make gcc-arm-none-eabi
@@ -29,22 +28,19 @@ $ sudo add-apt-repository ppa:team-gcc-arm-embedded/ppa
 $ sudo apt-get update
 $ sudo apt install gcc-arm-embedded
 ```
-{% endtab %}
 
-{% tab Arch Linux %}
+##### Arch Linux
 ```
 $ sudo pacman -S community/arm-none-eabi-gcc community/arm-none-eabi-gdb community/arm-none-eabi-newlib
 ```
-{% endtab %}
 
-{% tab OS X %}
+##### macOS
 ```
 $ brew tap PX4/homebrew-px4
 $ brew install gcc-arm-none-eabi
 ```
-{% endtab %}
 
-{% tab Windows %}
+##### Windows
 The supported way to build the Crazyflie on Windows is to use the Windows Subsystem for Linux (WSL) on Windows 10+.
 This means that developement happens in a Linux environment.
 Flashing is handled by installing Python and the Crazyflie client on Windows launched from linux.
@@ -65,8 +61,6 @@ $ pip.exe install cfclient
 ```
 
 The Crazyflie makefile will automatically use the Windows python when running in WSL.
-{% endtab %}
-{% endtabgroup %}
 
 ### Cloning
 
@@ -90,42 +84,34 @@ $ git submodule update
 
 ## Compiling
 
-### Building the default firmware
+### Configuration
 
 Before you can build the firmware, you will need to configure it. To use a platform default configuration, run the following command:
 
-{% tabgroup %}
-{% tab Crazyflie 2.x %}
+#### Crazyflie 2.x
 ```
 $ make cf2_defconfig
 ```
-{% endtab %}
-{% tab Crazyflie 2.1 Brushless %}
+#### Crazyflie 2.1 Brushless
 ```
 $ make cf21bl_defconfig
 ```
-{% endtab %}
-{% tab Crazyflie Bolt %}
+#### Crazyflie Bolt
 ```
 $ make bolt_defconfig
 ```
-{% endtab %}
-{% endtabgroup %}
 
+### Building the firmware
 Then build the firmware with:
 
-{% tabgroup %}
-{% tab Linux/WSL %}
+#### Linux/WSL
 ```
 $ make -j$(nproc)
 ```
-{% endtab %}
-{% tab MacOS %}
+#### macOS
 ```
 $ make -j$(sysctl -n hw.ncpu)
 ```
-{% endtab %}
-{% endtabgroup %}
 
 >  Alternatively, to configure and build with the toolbelt, prepend `tb` to the make commands as follows:
 >  
