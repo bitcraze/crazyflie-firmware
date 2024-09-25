@@ -185,7 +185,7 @@ int crtpCommanderBlock(bool doBlock);
 bool crtpCommanderHighLevelIsBlocked();
 
 /**
- * @brief Go to an absolute or relative position (will be deprecated on TBD, use crtpCommanderHighLevelGoTo2)
+ * @brief Go to an absolute or relative position (will be deprecated, use crtpCommanderHighLevelGoTo2)
  *
  * @param x          x (m)
  * @param y          y (m)

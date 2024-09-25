@@ -133,7 +133,7 @@ enum TrajectoryCommand_e {
   COMMAND_TAKEOFF                 = 1, // Deprecated (removed after August 2023), use COMMAND_TAKEOFF_2
   COMMAND_LAND                    = 2, // Deprecated (removed after August 2023), use COMMAND_LAND_2
   COMMAND_STOP                    = 3,
-  COMMAND_GO_TO                   = 4, // Deprecated (removed after TBD), use COMMAND_GO_TO_2
+  COMMAND_GO_TO                   = 4, // Deprecated (will be removed), use COMMAND_GO_TO_2
   COMMAND_START_TRAJECTORY        = 5,
   COMMAND_DEFINE_TRAJECTORY       = 6,
   COMMAND_TAKEOFF_2               = 7,
