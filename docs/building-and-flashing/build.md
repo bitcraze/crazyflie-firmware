@@ -228,7 +228,9 @@ You need:
 
 In your terminal, run
 
-`make flash`
+```
+$ make flash
+```
 
 ## Unit testing
 
