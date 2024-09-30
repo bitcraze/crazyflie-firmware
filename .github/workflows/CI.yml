@@ -24,6 +24,9 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
 
+    - name: Create cache directory
+      run: mkdir -p /tmp/.buildx-cache
+
     - name: Cache Docker layers
       id: cache-docker-layers
       uses: actions/cache@v2
