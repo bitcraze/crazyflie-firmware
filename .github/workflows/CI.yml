@@ -5,6 +5,7 @@ name: CI
 # Controls when the action will run. Triggers the workflow on push or pull request
 # events but only for the master branch
 on:
+  workflow_dispatch: # temporary for testing
   push:
     branches: [ master ]
   pull_request:
@@ -17,13 +18,34 @@ permissions:
   contents: read
 
 jobs:
+  cache_docker_image:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    - name: Cache Docker layers
+      id: cache-docker-layers
+      uses: actions/cache@v2
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ hashFiles('Dockerfile') }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+
+    - name: Pull Docker image
+      run: docker pull bitcraze/builder
+
+    - name: Save Docker image to cache
+      run: docker save bitcraze/builder -o /tmp/.buildx-cache/bitcraze-builder.tar
+
   read_targets_from_file:
     uses: bitcraze/workflows/.github/workflows/read_build_targets.yml@cc82f0e5999c39eff964dd73ce9363e94d5b5b76
     with:
       target_file: './build_targets.json'
 
   basic_build:
-    needs: read_targets_from_file
+    needs: [cache_docker_image, read_targets_from_file]
     runs-on: ubuntu-latest
 
     strategy:
@@ -36,6 +58,17 @@ jobs:
       uses: actions/checkout@v4
       with:
         submodules: true
+    
+    - name: Restore Docker image from cache
+      uses: actions/cache@v2
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ hashFiles('Dockerfile') }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+
+    - name: Load Docker image
+      run: docker load -i /tmp/.buildx-cache/bitcraze-builder.tar
 
     - name: build
       run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make ${{ matrix.platform }}_defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
@@ -81,6 +114,17 @@ jobs:
       with:
         submodules: true
 
+    - name: Restore Docker image from cache
+      uses: actions/cache@v2
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ hashFiles('Dockerfile') }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+
+    - name: Load Docker image
+      run: docker load -i /tmp/.buildx-cache/bitcraze-builder.tar
+
     - name: build
       run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "./scripts/kconfig/merge_config.sh configs/${CONF} configs/defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
 
@@ -110,6 +154,17 @@ jobs:
       with:
         submodules: true
 
+    - name: Restore Docker image from cache
+      uses: actions/cache@v2
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ hashFiles('Dockerfile') }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+
+    - name: Load Docker image
+      run: docker load -i /tmp/.buildx-cache/bitcraze-builder.tar
+
     - name: build
       run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "./tools/build/make_app ${EXAMPLE}"
 
@@ -133,6 +188,17 @@ jobs:
       uses: actions/checkout@v4
       with:
         submodules: true
+
+    - name: Restore Docker image from cache
+      uses: actions/cache@v2
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ hashFiles('Dockerfile') }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+
+    - name: Load Docker image
+      run: docker load -i /tmp/.buildx-cache/bitcraze-builder.tar
 
     - name: build
       run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "KCONFIG_ALLCONFIG=configs/all.config make ${TARGET} &&  ./tools/build/build UNIT_TEST_STYLE=min"
