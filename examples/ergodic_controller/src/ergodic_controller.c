@@ -52,7 +52,8 @@ static struct {
     // array
     //Eigen::VectorXd map(n);
     std::vector vec(3);
-} target_distro;
+    //
+} target_distro; // target map
 
 void appMain() {
   DEBUG_PRINT("Waiting for activation ...\n");
@@ -60,14 +61,16 @@ void appMain() {
   while(1) {
     vTaskDelay(M2T(2000));
   }
-}
+} //runs the task for this application
 
 void controllerOutOfTreeInit() {
   controllerPidInit();
   ergodicControllerInit();
-}
+} //using the PID to test so we need to initilize it
 
 void ergodicControllerInit() {
+  attitudeControllerInit(ATTITUDE_UPDATE_DT);
+  positionControllerInit();
   //create information map
   
   //get initial position
@@ -87,6 +90,19 @@ bool controllerOutOfTreeTest() {
   return true;
 }
 
-void controllerOutOfTree(control_t *control, const setpoint_t *setpoint, const sensorData_t *sensors, const state_t *state, const uint32_t tick) {
-  controllerPid(control, setpoint, sensors, state, tick);
+void controllerOutOfTree(control_t *control, 
+                          const setpoint_t *setpoint, 
+                          const sensorData_t *sensors, 
+                          const state_t *state, 
+                          const uint32_t tick) 
+{
+  controllerPid(control, setpoint, sensors, state, tick); //calling PID controller for now
+
+  // TODO
+  // Set mode
+  // Get setpoint
+  // Get state
+  // Whichever mode we slect, we get the current motor torques or current x,y,z
+  // Call ergodic controller to get next state
+  // Update inforamtion map
 }
