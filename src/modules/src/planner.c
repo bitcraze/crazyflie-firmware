@@ -37,6 +37,7 @@ implementation of planning state machine
 */
 #include <stddef.h>
 #include "planner.h"
+#include "arm_math.h"
 
 static struct traj_eval plan_eval(struct planner *p, float t);
 
@@ -219,12 +220,28 @@ int plan_go_to(struct planner *p, bool relative, bool linear, struct vec hover_p
 
 int plan_spiral_from(struct planner *p, const struct traj_eval *curr_eval, bool sideways, bool clockwise, float spiral_angle, float radius0, float radiusF, float ascent, float duration, float t)
 {
-	int sense = -1 + 2*clockwise; // -1 counter-clockwise, +1 clockwise
+	// Limitting the inputs
+  if (spiral_angle > 2*PI) {
+    spiral_angle = 2*PI;
+    DEBUG_PRINT("Warning: spiral angle saturated at 2pi\n");
+  }
+  else if (spiral_angle < -2*PI) {
+    spiral_angle = -2*PI;
+    DEBUG_PRINT("Warning: spiral angle saturated at -2pi\n");
+  }
+  if (radius0 < 0) {
+    radius0 = 0;
+    DEBUG_PRINT("Warning: radius set to 0 (was negative) \n");
+  }
+  if (radiusF < 0) {
+    radiusF = 0;
+    DEBUG_PRINT("Warning: radius set to 0 (was negative) \n");
+  }
+    
+  int sense = -1 + 2*clockwise; // -1 counter-clockwise, +1 clockwise
 	float omz =  -sense*spiral_angle/duration;
 	float dz = ascent/duration;
 	float dr = (radiusF - radius0)/duration;
-	
-	// struct traj_eval setpoint = plan_current_goal(p, t);
 	
 	struct vec pos0 = curr_eval->pos;
 	
@@ -233,8 +250,6 @@ int plan_spiral_from(struct planner *p, const struct traj_eval *curr_eval, bool 
 	float yawF = phi0 - sense*spiral_angle;
 	float phiF = phi0 - sense*spiral_angle;
 
-	// TODO sideways, now assuming forward/backward
-			
 	float c0 = cosf(phi0);
 	float s0 = sinf(phi0);
 	float cF = cosf(phiF);

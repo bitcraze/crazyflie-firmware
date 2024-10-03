@@ -214,10 +214,10 @@ int crtpCommanderHighLevelGoTo2(const float x, const float y, const float z, con
 /**
  * @brief Follow a spiral segment (spline approximation of and arc for <= 90-degree segments)
  *
- * @param phi         spiral angle (rad), positive for left turn, negative for right turn
- * @param r0          initial radius (m)
- * @param rf          final radius (m)
- * @param dz          altitude gain (m)
+ * @param phi         spiral angle (rad), limited to +/- 2pi
+ * @param r0          initial radius (m), must be positive
+ * @param rf          final radius (m), must be positive
+ * @param dz          altitude gain (m), positive to climb, negative to descent
  * @param duration_s  time it should take to reach the end of the spiral (s)
  * @param sideways    true if crazyflie should spiral sideways instead of forward
  * @param clockwise   true if crazyflie should spiral clockwise instead of counter-clockwise
