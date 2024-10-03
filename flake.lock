@@ -1,0 +1,27 @@
+{
+  "nodes": {
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1709825657,
+        "narHash": "sha256-My+8zYh9oFncXia1jDfhkXWBMrCMO8xRwUgNNYv3uvM=",
+        "owner": "vBruegge",
+        "repo": "nixpkgs",
+        "rev": "13dbb32e5d5c413a633b17b4b21369b52b592f51",
+        "type": "github"
+      },
+      "original": {
+        "owner": "vBruegge",
+        "ref": "crazyflie",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
