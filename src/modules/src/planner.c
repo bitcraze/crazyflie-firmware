@@ -37,6 +37,8 @@ implementation of planning state machine
 */
 #include <stddef.h>
 #include "planner.h"
+#include "arm_math.h"
+#include "debug.h"
 
 static struct traj_eval plan_eval(struct planner *p, float t);
 
@@ -176,7 +178,7 @@ int plan_land(struct planner *p, struct vec curr_pos, float curr_yaw, float hove
 	return 0;
 }
 
-int plan_go_to_from(struct planner *p, const struct traj_eval *curr_eval, bool relative, struct vec hover_pos, float hover_yaw, float duration, float t)
+int plan_go_to_from(struct planner *p, const struct traj_eval *curr_eval, bool relative, bool linear, struct vec hover_pos, float hover_yaw, float duration, float t)
 {
 	if (relative) {
 		hover_pos = vadd(hover_pos, curr_eval->pos);
@@ -186,11 +188,22 @@ int plan_go_to_from(struct planner *p, const struct traj_eval *curr_eval, bool r
 	// compute the shortest possible rotation towards 0
 	float curr_yaw = normalize_radians(curr_eval->yaw);
 	hover_yaw = normalize_radians(hover_yaw);
-	float goal_yaw = curr_yaw + shortest_signed_angle_radians(curr_yaw, hover_yaw);
+	float delta_yaw = shortest_signed_angle_radians(curr_yaw, hover_yaw);
+	float goal_yaw = curr_yaw + delta_yaw;
 
-	piecewise_plan_7th_order_no_jerk(&p->planned_trajectory, duration,
+	if (linear) {
+		struct vec vel = vdiv(vsub(hover_pos,curr_eval->pos), duration);
+		float omz = delta_yaw/duration;
+		
+		piecewise_plan_7th_order_no_jerk(&p->planned_trajectory, duration,
+		curr_eval->pos, curr_yaw, vel, omz, vzero(),
+		hover_pos,      goal_yaw, vel, omz, vzero());
+	}
+	else {
+		piecewise_plan_7th_order_no_jerk(&p->planned_trajectory, duration,
 		curr_eval->pos, curr_yaw, curr_eval->vel, curr_eval->omega.z, curr_eval->acc,
 		hover_pos,      goal_yaw,      vzero(),        0,                  vzero());
+	}
 
 	p->reversed = false;
 	p->state = TRAJECTORY_STATE_FLYING;
@@ -200,10 +213,113 @@ int plan_go_to_from(struct planner *p, const struct traj_eval *curr_eval, bool r
 	return 0;
 }
 
-int plan_go_to(struct planner *p, bool relative, struct vec hover_pos, float hover_yaw, float duration, float t)
+int plan_go_to(struct planner *p, bool relative, bool linear, struct vec hover_pos, float hover_yaw, float duration, float t)
 {
 	struct traj_eval setpoint = plan_current_goal(p, t);
-	return plan_go_to_from(p, &setpoint, relative, hover_pos, hover_yaw, duration, t);
+	return plan_go_to_from(p, &setpoint, relative, linear, hover_pos, hover_yaw, duration, t);
+}
+
+int plan_spiral_from(struct planner *p, const struct traj_eval *curr_eval, bool sideways, bool clockwise, float spiral_angle, float radius0, float radiusF, float ascent, float duration, float t)
+{
+	// Limitting the inputs
+  if (spiral_angle > 2*PI) {
+    spiral_angle = 2*PI;
+    DEBUG_PRINT("Warning: spiral angle saturated at 2pi\n");
+  }
+  else if (spiral_angle < -2*PI) {
+    spiral_angle = -2*PI;
+    DEBUG_PRINT("Warning: spiral angle saturated at -2pi\n");
+  }
+  if (radius0 < 0) {
+    radius0 = 0;
+    DEBUG_PRINT("Warning: radius set to 0 (was negative) \n");
+  }
+  if (radiusF < 0) {
+    radiusF = 0;
+    DEBUG_PRINT("Warning: radius set to 0 (was negative) \n");
+  }
+    
+  int sense = -1 + 2*clockwise; // -1 counter-clockwise, +1 clockwise
+	float omz =  -sense*spiral_angle/duration;
+	float dz = ascent/duration;
+	float dr = (radiusF - radius0)/duration;
+	
+	struct vec pos0 = curr_eval->pos;
+	
+	float phi0 = normalize_radians(curr_eval->yaw);
+	
+	float yawF = phi0 - sense*spiral_angle;
+	float phiF = phi0 - sense*spiral_angle;
+
+	float c0 = cosf(phi0);
+	float s0 = sinf(phi0);
+	float cF = cosf(phiF);
+	float sF = sinf(phiF);
+
+	float z0 = pos0.z;
+	float xCenter, yCenter, dx0, ddx0, xF, dxF, ddxF, dy0, ddy0, yF, dyF, ddyF;
+
+	if (sideways)
+	{
+		// center position
+		xCenter = pos0.x + sense*radius0*c0;
+		yCenter = pos0.y + sense*radius0*s0;
+		
+		// x0 = -sense*radius0*c0;
+		dx0 = sense*(radius0*s0*omz - dr*c0);
+		ddx0 = sense*(radius0*c0*omz*omz + 2*dr*s0*omz);
+
+		xF = -sense*radiusF*cF;
+		dxF = sense*(radiusF*sF*omz - dr*cF);
+		ddxF = sense*(radiusF*cF*omz*omz + 2*dr*sF*omz);
+		
+		// y0 = -sense*radius0*s0;
+		dy0 = sense*(-radius0*c0*omz - dr*s0);
+		ddy0 = sense*(radius0*s0*omz*omz - 2*dr*c0*omz);
+
+		yF = -sense*radiusF*sF;
+		dyF = sense*(-radiusF*cF*omz - dr*sF);
+		ddyF = sense*(radiusF*sF*omz*omz - 2*dr*cF*omz);
+	}
+	else
+	{
+		// center position
+		xCenter = pos0.x + sense*radius0*s0;
+		yCenter = pos0.y - sense*radius0*c0;
+		
+		// x0 = -sense*radius0*s0;
+		dx0 = -sense*(radius0*c0*omz + dr*s0);
+		ddx0 = sense*(radius0*s0*omz*omz - 2*dr*c0*omz);
+
+		xF = -sense*radiusF*sF;
+		dxF = -sense*(radiusF*cF*omz + dr*sF);
+		ddxF = sense*(radiusF*sF*omz*omz - 2*dr*cF*omz);
+		
+		// y0 = sense*radius0*c0;
+		dy0 = sense*(-radius0*s0*omz + dr*c0);
+		ddy0 = sense*(-radius0*c0*omz*omz - 2*dr*s0*omz);
+
+		yF = sense*radiusF*cF;
+		dyF = sense*(-radiusF*sF*omz + dr*cF);
+		ddyF = sense*(-radiusF*cF*omz*omz - 2*dr*sF*omz);
+	}
+
+	struct vec posF = mkvec(xCenter + xF, yCenter + yF, z0 + ascent);
+	struct vec vel0 = mkvec(dx0, dy0, dz);
+	struct vec velF = mkvec(dxF, dyF, dz);
+	struct vec acc0 = mkvec(ddx0, ddy0, 0);
+	struct vec accF = mkvec(ddxF, ddyF, 0);
+	
+	piecewise_plan_7th_order_no_jerk(&p->planned_trajectory, duration,
+		pos0, phi0, vel0, omz, acc0,
+		posF, yawF, velF, omz, accF);
+	
+	p->reversed = false;
+	p->state = TRAJECTORY_STATE_FLYING;
+	p->type = TRAJECTORY_TYPE_PIECEWISE;
+	p->planned_trajectory.t_begin = t;
+	p->trajectory = &p->planned_trajectory;
+	return 0;
 }
 
 int plan_start_trajectory(struct planner *p, struct piecewise_traj* trajectory, bool reversed, bool relative, struct vec start_from)
