@@ -23,4 +23,5 @@ obj-$(CONFIG_DECK_CPX_HOST_ON_UART2)    += cpx-host-on-uart2.o
 obj-$(CONFIG_DECK_RPM)                  += rpm.o
 obj-$(CONFIG_DECK_LOADCELL)             += loadcell_nau7802.o
 obj-$(CONFIG_DECK_ACS37800)             += acs37800.o
-
+obj-$(CONFIG_DECK_SERVO_GRIPPER)		+= servo_gripper.o
+obj-$(CONFIG_DECK_SPRING_GRIPPER)		+= spring_gripper.o

@@ -127,6 +127,15 @@ static void calcSensorToOutputLatency(const sensorData_t *sensorData)
   inToOutLatency = outTimestamp - sensorData->interruptTimestamp;
 }
 
+float getThrust() {
+  return control.thrust;
+}
+void resetThrust() {
+  control.thrust = 0.0;
+}
+
+
+
 static void compressState()
 {
   stateCompressed.x = state.position.x * 1000.0f;

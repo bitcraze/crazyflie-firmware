@@ -175,6 +175,18 @@ config DECK_FLAPPER_EXTRX_ENABLE
     help
         Enables external receiver on PA3 (Flapper Nimble+ PCB).
 
+config DECK_SERVO_GRIPPER
+    bool "Enable Servo Gripper for Flapper Nimble+ PCB functionality"
+    default n
+    help
+        Enables Servo Gripper for Flapper Nimble+ PCB
+
+config DECK_SPRING_GRIPPER
+    bool "Enable Spring Gripper for Flapper Nimble+ PCB functionality"
+    default n
+    help
+        Enables Spring Gripper for Flapper Nimble+ PCB
+
 config DECK_FLOW
     bool "Support the Flow (v1 and v2) deck"
     default y

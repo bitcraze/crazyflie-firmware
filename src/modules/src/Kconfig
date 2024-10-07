@@ -188,14 +188,14 @@ config POWER_DISTRIBUTION_QUADROTOR
         Power distribution function for quadrotors
 config POWER_DISTRIBUTION_FLAPPER
     bool "Flapper Nimble+ power distribution"
-    depends on PLATFORM_FLAPPER
+    depends on PLATFORM_FLAPPER || PLATFORM_SERVO_GRIPPER || PLATFORM_SPRING_GRIPPER
     help
         Power distribution function for Flapper Nimble+
 
 endchoice
 config POWER_DISTRIBUTION_FLAPPER_REVB
     bool "Flapper  Nimble+ power distribution (PCB revision B)"
-    depends on POWER_DISTRIBUTION_FLAPPER
+    depends on POWER_DISTRIBUTION_FLAPPER || PLATFORM_SERVO_GRIPPER || PLATFORM_SPRING_GRIPPER
     default n
     help
         Power distribution function for Flapper Nimble+ with revB PCB

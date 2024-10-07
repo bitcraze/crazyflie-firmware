@@ -214,6 +214,17 @@ float getCPPMYawRateScale()
   return s_CppmEmuYawMaxRateDps;
 }
 
+static bool activateGripper = false;
+static int lastGripperCall = -1;
+bool getGripperStatus() {
+  if(activateGripper != lastGripperCall) {
+    lastGripperCall = activateGripper;
+    return 1;
+  }
+  else
+    return 0;
+}
+
 static void cppmEmuDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
 {
   bool isSelfLevelEnabled = true;
@@ -226,6 +237,13 @@ static void cppmEmuDecoder(setpoint_t *setpoint, uint8_t type, const void *data,
   // If it's in use, check and see if it's set and enable self-leveling.
   // If aux channel 0 is not in use, default to self-leveling enabled.
   isSelfLevelEnabled = !(values->hdr.numAuxChannels >= 1 && values->channelAux[0] < 1500);
+
+  //receive additional toggles and switches
+  //toggle for disabling gripper  
+  activateGripper = (values->hdr.numAuxChannels >= 2 && values->channelAux[1] > 1500);
+  if(lastGripperCall == -1) {
+    lastGripperCall = activateGripper;
+  }
 
   // Set the modes
 

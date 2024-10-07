@@ -43,5 +43,7 @@ void stabilizerInit(StateEstimatorType estimator);
  * @return True if all test has passed. False otherwise.
  */
 bool stabilizerTest(void);
+float getThrust();
+void resetThrust();
 
 #endif /* STABILIZER_H_ */

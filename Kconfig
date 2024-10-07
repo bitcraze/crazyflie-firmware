@@ -88,6 +88,16 @@ config PLATFORM_FLAPPER
     select SENSORS_BMI088_BMP3XX
     select SENSORS_BMI088_SPI
 
+config PLATFORM_SERVO_GRIPPER
+    bool "Build for Flapper Nimble+ with Servo Gripper"
+    select SENSORS_BMI088_BMP3XX
+    select SENSORS_BMI088_SPI
+
+config PLATFORM_SPRING_GRIPPER
+    bool "Build for Flapper Nimble+ with Spring Gripper"
+    select SENSORS_BMI088_BMP3XX
+    select SENSORS_BMI088_SPI
+
 endchoice
 
 config BOLT11_BRUSHED

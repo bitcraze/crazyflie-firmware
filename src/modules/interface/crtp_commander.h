@@ -39,5 +39,6 @@ float getCPPMRollRateScale();
 float getCPPMPitchScale();
 float getCPPMPitchRateScale();
 float getCPPMYawRateScale();
+bool getGripperStatus();
 
 #endif /* CRTP_COMMANDER_H_ */

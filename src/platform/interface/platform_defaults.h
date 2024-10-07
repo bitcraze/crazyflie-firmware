@@ -46,6 +46,12 @@
 #ifdef CONFIG_PLATFORM_FLAPPER
     #include "platform_defaults_flapper.h"
 #endif
+#ifdef CONFIG_PLATFORM_SERVO_GRIPPER
+    #include "platform_defaults_servo_gripper.h"
+#endif
+#ifdef CONFIG_PLATFORM_SPRING_GRIPPER
+    #include "platform_defaults_spring_gripper.h"
+#endif
 
 // Drone physical constants
 // TODO provide those in each config. Those are values of cf2 platform
