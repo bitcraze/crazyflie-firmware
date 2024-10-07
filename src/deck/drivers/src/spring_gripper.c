@@ -69,7 +69,7 @@ void springGripperTask(void* arg)
 
     gripperState = RDY2LAND;
     digitalWrite(*disengageGripperPin, LOW);
-    DEBUG_PRINT("Grripper ready to land!\n");
+    DEBUG_PRINT("Gripper ready to land!\n");
 
     while (1) {
       activateGripper = getGripperStatus();
