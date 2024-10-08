@@ -52,7 +52,7 @@ This can be done by opening `power shell` as administrator and typing:
 $ wsl --install
 ```
 
-Then follow the [install instruction for Ubuntu 20.04](#debianubuntu) above to install the required build dependencies.
+Then follow the [install instruction for Ubuntu 20.04](#ubuntu) above to install the required build dependencies.
 
 For [flashing](#flashing) you need to install [Python](https://www.python.org/downloads/windows/) (=>version 3.7) and the [CFclient](https://github.com/bitcraze/crazyflie-clients-python) **on Windows**.
 When installing Python, the checkbox to add python to the Path should be checked and then the CFclient can be installed with pip in a `powershell` or `cmd` window:
