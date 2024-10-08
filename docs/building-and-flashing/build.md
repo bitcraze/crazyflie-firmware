@@ -29,11 +29,6 @@ $ sudo apt-get update
 $ sudo apt install gcc-arm-embedded
 ```
 
-##### Arch Linux
-```
-$ sudo pacman -S community/arm-none-eabi-gcc community/arm-none-eabi-gdb community/arm-none-eabi-newlib
-```
-
 ##### macOS
 ```
 $ brew tap PX4/homebrew-px4
