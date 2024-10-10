@@ -77,6 +77,10 @@ static setpoint_t tempSetpoint;
 static StateEstimatorType estimatorType;
 static ControllerType controllerType;
 
+// Controls whether the HL commander knows the state. If not, trajectories are
+// initiated at the most recent setpoint.
+static bool doHLTellState;
+
 static STATS_CNT_RATE_DEFINE(stabilizerRate, 500);
 static rateSupervisor_t rateSupervisorContext;
 static bool rateWarningDisplayed = false;
@@ -294,7 +298,10 @@ static void stabilizerTask(void* param)
       updateStateEstimatorAndControllerTypes();
 
       stateEstimator(&state, stabilizerStep);
-      // crtpCommanderHighLevelTellState(&state);
+
+      if (doHLTellState) {
+        crtpCommanderHighLevelTellState(&state);
+      }
 
       const bool areMotorsAllowedToRun = supervisorAreMotorsAllowedToRun();
 
@@ -371,6 +378,10 @@ PARAM_ADD_CORE(PARAM_UINT8, estimator, &estimatorType)
  * @brief Controller type Auto select(0), PID(1), Mellinger(2), INDI(3), Brescianini(4), Lee(5) (Default: 0)
  */
 PARAM_ADD_CORE(PARAM_UINT8, controller, &controllerType)
+/**
+ * @brief Whether high-level commander tells state (Default: 0)
+ */
+PARAM_ADD(PARAM_UINT8, hltellstate, &doHLTellState)
 PARAM_GROUP_STOP(stabilizer)
 
 
