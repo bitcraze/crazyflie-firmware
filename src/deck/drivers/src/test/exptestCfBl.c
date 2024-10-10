@@ -280,7 +280,7 @@ static bool expCfBlTestRun(void)
 
 static const DeckDriver expCfBltest_deck = {
   .vid = 0xFF,
-  .pid = 0xFF,
+  .pid = 0xFE,
   .name = "bcExpTestCfBl",
 
   .usedGpio = 0xFFFFFFFF,
