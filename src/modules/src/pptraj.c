@@ -374,8 +374,7 @@ struct traj_eval piecewise_eval(
 	struct poly4d const *end_piece = &(traj->pieces[traj->n_pieces - 1]);
 	struct traj_eval ev = poly4d_eval(end_piece, end_piece->duration);
 	traj_eval_transform(&ev, traj->shift, traj->shift_yaw);
-	// ev.pos = vadd(ev.pos, traj->shift);
-	// ev.yaw = normalize_radians(ev.yaw + traj->shift_yaw);
+
 	ev.vel = vzero();
 	ev.acc = vzero();
 	ev.jerk = vzero();

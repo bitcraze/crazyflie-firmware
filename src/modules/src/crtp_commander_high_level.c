@@ -98,6 +98,7 @@ static bool isInit = false;
 static struct planner planner;
 static uint8_t group_mask;
 static bool isBlocked; // Are we blocked to do anything by the supervisor
+static bool isRelativeYaw; // Is yaw relative in relative mode?
 static struct vec pos; // last known setpoint (position [m])
 static struct vec vel; // last known setpoint (velocity [m/s])
 static float yaw; // last known setpoint yaw (yaw [rad])
@@ -637,7 +638,7 @@ int start_trajectory(const struct data_start_trajectory* data)
         trajectory.timescale = data->timescale;
         trajectory.n_pieces = trajDesc->trajectoryIdentifier.mem.n_pieces;
         trajectory.pieces = (struct poly4d*)&trajectories_memory[trajDesc->trajectoryIdentifier.mem.offset];
-        result = plan_start_trajectory(&planner, &trajectory, data->reversed, data->relative, pos, yaw);
+        result = plan_start_trajectory(&planner, &trajectory, data->reversed, data->relative, isRelativeYaw, pos, yaw);
         xSemaphoreGive(lockTraj);
       } else if (trajDesc->trajectoryLocation == TRAJECTORY_LOCATION_MEM
           && trajDesc->trajectoryType == CRTP_CHL_TRAJECTORY_TYPE_POLY4D_COMPRESSED) {
@@ -894,6 +895,11 @@ bool crtpCommanderHighLevelIsTrajectoryFinished() {
  * landing, polynomial trajectories.
  */
 PARAM_GROUP_START(hlCommander)
+
+/**
+ * @brief Boolean whether to use relative yaw in relative trajectories.
+ */
+PARAM_ADD(PARAM_INT8, relativeyaw, &isRelativeYaw)
 
 /**
  * @brief Default take off velocity (m/s)

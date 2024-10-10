@@ -206,7 +206,7 @@ int plan_go_to(struct planner *p, bool relative, struct vec hover_pos, float hov
 	return plan_go_to_from(p, &setpoint, relative, hover_pos, hover_yaw, duration, t);
 }
 
-int plan_start_trajectory(struct planner *p, struct piecewise_traj* trajectory, bool reversed, bool relative, struct vec start_from, float start_yaw)
+int plan_start_trajectory(struct planner *p, struct piecewise_traj* trajectory, bool reversed, bool relative, bool relative_yaw, struct vec start_from, float start_yaw)
 {
 	p->reversed = reversed;
 	p->state = TRAJECTORY_STATE_FLYING;
@@ -228,10 +228,12 @@ int plan_start_trajectory(struct planner *p, struct piecewise_traj* trajectory, 
 		struct vec shift_pos = vsub(start_from, traj_init.pos);
 		trajectory->shift = shift_pos;
 		
-		// compute the shortest possible rotation towards trajectory start yaw to current yaw 
-		float traj_yaw = normalize_radians(traj_init.yaw);
-		start_yaw = normalize_radians(start_yaw);
-		trajectory->shift_yaw = shortest_signed_angle_radians(traj_yaw, start_yaw);
+		if (relative_yaw) {
+			// compute the shortest possible rotation towards trajectory start yaw to current yaw 
+			float traj_yaw = normalize_radians(traj_init.yaw);
+			start_yaw = normalize_radians(start_yaw);
+			trajectory->shift_yaw = shortest_signed_angle_radians(traj_yaw, start_yaw);
+		}
 	}
 	else {
 		trajectory->shift = vzero();
