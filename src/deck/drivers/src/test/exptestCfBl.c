@@ -253,7 +253,7 @@ static bool expCfBlTestRun(void)
     bcRpm->init(NULL);
     }
 
-    rpmTestRun();
+    status = rpmTestRun();
   }
   return status;
 }
