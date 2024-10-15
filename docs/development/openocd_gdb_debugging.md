@@ -101,24 +101,8 @@ You should now see WSL Ubuntu installing the VS Code Server program. Shortly aft
 > Note: In addition to the Arm-Cortex Debugging Extension (Version 1.2.2!), which is installed later in this instruction, you should also install Microsofts C/C++ Extension Pack and its recommended Extensions. 
 
 ##### Attach the ST-Link V2 USB device directly to WSL
-In contrast to `make cload`, which uses the windows programs to interface with usb devices such as Crazyradio PA, the openocd wants to communicate directly in WSL with your ST-Link V2. So it's not sufficient to just connect it to your Windows machine, you also have to attach it to WSL. For that we need to install USBIPD on Windows.
 
-In Windows Powershell(Admin), execute
-
-    winget install --interactive --exact dorssel.usbipd-win
-
-In WSL Ubuntu, execute
-
-    sudo apt install linux-tools-5.4.0-77-generic hwdata -y 
-    sudo update-alternatives --install /usr/local/bin/usbip usbip /usr/lib/linux-tools/5.4.0-77-generic/usbip 20
-
-After that you can use the following Commands in Windows Powershell(Admin)
-- List all USB Devices: ```usbipd wsl list```
-- Attach USB Device to WSL: 
-    - ```usbipd wsl attach -b <busid of ST-Link>```
-    - ```usbipd wsl attach -b <busid of ST-Link> -d <Name of specific WSL Distro if you have more than one>```
-    - Example: ```usbipd wsl attach -b 2-6 -d Ubuntu-20.04```
-- Detach USB Device to WSL: ```usbipd wsl detach -b <busid of ST-Link>``` (or just unplug it)
+Unlike make cload, which uses Windows programs to connect with USB devices like the Crazyradio PA, OpenOCD needs to communicate directly with your ST-Link V2 in WSL. Simply connecting it to your Windows machine isn’t enough; you also need to attach it to WSL. To do this, you'll need to install `USBIPD` on Windows. Follow the instructions on[ how to install USBIPD](https://github.com/dorssel/usbipd-win?tab=readme-ov-file#how-to-install) and [how to attach a device to WSL](https://github.com/dorssel/usbipd-win?tab=readme-ov-file#connecting-devices).
 
 Now make sure that it is connected to WSL by listing all usb devices with ```lsusb```
 Currently only the Superuser has read/write access to that usb device, change that by
