@@ -99,8 +99,6 @@ static EtGpio etGpioIn[ET_NBR_PINS] = {
   {ET_GPIO_PORT_IO4,  ET_GPIO_PIN_IO4, "IO4"}
 };
 
-static EtGpio etGpioSDA = {ET_GPIO_PORT_SDA,  ET_GPIO_PIN_SDA, "SDA"};
-static EtGpio etGpioSCL = {ET_GPIO_PORT_SCL,  ET_GPIO_PIN_SCL, "SCL"};
 
 static bool isInit;
 const DeckDriver *bcRpm = NULL;
@@ -255,23 +253,8 @@ static bool expCfBlTestRun(void)
     bcRpm->init(NULL);
     }
 
-    rpmTestRun();
+    status = rpmTestRun();
   }
-
-  if (status) {
-    // Configure SDA & SCL to turn on OK leds
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Low_Speed;
-    GPIO_InitStructure.GPIO_Pin = etGpioSDA.pin;
-    GPIO_Init(etGpioSDA.port, &GPIO_InitStructure);
-    GPIO_InitStructure.GPIO_Pin = etGpioSCL.pin;
-    GPIO_Init(etGpioSCL.port, &GPIO_InitStructure);
-    // Turn on OK LEDs.
-    GPIO_ResetBits(etGpioSDA.port, etGpioSDA.pin);
-    GPIO_ResetBits(etGpioSCL.port, etGpioSCL.pin);
-  }
-
   return status;
 }
 
