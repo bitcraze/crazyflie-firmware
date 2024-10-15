@@ -12,21 +12,13 @@ install some ARM toolchain.
 ### Install a toolchain
 
 #### Toolchain and compiler version policy
-Our policy for toolchain is to follow what is available in the oldest [Ubuntu Long Term Support release](https://wiki.ubuntu.com/Releases) and treat that as the oldest supported version. At the time of writing this (September 6 2021) the oldest LTS release is 18.04. And in Ubuntu 18.04 (bionic) the version of gcc-arm-none-eabi is 6.3.
+Our toolchain policy is to support the [oldest Ubuntu Long Term Support (LTS) release that is still within its Standard Support period](https://wiki.ubuntu.com/Releases). This means that we do not support Ubuntu releases that have reached End of Standard Support. As of October 15th, 2024, the oldest Ubuntu LTS release still receiving Standard Support is 20.04 (Focal Fossa). In Ubuntu 20.04, the version of `gcc-arm-none-eabi` available is 9.
 
-This means that if the firmware can not be compiled using gcc 6.3, **or anything newer**, it should be considered a bug.
+This means that if the firmware can not be compiled using gcc 9, **or anything newer**, it should be considered a bug.
 
 ##### Ubuntu
-For Ubuntu 20.04 and 22.04:
 ```
 $ sudo apt-get install make gcc-arm-none-eabi
-```
-
-For Ubuntu 18.04:
-```
-$ sudo add-apt-repository ppa:team-gcc-arm-embedded/ppa
-$ sudo apt-get update
-$ sudo apt install gcc-arm-embedded
 ```
 
 ##### macOS
@@ -109,7 +101,7 @@ $ make -j$(sysctl -n hw.ncpu)
 ```
 
 >  Alternatively, to configure and build with the toolbelt, prepend `tb` to the make commands as follows:
->  
+>
 >  ```
 >  $ tb make cf2_defconfig
 >  $ tb make
