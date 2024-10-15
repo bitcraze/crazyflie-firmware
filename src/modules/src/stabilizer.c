@@ -318,6 +318,7 @@ static void stabilizerTask(void* param)
       updateStateEstimatorAndControllerTypes();
 
       stateEstimator(&state, stabilizerStep);
+      // crtpCommanderHighLevelTellState(&state);
 
       const bool areMotorsAllowedToRun = supervisorAreMotorsAllowedToRun();
 
