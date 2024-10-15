@@ -12,9 +12,9 @@ install some ARM toolchain.
 ### Install a toolchain
 
 #### Toolchain and compiler version policy
-Our toolchain policy is to support the [oldest Ubuntu Long Term Support (LTS) release that is still within its Standard Support period](https://wiki.ubuntu.com/Releases). This means that we do not support Ubuntu releases that have reached End of Standard Support. As of October 15th, 2024, the oldest Ubuntu LTS release still receiving Standard Support is 20.04 (Focal Fossa). In Ubuntu 20.04, the version of `gcc-arm-none-eabi` available is 9.
+Our toolchain policy is to support the two most recent [Ubuntu Long Term Support (LTS) releases](https://wiki.ubuntu.com/Releases). This ensures we stay aligned with widely used, actively maintained versions. As of October 15th, 2024, the oldest supported LTS release is Ubuntu 22.04 (Jammy Jellyfish), which includes `gcc-arm-none-eabi` version 10.3.
 
-This means that if the firmware can not be compiled using gcc 9, **or anything newer**, it should be considered a bug.
+This means that if the firmware can not be compiled using gcc 10.3, **or anything newer**, it should be considered a bug.
 
 ##### Ubuntu
 ```
