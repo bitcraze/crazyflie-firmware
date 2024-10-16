@@ -75,7 +75,7 @@ $ git submodule update
 
 Before you can build the firmware, you will need to configure it. To use a platform default configuration, run the following command:
 
-#### Crazyflie 2.x
+#### Crazyflie 2.0, Crazyflie 2.1(+)
 ```
 $ make cf2_defconfig
 ```

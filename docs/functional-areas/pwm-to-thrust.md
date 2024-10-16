@@ -59,7 +59,7 @@ To measure the RPM we used optical switches that we connected to a prototype boa
 ![rpm board](/docs/images/rpm-board.jpg)
 
 ### Measuring the thrust
-To measure the thrust we built a simple test fixture. We use a precise scale to measure the thrust. It is done by letting a weight hold the Crazyflie 2.X down that is standing on the scale. The lift generated will show up on the scale as the total weight gets lighter. We glued a prototype expansion board to a bottle which we could attach the Crazyflie 2.X to. It is not a perfect fixture but shouldn't be too far off.
+To measure the thrust we built a simple test fixture. We use a precise scale to measure the thrust. It is done by letting a weight hold the Crazyflie 2.x down that is standing on the scale. The lift generated will show up on the scale as the total weight gets lighter. We glued a prototype expansion board to a bottle which we could attach the Crazyflie 2.x to. It is not a perfect fixture but shouldn't be too far off.
 
 ![cf2 thrust fixture](/docs/images/cf2_thrust_fixture.jpg)
 

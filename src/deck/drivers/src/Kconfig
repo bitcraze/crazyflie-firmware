@@ -57,7 +57,7 @@ config DECK_BIGQUAD
     bool "Support the BigQuad deck"
     default n
     help
-        With the BigQuad deck you can transform your Crazyflie 2.X to a
+        With the BigQuad deck you can transform your Crazyflie 2.x to a
         bigger quad by connecting external Electronic speed controllers
         (ESCs) to the breakout connectors on the deck. The autodetection
         of the deck makes this transformation possible to do in seconds.
@@ -182,7 +182,7 @@ config DECK_FLOW
     select DECK_ZRANGER
     select DECK_ZRANGER2
     help
-        The Flow deck gives the Crazyflie 2.X the ability to understand
+        The Flow deck gives the Crazyflie 2.x the ability to understand
         when it’s moving in any direction. The VL53L1x ToF sensor measures
         the distance to the ground with high precision and the PMW3901
         optical flow sensor measures movements in relation to the ground.
@@ -277,7 +277,7 @@ config DECK_LOCO
     help
         The Loco Positioning deck is a Tag in a Loco Positioning system
         and measures the distances to Anchors. The distances are used to
-        estimate the absolute position of the Crazyflie 2.X in the room,
+        estimate the absolute position of the Crazyflie 2.x in the room,
         which can be used for autonomous flight. The position is calculated
         on-board of the Crazyflie and there is no need for an external
         computer for position estimation.
@@ -379,7 +379,7 @@ config DECK_MULTIRANGER
     bool "Support the Multi-ranger deck"
     default y
     help
-        The Multi-ranger deck  gives the Crazyflie 2.X the ability to
+        The Multi-ranger deck  gives the Crazyflie 2.x the ability to
         detect objects around it. This is done by measuring the distance
         to objects in the following 5 directions: front/back/left/right/up
         with mm precision up to 4 meters.

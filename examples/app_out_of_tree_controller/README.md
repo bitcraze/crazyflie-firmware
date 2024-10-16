@@ -1,4 +1,4 @@
-# Out of tree controller app for Crazyflie 2.X
+# Out of tree controller app for Crazyflie 2.x
 
 This folder contains an out of tree controller implementation for the Crazyflie. Instead of using a custom controller, this example uses the built-in PID controller.
 

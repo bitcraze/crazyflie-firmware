@@ -19,11 +19,11 @@ Apps running in the Crazyflie request arming by calling the `supervisorRequestAr
 
 ## Auto arming
 
-On small, safe platforms with brushed motors, like the Crazyflie 2.X, it is possible to configure auto arming. When
+On small, safe platforms with brushed motors, like the Crazyflie 2.0 and Crazyflie 2.1(+), it is possible to configure auto arming. When
 auto arming is enabled, the system will automatically request arming when entering the `Pre flight checks passed`
 state. This will (if all other conditions are met) make the supervisor transition into the `Ready to fly` state.
 
-Auto arming is the default setting for the Crazyflie 2.X.
+Auto arming is the default setting for the Crazyflie 2.0 and Crazyflie 2.1(+).
 
 Auto arming is configured at compile time through the `CONFIG_MOTORS_REQUIRE_ARMING=y` kconfig flag.
 
@@ -33,7 +33,7 @@ The motors are used to indicate to the pilot that the system is armed and ready 
 the supervisor is in a state where flight is enabled.
 
 Note that the default
-settings for idle thrust on the Crazyflie 2.X is 0 and the motors will not spin. On platforms using brushless motors,
-an idle thrust that spins the motors should be used.
+settings for idle thrust on the Crazyflie 2.0 and Crazyflie 2.1(+) is 0 and the motors will not spin. On platforms using brushless motors,
+like the Crazyflie 2.1 Brushless, an idle thrust that spins the motors should be used.
 
 Idle thrust is configured at compile time through the `CONFIG_MOTORS_DEFAULT_IDLE_THRUST` kconfig parameter.
