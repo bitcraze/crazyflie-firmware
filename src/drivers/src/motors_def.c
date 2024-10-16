@@ -25,7 +25,7 @@
  *
  */
 
-// CF2.X connector M1, PA1, TIM2_CH2
+// CF2.x connector M1, PA1, TIM2_CH2
 static const MotorPerifDef MOTORS_PA1_TIM2_CH2_BRUSHED =
 {
     .drvType       = BRUSHED,
@@ -47,7 +47,7 @@ static const MotorPerifDef MOTORS_PA1_TIM2_CH2_BRUSHED =
     .preloadConfig = TIM_OC2PreloadConfig,
 };
 
-// CF2.X connector M2, PB11, TIM2_CH4
+// CF2.x connector M2, PB11, TIM2_CH4
 static const MotorPerifDef MOTORS_PB11_TIM2_CH4_BRUSHED =
 {
     .drvType       = BRUSHED,
@@ -69,7 +69,7 @@ static const MotorPerifDef MOTORS_PB11_TIM2_CH4_BRUSHED =
     .preloadConfig = TIM_OC4PreloadConfig,
 };
 
-// CF2.X connector M3, PA15, TIM2_CH1
+// CF2.x connector M3, PA15, TIM2_CH1
 static const MotorPerifDef MOTORS_PA15_TIM2_CH1_BRUSHED =
 {
     .drvType       = BRUSHED,
@@ -91,7 +91,7 @@ static const MotorPerifDef MOTORS_PA15_TIM2_CH1_BRUSHED =
     .preloadConfig = TIM_OC1PreloadConfig,
 };
 
-// CF2.X connector M4, PB9, TIM4_CH4
+// CF2.x connector M4, PB9, TIM4_CH4
 static const MotorPerifDef MOTORS_PB9_TIM4_CH4_BRUSHED =
 {
     .drvType       = BRUSHED,
@@ -134,7 +134,7 @@ static const MotorPerifDef MOTORS_PB10_TIM2_CH3_BRUSHED =
     .preloadConfig = TIM_OC3PreloadConfig,
 };
 
-// CF2.X connector M1, PA1, TIM2_CH2, Brushless config, inversed
+// CF2.x connector M1, PA1, TIM2_CH2, Brushless config, inversed
 static const MotorPerifDef MOTORS_PA1_TIM2_CH2_BRUSHLESS_INV_PP =
 {
     .drvType       = BRUSHLESS,
@@ -156,7 +156,7 @@ static const MotorPerifDef MOTORS_PA1_TIM2_CH2_BRUSHLESS_INV_PP =
     .preloadConfig = TIM_OC2PreloadConfig,
 };
 
-// CF2.X connector M2, PB11, TIM2_CH4, Brushless config, inversed
+// CF2.x connector M2, PB11, TIM2_CH4, Brushless config, inversed
 static const MotorPerifDef MOTORS_PB11_TIM2_CH4_BRUSHLESS_INV_PP =
 {
     .drvType       = BRUSHLESS,
@@ -178,7 +178,7 @@ static const MotorPerifDef MOTORS_PB11_TIM2_CH4_BRUSHLESS_INV_PP =
     .preloadConfig = TIM_OC4PreloadConfig,
 };
 
-// CF2.X connector M3, PA15, TIM2_CH1, Brushless config, inversed
+// CF2.x connector M3, PA15, TIM2_CH1, Brushless config, inversed
 static const MotorPerifDef MOTORS_PA15_TIM2_CH1_BRUSHLESS_INV_PP =
 {
     .drvType       = BRUSHLESS,
@@ -200,7 +200,7 @@ static const MotorPerifDef MOTORS_PA15_TIM2_CH1_BRUSHLESS_INV_PP =
     .preloadConfig = TIM_OC1PreloadConfig,
 };
 
-// CF2.X connector M4, PB9, TIM4_CH4, Brushless config, inversed
+// CF2.x connector M4, PB9, TIM4_CH4, Brushless config, inversed
 static const MotorPerifDef MOTORS_PB9_TIM4_CH4_BRUSHLESS_INV_PP =
 {
     .drvType       = BRUSHLESS,

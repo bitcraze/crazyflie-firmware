@@ -1,4 +1,4 @@
-# Peer to Peer App for Crazyflie 2.X
+# Peer to Peer App for Crazyflie 2.x
 
 This folder contains the app layer application for the Crazyflie to send and receive peer to peer messages. The debug messages of the received messages can be read in the console tab of the [cfclient](https://github.com/bitcraze/crazyflie-clients-python). Two Crazyflies need to be flashed with this program in order to work. Make sure that they are both on the same channel, and that they have different IDs.
 

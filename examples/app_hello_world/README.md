@@ -1,4 +1,4 @@
-# Hello world App for Crazyflie 2.X
+# Hello world App for Crazyflie 2.x
 
 This folder contains the app layer application for the Crazyflie to print a hello world debug message, which can be read in the console tab of the [cfclient](https://github.com/bitcraze/crazyflie-clients-python). 
 

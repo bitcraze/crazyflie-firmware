@@ -1,4 +1,4 @@
-# Dynamic Token Ring Protocol for Crazyflie 2.X
+# Dynamic Token Ring Protocol for Crazyflie 2.x
 
 This folder contains the app layer application for the Crazyflie to send and receive peer to peer messages while utilising the DTR(Dynamic Token Ring) protocol. This protocol is used to ensure that each time only one Crazyflie broadcasts data which leads to less packet collisions and losses. It also provides a way to ensure that the transmitted data will be sent to the other copters since it receives an acknowledgement from each receiver.
 

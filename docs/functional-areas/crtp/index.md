@@ -9,8 +9,7 @@ subsystems. In the context of this documentation, the term `CRTP` is used both
 to describe the packet protocol and its format as well as the collection of
 data packets that are used to communicate with the Crazyflie.
 
-Unless otherwise noted, this protocol documentation covers `Crazyflie 2.x`, the
-`Crazyflie Bolt` and the `Roadrunner`.
+Unless otherwise noted, this protocol documentation covers `Crazyflie 2.x` (including `Crazyflie Bolt`) and the `Roadrunner`.
 
 ## Protocol version and stability guarantee
 

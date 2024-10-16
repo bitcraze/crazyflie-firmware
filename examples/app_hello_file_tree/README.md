@@ -1,4 +1,4 @@
-# Hello file tree App for Crazyflie 2.X
+# Hello file tree App for Crazyflie 2.x
 
 This folder contains an app layer application for the Crazyflie to show how to work with a file tree in Out Of Tree builds.
 It prints the classic hello world debug message, which can be read in the console tab of the [cfclient](https://github.com/bitcraze/crazyflie-clients-python).

@@ -1,4 +1,4 @@
-# API App for Crazyflie 2.X
+# API App for Crazyflie 2.x
 
 This folder contains an app layer application for the Crazyflie that is intended to document which functions that are part of the
 app API. This is not an example app with useful code, see the example directroy for examples of how to use functions.

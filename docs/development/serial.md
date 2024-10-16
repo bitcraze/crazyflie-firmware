@@ -1,15 +1,15 @@
 ---
-title: Getting the serial number of the Crazyflie 2.X
+title: Getting the serial number of the Crazyflie 2.x
 page_id: serial
 ---
 
-The Crazyflie 2.X ID is a character string of 24 characters. It is
-unique to each Crazyflie 2.X.
+The Crazyflie 2.x ID is a character string of 24 characters. It is
+unique to each Crazyflie 2.x.
 
 ## Windows
 
--   Open the \"Device manager\" and find the Crazyflie 2.X.
--   Right click on Crazyflie 2.X, go in \"Properties\" then in the
+-   Open the \"Device manager\" and find the Crazyflie 2.x.
+-   Right click on Crazyflie 2.x, go in \"Properties\" then in the
     tab \"Details\".
 -   In the drop-box select \"Device instance path\".
 
@@ -36,7 +36,7 @@ From the \"About this mac\" menu, click on \"System reports\...\"
 
 ![mac serial](/docs/images/mac_serial_about.png){:width=400px}
 
-Then click on \"USB\", locate the Crazyflie 2.X and the serial number can
+Then click on \"USB\", locate the Crazyflie 2.x and the serial number can
 be copied from there
 
 ![mac serial 2](/docs/images/mac_serial.png){:width=500px}
