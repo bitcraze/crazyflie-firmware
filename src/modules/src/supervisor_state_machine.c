@@ -160,7 +160,7 @@ static SupervisorStateTransition_t transitionsFlying[] = {
     .newState = supervisorStateExceptFreeFall,
 
     .triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_EMERGENCY_STOP,
-    .negatedTriggers = SUPERVISOR_CB_ARMED,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAny,
 
     .blockerCombiner = supervisorNever,
@@ -169,7 +169,7 @@ static SupervisorStateTransition_t transitionsFlying[] = {
     .newState = supervisorStateCrashed,
 
     .triggers = SUPERVISOR_CB_IS_TUMBLED,
-    .negatedTriggers = SUPERVISOR_CB_ARMED,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAny,
 
     .blockerCombiner = supervisorNever,
@@ -230,7 +230,7 @@ static SupervisorStateTransition_t transitionsWarningLevelOut[] = {
     .newState = supervisorStateExceptFreeFall,
 
     .triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
-    .negatedTriggers = SUPERVISOR_CB_ARMED,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAny,
 
     .blockerCombiner = supervisorNever,
