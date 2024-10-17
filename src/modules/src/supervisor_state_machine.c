@@ -199,8 +199,8 @@ static SupervisorStateTransition_t transitionsLanded[] = {
     .newState = supervisorStateReset,
 
     .triggers = SUPERVISOR_CB_LANDING_TIMEOUT,
-    .negatedTriggers = SUPERVISOR_CB_NONE,
-    .triggerCombiner = supervisorAll,
+    .negatedTriggers = SUPERVISOR_CB_ARMED,
+    .triggerCombiner = supervisorAny,
 
     .blockerCombiner = supervisorNever,
   },
