@@ -175,6 +175,15 @@ static SupervisorStateTransition_t transitionsFlying[] = {
     .blockerCombiner = supervisorNever,
   },
   {
+    .newState = supervisorStateReset,
+
+    .triggers = SUPERVISOR_CB_NONE,
+    .negatedTriggers = SUPERVISOR_CB_ARMED,
+    .triggerCombiner = supervisorAll,
+
+    .blockerCombiner = supervisorNever,
+  },
+  {
     .newState = supervisorStateWarningLevelOut,
 
     .triggers = SUPERVISOR_CB_COMMANDER_WDT_WARNING,

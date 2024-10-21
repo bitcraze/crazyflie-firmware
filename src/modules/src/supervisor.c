@@ -264,7 +264,7 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
     supervisorSetLatestLandingTime(this, currentTick);
   }
 
-  if ((previousState == supervisorStateLanded) && (newState == supervisorStateReset)) {
+  if ((previousState == supervisorStateFlying || previousState == supervisorStateLanded) && (newState == supervisorStateReset)) {
     DEBUG_PRINT("Disarming\n");
   }
 
