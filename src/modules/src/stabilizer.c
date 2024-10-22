@@ -381,7 +381,7 @@ PARAM_ADD_CORE(PARAM_UINT8, controller, &controllerType)
 /**
  * @brief Whether high-level commander tells state (Default: 0)
  */
-PARAM_ADD(PARAM_UINT8, hltellstate, &doHLTellState)
+PARAM_ADD(PARAM_UINT8, hlTellState, &doHLTellState)
 PARAM_GROUP_STOP(stabilizer)
 
 

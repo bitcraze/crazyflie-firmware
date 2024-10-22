@@ -899,7 +899,7 @@ PARAM_GROUP_START(hlCommander)
 /**
  * @brief Boolean whether to use relative yaw in relative trajectories.
  */
-PARAM_ADD(PARAM_INT8, relativeyaw, &isRelativeYaw)
+PARAM_ADD(PARAM_INT8, relativeYaw, &isRelativeYaw)
 
 /**
  * @brief Default take off velocity (m/s)
