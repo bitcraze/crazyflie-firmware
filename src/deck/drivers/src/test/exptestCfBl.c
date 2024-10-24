@@ -70,7 +70,6 @@
 
 #define ET_NBR_PINS         7
 
-#define RPM_TEST_LOWER_LIMIT 12000
 #define MOTOR_TEST_PWM (UINT16_MAX/2)
 #define MOTOR_TEST_TIME_MILLIS 2000
 #define MOTOR_FEED_SIGNAL_INTVL 1
@@ -103,6 +102,7 @@ static EtGpio etGpioIn[ET_NBR_PINS] = {
 static bool isInit;
 const DeckDriver *bcRpm = NULL;
 static motorRpmParams_t motorRpm = {0};
+static uint32_t rpmResult[4] = {0,0,0,0};
 
 static void expCfBlTestInit(DeckInfo *info)
 {
@@ -166,10 +166,9 @@ static void runMotors()
 
 static bool rpmTestRun(void)
 {
-  bool passed = true;
   uint16_t testTime = MOTOR_TEST_TIME_MILLIS;
   int32_t waitTime = MOTOR_TEST_TIME_MILLIS;
-  int32_t rpmSamples[] = {0,0,0,0};
+  uint32_t rpmSamples[] = {0,0,0,0};
   setMotorsPwm(0);
   while (waitTime) { //We need to wait until all ESCs are started. We need to feed a signal continuosly so they dont go to sleep
     runMotors();
@@ -187,11 +186,11 @@ static bool rpmTestRun(void)
 
   setMotorsPwm(0);
   for (int i = 0; i<NBR_OF_MOTORS; i++) {
-    int rpmAvg = rpmSamples[i] / MOTOR_RPM_NBR_SAMPLES;
-    DEBUG_PRINT("Motor; %d RPM; %d\n", i, rpmAvg);
-    passed &= (rpmAvg > RPM_TEST_LOWER_LIMIT);
+    uint32_t rpmAvg = rpmSamples[i] / MOTOR_RPM_NBR_SAMPLES;
+    rpmResult[i] = rpmAvg;
   }
-  return passed;
+
+  return true; //Return True here regardless. This should be checked externally
 }
 
 static bool expCfBlTestRun(void)
@@ -272,4 +271,10 @@ static const DeckDriver expCfBltest_deck = {
   .test = expCfBlTestRun
 };
 
+PARAM_GROUP_START(prodTestRpm)
+PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, m1, &rpmResult[0])
+PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, m2, &rpmResult[1])
+PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, m3, &rpmResult[2])
+PARAM_ADD(PARAM_UINT32 | PARAM_RONLY, m4, &rpmResult[3])
+PARAM_GROUP_STOP(prodTestRpm)
 DECK_DRIVER(expCfBltest_deck);
