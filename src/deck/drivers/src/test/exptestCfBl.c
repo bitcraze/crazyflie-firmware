@@ -119,9 +119,6 @@ static bool expCfBlTestRun(void)
   bool status = true;
   GPIO_InitTypeDef GPIO_InitStructure;
   GpioRegBuf gpioSaved;
-
-  isInit = true;
-
   status &= sensorsManufacturingTest();
 
 
@@ -165,7 +162,7 @@ static bool expCfBlTestRun(void)
 
   decktestRestoreGPIOStatesABC(&gpioSaved);
 
-  if(status) {
+  if(status && isInit) {
     if(bcRpm->init) {
       bcRpm->init(NULL);
     } else {
