@@ -40,7 +40,7 @@ To write the setting to the ESCs press the "Write settings" button. This will wr
 
 
 ## Flash the ESCs
-To flash the ESCs presh the "Flash Firmware to this ESC".
+To flash the ESCs press the "Flash Firmware to this ESC".
 
 You can choose to flash either a standard off-the-shelf FW like Bluejay or BLHEli_S or a custom FW.
 
