@@ -3,7 +3,7 @@ title: ESC Configuration
 page_id: esc_configuration
 ---
 
-# Configure the ESCs of the Crazyflie 2.1 Brushless
+## Configure the ESCs of the Crazyflie 2.1 Brushless
 
 ***NOTE: You must use a Chrome browser (Chromium or similar does not work)***
 
@@ -19,7 +19,7 @@ The serial port should be named something along the lines of "CrazyflieXX"
 Connect to the pass through interface via USB by pressing the Connect button.
 ![connect](/docs/images/esc_configurator_connect.png)
 
-## Motor control
+### Motor control
 The first page is a motor control page where you can check that the motors are spinning as expected.
 Enable control by checking the "Enable motor control" checkbox.
 
@@ -31,7 +31,7 @@ You can either spin the motors separately or all motors at the same time with th
 ***NOTE: Be careful to not ramp the speed up so high that the drone takes off or flips.***
 
 
-## Write settings to the ESCs
+### Write settings to the ESCs
 Click the "Read Settings" button. The settings read from the ESCs will now be displayed.
 
 Be aware that setting other settings than the recommended is done at you own risk, make sure you know what you are doing before attempting to change these.
@@ -44,7 +44,7 @@ To write the setting to the ESCs press the "Write settings" button. This will wr
 ***NOTE if you push "reset to default" these settigns are not our default settings, but the ones specified by the esc-configurator website.***
 
 
-## Flash the ESCs
+### Flash the ESCs
 To flash the ESCs press the "Flash Firmware to this ESC".
 
 You can choose to flash either a standard off-the-shelf FW like Bluejay or BLHEli_S or a custom FW.
