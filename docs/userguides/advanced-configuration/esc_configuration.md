@@ -1,3 +1,8 @@
+---
+title: ESC Configuration
+page_id: esc_configuration
+---
+
 # Configure the ESCs of the Crazyflie 2.1 Brushless
 
 ***NOTE: You must use a Chrome browser (Chromium or similar does not work)***
