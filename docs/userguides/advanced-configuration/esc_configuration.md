@@ -7,7 +7,7 @@ page_id: esc_configuration
 
 ***NOTE: You must use a Chrome browser (Chromium or similar does not work)***
 
-Open the wep page [esc-configurator](https://[esc-configurator.com) in a Chrome browser.
+Open the wep page [esc-configurator](https://esc-configurator.com) in a Chrome browser.
 
 Connect the Crazyflie 2.1 Brushless using the provided USB cable.
 Select a serial port in the GUI.
