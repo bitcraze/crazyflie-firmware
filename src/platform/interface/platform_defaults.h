@@ -147,6 +147,11 @@
     #define SUPERVISOR_TUMBLE_CHECK_ACCEPTED_UPSIDEDOWN_TIME 100
 #endif
 
+// Pre-flight disarming timeout
+#ifndef PREFLIGHT_TIMEOUT_MS
+    #define PREFLIGHT_TIMEOUT_MS 30000
+#endif
+
 // Landing timeout before disarming
 #ifndef LANDING_TIMEOUT_MS
     #define LANDING_TIMEOUT_MS 3000
