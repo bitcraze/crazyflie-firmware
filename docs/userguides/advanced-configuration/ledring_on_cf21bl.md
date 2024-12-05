@@ -14,7 +14,7 @@ The ESC firmware file O_H_10_48_REV16_77.hex can be found [here](https://github.
 
 ### Flash the ESCs
 
-Use the [ESC-configuration guide](/docs/images/esc_configuration-md) to flash custom FW to the ESCs
+Use the [ESC-configuration guide](/docs/userguides/advanced-configuration/esc_configuration.md) to flash custom FW to the ESCs
 
 ![Flash custom FW](/docs/images/esc-flash-local-firmware.png)
 
