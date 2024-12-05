@@ -44,4 +44,4 @@ Then build and flash the Crazyflie 2.1 Brushless firmware. The LED-ring should n
 
 ## Restoring the original ESC firmware
 
-We use different settings then the official Bluejay firmware, so use our fork of the Bluejay ESC firmware. Our latest release can be found [here](https://github.com/bitcraze/bluejay/releases). Download and flash the cfbl2.1_esc_normal_m1-m3.hex on all ESCs. You can configure the rotation direction afterwards together with the other settings that are shown in the [ESC-configuration guide](/docs/images/esc_configuration-md).
+We use different settings then the official Bluejay firmware, so use our fork of the Bluejay ESC firmware. Our latest release can be found [here](https://github.com/bitcraze/bluejay/releases). Download and flash the cfbl2.1_esc_normal_m1-m3.hex on all ESCs. You can configure the rotation direction afterwards together with the other settings that are shown in the [ESC-configuration guide](/docs/userguides/advanced-configuration/esc_configuration.md).
