@@ -100,7 +100,7 @@ VL53L1_Error vl53l1xSetI2CAddress(VL53L1_Dev_t* pdev, uint8_t address)
 {
   VL53L1_Error status = VL53L1_ERROR_NONE;
 
-  status = VL53L1_SetDeviceAddress(pdev, address*2);
+  status = VL53L1_SetDeviceAddress(pdev, address);
   pdev->I2cDevAddr = address;
   return  status;
 }
@@ -199,7 +199,7 @@ VL53L1_Error VL53L1_RdByte(
   VL53L1_Error status         = VL53L1_ERROR_NONE;
   static uint8_t r8data;
 
-  if (!i2cdevRead16(pdev->I2Cx, pdev->I2cDevAddr, index, 1, pdata))
+  if (!i2cdevRead16(pdev->I2Cx, pdev->I2cDevAddr, index, 1, &r8data))
   {
     status = VL53L1_ERROR_CONTROL_INTERFACE;
   }
@@ -217,7 +217,7 @@ VL53L1_Error VL53L1_RdWord(
   VL53L1_Error status         = VL53L1_ERROR_NONE;
   static uint16_t r16data;
 
-  if (!i2cdevRead16(pdev->I2Cx, pdev->I2cDevAddr, index, 2, (uint8_t *)pdata))
+  if (!i2cdevRead16(pdev->I2Cx, pdev->I2cDevAddr, index, 2, (uint8_t *)&r16data))
   {
     status = VL53L1_ERROR_CONTROL_INTERFACE;
   }
@@ -235,7 +235,7 @@ VL53L1_Error VL53L1_RdDWord(
   VL53L1_Error status = VL53L1_ERROR_NONE;
   static uint32_t r32data;
 
-  if (!i2cdevRead16(pdev->I2Cx, pdev->I2cDevAddr, index, 4, (uint8_t *)pdata))
+  if (!i2cdevRead16(pdev->I2Cx, pdev->I2cDevAddr, index, 4, (uint8_t *)&r32data))
   {
     status = VL53L1_ERROR_CONTROL_INTERFACE;
   }

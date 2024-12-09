@@ -749,7 +749,7 @@ VL53L1_Error VL53L1_SetDeviceAddress(VL53L1_DEV Dev, uint8_t DeviceAddress)
 	LOG_FUNCTION_START("");
 
 	Status = VL53L1_WrByte(Dev, VL53L1_I2C_SLAVE__DEVICE_ADDRESS,
-			DeviceAddress / 2);
+			DeviceAddress);
 
 	LOG_FUNCTION_END(Status);
 	return Status;
