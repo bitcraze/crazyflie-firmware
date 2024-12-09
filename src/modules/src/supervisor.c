@@ -293,11 +293,6 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
     supervisorRequestCrashRecovery(false);
   }
 
-  if ((previousState == supervisorStateNotInitialized || previousState == supervisorStateReadyToFly || previousState == supervisorStateFlying) &&
-      newState != supervisorStateReadyToFly && newState != supervisorStateFlying && newState != supervisorStateLanded) {
-    DEBUG_PRINT("Can not fly\n");
-  }
-
   if (newState != supervisorStateReadyToFly &&
       newState != supervisorStateFlying &&
       newState != supervisorStateWarningLevelOut &&
