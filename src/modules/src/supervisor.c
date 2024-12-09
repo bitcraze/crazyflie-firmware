@@ -271,7 +271,9 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
   const supervisorState_t newState = this->state;
 
   if (newState == supervisorStateReadyToFly) {
-    DEBUG_PRINT("Ready to fly\n");
+    if (!AUTO_ARMING){
+      DEBUG_PRINT("Ready to fly\n");
+    }
     supervisorSetLatestArmingTime(this, currentTick);
   }
 
@@ -281,7 +283,9 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
 
   if (((previousState == supervisorStateFlying || previousState == supervisorStateLanded) && (newState == supervisorStateReset))
        || (previousState == supervisorStateReadyToFly && newState == supervisorStatePreFlChecksPassed)) {
-    DEBUG_PRINT("Disarming\n");
+    if (!AUTO_ARMING){
+      DEBUG_PRINT("Disarming\n");
+    }
   }
 
   if (newState == supervisorStateLocked) {
