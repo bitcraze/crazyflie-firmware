@@ -43,10 +43,10 @@
 #define DEFAULT_SYSTEM_SHUTDOWN_TIMEOUT_MIN 5
 
 // Drone physical constants
-// m
-#define ARM_LENGTH 0.046f
-// kg
-#define CF_MASS 0.030f
+#define ARM_LENGTH 0.050f  // m
+// Default: Crazyflie 2.1 Brushless with propeller guards, 350mAh battery, and Lighthouse deck.
+// Update this value with the mass of your specific setup if different.
+#define CF_MASS 0.0393f  // kg
 
 // Default PID gains
 #define PID_ROLL_RATE_KP 200.0
