@@ -58,6 +58,8 @@ Check the implementation details in `position_controller_pid.c` in `positionCont
 
 ## Mellinger Controller
 
+_**Note:** This controller relies on the platform mass for its calculations. Ensure the platform mass is updated in [the firmware's platform defaults](https://github.com/bitcraze/crazyflie-firmware/tree/master/src/platform/interface) whenever the setup changes._
+
 Conceptually the Mellinger controller is similar to the cascaded PID controller, i.e. there is an attitude controller (running at 250 Hz) and a position controller (running at 100 Hz). The main difference to the cascaded PID controller is how errors are defined and how the position error is translated into desired attitude setpoints. Like the cascaded PID, this is a reactive geometric controller that uses the mathematical property of differential flatness. Details are given in the following scientific publication:
 
 ```
@@ -82,6 +84,8 @@ https://doi.org/10.2514/1.G001490
 
 ## Brescianini Controller
 
+_**Note:** This controller relies on the platform mass for its calculations. Ensure the platform mass is updated in [the firmware's platform defaults](https://github.com/bitcraze/crazyflie-firmware/tree/master/src/platform/interface) whenever the setup changes._
+
 Details of this controller are in the following scientific publication:
 
 ```
@@ -92,6 +96,8 @@ https://doi.org/10.3929/ethz-a-009970340
 ```
 
 ## Lee Controller
+
+_**Note:** This controller relies on the platform mass for its calculations. Ensure the platform mass is updated in [the firmware's platform defaults](https://github.com/bitcraze/crazyflie-firmware/tree/master/src/platform/interface) whenever the setup changes._
 
 Conceptually the Lee controller is similar to the cascaded PID controller, i.e. there is an attitude controller (running at 250 Hz) and a position controller (running at 100 Hz). The main difference to the cascaded PID controller is how errors are defined and how the position error is translated into desired attitude setpoints. Like the cascaded PID, this is a reactive geometric controller that uses the mathematical property of differential flatness. Compared to the Mellinger controller, a different angular velocity error and higher-order terms in the attitude controller are used. Details including a stability proof are given in the following scientific publication:
 
