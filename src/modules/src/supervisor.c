@@ -73,9 +73,6 @@ typedef struct {
   uint16_t infoBitfield;
   uint8_t paramEmergencyStop;
 
-  // Deprecated, remove after 2024-06-01
-  int8_t deprecatedArmParam;
-
   // The time (in ticks) of the first tumble event. 0=no tumble
   uint32_t initialTumbleTick;
 
@@ -118,7 +115,7 @@ bool supervisorCanArm() {
 }
 
 bool supervisorIsArmed() {
-  return supervisorMem.isArmingActivated || supervisorMem.deprecatedArmParam;
+  return supervisorMem.isArmingActivated;
 }
 
 bool supervisorIsLocked() {
@@ -309,7 +306,7 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
   }
 
   // We do not require an arming action by the user, auto arm
-  if (AUTO_ARMING || this->deprecatedArmParam) {
+  if (AUTO_ARMING) {
     if (newState == supervisorStatePreFlChecksPassed) {
       supervisorRequestArming(true);
     }
@@ -385,7 +382,7 @@ static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t
   if (supervisorIsArmed()) {
     this->infoBitfield |= 0x0002;
   }
-  if(AUTO_ARMING || this->deprecatedArmParam) {
+  if(AUTO_ARMING) {
     this->infoBitfield |= 0x0004;
   }
   if (this->canFly) {
@@ -515,17 +512,6 @@ PARAM_GROUP_START(stabilizer)
  */
 PARAM_ADD_CORE(PARAM_UINT8, stop, &supervisorMem.paramEmergencyStop)
 PARAM_GROUP_STOP(stabilizer)
-
-
-PARAM_GROUP_START(system)
-
-/**
- * @brief Set to nonzero to arm the system. A nonzero value enables the auto arm functionality
- *
- * Deprecated, will be removed after 2024-06-01. Use the CRTP `PlatformCommand` `armSystem` on the CRTP_PORT_PLATFORM port instead.
- */
-PARAM_ADD_CORE(PARAM_INT8, arm, &supervisorMem.deprecatedArmParam)
-PARAM_GROUP_STOP(system)
 
 
 /**
