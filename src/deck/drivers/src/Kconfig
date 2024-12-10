@@ -494,4 +494,11 @@ config DECK_LOADCELL
     default n
     help
         Enables the support for the NAU7802 loadcell.
+        
+config DECK_HPRGBW
+    bool "Support for High Powered RGBW LED deck"
+    default n
+    help
+        Enables the support for High Powered RGBW LED deck.
+        
       
