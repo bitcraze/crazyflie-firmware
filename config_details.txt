@@ -1,0 +1,29 @@
+1     # version
+8192  # buffer size in bytes
+log   # file name
+1     # enable on startup (0/1)
+on:fixedFrequency
+250     # frequency
+1     # mode (0: disabled, 1: synchronous stabilizer, 2: asynchronous)
+stateEstimate.x
+stateEstimate.y
+stateEstimate.z
+on:estTOF
+kalman_mm.tofDistance
+kalman_mm.tofStdDev
+on:estFlow
+kalman_mm.flowDt
+kalman_mm.flowDPixelX
+kalman_mm.flowDPixelY
+kalman_mm.flowStdDevX
+kalman_mm.flowStdDevY
+on:estGyroscope
+gyro.x
+gyro.y
+gyro.z
+on:estAcceleration
+acc.x
+acc.y
+acc.z
+on:estBarometer
+baro.asl

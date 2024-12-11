@@ -24,6 +24,10 @@
  */
 
 #include "mm_tof.h"
+#include "log.h"
+
+static float tofDistance;
+static float tofStdDev;
 
 void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof)
 {
@@ -55,7 +59,22 @@ void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof)
 
     h[KC_STATE_Z] = 1 / cosf(angle); // This just acts like a gain for the sensor model. Further updates are done in the scalar update function below
 
+    // Update logging variables
+    tofDistance = measuredDistance;
+    tofStdDev = tof->stdDev;
+
     // Scalar update
-    kalmanCoreScalarUpdate(this, &H, measuredDistance-predictedDistance, tof->stdDev);
+    // kalmanCoreScalarUpdate(this, &H, measuredDistance-predictedDistance, tof->stdDev);
   }
 }
+
+LOG_GROUP_START(kalman_mm)
+  /**
+   * @brief TOF sensor measured distance [m]
+   */
+  LOG_ADD(LOG_FLOAT, tofDistance, &tofDistance)
+  /**
+   * @brief TOF sensor measured standard deviation [m]
+   */
+  LOG_ADD(LOG_FLOAT, tofStdDev, &tofStdDev)
+LOG_GROUP_STOP(kalman_mm)
