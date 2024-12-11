@@ -81,10 +81,10 @@ def decode(filename):
             result[event['name']][v].append(d)
         result[event['name']]["timestamp"].append(timestamp)
 
-    # remove keys that had no data
-    for event_name in list(result.keys()):
-        if len(result[event_name]['timestamp']) == 0:
-            del result[event_name]
+    # # remove keys that had no data
+    # for event_name in list(result.keys()):
+    #     if len(result[event_name]['timestamp']) == 0:
+    #         del result[event_name]
 
     # convert to numpy arrays
     for event_name in result.keys():

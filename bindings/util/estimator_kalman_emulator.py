@@ -18,18 +18,20 @@ class EstimatorKalmanEmulator:
     how they are connected.
 
     """
-    def __init__(self, anchor_positions) -> None:
-        self.anchor_positions = anchor_positions
+    def __init__(self) -> None:
         self.accSubSampler = cffirmware.Axis3fSubSampler_t()
         self.gyroSubSampler = cffirmware.Axis3fSubSampler_t()
         self.coreData = cffirmware.kalmanCoreData_t()
-        self.outlierFilterState = cffirmware.OutlierFilterTdoaState_t()
+        print(self.coreData.baroReferenceHeight)
+        self.last_gyro_sample = None
 
-        self.TDOA_ENGINE_MEASUREMENT_NOISE_STD = 0.30
         self.PREDICT_RATE = 100
         self.PREDICT_STEP_MS = 1000 / self.PREDICT_RATE
 
         self._is_initialized = False
+
+    def set_parameters(self, params):
+        pass
 
     def run_one_1khz_iteration(self, sensor_samples) -> tuple[float, cffirmware.state_t]:
         """
@@ -85,8 +87,8 @@ class EstimatorKalmanEmulator:
         cffirmware.axis3fSubSamplerInit(self.gyroSubSampler, DEG_TO_RAD)
 
         self.coreParams = cffirmware.kalmanCoreParams_t()
+        print(self.coreParams)
         cffirmware.kalmanCoreDefaultParams(self.coreParams)
-        cffirmware.outlierFilterTdoaReset(self.outlierFilterState)
         cffirmware.kalmanCoreInit(self.coreData, self.coreParams, self.now_ms)
 
         self._is_initialized = True
@@ -117,6 +119,7 @@ class EstimatorKalmanEmulator:
             cffirmware.kalmanCoreUpdateWithTdoa(self.coreData, tdoa, now_ms, self.outlierFilterState)
 
         if sample[0] == 'estAcceleration':
+            # print("Acceleration sample")
             acc_data = sample[1]
 
             acc = cffirmware.Axis3f()
@@ -127,6 +130,7 @@ class EstimatorKalmanEmulator:
             cffirmware.axis3fSubSamplerAccumulate(self.accSubSampler, acc)
 
         if sample[0] == 'estGyroscope':
+            # print("Gyroscope sample")
             gyro_data = sample[1]
 
             gyro = cffirmware.Axis3f()
@@ -134,4 +138,28 @@ class EstimatorKalmanEmulator:
             gyro.y = float(gyro_data['gyro.y'])
             gyro.z = float(gyro_data['gyro.z'])
 
+            self.last_gyro_sample = gyro
+
             cffirmware.axis3fSubSamplerAccumulate(self.gyroSubSampler, gyro)
+
+        if sample[0] == 'estFlow':
+            # print("Flow sample")
+            flow_data = sample[1]
+            flow = cffirmware.flowMeasurement_t()
+
+            flow.deltaX = float(flow_data['motion.deltaX'])
+            flow.deltaY = float(flow_data['motion.deltaY'])
+            # flow.stdDev = self.FLOW_ENGINE_MEASUREMENT_NOISE_STD
+
+            cffirmware.kalmanCoreUpdateWithFlow(self.coreData, flow, self.last_gyro_sample)
+
+        if sample[0] == 'estTOF':
+            # print("TOF sample")
+            tof_data = sample[1]
+            tof = cffirmware.tofMeasurement_t()
+
+            # tof.timestamp = tof_data['timestamp']
+            tof.distance = float(tof_data['kalman_mm.tofDistance'])
+            tof.stdDev = float(tof_data['kalman_mm.tofStdDev'])
+
+            cffirmware.kalmanCoreUpdateWithTof(self.coreData, tof)

@@ -25,6 +25,8 @@
 #include "outlierFilterTdoa.h"
 #include "kalman_core.h"
 #include "mm_tdoa.h"
+#include "mm_flow.h"
+#include "mm_tof.h"
 %}
 
 %include "math3d.h"
@@ -42,6 +44,8 @@
 %include "outlierFilterTdoa.h"
 %include "kalman_core.h"
 %include "mm_tdoa.h"
+%include "mm_flow.h"
+%include "mm_tof.h"
 
 
 %inline %{

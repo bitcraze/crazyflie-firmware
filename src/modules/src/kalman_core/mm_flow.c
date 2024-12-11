@@ -34,6 +34,12 @@ static float predictedNY;
 static float measuredNX;
 static float measuredNY;
 
+static float flowDt;
+static float flowDPixelX;
+static float flowDPixelY;
+static float flowStdDevX;
+static float flowStdDevY;
+
 void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *flow, const Axis3f *gyro)
 {
   // Inclusion of flow measurements in the EKF done by two scalar updates
@@ -92,12 +98,24 @@ void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *f
   predictedNY = (flow->dt * Npix / thetapix ) * ((dy_g * this->R[2][2] / z_g) + omegax_b);
   measuredNY = flow->dpixely*FLOW_RESOLUTION;
 
+
+  flowDt = flow->dt;
+  flowDPixelX = flow->dpixelx;
+  flowDPixelY = flow->dpixely;
+  flowStdDevX = flow->stdDevX;
+  flowStdDevY = flow->stdDevY;
+
+
+  /**
+    * disable update with flow right now. we want to ignore it.
+    */
+
   // derive measurement equation with respect to dy (and z?)
   hy[KC_STATE_Z] = (Npix * flow->dt / thetapix) * ((this->R[2][2] * dy_g) / (-z_g * z_g));
   hy[KC_STATE_PY] = (Npix * flow->dt / thetapix) * (this->R[2][2] / z_g);
 
-  // Second update
-  kalmanCoreScalarUpdate(this, &Hy, (measuredNY-predictedNY), flow->stdDevY*FLOW_RESOLUTION);
+  // // Second update
+  // kalmanCoreScalarUpdate(this, &Hy, (measuredNY-predictedNY), flow->stdDevY*FLOW_RESOLUTION);
 }
 
 /**
@@ -130,3 +148,18 @@ LOG_GROUP_START(kalman_pred)
  */
   LOG_ADD(LOG_FLOAT, measNY, &measuredNY)
 LOG_GROUP_STOP(kalman_pred)
+
+// flow->dt
+// flow->dpixelx
+// flow->stdDevX
+// flow->dpixely
+// flow->stdDevY
+
+
+LOG_GROUP_START(kalman_mm)
+  LOG_ADD(LOG_FLOAT, flowDt, &flowDt)
+  LOG_ADD(LOG_FLOAT, flowDPixelX, &flowDPixelX)
+  LOG_ADD(LOG_FLOAT, flowDPixelY, &flowDPixelY)
+  LOG_ADD(LOG_FLOAT, flowStdDevX, &flowStdDevX)
+  LOG_ADD(LOG_FLOAT, flowStdDevY, &flowStdDevY)
+LOG_GROUP_STOP(kalman_mm)
