@@ -97,7 +97,7 @@
 #include "cfassert.h"
 
 
-// #define KALMAN_USE_BARO_UPDATE
+#define KALMAN_USE_BARO_UPDATE
 
 
 // Semaphore to signal that we got data from the stabilizer loop to process
@@ -214,6 +214,7 @@ static void kalmanTask(void* parameters) {
 
   rateSupervisorInit(&rateSupervisorContext, nowMs, ONE_SECOND, PREDICT_RATE - 1, PREDICT_RATE + 1, 1);
 
+  uint32_t startTime = ((unsigned int)(xTaskGetTickCount()));
   while (true) {
     xSemaphoreTake(runTaskSemaphore, portMAX_DELAY);
     nowMs = T2M(xTaskGetTickCount()); // would be nice if this had a precision higher than 1ms...
@@ -223,7 +224,13 @@ static void kalmanTask(void* parameters) {
       resetEstimation = false;
     }
 
-    bool quadIsFlying = supervisorIsFlying();
+
+    bool quadIsFlying;
+    if ((nowMs - startTime) > 1000) {
+        quadIsFlying = true;
+    } else {
+        quadIsFlying = false;
+    }
 
   #ifdef KALMAN_DECOUPLE_XY
     kalmanCoreDecoupleXY(&coreData);
@@ -406,6 +413,10 @@ LOG_GROUP_START(kalman)
  */
   LOG_ADD(LOG_FLOAT, stateZ, &coreData.S[KC_STATE_Z])
   /**
+   * @brief State terrain height
+   */
+  LOG_ADD(LOG_FLOAT, stateTerrainHeight, &coreData.S[KC_STATE_H])
+  /**
   * @brief State velocity in its body frame x
   *
   *  Note: This should be part of stateEstimate
@@ -542,6 +553,10 @@ PARAM_GROUP_START(kalman)
  * @brief Process noise for attitude
  */
   PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, pNAtt, &coreParams.procNoiseAtt)
+  /**
+   * @brief Process noise for terrain
+   */
+  PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, pNTerrain, &coreParams.procNoiseTerrain)
   /**
  * @brief Measurement noise for barometer
  */

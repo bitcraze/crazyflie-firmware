@@ -59,7 +59,7 @@
 // Indexes to access the quad's state, stored as a column vector
 typedef enum
 {
-  KC_STATE_X, KC_STATE_Y, KC_STATE_Z, KC_STATE_PX, KC_STATE_PY, KC_STATE_PZ, KC_STATE_D0, KC_STATE_D1, KC_STATE_D2, KC_STATE_DIM
+  KC_STATE_X, KC_STATE_Y, KC_STATE_Z, KC_STATE_PX, KC_STATE_PY, KC_STATE_PZ, KC_STATE_D0, KC_STATE_D1, KC_STATE_D2, KC_STATE_H, KC_STATE_DIM
 } kalmanCoreStateIdx_t;
 
 
@@ -106,6 +106,7 @@ typedef struct {
   // Initial variances, uncertain of position, but know we're stationary and roughly flat
   float stdDevInitialPosition_xy;
   float stdDevInitialPosition_z;
+  float stdDevInitialTerrainHeight;
   float stdDevInitialVelocity;
   float stdDevInitialAttitude_rollpitch;
   float stdDevInitialAttitude_yaw;
@@ -115,6 +116,7 @@ typedef struct {
   float procNoiseVel;
   float procNoisePos;
   float procNoiseAtt;
+  float procNoiseTerrain;
   float measNoiseBaro;           // meters
   float measNoiseGyro_rollpitch; // radians per second
   float measNoiseGyro_yaw;       // radians per second

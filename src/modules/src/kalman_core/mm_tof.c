@@ -24,6 +24,7 @@
  */
 
 #include "mm_tof.h"
+// #include "debug.h"
 
 void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof)
 {
@@ -37,8 +38,10 @@ void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof)
     if (angle < 0.0f) {
       angle = 0.0f;
     }
-    float predictedDistance = this->S[KC_STATE_Z] / cosf(angle);
     float measuredDistance = tof->distance; // [m]
+    float predictedDistance = (this->S[KC_STATE_Z] - this->S[KC_STATE_H]) / cosf(angle);
+
+    // DEBUG_PRINT("Measured distance: %f, Predicted distance: %f\n", (double)measuredDistance, (double)predictedDistance);
 
     /*
     The sensor model (Pg.95-96, https://lup.lub.lu.se/student-papers/search/publication/8905295)
@@ -54,8 +57,11 @@ void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof)
     */
 
     h[KC_STATE_Z] = 1 / cosf(angle); // This just acts like a gain for the sensor model. Further updates are done in the scalar update function below
+    h[KC_STATE_H] = -1 / cosf(angle);
+
+    float residual = measuredDistance - predictedDistance;
 
     // Scalar update
-    kalmanCoreScalarUpdate(this, &H, measuredDistance-predictedDistance, tof->stdDev);
+    kalmanCoreScalarUpdate(this, &H, residual, tof->stdDev);
   }
 }
