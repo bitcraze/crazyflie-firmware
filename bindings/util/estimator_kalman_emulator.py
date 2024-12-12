@@ -21,7 +21,7 @@ class EstimatorKalmanEmulator:
         self.accSubSampler = cffirmware.Axis3fSubSampler_t()
         self.gyroSubSampler = cffirmware.Axis3fSubSampler_t()
         self.coreData = cffirmware.kalmanCoreData_t()
-        print(self.coreData.baroReferenceHeight)
+        # print(self.coreData.baroReferenceHeight)
         self.last_gyro_sample = None
 
         self.PREDICT_RATE = 100
