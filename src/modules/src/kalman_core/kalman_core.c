@@ -126,19 +126,19 @@ void kalmanCoreDefaultParams(kalmanCoreParams_t* params)
 {
   // Initial variances, uncertain of position, but know we're stationary and roughly flat
   params->stdDevInitialPosition_xy = 100;
-  params->stdDevInitialPosition_z = 0.1;
+  params->stdDevInitialPosition_z = 1.0e-3f;
   params->stdDevInitialTerrainHeight = 1.0f;
   params->stdDevInitialVelocity = 0.01;
   params->stdDevInitialAttitude_rollpitch = 0.01;
   params->stdDevInitialAttitude_yaw = 0.01;
 
   params->procNoiseAcc_xy = 0.5f;
-  params->procNoiseAcc_z = 1.0f;
+  params->procNoiseAcc_z = 1.2685;
   params->procNoiseVel = 0;
   params->procNoisePos = 0;
   params->procNoiseAtt = 0;
-  params->procNoiseTerrain = 0.1f;
-  params->measNoiseBaro = 0.2f;           // meters
+  params->procNoiseTerrain = 8.52703449e-1;
+  params->measNoiseBaro = 5.26f;           // meters
   params->measNoiseGyro_rollpitch = 0.1f; // radians per second
   params->measNoiseGyro_yaw = 0.1f;       // radians per second
 
@@ -201,10 +201,11 @@ void kalmanCoreInit(kalmanCoreData_t *this, const kalmanCoreParams_t *params, co
   this->P[KC_STATE_D2][KC_STATE_D2] = powf(params->stdDevInitialAttitude_yaw, 2);
 
   this->P[KC_STATE_H][KC_STATE_H] = powf(params->stdDevInitialTerrainHeight, 2);
+  // DEBUG_PRINT("Initial Terrain Height Std Dev: %f\n", params->stdDevInitialTerrainHeight);
 
-  // initialize variance between altitude and terrain height with negative covariance
-  this->P[KC_STATE_Z][KC_STATE_H] = -1.;
-  this->P[KC_STATE_H][KC_STATE_Z] = -1.;
+  // // initialize variance between altitude and terrain height with negative covariance
+  // this->P[KC_STATE_Z][KC_STATE_H] = -1.;
+  // this->P[KC_STATE_H][KC_STATE_Z] = -1.;
 
   this->Pm.numRows = KC_STATE_DIM;
   this->Pm.numCols = KC_STATE_DIM;

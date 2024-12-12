@@ -27,6 +27,7 @@
 #include "mm_tdoa.h"
 #include "mm_flow.h"
 #include "mm_tof.h"
+#include "mm_position.h"
 %}
 
 %include "math3d.h"
@@ -46,6 +47,7 @@
 %include "mm_tdoa.h"
 %include "mm_flow.h"
 %include "mm_tof.h"
+%include "mm_position.h"
 
 
 %inline %{

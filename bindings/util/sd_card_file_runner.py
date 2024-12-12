@@ -19,10 +19,13 @@ class SdCardFileRunner:
         """
         self.samples = self._read_sensor_data_sorted(file_name)
 
-    def run_estimator_loop(self, emulator: EstimatorKalmanEmulator):
+    def run_estimator_loop(self, emulator: EstimatorKalmanEmulator, quad_flying_from_sample=0):
         result = []
-        while len(self.samples):
-            now_ms, external_state = emulator.run_one_1khz_iteration(self.samples)
+        quad_is_flying = False
+        for index, sample in enumerate(self.samples):
+            if index >= quad_flying_from_sample:
+                quad_is_flying = True
+            now_ms, external_state = emulator.run_one_1khz_iteration(self.samples, quad_is_flying)
             result.append((now_ms, (external_state.position.x, external_state.position.y, external_state.position.z)))
 
         return result

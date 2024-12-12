@@ -1,8 +1,6 @@
 import math
+
 import cffirmware
-
-
-
 
 
 class EstimatorKalmanEmulator:
@@ -18,6 +16,7 @@ class EstimatorKalmanEmulator:
     how they are connected.
 
     """
+
     def __init__(self) -> None:
         self.accSubSampler = cffirmware.Axis3fSubSampler_t()
         self.gyroSubSampler = cffirmware.Axis3fSubSampler_t()
@@ -33,7 +32,9 @@ class EstimatorKalmanEmulator:
     def set_parameters(self, params):
         pass
 
-    def run_one_1khz_iteration(self, sensor_samples) -> tuple[float, cffirmware.state_t]:
+    def run_one_1khz_iteration(
+        self, sensor_samples, quad_is_flying=True
+    ) -> tuple[float, cffirmware.state_t]:
         """
         Run one iteration of the estimation loop (runs at 1kHz)
 
@@ -47,24 +48,28 @@ class EstimatorKalmanEmulator:
         """
         if not self._is_initialized:
             first_sample = sensor_samples[0]
-            time_ms = int(first_sample[1]['timestamp'])
+            time_ms = int(first_sample[1]["timestamp"])
+            # self._fetch_core_params()
             self._lazy_init(time_ms)
-
-        # Simplification, assume always flying
-        quad_is_flying = True
 
         if self.now_ms > self.next_prediction_ms:
             cffirmware.axis3fSubSamplerFinalize(self.accSubSampler)
             cffirmware.axis3fSubSamplerFinalize(self.gyroSubSampler)
 
-            cffirmware.kalmanCorePredict(self.coreData, self.accSubSampler.subSample, self.gyroSubSampler.subSample,
-                                            self.now_ms, quad_is_flying)
+            cffirmware.kalmanCorePredict(
+                self.coreData,
+                self.accSubSampler.subSample,
+                self.gyroSubSampler.subSample,
+                self.now_ms,
+                quad_is_flying,
+            )
 
             self.next_prediction_ms += self.PREDICT_STEP_MS
+        cffirmware.kalmanCoreAddProcessNoise(
+            self.coreData, self.coreParams, self.now_ms
+        )
 
-        cffirmware.kalmanCoreAddProcessNoise(self.coreData, self.coreParams, self.now_ms)
-
-        self._update_queued_measurements(self.now_ms, sensor_samples)
+        self._update_queued_measurements(self.now_ms, sensor_samples, quad_is_flying)
 
         cffirmware.kalmanCoreFinalize(self.coreData)
 
@@ -77,6 +82,10 @@ class EstimatorKalmanEmulator:
 
         return self.now_ms, external_state
 
+    def _fetch_core_params(self):
+        self.coreParams = cffirmware.kalmanCoreParams_t()
+        cffirmware.kalmanCoreDefaultParams(self.coreParams)
+
     def _lazy_init(self, sample_time_ms):
         self.now_ms = sample_time_ms
         self.next_prediction_ms = self.now_ms + self.PREDICT_STEP_MS
@@ -86,80 +95,104 @@ class EstimatorKalmanEmulator:
         cffirmware.axis3fSubSamplerInit(self.accSubSampler, GRAVITY_MAGNITUDE)
         cffirmware.axis3fSubSamplerInit(self.gyroSubSampler, DEG_TO_RAD)
 
-        self.coreParams = cffirmware.kalmanCoreParams_t()
-        print(self.coreParams)
-        cffirmware.kalmanCoreDefaultParams(self.coreParams)
         cffirmware.kalmanCoreInit(self.coreData, self.coreParams, self.now_ms)
 
         self._is_initialized = True
 
-    def _update_queued_measurements(self, now_ms: int, sensor_samples):
+    def _update_queued_measurements(
+        self, now_ms: int, sensor_samples, quad_is_flying=True
+    ):
         done = False
 
         while len(sensor_samples):
             sample = sensor_samples.pop(0)
-            time_ms = int(sample[1]['timestamp'])
+            time_ms = int(sample[1]["timestamp"])
             if time_ms <= now_ms:
-                self._update_with_sample(sample, now_ms)
+                self._update_with_sample(sample, now_ms, quad_is_flying)
             else:
                 return
 
-    def _update_with_sample(self, sample, now_ms):
-        if sample[0] == 'estTDOA':
+    def _update_with_sample(self, sample, now_ms, quad_is_flying=True):
+        if sample[0] == "estTDOA":
             tdoa_data = sample[1]
             tdoa = cffirmware.tdoaMeasurement_t()
 
-            tdoa.anchorIdA = int(tdoa_data['idA'])
-            tdoa.anchorIdB = int(tdoa_data['idB'])
+            tdoa.anchorIdA = int(tdoa_data["idA"])
+            tdoa.anchorIdB = int(tdoa_data["idB"])
             tdoa.anchorPositionA = self.anchor_positions[tdoa.anchorIdA]
             tdoa.anchorPositionB = self.anchor_positions[tdoa.anchorIdB]
-            tdoa.distanceDiff = float(tdoa_data['distanceDiff'])
+            tdoa.distanceDiff = float(tdoa_data["distanceDiff"])
             tdoa.stdDev = self.TDOA_ENGINE_MEASUREMENT_NOISE_STD
 
-            cffirmware.kalmanCoreUpdateWithTdoa(self.coreData, tdoa, now_ms, self.outlierFilterState)
+            cffirmware.kalmanCoreUpdateWithTdoa(
+                self.coreData, tdoa, now_ms, self.outlierFilterState
+            )
 
-        if sample[0] == 'estAcceleration':
+        elif sample[0] == "estAcceleration":
             # print("Acceleration sample")
             acc_data = sample[1]
 
             acc = cffirmware.Axis3f()
-            acc.x = float(acc_data['acc.x'])
-            acc.y = float(acc_data['acc.y'])
-            acc.z = float(acc_data['acc.z'])
+            acc.x = float(acc_data["acc.x"])
+            acc.y = float(acc_data["acc.y"])
+            acc.z = float(acc_data["acc.z"])
 
             cffirmware.axis3fSubSamplerAccumulate(self.accSubSampler, acc)
 
-        if sample[0] == 'estGyroscope':
+        elif sample[0] == "estGyroscope":
             # print("Gyroscope sample")
             gyro_data = sample[1]
 
             gyro = cffirmware.Axis3f()
-            gyro.x = float(gyro_data['gyro.x'])
-            gyro.y = float(gyro_data['gyro.y'])
-            gyro.z = float(gyro_data['gyro.z'])
+            gyro.x = float(gyro_data["gyro.x"])
+            gyro.y = float(gyro_data["gyro.y"])
+            gyro.z = float(gyro_data["gyro.z"])
 
             self.last_gyro_sample = gyro
 
             cffirmware.axis3fSubSamplerAccumulate(self.gyroSubSampler, gyro)
 
-        if sample[0] == 'estFlow':
+        elif sample[0] == "estFlow":
             # print("Flow sample")
             flow_data = sample[1]
             flow = cffirmware.flowMeasurement_t()
 
-            flow.deltaX = float(flow_data['motion.deltaX'])
-            flow.deltaY = float(flow_data['motion.deltaY'])
+            flow.deltaX = float(flow_data["motion.deltaX"])
+            flow.deltaY = float(flow_data["motion.deltaY"])
             # flow.stdDev = self.FLOW_ENGINE_MEASUREMENT_NOISE_STD
 
-            cffirmware.kalmanCoreUpdateWithFlow(self.coreData, flow, self.last_gyro_sample)
+            cffirmware.kalmanCoreUpdateWithFlow(
+                self.coreData, flow, self.last_gyro_sample
+            )
 
-        if sample[0] == 'estTOF':
+        elif sample[0] == "estTOF":
             # print("TOF sample")
             tof_data = sample[1]
             tof = cffirmware.tofMeasurement_t()
 
             # tof.timestamp = tof_data['timestamp']
-            tof.distance = float(tof_data['kalman_mm.tofDistance'])
-            tof.stdDev = float(tof_data['kalman_mm.tofStdDev'])
+            tof.distance = float(tof_data["kalman_mm.tofDistance"])
+            tof.stdDev = float(tof_data["kalman_mm.tofStdDev"])
 
             cffirmware.kalmanCoreUpdateWithTof(self.coreData, tof)
+
+        elif sample[0] == "estBarometer":
+            # print("Baro sample")
+            baro_data = sample[1]
+            baro_asl = baro_data["baro.asl"]
+            cffirmware.kalmanCoreUpdateWithBaro(self.coreData, self.coreParams, baro_asl, quad_is_flying)
+
+        elif sample[0] == "fixedFrequency":
+            pos_data = sample[1]
+            pos = cffirmware.positionMeasurement_t()
+            # print(pos_data.keys())
+            pos.x = float(pos_data["stateEstimate.x"])
+            pos.y = float(pos_data["stateEstimate.y"])
+            # pos.z = float(pos_data["pos.z"])
+            # pos.stdDev = float(pos_data["pos.stdDev"])
+
+            cffirmware.kalmanCoreUpdateWithPosition(self.coreData, pos)
+
+        else:
+            print("Unknown sample type: {}".format(sample[0]))
+            pass

@@ -115,7 +115,7 @@ void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *f
   hy[KC_STATE_PY] = (Npix * flow->dt / thetapix) * (this->R[2][2] / z_g);
 
   // // Second update
-  // kalmanCoreScalarUpdate(this, &Hy, (measuredNY-predictedNY), flow->stdDevY*FLOW_RESOLUTION);
+  kalmanCoreScalarUpdate(this, &Hy, (measuredNY-predictedNY), flow->stdDevY*FLOW_RESOLUTION);
 }
 
 /**
