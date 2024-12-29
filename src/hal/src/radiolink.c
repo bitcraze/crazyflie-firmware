@@ -162,6 +162,7 @@ void radiolinkSyslinkDispatch(SyslinkPacket *slp)
     slp->length--; // Decrease to get CRTP size.
     // Assert that we are not dropping any packets
     ASSERT(xQueueSend(crtpPacketDelivery, &slp->length, 0) == pdPASS);
+    // xQueueSend(crtpPacketDelivery, &slp->length, 0);
     ledseqRun(&seq_linkUp);
     // If a radio packet is received, one can be sent
     if (xQueueReceive(txQueue, &txPacket, 0) == pdTRUE)

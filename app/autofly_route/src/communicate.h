@@ -4,22 +4,10 @@
 #include "stdint.h"
 #define MAPPING_REQUEST_PAYLOAD_LENGTH 1
 #define AUTOFLY_PACKET_MUT 60-4
-#define UAV_COMPUTING_ID 0x00
 
-typedef enum{
-    // request
-    MAPPING_REQ = 0x10, // mapping
-    EXPLORE_REQ = 0x20, // explore
-    PATH_REQ = 0x30,    // path
-    CLUSTER_REQ = 0x40,  // cluster
-    
-    TERMINATE = 0xFF,   // terminate
+#define AIDECK_ID 0xFF
 
-    // response
-    EXPLORE_RESP = 0x2A,
-    PATH_RESP = 0x3A,
-    CLUSTER_RESP = 0x4A,
-}packetType_t;
+// #define ENABLE_CPX 
 
 typedef struct
 {
@@ -48,6 +36,21 @@ typedef struct uavRange_t
     example_measure_t measurement;
     coordinateF_t current_point;
 }uavRange_t;
+
+typedef enum{
+    // request
+    MAPPING_REQ = 0x10, // mapping
+    EXPLORE_REQ = 0x20, // explore
+    PATH_REQ = 0x30,    // path
+    CLUSTER_REQ = 0x40,  // cluster
+    
+    TERMINATE = 0xFF,   // terminate
+
+    // response
+    EXPLORE_RESP = 0x2A,
+    PATH_RESP = 0x3A,
+    CLUSTER_RESP = 0x4A,
+}packetType_t;
 
 typedef struct
 {
@@ -85,16 +88,29 @@ typedef struct
     explore_resp_payload_t exploreResponsePayload;
 } explore_resp_packet_t;  // 12+2
 
+typedef struct 
+{
+    uint16_t seq;
+    coordinateF_t CurrentPoint;
+}cluster_req_packet_t;
+
+typedef struct 
+{
+    uint16_t seq;
+    uint8_t clusterId;
+}cluster_resp_packet_t;
+
+
 typedef struct
 {
     uint8_t sourceId;
     uint8_t destinationId;
+    uint8_t nextdestinationId;
     uint8_t packetType;
     uint8_t length;
     uint8_t data[AUTOFLY_PACKET_MUT];
-} Autofly_packet_t;  
+} Autofly_packet_t;   // 60
 
-void CPXForwardInit();
-void P2PListeningInit();
+void communicateInit();
 bool sendAutoflyPacket(Autofly_packet_t* AutoflyPacket);
 #endif

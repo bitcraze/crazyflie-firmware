@@ -122,12 +122,12 @@ bool sendMappingRequest(mapping_req_packet_t* mappingReqPacket)
     // Send the P2P packet
     if(radiolinkSendP2PPacketBroadcast(&packet)){
         // DEBUG_PRINT("Send mapping request successfully!,destinationId:%d,seq=%d\n",destinationId,mappingReqPacket->seq);
-        mapping_req_payload_t *mappingReqPayload = (mapping_req_payload_t*)mappingReqPacket->mappingRequestPayload;
-        DEBUG_PRINT("(%d,%d,%d) ", mappingReqPayload->startPoint.x, mappingReqPayload->startPoint.y, mappingReqPayload->startPoint.z);
-        for(int i = 0; i < mappingReqPayload->len; i++){
-            DEBUG_PRINT("(%d,%d,%d) ", mappingReqPayload->endPoint[i].x, mappingReqPayload->endPoint[i].y, mappingReqPayload->endPoint[i].z);
-        }
-        DEBUG_PRINT("\n");
+        // mapping_req_payload_t *mappingReqPayload = (mapping_req_payload_t*)mappingReqPacket->mappingRequestPayload;
+        // DEBUG_PRINT("(%d,%d,%d) ", mappingReqPayload->startPoint.x, mappingReqPayload->startPoint.y, mappingReqPayload->startPoint.z);
+        // for(int i = 0; i < mappingReqPayload->len; i++){
+        //     DEBUG_PRINT("(%d,%d,%d) ", mappingReqPayload->endPoint[i].x, mappingReqPayload->endPoint[i].y, mappingReqPayload->endPoint[i].z);
+        // }
+        // DEBUG_PRINT("\n");
         return true;
     }
     else{

@@ -153,9 +153,9 @@ void MoveToNext(coordinateF_t* cur,coordinateF_t* next)
 {   
     float d = sqrt(pow(cur->x - next->x, 2) + pow(cur->y - next->y, 2) + pow(cur->z - next->z, 2));
     float time = d/100/SPEED;
-    DEBUG_PRINT("time:%f\n",(double)time);
+    // DEBUG_PRINT("time:%f\n",(double)time);
     crtpCommanderHighLevelGoTo((next->x - OFFSET_X) / 100, (next->y - OFFSET_Y) / 100, (next->z - OFFSET_Z) / 100, 0, time, 0);
-    vTaskDelay(M2T(time*1000 + WAIT_DELAY));
+    // vTaskDelay(M2T(time*1000 + WAIT_DELAY));
 }
 
 bool CalNextPoint(uavControl_t* uavControl,octoMap_t* octoMap){

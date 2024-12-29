@@ -86,6 +86,7 @@ extern uint16_t mappingRequestSeq;
 extern uint16_t exploreRequestSeq;
 uavRange_t* uavRange;
 
+uint8_t getSourceId();
 void CommunicateInit();
 void CommunicateTerminate();
 bool generateMappingReqPacket(mapping_req_packet_t* mappingReqPacket);

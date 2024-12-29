@@ -1,6 +1,6 @@
 // Autofly_Main config
-#define OFFSET_X 0
-#define OFFSET_Y 0
+#define OFFSET_X 3
+#define OFFSET_Y 3
 #define OFFSET_Z 0
 #define TOP 65 //obstacle top
 #define BOTTOM 25 //obstacle bottom
@@ -14,14 +14,15 @@
 #define MAXRUN 200
 #define RELIABILITY_DISTANCE 24
 
-#define WAIT_DELAY 100
+#define WAIT_DELAY 50
 #define LOOP_DELAY 50
 #define PROBABILITY_MEM(octomap) (double)octomap->octoNodeSet->length / NODE_SET_SIZE
 #define PRESENT_JUMP 2
 #define SPEED 0.25
 
-#define MAPPING_DIF 100
+#define MAPPING_DIF 150
 #define EXPLORE_DIF 300
+#define FLYING_DIF 300
 #define TERMINATE_DIF 500
 #define MAPPING_MAX 200
 #define EXPLORE_MAX MAXRUN*2

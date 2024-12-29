@@ -1,2 +1,2 @@
 obj-y += communicate.o
-obj-y += main_route.o
+obj-y += main_route_p2p.o
