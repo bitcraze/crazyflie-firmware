@@ -14,6 +14,13 @@
 #
 CRAZYFLIE_BASE := ../..
 
+EXTRA_CFLAGS += -I$(PWD)/src/autoflyControl
+EXTRA_CFLAGS += -I$(PWD)/src/common
+EXTRA_CFLAGS += -I$(PWD)/src/communication
+EXTRA_CFLAGS += -I$(PWD)/src/compress
+EXTRA_CFLAGS += -I$(PWD)/src/octomap
+EXTRA_CFLAGS += -I$(PWD)/src  # 如果 config_autofly.h 位于 src/ 目录
+
 #
 # We override the default OOT_CONFIG here, we could also name our config
 # to oot-config and that would be the default.
@@ -21,3 +28,10 @@ CRAZYFLIE_BASE := ../..
 OOT_CONFIG := $(PWD)/app-config
 
 include $(CRAZYFLIE_BASE)/tools/make/oot.mk
+
+
+# 递归清除当前文件目录下所有.o,.cmd,.d文件
+clean_item:
+	@find . -type f \( -name "*.o" -o -name "*.cmd" -o -name "*.d" \) -delete
+
+

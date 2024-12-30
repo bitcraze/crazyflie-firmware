@@ -1,7 +1,7 @@
 // #include "pmsis.h"
 
-#include "stdlib.h"
-#include "stdbool.h"
+#include <stdlib.h>
+#include <stdbool.h>
 #include "FreeRTOS.h"
 #include "task.h"
 #include "debug.h"
@@ -13,6 +13,8 @@
 #include "auxiliary_tool.h"
 #include "octoMap.h"
 #include "communicate.h"
+#include "mappingCommunication.h"
+#include "exploreCommunication.h"
 
 #define MAPPING_TASK_NAME "MappingTask"
 #define MAPPING_TASK_STACK_SIZE 2048
@@ -45,6 +47,8 @@ static coordinateF_t path2[PATH_LENGTH];
 static coordinateF_t path3[PATH_LENGTH];
 
 static void mappingTask(void *parameters){
+    uavRange_t* uavRange = NULL;
+    getUavRange(uavRange);
     while (true)
     {
         if(!flag_Terminate && octotree_Flying){
@@ -54,12 +58,12 @@ static void mappingTask(void *parameters){
                 mappingReqPacket.mappingRequestPayload->mergedNums++;
             }
             else{
-                sendMappingRequest(&mappingReqPacket);
+                sendMappingRequest(AIDECK_ID, &mappingReqPacket);
                 generateMappingReqPacket(&mappingReqPacket);
             }
 
             if(mappingReqPacket.mappingRequestPayload->mergedNums >= 3){
-                sendMappingRequest(&mappingReqPacket);
+                sendMappingRequest(AIDECK_ID,&mappingReqPacket);
                 generateMappingReqPacket(&mappingReqPacket);
             }
         }
@@ -69,7 +73,8 @@ static void mappingTask(void *parameters){
 
 static void flyingTask(void *parameters){
     int index = 0;
-    
+    uavRange_t* uavRange = NULL;
+    getUavRange(uavRange);
     while (true)
     {
         if(octotree_Flying && index < PATH_LENGTH){
@@ -110,6 +115,7 @@ void appMain()
     mappingReqPacket.mappingRequestPayload->len = 0;
     exploreReqPacket.seq = 0;
     CommunicateInit();
+    autoflyControlSystemInit();
     DEBUG_PRINT("init success\n");
     xTaskCreate(mappingTask, MAPPING_TASK_NAME, MAPPING_TASK_STACK_SIZE, NULL, MAPPING_TASK_PRI, NULL);
     // xTaskCreate(flyingTask, FLYING_TASK_NAME, FLYING_TASK_STACK_SIZE, NULL, FLYING_TASK_PRI, NULL);

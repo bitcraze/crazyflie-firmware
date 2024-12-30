@@ -1,0 +1,5 @@
+obj-y += communicate.o
+obj-y += autoflyPacketQueue.o
+obj-y += exploreCommunication.o
+obj-y += mappingCommunication.o
+obj-y += octoMapDataCommunication.o

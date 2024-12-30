@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __CIRCULAR_QUEUE_H__
+#define __CIRCULAR_QUEUE_H__
 #include "stdbool.h"
 #define MAX_QUEUE_SIZE 80
 
@@ -14,3 +15,5 @@ void push(Queue_t *queue, short data);
 short pop(Queue_t *queue);
 bool isQueueEmpty(Queue_t *queue);
 bool isQueueFull(Queue_t *queue);
+
+#endif

@@ -1,16 +1,17 @@
-#include "rrtConnect.h"
 #include <stdlib.h>
-#include "stdio.h"
+#include <stdio.h>
 #include "FreeRTOS.h"
 #include <math.h>
 #include "debug.h"
 #include "task.h"
+
+#include "rrtConnect.h"
 #include "auxiliary_tool.h"
 
 void planning(coordinate_t* X_start, coordinate_t* X_end, octoTree_t *octoTree, octoMap_t *octoMap,array_t* result)
 {
     DEBUG_PRINT("Start planning\n");
-    //char* filename = "../assets/rrtPath.csv";
+    //char* filename = "./assets/rrtPath.csv";
     //FILE *fp = fopen(filename, "w");
     // fprintf(fp, "%d,%d,%d,", X_start.x, X_start.y, X_start.z);
     // fprintf(fp, "%d,%d,%d,0\n", X_end.x, X_end.y, X_end.z);

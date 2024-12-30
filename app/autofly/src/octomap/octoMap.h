@@ -1,4 +1,3 @@
-#pragma once
 #ifndef __OCTOMAP_H__
 #define __OCTOMAP_H__
 #include <stdint.h>
@@ -75,7 +74,6 @@ typedef struct
     octoNode_t *node; // the node 
     double p_not_occupied; // the probability of the node is not occupied
 } costParameter_t;
-#endif
 
 // Cost_C
 typedef struct
@@ -86,3 +84,5 @@ typedef struct
 
 void recursiveExportOctoMap(octoMap_t* octoMap, octoNode_t* node, coordinate_t origin, uint16_t width);
 void printOctomap(octoMap_t *octoMap);
+
+#endif

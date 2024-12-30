@@ -1,7 +1,7 @@
 // #include "pmsis.h"
 
-#include "stdlib.h"
-#include "stdbool.h"
+#include <stdlib.h>
+#include <stdbool.h>
 #include "FreeRTOS.h"
 #include "task.h"
 #include "debug.h"
@@ -37,7 +37,7 @@ void appMain()
     vTaskDelay(M2T(10000));
     coordinateF_t item_point;
     uavControl_t* uavControl;
-    // uavRange_t* uavRange;
+    uavRange_t* uavRange;
     TickType_t last_time_mapping, last_time_explore, last_time_terminate;
     octoMap_t *octoMap;
     if(MODEL>=1){
@@ -51,6 +51,7 @@ void appMain()
     }
     else{
         seqnumber = 0;
+        getUavRange(uavRange);
         octoMap = (octoMap_t *)malloc(sizeof(octoMap_t));
         octoMapInit(octoMap);
         uavControl = (uavControl_t *)malloc(sizeof(uavControl_t));
@@ -136,8 +137,7 @@ void appMain()
                 last_time_explore = xTaskGetTickCount();
             }
 
-            DEBUG_PRINT("exploreRequestSeq:%d, mappingRequestSeq:%d\n",exploreRequestSeq,mappingRequestSeq);
-            if(exploreRequestSeq >=  EXPLORE_MAX || mappingRequestSeq >= MAPPING_MAX){
+            if(getExploreRequestSeq() >=  EXPLORE_MAX || getMappingRequestSeq() >= MAPPING_MAX){
                 sendTerminate();
                 last_time_terminate = xTaskGetTickCount();
                 Land();

@@ -1,0 +1,4 @@
+obj-y += compressBaseStruct.o
+obj-y += huffmanTree.o
+obj-y += LZWCompress.o
+obj-y += octoMapSerializer.o

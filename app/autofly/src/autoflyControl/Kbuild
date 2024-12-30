@@ -1,0 +1,3 @@
+obj-y += auxiliary_tool.o
+obj-y += control_tool.o
+obj-y += rrtConnect.o

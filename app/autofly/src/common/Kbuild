@@ -1,0 +1,2 @@
+obj-y += circularQueue.o
+obj-y += coordinateQueue.o

@@ -1,17 +1,28 @@
-#include "stdlib.h"
+#include <stdlib.h>
 #include "FreeRTOS.h"
 #include "task.h"
 #include "log.h"
 #include "debug.h"
 #include <stdint.h>
 
-#include "config_autofly.h"
 #include "crtp_commander_high_level.h"
 
+#include "config_autofly.h"
 #include "control_tool.h"
 #include "auxiliary_tool.h"
 #include "octoMap.h"
 #include "octoTree.h"
+
+static uavRange_t uavRange;
+
+void autoflyControlSystemInit()
+{
+    inituavRange(&uavRange);
+}
+
+void getUavRange(uavRange_t* uavRange){
+    uavRange = &(uavRange);
+}
 
 void GetRange(uavRange_t* uavRange){
     coordinateF_t item_pointF;

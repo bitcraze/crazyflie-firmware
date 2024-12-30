@@ -1,6 +1,10 @@
-#pragma once
+#ifndef __CONTROL_TOOL_H__
+#define __CONTROL_TOOL_H__
 #include "octoMap.h"
 #include "auxiliary_tool.h"
+
+void autoflyControlSystemInit();
+void getUavRange(uavRange_t* uavRange);
 
 void GetRange(uavRange_t* uavRange);
 void UpdateMap(octoMap_t *octoMap, uavRange_t* uavRange);
@@ -11,3 +15,4 @@ void MoveToNext(coordinateF_t* cur,coordinateF_t* next);
 bool CalNextPoint(uavControl_t* uavControl,octoMap_t* octoMap);
 
 void Land();
+#endif

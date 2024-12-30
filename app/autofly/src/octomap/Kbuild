@@ -1,0 +1,4 @@
+obj-y += octoMap.o
+obj-y += octoNode.o
+obj-y += octoNodeSet.o
+obj-y += octoTree.o

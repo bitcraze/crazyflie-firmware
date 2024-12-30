@@ -1,4 +1,6 @@
-#pragma once
+#ifndef __AUXILIARY_TOOL_H__
+#define __AUXILIARY_TOOL_H__
+
 #include "octoMap.h"
 #include "range.h"
 #include "circularQueue.h"
@@ -65,3 +67,4 @@ octoNode_t *findTargetParent(octoNode_t *octoNode, octoMap_t *octoMap, coordinat
 costParameter_t Cost(coordinate_t *Point,octoTree_t *octoTree, octoMap_t *octoMap, octoNode_t *LastoctoNode);
 Cost_C_t Cost_Sum(octoTree_t *octoTree, octoMap_t *octoMap, coordinate_t *start, rangeDirection_t dir);
 
+#endif
