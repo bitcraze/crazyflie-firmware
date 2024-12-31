@@ -30,6 +30,8 @@ void processReq(Autofly_packet_t* autoflyPacket);
 void processResp(Autofly_packet_t* autoflyPacket);
 void processPathResp();
 
+void TxTask(void * parameter);
+
 uint8_t getSourceId()
 {
     uint64_t address = configblockGetRadioAddress();
@@ -49,8 +51,7 @@ void CommunicateInit(){
     exploreCommunicationInit();
     ListeningInit();
     // 启动发送任务
-    // xTaskCreate(TxTask, , UWB_TASK_STACK_SIZE, NULL,
-    //             AUTOFLY_TX_TASK_PRI, &autoflyTxTaskHandle);
+    xTaskCreate(TxTask, AUTOFLY_TX_TASK_NAME, AUTOFLY_TX_TASK_STACK_SIZE, NULL, AUTOFLY_TX_TASK_PRI, &autoflyTxTaskHandle);
 }
 
 void CommunicateTerminate(){

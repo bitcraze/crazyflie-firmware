@@ -5,6 +5,7 @@
 #include "autoflyPacket.h"
 
 #define AUTOFLY_TX_TASK_NAME "AUTOFLY_TX"
+#define AUTOFLY_TX_TASK_STACK_SIZE 1024
 #define AUTOFLY_TX_TASK_PRI 3
 
 #define BROADCAST_LIDAR_ID 0xFF

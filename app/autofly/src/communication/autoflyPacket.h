@@ -27,7 +27,10 @@ typedef enum{
     OCTOMAP_DATA_FRAGEMENT_SACK = 0x53,
     OCTOMAP_ERROR = 0x54,
     OCTOMAP_ERROR_MISS_BUFFER = 0x55, // 缓冲已被清除
-    OCTOMAP_ERROR_TIMEOUT = 0x56, // 超时
+    OCTOMAP_ERROR_HAS_PROCESSED = 0x56, // 数据已被处理
+    OCTOMAP_ERROR_TX_WAITING_TIMEOUT = 0x57, // 超时
+    OCTOMAP_ERROR_RX_WAITING_TIMEOUT = 0x58, // 超时
+    OCTOMAP_RECEIVE_BUSY = 0x59, // 忙碌
 }packetType_t;
 
 typedef struct{
