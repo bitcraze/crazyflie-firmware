@@ -95,7 +95,7 @@ class CalibScale:
         readings = []
 
         while True:
-            data = float(input("enter weight in grams (-1 to end): "))
+            data = float(input("enter weight in grams (-1 to end calibration): "))
             if data < 0:
                 break
             self.measurements = []
@@ -114,6 +114,8 @@ class CalibScale:
 
 
         plt.plot(readings, weights, '.', xp, p(xp), '--')
+        plt.xlabel("Loadcell reading")
+        plt.ylabel("Weight in [g]")
         plt.show()
         return float(z[0]), float(z[1])
 
