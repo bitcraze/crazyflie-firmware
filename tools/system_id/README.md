@@ -57,29 +57,26 @@ python3 collect_data.py --uri <URI> --mode=ramp_motors --comb=<COMB>
 python3 plot_data_ramp_motors.py
 ```
 
-### Find (PWM,VBat)->Force, (desired Force,VBat)->PWM, (PWM, VBat)-> MaxForce
+### System identification
 
-This test will randomly select sample a PWM value and average the resulting force and measured vbat over a short period of time. Then, it will output the largest possible PWM value to estimate the maximum force that the Crazyflie can create at the current state-of-charge. The mapping functions can be automatically computed. TODO 
+This test will randomly select sample a PWM value and average the resulting force and measured vbat over a short period of time. With that information we can identify the system. The system_id script calculates a mapping from vmotor, which is vbat*PWM/65535, to thrust. This helps to know how the battery compensation needs to be set. Additionally, this script calculates the efficiency in g/W. The results are also stored in the .yaml file used for the calibration data. TODO actually implement that.
 
 ```
 python3 collect_data.py --uri <URI> --mode=max_thrust --comb=<COMB> 
 python3 system_id.py
 ```
 
+To verify the results, we first need to add the new battery compensation values to the battery compensation in `motors.c`. We can then activate the battery compensation by using `make sysverif_defconfig`. After building and flashing, data can be collected with `mode=verification`. To visualize the results, run the following script. All data points should be in the same plane as in the plot.
+
+```
+python3 system_id_verification.py
+```
+
 ### Motor Delay
 
-This test uses a higher sampling rate and visualizes the delayed motor response given a step input.
+This test uses a higher sampling rate and visualizes the delayed motor response given a step input. TODO
 
 ```
 python3 collect_data.py --uri <URI> --mode=motor_delay --comb=<COMB> 
 python3 plot_data_motor_delay.py
-```
-
-### Efficency
-
-This test will staircase the motors.
-
-```
-python3 collect_data.py --uri <URI> --mode=efficiency --comb=<COMB> 
-python3 plot_data_efficiency.py
 ```
