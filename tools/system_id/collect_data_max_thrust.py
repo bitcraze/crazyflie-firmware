@@ -7,6 +7,7 @@ import time
 from threading import Thread
 import numpy as np
 import yaml
+import os.path
 
 import cflib.crtp
 from cflib.crazyflie import Crazyflie
@@ -24,10 +25,11 @@ class CollectData:
     link uri and disconnects after 5s.
     """
 
-    def __init__(self, link_uri, calib_a, calib_b):
+    def __init__(self, link_uri, calib_a, calib_b, comb):
         """ Initialize and run the example with the specified link_uri """
         self.measurements = []
         self.desiredThrust = 0
+        self.comb = comb
         self.calib_a = calib_a
         self.calib_b = calib_b
 
@@ -35,29 +37,43 @@ class CollectData:
 
         # Connect some callbacks from the Crazyflie API
         self._cf.connected.add_callback(self._connected)
+        self._cf.fully_connected.add_callback(self._fully_connected)
         self._cf.disconnected.add_callback(self._disconnected)
         self._cf.connection_failed.add_callback(self._connection_failed)
         self._cf.connection_lost.add_callback(self._connection_lost)
 
+        self.is_connected = False
         print('Connecting to %s' % link_uri)
 
         # Try to connect to the Crazyflie
         self._cf.open_link(link_uri)
-
-        # Variable used to keep main loop occupied until disconnect
-        self.is_connected = True
 
     def _connected(self, link_uri):
         """ This callback is called form the Crazyflie API when a Crazyflie
         has been connected and the TOCs have been downloaded."""
         print('Connected to %s' % link_uri)
 
-        print(self.calib_a, self.calib_b)
+        # Variable used to keep main loop occupied until disconnect
+        self.is_connected = True
+
+    def _fully_connected(self, link_uri):
+        """ This callback is called form the Crazyflie API when a Crazyflie
+        has been connected and the TOCs have been downloaded."""
+        print('Connected to %s' % link_uri)
+
+        # print(self.calib_a, self.calib_b)
         self._cf.param.set_value('loadcell.a', str(self.calib_a))
         self._cf.param.set_value('loadcell.b', str(self.calib_b))
 
-        self._file = open("data.csv", "w+")
-        self._file.write("thrust[g],pwm,vbat[V],maxThrust[g],maxThrustVbat[V],rpm\n");
+        i = 0
+        filename = f"data_max_thrust_{self.comb}_{i}.csv"
+        while os.path.isfile(filename):
+            i += 1
+            filename = f"data_max_thrust_{self.comb}_{i}.csv"
+            if i > 100: break
+        print(f"Storing data in {filename}")
+        self._file = open(filename, "w+")
+        self._file.write("thrust[g],pwm,vbat[V],maxThrust[g],maxThrustVbat[V],rpm\n")
 
         # The definition of the logconfig can be made before connecting
         self._lg_stab = LogConfig(name='data', period_in_ms=10)
@@ -136,9 +152,11 @@ class CollectData:
         return m[40:]
 
     def _ramp_motors(self):
-
         self._cf.param.set_value('motorPowerSet.m1', 0)
         self._cf.param.set_value('motorPowerSet.enable', 2)
+
+        t_start = time.time()
+        t_max = 60
 
         while self.is_connected: #thrust >= 0:
             # randomply sample PWM
@@ -164,9 +182,14 @@ class CollectData:
                 vbatAtMaxThrust))
 
             if vbatAtMaxThrust < 2.8:
+                print("Warning: Battery low")
                 break
 
-        # self._cf.commander.send_setpoint(0, 0, 0, 0)
+            if time.time()-t_start > t_max:
+                break
+        
+        self._cf.param.set_value('motorPowerSet.m1', 0)
+        self._cf.commander.send_setpoint(0, 0, 0, 0)
         # Make sure that the last packet leaves before the link is closed
         # since the message queue is not flushed before closing
         time.sleep(0.1)
@@ -178,6 +201,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--calibration", default="calibration.yaml", help="Input file containing the calibration")
     parser.add_argument("--uri", default="radio://0/42/2M/E7E7E7E7E7", help="URI of Crazyflie")
+    parser.add_argument("--comb", default="-B250", help="Combination of propellers, motors, and battery")
+    # First char is the version of the propellers (- for the regular or + for the 2.X+ propellers)
+    # Second char is the motors (B for base 17mm or T for thrust upgrade 20mm motors)
+    # Rest is the capacity of the battery (250mAh or 350mAh)
     args = parser.parse_args()
 
     # Only output errors from the logging framework
@@ -192,7 +219,7 @@ if __name__ == '__main__':
         b = r['b']
 
     # collect data
-    le = CollectData(args.uri, a, b)
+    le = CollectData(args.uri, a, b, args.comb)
 
     # The Crazyflie lib doesn't contain anything to keep the application alive,
     # so this is where your application should do something. In our case we
