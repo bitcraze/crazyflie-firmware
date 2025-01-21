@@ -29,6 +29,7 @@
 #define DEBUG_MODULE "MTR-DRV"
 
 #include <stdbool.h>
+#include <math.h>
 
 /* ST includes */
 #include "stm32fxxx.h"
@@ -193,10 +194,22 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
       return iThrust;
     }
 
-    float thrust = (iThrust / 65536.0f) * 60;
-    float volts = -0.0006239f * thrust * thrust + 0.088f * thrust;
-    float ratio = volts / supplyVoltage;
-    return UINT16_MAX * ratio;
+    static float thrust_min = 0.02f;
+    static float thrust_max = 0.1373f;
+    static float p[] = {0.019557f, -0.013537f, 0.015267f}; // in order of exponent p[i]*x^i
+    // motor voltage to thrust is a quadratic fit => thrust to voltage is sqrt fit
+    float thrust = (iThrust / 65535.0f) * thrust_max; // rescaling integer thrust to N
+    if (thrust < thrust_min)
+    {
+      return 0.0f;
+    }
+    else 
+    {
+      float motorVoltage = (-p[1] + (float)sqrt(p[1]*p[1] - 4*p[2]*(p[0]-thrust))) / (2*p[2]);
+      float ratio = motorVoltage / supplyVoltage;
+      return UINT16_MAX * ratio;
+    }
+    
   }
   #endif
 
@@ -501,6 +514,13 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
     else if (motorSetEnable == 1)
     {
       ratio = motorPowerSet[id];
+    }
+    else if (motorSetEnable == 3) // for testing the battery compensation
+    {
+      float ff = 10.0f;
+      static float supplyVoltage = 4.2;
+      supplyVoltage = (ff*supplyVoltage + pmGetBatteryVoltage()) / (ff+1);
+      ratio = motorsCompensateBatteryVoltage(id, motorPowerSet[MOTOR_M1], supplyVoltage);
     }
 
     motor_ratios[id] = ratio;
