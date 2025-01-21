@@ -12,13 +12,16 @@ from cflib.crazyflie.log import LogConfig
 
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 
 class CalibScale:
-    def __init__(self, link_uri):
+    def __init__(self, link_uri, calib_a, calib_b):
         """ Initialize and run with the specified link_uri """
 
         self.measurements = []
+        self.calib_a = calib_a
+        self.calib_b = calib_b
 
         self._cf = Crazyflie(rw_cache='./cache')
 
@@ -112,10 +115,15 @@ class CalibScale:
 
         xp = np.linspace(readings[0], readings[-1], 100)
 
-
-        plt.plot(readings, weights, '.', xp, p(xp), '--')
+        plt.plot(readings, weights, '.', label="data")
+        plt.plot(xp, p(xp), '--', label="calibration")
+        # old values for comparison
+        if self.calib_a is not None and self.calib_b is not None:
+            p_old = np.poly1d([self.calib_a, self.calib_b])
+            plt.plot(xp, p_old(xp), ':', label="previous calibration")
         plt.xlabel("Loadcell reading")
         plt.ylabel("Weight in [g]")
+        plt.legend()
         plt.show()
         return float(z[0]), float(z[1])
 
@@ -131,7 +139,15 @@ if __name__ == '__main__':
     
     # Initialize the low-level drivers (don't list the debug drivers)
     cflib.crtp.init_drivers(enable_debug_driver=False)
-    le = CalibScale(args.uri)
+
+    a, b = None, None
+    if os.path.isfile(args.output):
+        with open(args.output, 'r') as f:
+            r = yaml.safe_load(f)
+            a = r['a']
+            b = r['b']
+    
+    le = CalibScale(args.uri, a, b)
 
     while not le.is_connected:
         time.sleep(0.1)
