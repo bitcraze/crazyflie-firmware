@@ -29,10 +29,11 @@ class CollectData(ABC):
     link uri and disconnects after 5s.
     """
 
-    def __init__(self, link_uri, calib_a, calib_b, comb, mode, verbose=False):
+    def __init__(self, link_uri, calib_a, calib_b, comb, mode, batComp=False, verbose=False):
         """ Initialize and run the example with the specified link_uri """
         self.measurements = []
         self.desiredThrust = 0
+        self.batComp = batComp
         self.comb = comb
         self.mode = mode
         self.verbose = verbose
@@ -241,10 +242,11 @@ class CollectDataRamp(CollectData):
         pwm = 0
         max_pwm = PWM_MAX # max = 65535
 
-        # self._cf.param.set_value('motor.batCompensation', 0)
         self._cf.param.set_value('motorPowerSet.m1', 0)
-        self._cf.param.set_value('motorPowerSet.enable', 2)
-        # self._cf.param.set_value('system.forceArm', 1)
+        if self.batComp:
+            self._cf.param.set_value('motorPowerSet.enable', 2)
+        else:
+            self._cf.param.set_value('motorPowerSet.enable', 2)
 
         print("Starting ramping motors")
 
@@ -265,17 +267,17 @@ class CollectDataRamp(CollectData):
         self._close()
 
 
-class CollectDataThrust(CollectData):
+class CollectDataStatic(CollectData):
     """
     Simple logging example class that logs the Stabilizer from a supplied
     link uri and disconnects after 5s.
     """
 
-    def __init__(self, link_uri, calib_a, calib_b, comb):
+    def __init__(self, link_uri, calib_a, calib_b, comb, batComp=False):
         """ Initialize and run the example with the specified link_uri """
         self.measurements = []
         self.desiredThrust = 0
-        super().__init__(link_uri, calib_a, calib_b, comb, "max_thrust")
+        super().__init__(link_uri, calib_a, calib_b, comb, "static", batComp)
 
     def _stab_log_data(self, timestamp, data, logconf):
         """Callback froma the log API when data arrives"""
@@ -308,7 +310,10 @@ class CollectDataThrust(CollectData):
         self._check_parameters()
 
         self._cf.param.set_value('motorPowerSet.m1', 0)
-        self._cf.param.set_value('motorPowerSet.enable', 2)
+        if self.batComp:
+            self._cf.param.set_value('motorPowerSet.enable', 3)
+        else:
+            self._cf.param.set_value('motorPowerSet.enable', 2)
 
         t_max = 600 # Set to np.inf to run until battery is empty
         t_start = time.time()
@@ -347,7 +352,7 @@ class CollectDataThrust(CollectData):
         self._close()
 
 
-class CollectDataDelay(CollectData):
+class CollectDataDynamic(CollectData):
     """
     Simple logging example class that logs the Stabilizer from a supplied
     link uri and disconnects after 5s.
@@ -359,7 +364,7 @@ class CollectDataDelay(CollectData):
         # 0 = 10Hz (default), 1 = 20Hz, 2 = 40Hz, 3 = 80Hz, 7 = 320Hz
         # See datasheet of NAU7802
         # However, the data of the loadcell only gets sent with ~2Hz anyway
-        super().__init__(link_uri, calib_a, calib_b, comb, "motor_delay")
+        super().__init__(link_uri, calib_a, calib_b, comb, "dynamic")
 
     def _fully_connected(self, link_uri):
         """ This callback is called form the Crazyflie API when a Crazyflie
@@ -397,14 +402,16 @@ class CollectDataDelay(CollectData):
         self._cf.param.set_value('motorPowerSet.m1', 0)
 
         duration = 2.0
-        enable = 2 # starting with 2 (no battery compensation)
 
+        # collecting data twice:
+        # Once with and once without batter compensation
         while self.is_connected:
-            self._cf.param.set_value('motorPowerSet.enable', enable)
-            if enable == 2:
-                print("Collecting data without battery compensation")
-            elif enable == 3:
+            if self.batComp:
+                self._cf.param.set_value('motorPowerSet.enable', 3)
                 print("Collecting data with battery compensation")
+            else:
+                self._cf.param.set_value('motorPowerSet.enable', 2)
+                print("Collecting data without battery compensation")
 
             # base speed
             self._applyThrust(PWM_MIN, duration)
@@ -427,96 +434,12 @@ class CollectDataDelay(CollectData):
 
             self._applyThrust(0, duration)
 
-            # do the same thing again with battery compensation enabled
-            enable += 1
-
-            if enable >= 4:
+            if self.batComp:
                 break
+            else:
+                self.batComp = True
 
         self._close()
-
-
-class CollectDataVerification(CollectData):
-    """
-    Simple logging example class that logs the Stabilizer from a supplied
-    link uri and disconnects after 5s.
-    """
-
-    def __init__(self, link_uri, calib_a, calib_b, comb):
-        """ Initialize and run the example with the specified link_uri """
-        self.measurements = []
-        self.desiredThrust = 0
-        super().__init__(link_uri, calib_a, calib_b, comb, "verification")
-
-    def _stab_log_data(self, timestamp, data, logconf):
-        """Callback froma the log API when data arrives"""
-        if self.verbose: print('[%d][%s]: %s' % (timestamp, logconf.name, data))
-        self.measurements.append(data)
-
-    def _average_dict(self, dictionary_list):
-        """Converts a list of dictionaries into a single dictionary with the averages."""
-        sums = {}
-        for d in dictionary_list:
-            for key, value in d.items():
-                sums[key] = sums.get(key, 0) + value
-        averages = {key: value / len(dictionary_list) for key, value in sums.items()}
-        return averages
-
-    def _measure(self, thrust, min_samples = 100): # time per measurement = min_samples * log prediod_in_ms
-        self.desiredThrust = thrust
-        self.measurements = []
-        self._cf.param.set_value('motorPowerSet.m1', thrust)
-        while len(self.measurements) < min_samples:
-            self._localization.send_emergency_stop_watchdog()
-            time.sleep(0.1)
-        # m = np.array(self.measurements)
-        # only return the last few samples
-        return self.measurements[-int(0.2*min_samples):]
-
-    def _ramp_motors(self):
-        self._check_parameters()
-
-        self._cf.param.set_value('motorPowerSet.m1', 0)
-        self._cf.param.set_value('motorPowerSet.enable', 3)
-
-        t_max = 600 # Set to np.inf to run until battery is empty
-        t_start = time.time()
-
-        # Here we care about the thrust generated for different battery levels
-        # We store a random PWM with its corresponding thrust 
-        # and thrust @ max PWM + the battery voltage for both cases
-        while self.is_connected: #thrust >= 0:
-            # randomply sample PWM
-            pwm = int(np.random.uniform(15000, PWM_MAX))
-            data = self._measure(pwm)
-            # average thrust and vbat
-            data = self._average_dict(data)
-            # add thrust command into dict
-            data['cmd'] = pwm
-
-            print(f"pwm={pwm}, vbat={data['pm.vbatMV']/1000:.3f}V, thrust={data['loadcell.weight']*self.g:.3f}mN")
-
-            # go to full thrust
-            # data_max = self._measure(PWM_MAX)
-            # data_max = self._average_dict(data_max)
-
-            # combine data
-            # data['loadcell.weight_max'] = data_max['loadcell.weight']
-            # data['pm.vbatMV_max'] = data_max['pm.vbatMV']
-
-            # write result
-            self._write(time.time(), data)
-
-            # if data['pm.vbatMV_max']/1000 < VBAT_MIN: 
-            if data['pm.vbatMV']/1000 < VBAT_MIN:
-                print("Warning: Battery low, stopping...")
-                break
-
-            if time.time()-t_start > t_max:
-                break
-        
-        self._close()
-
 
 
 if __name__ == '__main__':
@@ -545,11 +468,11 @@ if __name__ == '__main__':
     if args.mode == "ramp_motors":
         le = CollectDataRamp(args.uri, a, b, args.comb)
     elif args.mode == "static":
-        le = CollectDataThrust(args.uri, a, b, args.comb)
-    elif args.mode == "verification":
-        le = CollectDataVerification(args.uri, a, b, args.comb)
+        le = CollectDataStatic(args.uri, a, b, args.comb)
+    elif args.mode == "verification": # activate battery compensation to test it
+        le = CollectDataStatic(args.uri, a, b, args.comb, batComp=True) 
     elif args.mode == "dynamic":
-        le = CollectDataDelay(args.uri, a, b, args.comb)
+        le = CollectDataDynamic(args.uri, a, b, args.comb)
     else:
         raise NotImplementedError(f"Data Collection Type {args.mode} is not implemented.")
     time.sleep(1)

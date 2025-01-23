@@ -39,6 +39,23 @@ def poly(x, p, order):
 		y += p[i] * x**i
 	return y
 
+def inversepoly(y, param, order):
+	# index of param = order, i.e. y = p[i] * x**i
+	assert len(param) == order+1
+	if order == 2:
+		return (-param[1] + np.sqrt(param[1]**2 - 4*param[2]*(param[0]-y))) / (2*param[2])
+	elif order == 3:
+		# https://math.vanderbilt.edu/schectex/courses/cubic/
+        # a = p[3], b = p[2], c = p[1], d = p[0]-thrust
+		p = -param[2] / (3*param[3])
+		q = p**3 + (param[2]*param[1]-3*param[3]*(param[0]-y)) / (6*param[3]**2)
+		r = param[1] / (3*param[3])
+
+		qrp = np.sqrt( q**2 + (r-p**2)**3 )
+		return np.cbrt(q+qrp) + np.cbrt(q-qrp) + p
+	else:
+		raise NotImplementedError(f"Inverted polynomial of order {order} not supported.")
+
 def loadYAML(comb: str, variableName, arrayLength=0):
 	filename = f"params_{comb}.yaml"
 	with open(filename, 'r') as f:
@@ -47,7 +64,7 @@ def loadYAML(comb: str, variableName, arrayLength=0):
 		return file[variableName]
 	else:
 		variables = []
-		for i in range(arrayLength+1):
+		for i in range(arrayLength):
 			variables.append(file[f"{variableName}{i}"])
 		return variables
 
@@ -61,7 +78,7 @@ def storeYAML(comb: str, variable, variableName, verbose=False):
 		with open(filename, 'r') as f:
 			file = yaml.safe_load(f)
 
-	if type(variable) is list:
+	if type(variable) is np.ndarray or type(variable) is list:
 		for i in range(len(variable)):
 			file[f"{variableName}{i}"] = float(variable[i])
 	else:
