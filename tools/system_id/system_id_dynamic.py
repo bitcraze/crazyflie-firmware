@@ -1,14 +1,19 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import argparse
-from plot_helpers import loadFile
-
+from helpers import loadFile, loadYAML
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--file", default="data_motor_delay_-B350_0.csv", help="csv file")
+parser.add_argument("--comb", default="+B250", help="csv file")
 args = parser.parse_args()
 
-data = loadFile(args.file)
+comb = args.comb
+data = loadFile(f"data_motor_delay_{comb}_00.csv")
+
+PWM_MAX = 65535
+THRUST_MIN = loadYAML(comb, "THRUST_MIN")
+THRUST_MAX = loadYAML(comb, "THRUST_MAX")
+
 
 # default
 c00 = 11.093358483549203
@@ -18,7 +23,7 @@ c20 = 20.573302305476638
 c11 = 38.42885066644033
 
 def pwm2force(pwm, v):
-	pwm = pwm / 65536
+	pwm = pwm / 65535
 	v = v / 4.2
 	return c00 + c10 * pwm + c01 * v + c20 * pwm * pwm + c11 * pwm * v
 
@@ -63,16 +68,32 @@ for i, dt in enumerate(dts):
 	u_pred.append(u + u_dot * dt)
 u_pred = np.array(u_pred)
 
-fig, ax1 = plt.subplots()
+p = [0.019557, -0.013537, 0.015267]
+thrustCMD = data["cmd"]/PWM_MAX*THRUST_MAX
+motorVoltage = np.zeros_like(data["cmd"])
+for i in range(len(data["cmd"])):
+	if thrustCMD[i] < THRUST_MIN:
+		motorVoltage[i] = 0
+	else:
+		motorVoltage[i] = (-p[1] + np.sqrt(p[1]*p[1] - 4*p[2]*(p[0]-thrustCMD[i]))) / (2*p[2])
 
-ax1.plot(data["time"], data["thrust"], 'b', label="Load cell")
+
+
+fig, axs = plt.subplots(3,1)
+
+axs[0].plot(data["time"], data["thrust"], label="Load cell [N]")
+axs[0].plot(data["time"], data["cmd"]/PWM_MAX*THRUST_MAX*4, label="Thrust CMD [N]")
+
+axs[1].plot(data["time"], data["vbat"], label="Vbat [V]")
+axs[1].plot(data["time"], motorVoltage, label="Vmotor uncomp [V]")
 
 # ax2 for PWM and RPM
-ax2 = ax1.twinx()
-ax2.plot(data["time"], data["pwm"], label="PWM")
-ax2.plot(data["time"], data["rpm_avg"], label="RPM")
+# ax2 = ax1.twinx()
+axs[2].plot(data["time"], data["pwm"], label="PWM")
+axs[2].plot(data["time"], data["cmd"], label="PWM CMD")
+# ax2.plot(data["time"], data["rpm_avg"], label="RPM")
 # ax2.plot(time, pwm2rpm(data_pwm), label="RPM Setpoint")
-ax2.plot(data["time"], rpm_pred, label="RPM Prediction")
+# ax2.plot(data["time"], rpm_pred, label="RPM Prediction")
 
 # ax1.plot(time, u_pred, 'r', label="Prediction")
 
@@ -84,7 +105,8 @@ f_des = np.array(f_des)
 
 # ax1.plot(time, f_des, 'g', label="F Desired")
 
-ax1.legend(loc="upper left")
-ax2.legend(loc="upper right")
+axs[0].legend()
+axs[1].legend()
+axs[2].legend()
 
 plt.show()

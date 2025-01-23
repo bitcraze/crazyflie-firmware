@@ -174,7 +174,7 @@ class CollectData(ABC):
         # Make sure maxThrust and maxThrustVbat are in the dict
         # data['loadcell.weight_max'] = data.get('loadcell.weight_max', 0)
         # data['pm.vbatMV_max'] = data.get('pm.vbatMV_max', 0)
-        data['cmd'] = data.get('cmd', 0)
+        data['cmd'] = data.get('cmd', self.desiredThrust)
         self._file.write("{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
                 timestamp,
                 data['loadcell.weight']/1000*self.g,
@@ -355,7 +355,7 @@ class CollectDataDelay(CollectData):
 
     def __init__(self, link_uri, calib_a, calib_b, comb):
         """ Initialize and run the example with the specified link_uri """
-        self.samplerate = 7 # has to be in [0,7], where 7 is the highest. 
+        self.samplerate = 0 # has to be in [0,7], where 7 is the highest. 
         # 0 = 10Hz (default), 1 = 20Hz, 2 = 40Hz, 3 = 80Hz, 7 = 320Hz
         # See datasheet of NAU7802
         # However, the data of the loadcell only gets sent with ~2Hz anyway
@@ -364,48 +364,9 @@ class CollectDataDelay(CollectData):
     def _fully_connected(self, link_uri):
         """ This callback is called form the Crazyflie API when a Crazyflie
         has been connected and the TOCs have been downloaded."""
-        self._cf.param.set_value('loadcell.sampleRate', str(self.samplerate))
+        self._cf.param.set_value('loadcell.sampleRate', self.samplerate)
         
         super()._fully_connected(link_uri)
-
-        # print(self.calib_a, self.calib_b)
-        # self._cf.param.set_value('loadcell.a', str(self.calib_a))
-        # self._cf.param.set_value('loadcell.b', str(self.calib_b))
-        # self._cf.param.set_value('loadcell.sampleRate', 7) # fastest sample rate: 320 Hz;
-        # # self._cf.param.set_value('loadcell.sampleRate', 4)
-
-        # self._file = open("data.csv", "w+")
-        # self._file.write("time[ms],weight[g],pwm,vbat[V],rpm1,rpm2,rpm3,rpm4,v[V],i[A]\n")
-
-        # # The definition of the logconfig can be made before connecting
-        # self._lg_stab = LogConfig(name='data', period_in_ms=5)
-        # self._lg_stab.useV2 = True # necessary to set the logger period lower than 10ms # TODO
-        # self._lg_stab.add_variable('loadcell.weight', 'float')
-        # self._lg_stab.add_variable('motor.m1', 'uint16_t')
-        # self._lg_stab.add_variable('pm.vbatMV', 'uint16_t')
-        # self._lg_stab.add_variable('rpm.m1', 'uint16_t')
-        # self._lg_stab.add_variable('rpm.m2', 'uint16_t')
-        # self._lg_stab.add_variable('rpm.m3', 'uint16_t')
-        # self._lg_stab.add_variable('rpm.m4', 'uint16_t')
-        # self._lg_stab.add_variable('asc37800.v_avg', 'float')
-        # self._lg_stab.add_variable('asc37800.i_avg', 'float')
-
-        # # Adding the configuration cannot be done until a Crazyflie is
-        # # connected, since we need to check that the variables we
-        # # would like to log are in the TOC.
-        # try:
-        #     self._cf.log.add_config(self._lg_stab)
-        #     # This callback will receive the data
-        #     self._lg_stab.data_received_cb.add_callback(self._stab_log_data)
-        #     # This callback will be called on errors
-        #     self._lg_stab.error_cb.add_callback(self._stab_log_error)
-        #     # Start the logging
-        #     self._lg_stab.start_v2() # Use special v2 version to be able to sample > 100 Hz
-        # except KeyError as e:
-        #     print('Could not start log configuration,'
-        #           '{} not found in TOC'.format(str(e)))
-        # except AttributeError:
-        #     print('Could not add Stabilizer log config, bad configuration.')
 
     def _check_parameters(self):
         """Checks the set parameters of the loadcell"""
@@ -421,6 +382,7 @@ class CollectDataDelay(CollectData):
                 time.sleep(2)
 
     def _applyThrust(self, thrust, duration):
+        self.desiredThrust = thrust
         start = time.time()
         self._cf.param.set_value('motorPowerSet.m1', int(thrust))
         print(f"Applied pwm={thrust}, waiting for {duration}s")
@@ -433,11 +395,17 @@ class CollectDataDelay(CollectData):
         self._check_parameters()
 
         self._cf.param.set_value('motorPowerSet.m1', 0)
-        self._cf.param.set_value('motorPowerSet.enable', 2)
 
         duration = 2.0
+        enable = 2 # starting with 2 (no battery compensation)
 
         while self.is_connected:
+            self._cf.param.set_value('motorPowerSet.enable', enable)
+            if enable == 2:
+                print("Collecting data without battery compensation")
+            elif enable == 3:
+                print("Collecting data with battery compensation")
+
             # base speed
             self._applyThrust(PWM_MIN, duration)
 
@@ -457,44 +425,13 @@ class CollectDataDelay(CollectData):
             # 1.0 -> 0.5
             self._applyThrust((PWM_MAX+PWM_MIN)/2, duration)
 
-            break
+            self._applyThrust(0, duration)
 
-        self._close()
+            # do the same thing again with battery compensation enabled
+            enable += 1
 
-
-class CollectDataEfficiency(CollectData):
-    """
-    Simple logging example class that logs the Stabilizer from a supplied
-    link uri and disconnects after 5s.
-    """
-
-    def __init__(self, link_uri, calib_a, calib_b, comb):
-        """ Initialize and run the example with the specified link_uri """
-        super().__init__(link_uri, calib_a, calib_b, comb, "efficiency")
-
-    def _ramp_motors(self):
-        self._check_parameters()
-
-        thrust_mult = 1
-        thrust_steps = 10
-        time_step = 1.0
-        thrust = 0
-        max_thrust = 65535
-
-        # Unlock startup thrust protection
-        for i in range(0, 100):
-            self._cf.commander.send_setpoint(0, 0, 0, 0)
-
-        localization = Localization(self._cf)
-
-        self._cf.param.set_value('motorPowerSet.m1', 0)
-        self._cf.param.set_value('motorPowerSet.enable', 2)
-
-        for i in range(11):
-            thrust = int((max_thrust/10)*i)
-            localization.send_emergency_stop_watchdog()
-            self._cf.param.set_value('motorPowerSet.m1', str(thrust))
-            time.sleep(time_step)
+            if enable >= 4:
+                break
 
         self._close()
 
@@ -607,14 +544,12 @@ if __name__ == '__main__':
     # collect data
     if args.mode == "ramp_motors":
         le = CollectDataRamp(args.uri, a, b, args.comb)
-    elif args.mode == "max_thrust":
+    elif args.mode == "static":
         le = CollectDataThrust(args.uri, a, b, args.comb)
-    elif args.mode == "motor_delay":
-        le = CollectDataDelay(args.uri, a, b, args.comb)
-    elif args.mode == "efficiency":
-        le = CollectDataEfficiency(args.uri, a, b, args.comb)
     elif args.mode == "verification":
         le = CollectDataVerification(args.uri, a, b, args.comb)
+    elif args.mode == "dynamic":
+        le = CollectDataDelay(args.uri, a, b, args.comb)
     else:
         raise NotImplementedError(f"Data Collection Type {args.mode} is not implemented.")
     time.sleep(1)

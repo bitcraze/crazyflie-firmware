@@ -193,13 +193,14 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
     {
       return iThrust;
     }
-
+    
     static float thrust_min = 0.02f;
-    static float thrust_max = 0.1373f;
-    static float p[] = {0.019557f, -0.013537f, 0.015267f}; // in order of exponent p[i]*x^i
+    static float thrust_max = 0.1125f;
+    // p in order of exponent: p[i]*x^i
+    static float p[] = {0.027108410124646785f, -0.01744562555285155f, 0.015799377165134628f}; //2.1+
     // motor voltage to thrust is a quadratic fit => thrust to voltage is sqrt fit
     float thrust = (iThrust / 65535.0f) * thrust_max; // rescaling integer thrust to N
-    if (thrust < thrust_min)
+    if (thrust < thrust_min) // Make sure sqrt function doesn't crash
     {
       return 0.0f;
     }
@@ -207,7 +208,15 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
     {
       float motorVoltage = (-p[1] + (float)sqrt(p[1]*p[1] - 4*p[2]*(p[0]-thrust))) / (2*p[2]);
       float ratio = motorVoltage / supplyVoltage;
-      return UINT16_MAX * ratio;
+      if (ratio >= 1.0) 
+      {
+        return UINT16_MAX;
+      }
+      else 
+      {
+        return UINT16_MAX * ratio;
+      }
+      
     }
     
   }
@@ -517,9 +526,13 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
     }
     else if (motorSetEnable == 3) // for testing the battery compensation
     {
-      float ff = 10.0f;
+      float b = 0.01f; // 0.2f = Convergence (95%) in ~10 steps = ~20ms
       static float supplyVoltage = 4.2;
-      supplyVoltage = (ff*supplyVoltage + pmGetBatteryVoltage()) / (ff+1);
+      // only update the voltage for the first motor and use the same for the others, as done in stabilizer.c
+      if (id == 0) 
+      {
+        supplyVoltage = supplyVoltage + b*(pmGetBatteryVoltage() - supplyVoltage);
+      }
       ratio = motorsCompensateBatteryVoltage(id, motorPowerSet[MOTOR_M1], supplyVoltage);
     }
 

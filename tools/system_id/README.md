@@ -50,16 +50,16 @@ As an example: The Crazyflies 2.1+ gets shipped with the new propellers, 17mm mo
 
 ### Ramping Motors
 
-This test will simply ramp the motors up and down. The results can be visualized with the correcsponding plot script.
+This test will simply ramp the motors up and down. The results can be visualized with the correcsponding plot script. Is is not really needed and just for fun. 
 
 ```
 python3 collect_data.py --uri <URI> --mode=ramp_motors --comb=<COMB> 
-python3 plot_data_ramp_motors.py
+python3 plot_data_ramp_motors.py --file=<FILENAME>
 ```
 
 ### System identification
 
-This test will randomly select sample a PWM value and average the resulting force and measured vbat over a short period of time. With that information we can identify the system. The system_id script calculates a mapping from vmotor, which is vbat*PWM/65535, to thrust. This helps to know how the battery compensation needs to be set. Additionally, this script calculates the efficiency in g/W. The results are also stored in the .yaml file used for the calibration data. TODO actually implement that.
+This test will randomly select sample a PWM value and average the resulting force and measured vbat over a short period of time. With that information we can identify the system. The system_id script calculates a mapping from vmotor, which is vbat*PWM/65535, to thrust. This helps to know how the battery compensation needs to be set. Additionally, this script calculates the efficiency in g/W. The results are also stored in the .yaml file used for the calibration data. TODO actually implement that. TODO RPM2THRUST
 
 ```
 python3 collect_data.py --uri <URI> --mode=max_thrust --comb=<COMB> 
@@ -74,7 +74,7 @@ python3 system_id_verification.py
 
 ### Motor Delay
 
-This test uses a higher sampling rate and visualizes the delayed motor response given a step input. TODO
+This test uses a higher sampling rate and visualizes the delayed motor response given a step input. TODO. TODO include the RPM2THRUST dynamics
 
 ```
 python3 collect_data.py --uri <URI> --mode=motor_delay --comb=<COMB> 

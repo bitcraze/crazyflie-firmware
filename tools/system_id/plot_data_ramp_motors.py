@@ -1,10 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
-from plot_helpers import loadFile
+from helpers import loadFile
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--file", default="data_ramp_motors_-B350_0.csv", help="csv file")
+parser.add_argument("--file", default="data_ramp_motors_+B250_00.csv", help="csv file")
 args = parser.parse_args()
 
 data = loadFile(args.file)
@@ -60,7 +60,7 @@ ax[2].plot(data["pwm"], rpm2thrust(pwm2rpm(data["pwm"])), '--', label='fit')
 # From firmware: // thrust = a * pwm^2 + b * pwm // where PWM is normalized (range 0...1) // thrust is in Newtons (per rotor)
 # static float pwmToThrustA = 0.091492681f;
 # static float pwmToThrustB = 0.067673604f;
-ax[2].plot(data["pwm"], (0.091492681*(data["pwm"]/65535)**2+0.067673604*(data["pwm"]/65535))/(9.81/1000), '--', label='firmware (old)')
+ax[2].plot(data["pwm"], (0.091492681*(data["pwm"]/65535)**2+0.067673604*(data["pwm"]/65535))*4, '--', label='firmware (old)')
 ax[2].set_xlabel('PWM')
 ax[2].set_ylabel('Thrust [N]')
 ax[2].legend()
