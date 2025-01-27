@@ -33,6 +33,23 @@ def loadFiles(filenames: list) -> dict:
 			data[k] = np.append(data[k], v)
 	return data
 
+def cutData(data: dict, tStart: float = None, tEnd: float = None):
+	if tEnd is not None:
+		end_idx = np.searchsorted(data['time'], tEnd, side='left') - 1
+	else:
+		end_idx = -1
+	
+	if tStart is not None:
+		start_idx = np.searchsorted(data['time'], tStart, side='right')
+		data['time'] = data['time'] - tStart
+	else:
+		start_idx = 0
+    
+	for k, v in data.items():
+		data[k] = v[start_idx:end_idx]
+
+	return data
+
 def poly(x, p, order):
 	y = 0
 	for i in range(order+1):

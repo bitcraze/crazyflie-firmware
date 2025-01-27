@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.linear_model import LinearRegression
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
-from helpers import loadFiles, poly, inversepoly, loadYAML, storeYAML
+from helpers import loadFiles, cutData, poly, inversepoly, loadYAML, storeYAML
 
 PWM_MAX = 65535
 
@@ -144,7 +144,7 @@ def system_id_verification(filenames, validations=[]):
 
     ax.scatter(data['cmd'], data['vbat'], data['thrust']/4, label="compensated")
     if len(validations) > 0:
-        ax.scatter(data_val['pwm'], data_val['vbat'], data_val['thrust']/4, label="uncompensated")
+        ax.scatter(data_val['cmd'], data_val['vbat'], data_val['thrust']/4, label="compensated old")
 
     # plane for verification
     X = np.linspace(15000, 65535, 10) # PWM
@@ -165,6 +165,10 @@ def system_id_verification(filenames, validations=[]):
     Y = X/PWM_MAX*THRUST_MAX
     plt.plot(X, Y, label="ideal compensation", color="tab:green")
     plt.scatter(data['cmd'], data['thrust']/4, label="compensated")
+    if len(validations) > 0:
+        Y_OLD = X/PWM_MAX*(0.06*9.81/4)
+        plt.plot(X, Y_OLD, "--", label="ideal compensation old")
+        plt.scatter(data_val['cmd'], data_val['thrust']/4, label="compensated old")
     plt.xlabel("Thrust command in PWM")
     plt.ylabel("Thrust per motor [N]")
     plt.title("Thrust Verification")
@@ -178,6 +182,7 @@ def system_id_verification(filenames, validations=[]):
 
 def system_id_dynamic(filenames, validations=[]): 
     data = loadFiles(filenames)
+    data = cutData(data, tStart=18)
     p_v_thrust = loadYAML(comb, "p_v_thrust", 4)
 
     # def thrust_dynamics(x, k_up, k_down):
@@ -244,24 +249,38 @@ def system_id_dynamic(filenames, validations=[]):
 
     storeYAML(comb, tau, "TAU")
 
-    fig, axs = plt.subplots(3,1)
+    # fig, axs = plt.subplots(3,1)
+    plt.tight_layout()
 
-    axs[0].plot(data["time"], data["thrust"], label="Load cell [N]")
-    axs[0].plot(data["time"], data["cmd"]/PWM_MAX*THRUST_MAX*4, label="Thrust CMD [N]")
-    axs[0].plot(data["time"], thrustPred, label="Thrust Prediction [N]")
-
-    axs[1].plot(data["time"], data["vbat"], label="Vbat [V]")
-    axs[1].plot(data["time"], VmotorCMD, label="Vmotor CMD [V]")
-    axs[1].plot(data["time"], Vmotor, label="Vmotor [V]")
-
-    axs[2].plot(data["time"], data["pwm"], label="PWM")
-    axs[2].plot(data["time"], data["cmd"], label="PWM CMD")
-
-    axs[0].legend()
-    axs[1].legend()
-    axs[2].legend()
-
+    plt.plot(data["time"], data["thrust"], label="Measurement")
+    plt.plot(data["time"], data["cmd"]/PWM_MAX*THRUST_MAX*4, label="CMD")
+    plt.plot(data["time"], thrustPred, label="Prediction")
+    plt.xlabel("Time [s]")
+    plt.ylabel("Total Thrust [N]")
+    plt.title("Thrust Delay")
+    plt.legend()
     plt.show()
+
+    plt.plot(data["time"], data["vbat"], label="Vbat")
+    plt.plot(data["time"], VmotorCMD, label="Vmotor CMD")
+    plt.plot(data["time"], Vmotor, label="Vmotor")
+    plt.xlabel("Time [s]")
+    plt.ylabel("Voltage [V]")
+    plt.legend()
+    plt.show()
+
+    plt.plot(data["time"], data["pwm"], label="PWM Motors")
+    plt.plot(data["time"], data["cmd"], label="PWM CMD")
+    plt.xlabel("Time [s]")
+    plt.ylabel("PWM")
+    plt.legend()
+    plt.show()
+
+    # axs[0].legend()
+    # axs[1].legend()
+    # axs[2].legend()
+
+    # plt.show()
 
 
 if __name__ == '__main__':
@@ -290,13 +309,13 @@ if __name__ == '__main__':
             # f"data_{mode}_{comb}_M2_00.csv", 
             # f"data_{mode}_{comb}_M2_01.csv",
             # f"data_{mode}_{comb}_M2_02.csv",
-            f"data_{mode}_{comb}_M4_00.csv", 
+            f"data_{mode}_{comb}_M4_01.csv", 
             # f"data_{mode}_{comb}_M4_01.csv", 
             # f"data_{mode}_{comb}_M4_02.csv", 
         ]
         filesVal = [
             # f"data_{mode}_{comb}_M4_00.csv", 
-            # f"data_{mode}_{comb}_M4_01.csv", 
+            f"data_{mode}_{comb}_M4_old_00.csv", 
             # f"data_{mode}_{comb}_M4_02.csv", 
         ]
 
@@ -307,7 +326,7 @@ if __name__ == '__main__':
     elif args.mode == "static_verification": # activate battery compensation to test it
         THRUST_MIN = loadYAML(comb, "THRUST_MIN")
         THRUST_MAX = loadYAML(comb, "THRUST_MAX")
-        system_id_verification(files)
+        system_id_verification(files, filesVal)
     elif args.mode == "dynamic":
         THRUST_MIN = loadYAML(comb, "THRUST_MIN")
         THRUST_MAX = loadYAML(comb, "THRUST_MAX")
