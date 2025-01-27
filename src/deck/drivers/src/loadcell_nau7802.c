@@ -465,14 +465,14 @@ static void loadcellInit(DeckInfo *info)
     // Create a task
     xTaskCreate(loadcellTask, "LOADCELL",
                 configMINIMAL_STACK_SIZE, NULL,
-                /*priority*/4, NULL);
+                /*priority*/1, NULL);
   }
 }
 
 static void loadcellTask(void* prm)
 {
   while (1) {
-    BaseType_t semResult = xSemaphoreTake(dataReady, M2T(3)); // 3ms wait = 333SPS ~ fmax of NAU7802
+    BaseType_t semResult = xSemaphoreTake(dataReady, M2T(500));
     if (semResult == pdTRUE || digitalRead(DATA_READY_PIN))
     {
       int32_t measurement;
