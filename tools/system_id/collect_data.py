@@ -21,7 +21,7 @@ from cflib.crazyflie.localization import Localization
 
 PWM_MIN = 20000
 PWM_MAX = 65535
-VBAT_MIN = 3.0 # Voltage at which we abort experiments, 2.8 in earlier version
+VBAT_MIN = 2.95 # Voltage at which we abort experiments, 2.8 in earlier version
 
 class CollectData(ABC):
     """
@@ -273,18 +273,23 @@ class CollectDataStatic(CollectData):
     link uri and disconnects after 5s.
     """
 
-    def __init__(self, link_uri, calib_a, calib_b, comb, batComp=False):
+    def __init__(self, link_uri, calib_a, calib_b, comb, extra="", batComp=False):
         """ Initialize and run the example with the specified link_uri """
         self.measurements = []
         self.desiredThrust = 0
-        super().__init__(link_uri, calib_a, calib_b, comb, "static", batComp)
+        if extra!="": # Add an underscore if extra is not empty
+            extra = f"_{extra}"
+        if batComp: # verification mode
+            super().__init__(link_uri, calib_a, calib_b, comb, f"static_verification{extra}", batComp)
+        else:
+            super().__init__(link_uri, calib_a, calib_b, comb, f"static{extra}", batComp)
 
     def _stab_log_data(self, timestamp, data, logconf):
         """Callback froma the log API when data arrives"""
         if self.verbose: print('[%d][%s]: %s' % (timestamp, logconf.name, data))
-        if self.desiredThrust == data['motor.m1']:
+        # if self.desiredThrust == data['motor.m1']:
             # self.measurements.append(np.array([data['loadcell.weight']/1000*self.g, data['pm.vbatMV']/1000]))
-            self.measurements.append(data)
+        self.measurements.append(data)
 
     def _average_dict(self, dictionary_list):
         """Converts a list of dictionaries into a single dictionary with the averages."""
@@ -312,8 +317,10 @@ class CollectDataStatic(CollectData):
         self._cf.param.set_value('motorPowerSet.m1', 0)
         if self.batComp:
             self._cf.param.set_value('motorPowerSet.enable', 3)
+            print("Collecting data with battery compensation")
         else:
             self._cf.param.set_value('motorPowerSet.enable', 2)
+            print("Collecting data without battery compensation")
 
         t_max = 600 # Set to np.inf to run until battery is empty
         t_start = time.time()
@@ -358,13 +365,15 @@ class CollectDataDynamic(CollectData):
     link uri and disconnects after 5s.
     """
 
-    def __init__(self, link_uri, calib_a, calib_b, comb):
+    def __init__(self, link_uri, calib_a, calib_b, comb, extra=""):
         """ Initialize and run the example with the specified link_uri """
-        self.samplerate = 0 # has to be in [0,7], where 7 is the highest. 
+        self.samplerate = 7 # has to be in [0,7], where 7 is the highest. 
         # 0 = 10Hz (default), 1 = 20Hz, 2 = 40Hz, 3 = 80Hz, 7 = 320Hz
         # See datasheet of NAU7802
         # However, the data of the loadcell only gets sent with ~2Hz anyway
-        super().__init__(link_uri, calib_a, calib_b, comb, "dynamic")
+        if extra!="": # Add an underscore if extra is not empty
+            extra = f"_{extra}"
+        super().__init__(link_uri, calib_a, calib_b, comb, f"dynamic{extra}")
 
     def _fully_connected(self, link_uri):
         """ This callback is called form the Crazyflie API when a Crazyflie
@@ -448,6 +457,7 @@ if __name__ == '__main__':
     parser.add_argument("--uri", default="radio://0/42/2M/E7E7E7E7E7", help="URI of Crazyflie")
     parser.add_argument("--mode", default="ramp_motors", help="Type of data collected, for more information see readme")
     parser.add_argument("--comb", default="", help="Combination of propellers, motors, and battery, for more information see readme")
+    parser.add_argument("--extra", default="", help="Additional information for labeling the csv file")
     # First char is the version of the propellers (- for the regular or + for the 2.X+ propellers)
     # Second char is the motors (B for base 17mm or T for thrust upgrade 20mm motors) # TODO Brushless?
     # Rest is the capacity of the battery (250mAh or 350mAh)
@@ -468,11 +478,11 @@ if __name__ == '__main__':
     if args.mode == "ramp_motors":
         le = CollectDataRamp(args.uri, a, b, args.comb)
     elif args.mode == "static":
-        le = CollectDataStatic(args.uri, a, b, args.comb)
+        le = CollectDataStatic(args.uri, a, b, args.comb, extra=args.extra)
     elif args.mode == "verification": # activate battery compensation to test it
-        le = CollectDataStatic(args.uri, a, b, args.comb, batComp=True) 
+        le = CollectDataStatic(args.uri, a, b, args.comb, extra=args.extra, batComp=True) 
     elif args.mode == "dynamic":
-        le = CollectDataDynamic(args.uri, a, b, args.comb)
+        le = CollectDataDynamic(args.uri, a, b, args.comb, extra=args.extra)
     else:
         raise NotImplementedError(f"Data Collection Type {args.mode} is not implemented.")
     time.sleep(1)

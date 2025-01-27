@@ -2,6 +2,7 @@ import argparse
 
 import numpy as np
 from sklearn.linear_model import LinearRegression
+from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 from helpers import loadFiles, poly, inversepoly, loadYAML, storeYAML
 
@@ -36,7 +37,7 @@ def system_id_static(filenames, validations=[]):
     storeYAML(comb, THRUST_MAX, "THRUST_MAX")
     
     X = np.linspace(0.9, 3.2, 1000)
-    plt.plot(X, poly(X, p_v_thrust, 3), label="fit", color="green")
+    plt.plot(X, poly(X, p_v_thrust, 3), label="fit", color="tab:green")
 
     # Y_inv = np.linspace(THRUST_MIN, THRUST_MAX, 1000)
     # X_inv = inversepoly(Y_inv, p_v_thrust, 3)
@@ -51,16 +52,16 @@ def system_id_static(filenames, validations=[]):
     storeYAML(comb, inversepoly(THRUST_MAX, p_v_thrust, 3), "VMOTOR_MAX")
 
     if len(validations) > 0:
-        X_val = np.vstack((data_val['vmotors'], data_val['vmotors']**2)).T
+        X_val = np.vstack((data_val['vmotors'], data_val['vmotors']**2, data_val['vmotors']**3)).T
         Y_val = data_val['thrust']/4
         Error = reg.predict(X_val) - Y_val
         print(f"validation score = {reg.score(X_val, Y_val):.4f}")
         print(f"validation max error = {np.max(np.abs(Error))*1000:.4f}mN")
         print(f"validation mean error = {np.mean(np.abs(Error))*1000:.4f}mN")
 
-    # y_old = np.linspace(0.02, 0.14, 1000)
-    # x_old = -0.00062390 * (y_old/9.81*1000*4)**2 + 0.08835522 * y_old/9.81*1000*4 # + 0.06865956
-    # plt.plot(x_old, y_old, label="old_fit")
+    y_old = np.linspace(0.02, 0.14, 1000)
+    x_old = -0.00062390 * (y_old/9.81*1000*4)**2 + 0.08835522 * y_old/9.81*1000*4 # + 0.06865956
+    plt.plot(x_old, y_old, label="old_fit")
 
     plt.xlabel("V_motors [V]")
     plt.ylabel("Thrust per motor [N]")
@@ -80,18 +81,18 @@ def system_id_static(filenames, validations=[]):
     reg = LinearRegression().fit(X, data['rpm_avg'])
     p_v_rpm = [reg.intercept_, reg.coef_[0]]
     vmotors = np.linspace(1, 3, 1000)
-    axs[0].plot(vmotors, poly(vmotors, p_v_rpm, 1), label="fit")
+    axs[0].plot(vmotors, poly(vmotors, p_v_rpm, 1), label="fit", color="tab:green")
     axs[0].set_xlabel("Motor voltage [V]")
     axs[0].set_ylabel("Motor RPM")
     axs[0].legend()
 
     axs[1].scatter(data['rpm_avg'], data['thrust'], label="data")
     X = np.vstack((data['rpm_avg']**2))
-    reg = LinearRegression().fit(X, data['thrust'])
+    reg = LinearRegression(fit_intercept=False).fit(X, data['thrust'])
     p_rpm_thrust = [0, 0, reg.coef_[0]]
     storeYAML(comb, reg.coef_[0], "kf")
-    rpms = np.linspace(000, 25000, 1000)
-    axs[1].plot(rpms, poly(rpms, p_rpm_thrust, 2), label="fit")
+    rpms = np.linspace(000, 30000, 1000)
+    axs[1].plot(rpms, poly(rpms, p_rpm_thrust, 2), label="fit", color="tab:green")
     axs[1].set_xlabel("Motor RPM")
     axs[1].set_ylabel("Thrust [N]")
     axs[1].legend()
@@ -118,11 +119,11 @@ def system_id_static(filenames, validations=[]):
     reg = LinearRegression().fit(X, Y)
     print(f"Efficiency: {reg.coef_[0]:.3f}N/W or {reg.coef_[0]/9.81*1000:.3f}g/w")
 
-    X = np.linspace(2.0, 14.0, 1000)
+    X = np.linspace(2.0, 15.0, 1000)
     X_fit = np.vstack((X))
     # Y_fit = reg.intercept_ + reg.coef_[0] * X_fit + reg.coef_[1] * X_fit**2
     Y_fit = reg.predict(X_fit)
-    plt.plot(X, Y_fit, label="fit", color="green")
+    plt.plot(X, Y_fit, label="fit", color="tab:green")
     
     plt.xlabel("Total Power [W]")
     plt.ylabel("Total Thrust [N]")
@@ -135,6 +136,7 @@ def system_id_verification(filenames, validations=[]):
     if len(validations) > 0:
         data_val = loadFiles(validations)
 
+    ### 3D Plot
     fig = plt.figure()
     plt.tight_layout()
     # ax = fig.add_subplot(projection='3d')
@@ -149,13 +151,24 @@ def system_id_verification(filenames, validations=[]):
     Y = np.linspace(3.0, 4.2, 10) # VBat
     X, Y = np.meshgrid(X, Y)
     Z = X/PWM_MAX*THRUST_MAX
-    ax.plot_surface(X, Y, Z, alpha=0.2)
+    ax.plot_surface(X, Y, Z, alpha=0.2) # , label="ideal compensation"
 
     ax.set_xlabel("Thrust command in PWM")
     ax.set_ylabel("Battery voltage [V]")
     ax.set_zlabel("Actual thrust [N]")
     ax.set_title("Thrust Verification")
     ax.legend()
+    plt.show()
+
+    ### 2D Plot
+    X = np.linspace(15000, 65535, 10) # PWM
+    Y = X/PWM_MAX*THRUST_MAX
+    plt.plot(X, Y, label="ideal compensation", color="tab:green")
+    plt.scatter(data['cmd'], data['thrust']/4, label="compensated")
+    plt.xlabel("Thrust command in PWM")
+    plt.ylabel("Thrust per motor [N]")
+    plt.title("Thrust Verification")
+    plt.legend()
     plt.show()
 
     points_plane = data['cmd']/PWM_MAX*THRUST_MAX
@@ -167,58 +180,45 @@ def system_id_dynamic(filenames, validations=[]):
     data = loadFiles(filenames)
     p_v_thrust = loadYAML(comb, "p_v_thrust", 4)
 
-    # default
-    c00 = 11.093358483549203
-    c10 = -39.08104165843915
-    c01 = -9.525647087583181
-    c20 = 20.573302305476638
-    c11 = 38.42885066644033
+    # def thrust_dynamics(x, k_up, k_down):
+    #     # x = (PMW_CMD, Thrust_prev, dt)
 
-    def pwm2force(pwm, v):
-        pwm = pwm / 65535
-        v = v / 4.2
-        return c00 + c10 * pwm + c01 * v + c20 * pwm * pwm + c11 * pwm * v
-
-    def pwm2rpm(pwm):
-        """From earlier system identification."""
-        return 4.684e3*(1-np.exp(-pwm*1.5e-4)) + 2.904e-1*pwm
-
-    def rpmdynamics(rpm, pwm, dt):
-        """Calculates the next RPM value based on the commanded PWM and the current RPM value.
-        linear dynamics: rpm_dot = k * (rpm_des - rpm)
-        TODO fit the parameters to the data. Right now it's just an estimate."""
-        # TODO maybe make dynamics on PWM istead of RPM (time constant rn depends on the size of the jump, which shouldn't be the case)
-        k_up = 10
-        k_down = 5
-        rpm_des = pwm2rpm(pwm)
-        delta = rpm_des-rpm
-        # print(f"delta={delta}")
-        if delta>0:
-            rpm_dot = k_up*delta
-        else:
-            rpm_dot = k_down*delta
-        # print(f"dt={dt}")
-        return rpm + rpm_dot*dt
+    # def rpmdynamics(rpm, pwm, dt):
+    #     """Calculates the next RPM value based on the commanded PWM and the current RPM value.
+    #     linear dynamics: rpm_dot = k * (rpm_des - rpm)
+    #     TODO fit the parameters to the data. Right now it's just an estimate."""
+    #     # TODO maybe make dynamics on PWM istead of RPM (time constant rn depends on the size of the jump, which shouldn't be the case)
+    #     k_up = 10
+    #     k_down = 5
+    #     rpm_des = pwm2rpm(pwm)
+    #     delta = rpm_des-rpm
+    #     # print(f"delta={delta}")
+    #     if delta>0:
+    #         rpm_dot = k_up*delta
+    #     else:
+    #         rpm_dot = k_down*delta
+    #     # print(f"dt={dt}")
+    #     return rpm + rpm_dot*dt
         
-    rpm_pred = [0]
-    for i, dt in enumerate(np.diff(data["time"])):
-        rpm_pred.append(rpmdynamics(rpm_pred[-1], data["pwm"][i], dt))
+    # rpm_pred = [0]
+    # for i, dt in enumerate(np.diff(data["time"])):
+    #     rpm_pred.append(rpmdynamics(rpm_pred[-1], data["pwm"][i], dt))
 
-    # u dot = lambda (u_des - u)
-    l = 16
+    # # u dot = lambda (u_des - u)
+    # l = 16
 
-    u_pred = [0]
-    dts = np.diff(data["time"]) / 1e3
-    for i, dt in enumerate(dts):
-        u = u_pred[-1]
-        pwm_des = data["pwm"][i]
-        v = data["vbat"][i]
-        # convert pwm -> force
-        f_des = pwm2force(pwm_des, v) * 4
+    # u_pred = [0]
+    # dts = np.diff(data["time"]) / 1e3
+    # for i, dt in enumerate(dts):
+    #     u = u_pred[-1]
+    #     pwm_des = data["pwm"][i]
+    #     v = data["vbat"][i]
+    #     # convert pwm -> force
+    #     f_des = pwm2force(pwm_des, v) * 4
 
-        u_dot = l * (f_des - u)
-        u_pred.append(u + u_dot * dt)
-    u_pred = np.array(u_pred)
+    #     u_dot = l * (f_des - u)
+    #     u_pred.append(u + u_dot * dt)
+    # u_pred = np.array(u_pred)
 
     thrustCMD = data["cmd"]/PWM_MAX*THRUST_MAX
     VmotorCMD = np.zeros_like(data["cmd"])
@@ -230,35 +230,32 @@ def system_id_dynamic(filenames, validations=[]):
 
     Vmotor = data['vbat'] * data["pwm"] / PWM_MAX
 
+    ### Fit exponential decay
+    tau = 8 # Manually fitted
+    def thrust_dynamics(thrust, thrustCMD, dt):
+        delta = thrustCMD-thrust
+        dTdt = tau * delta
+        return thrust + dTdt * dt
+    dts = np.diff(data["time"])
+    thrustPred = [0]
+    for i, dt in enumerate(dts):
+        t = thrust_dynamics(thrustPred[-1], thrustCMD[i]*4, dt)
+        thrustPred.append(t)
 
+    storeYAML(comb, tau, "TAU")
 
     fig, axs = plt.subplots(3,1)
 
     axs[0].plot(data["time"], data["thrust"], label="Load cell [N]")
     axs[0].plot(data["time"], data["cmd"]/PWM_MAX*THRUST_MAX*4, label="Thrust CMD [N]")
+    axs[0].plot(data["time"], thrustPred, label="Thrust Prediction [N]")
 
     axs[1].plot(data["time"], data["vbat"], label="Vbat [V]")
     axs[1].plot(data["time"], VmotorCMD, label="Vmotor CMD [V]")
     axs[1].plot(data["time"], Vmotor, label="Vmotor [V]")
 
-
-    # ax2 for PWM and RPM
-    # ax2 = ax1.twinx()
     axs[2].plot(data["time"], data["pwm"], label="PWM")
     axs[2].plot(data["time"], data["cmd"], label="PWM CMD")
-    # ax2.plot(data["time"], data["rpm_avg"], label="RPM")
-    # ax2.plot(time, pwm2rpm(data_pwm), label="RPM Setpoint")
-    # ax2.plot(data["time"], rpm_pred, label="RPM Prediction")
-
-    # ax1.plot(time, u_pred, 'r', label="Prediction")
-
-    # compute f desired from pwm
-    f_des = []
-    for i in range(len(data["time"])):
-        f_des.append(pwm2force(data["pwm"][i], data["vbat"][i]) * 4)
-    f_des = np.array(f_des)
-
-    # ax1.plot(time, f_des, 'g', label="F Desired")
 
     axs[0].legend()
     axs[1].legend()
@@ -271,37 +268,49 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", default="", help="Type of data collected, for more information see readme")
     parser.add_argument("--comb", default="", help="Combination of propellers, motors, and battery, for more information see readme")
+    parser.add_argument("--extra", default="", help="Additional information for labeling the csv file")
     parser.add_argument("--file", default="", help="Specific csv file used")
     args = parser.parse_args()
 
     mode = args.mode
     comb = args.comb
+    extra = args.extra
     file = args.file
-
-    THRUST_MIN = loadYAML(comb, "THRUST_MIN")
-    THRUST_MAX = loadYAML(comb, "THRUST_MAX")
 
     if args.file != "":
         files = [args.file]
         filesVal = []
     else:
+        if extra != "":
+            comb = f"{comb}_{extra}"
         files = [
-            f"data_{mode}_{comb}_00.csv", 
-            # f"data_{mode}_{comb}_01.csv",
-            # f"data_{mode}_{comb}_02.csv",
-            # f"data_{mode}_{comb}_03.csv",
+            # f"data_{mode}_{comb}_M1_00.csv", 
+            # f"data_{mode}_{comb}_M1_01.csv",
+            # f"data_{mode}_{comb}_M1_02.csv",
+            # f"data_{mode}_{comb}_M2_00.csv", 
+            # f"data_{mode}_{comb}_M2_01.csv",
+            # f"data_{mode}_{comb}_M2_02.csv",
+            f"data_{mode}_{comb}_M4_00.csv", 
+            # f"data_{mode}_{comb}_M4_01.csv", 
+            # f"data_{mode}_{comb}_M4_02.csv", 
         ]
         filesVal = [
-            # f"data_{mode}_{comb}_04.csv", 
+            # f"data_{mode}_{comb}_M4_00.csv", 
+            # f"data_{mode}_{comb}_M4_01.csv", 
+            # f"data_{mode}_{comb}_M4_02.csv", 
         ]
 
     if args.mode == "ramp_motors":
         raise NotImplementedError("For ramp_motors, please use the plotting script.")
     elif args.mode == "static":
         system_id_static(files, filesVal)
-    elif args.mode == "verification": # activate battery compensation to test it
+    elif args.mode == "static_verification": # activate battery compensation to test it
+        THRUST_MIN = loadYAML(comb, "THRUST_MIN")
+        THRUST_MAX = loadYAML(comb, "THRUST_MAX")
         system_id_verification(files)
     elif args.mode == "dynamic":
+        THRUST_MIN = loadYAML(comb, "THRUST_MIN")
+        THRUST_MAX = loadYAML(comb, "THRUST_MAX")
         system_id_dynamic(files, filesVal)
     else:
         raise NotImplementedError(f"System Identification Type {args.mode} is not implemented.")
