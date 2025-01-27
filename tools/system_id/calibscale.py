@@ -159,5 +159,6 @@ if __name__ == '__main__':
 
     with open(args.output, 'w') as yaml_file:
         yaml.dump(result, yaml_file)
+        print(f"Calibration saved in {args.output}")
 
 
