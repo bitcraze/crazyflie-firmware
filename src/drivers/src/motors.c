@@ -194,11 +194,21 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
       return iThrust;
     }
     
-    static float thrust_min = 0.02f;
-    static float thrust_max = 0.1125f;
-    // p in order of exponent: p[i]*x^i
-    static float p[] = {0.027108410124646785f, -0.01744562555285155f, 0.015799377165134628f}; //2.1+
-    // motor voltage to thrust is a quadratic fit => thrust to voltage is sqrt fit
+    // Depending on the configuration of motors/propellers, the thrust curve changes
+    # if (CONFIG_THRUST_BAT_COMPENSATION_TYPE==1) // 2.1+ propellers
+    static const float p_v_thrust[] = {-0.02427920377129026f, 0.06433042290821364f, -0.026401054210489865f, 0.006731877887386432f};
+    static const float thrust_min = 0.02f;
+    static const float thrust_max = 0.1125f;
+    # elif (CONFIG_THRUST_BAT_COMPENSATION_TYPE==2) // Thrust upgrade kit
+    static const float p_v_thrust[] = {0.027108410124646785f, -0.01744562555285155f, 0.015799377165134628f}; // TODO
+    static const float thrust_min = 0.02f; //TODO
+    static const float thrust_max = 0.1125f; // TODO
+    # else // default case, old propellers
+    static const float p_v_thrust[] = {-0.017182704676960966f, 0.05897568456518774f, -0.024659538154460096f, 0.006679835224267707f}; // TODO
+    static const float thrust_min = 0.02f;
+    static const float thrust_max = 0.1125f;
+    # endif
+
     float thrust = (iThrust / 65535.0f) * thrust_max; // rescaling integer thrust to N
     if (thrust < thrust_min) // Make sure sqrt function doesn't crash
     {
@@ -206,17 +216,18 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
     }
     else 
     {
-      float motorVoltage = (-p[1] + (float)sqrt(p[1]*p[1] - 4*p[2]*(p[0]-thrust))) / (2*p[2]);
+      // motor voltage to thrust is a cubic fit
+      // q, r, p to calculate the inverse of the third order polynomial
+      // For more info see https://math.vanderbilt.edu/schectex/courses/cubic/
+      // q and thus qrp need to be calculated each time
+      static const float p = -p_v_thrust[2] / (3*p_v_thrust[3]);
+      float q = p*p*p + (p_v_thrust[2]*p_v_thrust[1]-3*p_v_thrust[3]*(p_v_thrust[0]-thrust)) / (6*p_v_thrust[3]*p_v_thrust[3]);
+      static const float r = p_v_thrust[1] / (3*p_v_thrust[3]);
+      float qrp = (float)sqrt(q*q + (r-p*p)*(r-p*p)*(r-p*p));
+
+      float motorVoltage = (float)cbrt(q+qrp) + (float)cbrt(q-qrp) + p;
       float ratio = motorVoltage / supplyVoltage;
-      if (ratio >= 1.0) 
-      {
-        return UINT16_MAX;
-      }
-      else 
-      {
-        return UINT16_MAX * ratio;
-      }
-      
+      return UINT16_MAX * ratio;
     }
     
   }

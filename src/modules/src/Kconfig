@@ -206,7 +206,18 @@ config ENABLE_THRUST_BAT_COMPENSATED
     help
         Compensate thrust depending on battery voltage so it will produce about the same
         amount of thrust independent of the battery voltage.
-        The compensation is based on thrust measurements, which are only valid for CF2.1 stock configuration.
+        The compensation is based on thrust measurements, which are only valid for the specific type, see below.
+        Not applied for brushless motor setup.
+
+config THRUST_BAT_COMPENSATION_TYPE
+    int "Enable battery thrust compensation"
+    range 0 2
+    default 0
+    help
+        Compensate thrust depending on battery voltage so it will produce about the same
+        amount of thrust independent of the battery voltage.
+        The compensation is based on thrust measurements for different setups.
+        0 is the CF2.1 stock, 1 is the CF2.1+, and 2 is the thrust upgrade kit configuration.
         Not applied for brushless motor setup.
 
 config LOG_MOTOR_CAP_WARNING
