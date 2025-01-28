@@ -287,9 +287,11 @@ class CollectDataStatic(CollectData):
     def _stab_log_data(self, timestamp, data, logconf):
         """Callback froma the log API when data arrives"""
         if self.verbose: print('[%d][%s]: %s' % (timestamp, logconf.name, data))
-        # if self.desiredThrust == data['motor.m1']:
+        if self.batComp: # In verification mode, directly store data
+            self.measurements.append(data)
+        elif self.desiredThrust == data['motor.m1']: # In collection mode, wait for command to arrive
             # self.measurements.append(np.array([data['loadcell.weight']/1000*self.g, data['pm.vbatMV']/1000]))
-        self.measurements.append(data)
+            self.measurements.append(data)
 
     def _average_dict(self, dictionary_list):
         """Converts a list of dictionaries into a single dictionary with the averages."""
