@@ -207,7 +207,10 @@ bool stabilizerTest(void)
 
 static void batteryCompensation(const motors_thrust_uncapped_t* motorThrustUncapped, motors_thrust_uncapped_t* motorThrustBatCompUncapped)
 {
-  float supplyVoltage = pmGetBatteryVoltage();
+  // Low pass on the BatteryVoltage
+  float b = 0.01f; // 0.2f = Convergence (95%) in ~10 steps = ~20ms
+  static float supplyVoltage = 4.2;
+  supplyVoltage = supplyVoltage + b*(pmGetBatteryVoltage() - supplyVoltage);
 
   for (int motor = 0; motor < STABILIZER_NR_OF_MOTORS; motor++)
   {
