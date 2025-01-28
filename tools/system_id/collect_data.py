@@ -479,7 +479,7 @@ if __name__ == '__main__':
         le = CollectDataRamp(args.uri, a, b, args.comb)
     elif args.mode == "static":
         le = CollectDataStatic(args.uri, a, b, args.comb, extra=args.extra)
-    elif args.mode == "verification": # activate battery compensation to test it
+    elif args.mode == "static_verification": # activate battery compensation to test it
         le = CollectDataStatic(args.uri, a, b, args.comb, extra=args.extra, batComp=True) 
     elif args.mode == "dynamic":
         le = CollectDataDynamic(args.uri, a, b, args.comb, extra=args.extra)

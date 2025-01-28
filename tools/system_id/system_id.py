@@ -28,28 +28,28 @@ def system_id_static(filenames, validations=[]):
     # Fitting
     X = np.vstack((data['vmotors'], data['vmotors']**2, data['vmotors']**3)).T
     reg = LinearRegression().fit(X, data['thrust']/4)
-    p_v_thrust = np.array([reg.intercept_, reg.coef_[0], reg.coef_[1], reg.coef_[2]])
-    storeYAML(comb, p_v_thrust, "p_v_thrust")
+    p_vmotor2thrust = np.array([reg.intercept_, reg.coef_[0], reg.coef_[1], reg.coef_[2]])
+    storeYAML(comb, p_vmotor2thrust, "p_vmotor2thrust")
     # INFO: We want to achieve ~1.7G for the thrust, meaning 27g * 1.7 / 1000 * 9.81N/kg = 0.45N
-    THRUST_MIN = poly(1.0, p_v_thrust, 3)
+    THRUST_MIN = poly(1.0, p_vmotor2thrust, 3)
     THRUST_MAX = 0.45/4
     storeYAML(comb, THRUST_MIN, "THRUST_MIN")
     storeYAML(comb, THRUST_MAX, "THRUST_MAX")
     
     X = np.linspace(0.9, 3.2, 1000)
-    plt.plot(X, poly(X, p_v_thrust, 3), label="fit", color="tab:green")
+    plt.plot(X, poly(X, p_vmotor2thrust, 3), label="fit", color="tab:green")
 
     # Y_inv = np.linspace(THRUST_MIN, THRUST_MAX, 1000)
-    # X_inv = inversepoly(Y_inv, p_v_thrust, 3)
+    # X_inv = inversepoly(Y_inv, p_vmotor2thrust, 3)
     # plt.plot(X_inv, Y_inv, label="inv")
 
     print(f"Thrust = {reg.intercept_:.6f} {reg.coef_[0]:.6f}*V + {reg.coef_[1]:.6f}*V^2")
     print(f"Voltage = ({-reg.coef_[0]} + sqrt({reg.coef_[0]}**2 - 4*{reg.coef_[1]}*({reg.intercept_}-T))) / (2*{reg.coef_[1]})")
     print(f"Thrust_MIN = {THRUST_MIN:.4f}N, Thrust_MAX={THRUST_MAX:.4f}N")
     # INFO: VoltageBatteryLow is 3.2 and critically low is 3.0 
-    print(f"VMotor_MIN = {inversepoly(THRUST_MIN, p_v_thrust, 3):.4f}V, VMotor_MAX={inversepoly(THRUST_MAX, p_v_thrust, 3):.4f}V")
-    storeYAML(comb, inversepoly(THRUST_MIN, p_v_thrust, 3), "VMOTOR_MIN")
-    storeYAML(comb, inversepoly(THRUST_MAX, p_v_thrust, 3), "VMOTOR_MAX")
+    print(f"VMotor_MIN = {inversepoly(THRUST_MIN, p_vmotor2thrust, 3):.4f}V, VMotor_MAX={inversepoly(THRUST_MAX, p_vmotor2thrust, 3):.4f}V")
+    storeYAML(comb, inversepoly(THRUST_MIN, p_vmotor2thrust, 3), "VMOTOR_MIN")
+    storeYAML(comb, inversepoly(THRUST_MAX, p_vmotor2thrust, 3), "VMOTOR_MAX")
 
     if len(validations) > 0:
         X_val = np.vstack((data_val['vmotors'], data_val['vmotors']**2, data_val['vmotors']**3)).T
@@ -59,9 +59,9 @@ def system_id_static(filenames, validations=[]):
         print(f"validation max error = {np.max(np.abs(Error))*1000:.4f}mN")
         print(f"validation mean error = {np.mean(np.abs(Error))*1000:.4f}mN")
 
-    y_old = np.linspace(0.02, 0.14, 1000)
-    x_old = -0.00062390 * (y_old/9.81*1000*4)**2 + 0.08835522 * y_old/9.81*1000*4 # + 0.06865956
-    plt.plot(x_old, y_old, label="old_fit")
+    # y_old = np.linspace(0.02, 0.14, 1000)
+    # x_old = -0.00062390 * (y_old/9.81*1000*4)**2 + 0.08835522 * y_old/9.81*1000*4 # + 0.06865956
+    # plt.plot(x_old, y_old, label="old_fit")
 
     plt.xlabel("V_motors [V]")
     plt.ylabel("Thrust per motor [N]")
@@ -79,9 +79,10 @@ def system_id_static(filenames, validations=[]):
     axs[0].scatter(data['vmotors'], data['rpm_avg'], label="data")
     X = np.vstack((data['vmotors']))
     reg = LinearRegression().fit(X, data['rpm_avg'])
-    p_v_rpm = [reg.intercept_, reg.coef_[0]]
+    p_vmotor2rpm = [reg.intercept_, reg.coef_[0]]
+    storeYAML(comb, p_vmotor2rpm, "p_vmotor2rpm")
     vmotors = np.linspace(1, 3, 1000)
-    axs[0].plot(vmotors, poly(vmotors, p_v_rpm, 1), label="fit", color="tab:green")
+    axs[0].plot(vmotors, poly(vmotors, p_vmotor2rpm, 1), label="fit", color="tab:green")
     axs[0].set_xlabel("Motor voltage [V]")
     axs[0].set_ylabel("Motor RPM")
     axs[0].legend()
@@ -183,47 +184,7 @@ def system_id_verification(filenames, validations=[]):
 def system_id_dynamic(filenames, validations=[]): 
     data = loadFiles(filenames)
     data = cutData(data, tStart=18)
-    p_v_thrust = loadYAML(comb, "p_v_thrust", 4)
-
-    # def thrust_dynamics(x, k_up, k_down):
-    #     # x = (PMW_CMD, Thrust_prev, dt)
-
-    # def rpmdynamics(rpm, pwm, dt):
-    #     """Calculates the next RPM value based on the commanded PWM and the current RPM value.
-    #     linear dynamics: rpm_dot = k * (rpm_des - rpm)
-    #     TODO fit the parameters to the data. Right now it's just an estimate."""
-    #     # TODO maybe make dynamics on PWM istead of RPM (time constant rn depends on the size of the jump, which shouldn't be the case)
-    #     k_up = 10
-    #     k_down = 5
-    #     rpm_des = pwm2rpm(pwm)
-    #     delta = rpm_des-rpm
-    #     # print(f"delta={delta}")
-    #     if delta>0:
-    #         rpm_dot = k_up*delta
-    #     else:
-    #         rpm_dot = k_down*delta
-    #     # print(f"dt={dt}")
-    #     return rpm + rpm_dot*dt
-        
-    # rpm_pred = [0]
-    # for i, dt in enumerate(np.diff(data["time"])):
-    #     rpm_pred.append(rpmdynamics(rpm_pred[-1], data["pwm"][i], dt))
-
-    # # u dot = lambda (u_des - u)
-    # l = 16
-
-    # u_pred = [0]
-    # dts = np.diff(data["time"]) / 1e3
-    # for i, dt in enumerate(dts):
-    #     u = u_pred[-1]
-    #     pwm_des = data["pwm"][i]
-    #     v = data["vbat"][i]
-    #     # convert pwm -> force
-    #     f_des = pwm2force(pwm_des, v) * 4
-
-    #     u_dot = l * (f_des - u)
-    #     u_pred.append(u + u_dot * dt)
-    # u_pred = np.array(u_pred)
+    p_vmotor2thrust = loadYAML(comb, "p_vmotor2thrust", 4)
 
     thrustCMD = data["cmd"]/PWM_MAX*THRUST_MAX
     VmotorCMD = np.zeros_like(data["cmd"])
@@ -231,7 +192,7 @@ def system_id_dynamic(filenames, validations=[]):
         if thrustCMD[i] < THRUST_MIN:
             VmotorCMD[i] = 0
         else:
-            VmotorCMD[i] = inversepoly(thrustCMD[i], p_v_thrust, 3)
+            VmotorCMD[i] = inversepoly(thrustCMD[i], p_vmotor2thrust, 3)
 
     Vmotor = data['vbat'] * data["pwm"] / PWM_MAX
 
@@ -293,6 +254,7 @@ if __name__ == '__main__':
 
     mode = args.mode
     comb = args.comb
+    combVal = comb
     extra = args.extra
     file = args.file
 
@@ -303,19 +265,20 @@ if __name__ == '__main__':
         if extra != "":
             comb = f"{comb}_{extra}"
         files = [
-            # f"data_{mode}_{comb}_M1_00.csv", 
-            # f"data_{mode}_{comb}_M1_01.csv",
-            # f"data_{mode}_{comb}_M1_02.csv",
-            # f"data_{mode}_{comb}_M2_00.csv", 
-            # f"data_{mode}_{comb}_M2_01.csv",
-            # f"data_{mode}_{comb}_M2_02.csv",
+            f"data_{mode}_{comb}_M1_00.csv", 
+            f"data_{mode}_{comb}_M1_01.csv",
+            f"data_{mode}_{comb}_M1_02.csv",
+            f"data_{mode}_{comb}_M2_00.csv", 
+            f"data_{mode}_{comb}_M2_01.csv",
+            f"data_{mode}_{comb}_M2_02.csv",
             f"data_{mode}_{comb}_M4_01.csv", 
-            # f"data_{mode}_{comb}_M4_01.csv", 
-            # f"data_{mode}_{comb}_M4_02.csv", 
+            f"data_{mode}_{comb}_M4_01.csv", 
+            f"data_{mode}_{comb}_M4_02.csv", 
         ]
+        # combVal = "+B250"
         filesVal = [
             # f"data_{mode}_{comb}_M4_00.csv", 
-            f"data_{mode}_{comb}_M4_old_00.csv", 
+            # f"data_{mode}_{comb}_M4_old_00.csv", 
             # f"data_{mode}_{comb}_M4_02.csv", 
         ]
 
