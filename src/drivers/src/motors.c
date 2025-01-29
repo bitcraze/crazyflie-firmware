@@ -223,12 +223,18 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
       static const float p = -p_vmotor2thrust[2] / (3*p_vmotor2thrust[3]);
       float q = p*p*p + (p_vmotor2thrust[2]*p_vmotor2thrust[1]-3*p_vmotor2thrust[3]*(p_vmotor2thrust[0]-thrust)) / (6*p_vmotor2thrust[3]*p_vmotor2thrust[3]);
       static const float r = p_vmotor2thrust[1] / (3*p_vmotor2thrust[3]);
-      float qrp = (float)sqrt(q*q + (r-p*p)*(r-p*p)*(r-p*p));
+      float qrp = sqrtf(q*q + (r-p*p)*(r-p*p)*(r-p*p));
 
-      float motorVoltage = (float)cbrt(q+qrp) + (float)cbrt(q-qrp) + p;
+      float motorVoltage = cbrtf(q+qrp) + cbrtf(q-qrp) + p;
       float ratio = motorVoltage / supplyVoltage;
       return UINT16_MAX * ratio;
     }
+
+    // Old version
+    // float thrust = (iThrust / 65536.0f) * 60;
+    // float volts = -0.0006239f * thrust * thrust + 0.088f * thrust;
+    // float ratio = volts / supplyVoltage;
+    // return UINT16_MAX * ratio;
     
   }
   #endif
