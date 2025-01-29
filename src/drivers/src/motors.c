@@ -131,49 +131,19 @@ GPIO_InitTypeDef GPIO_PassthroughOutput =
     .GPIO_PuPd = GPIO_PuPd_UP
 };
 
-// We have data that maps PWM to thrust at different supply voltage levels.
-// However, it is not the PWM that drives the motors but the voltage and
-// amps (= power). With the PWM it is possible to simulate different
-// voltage levels. The assumption is that the voltage used will be an
-// procentage of the supply voltage, we assume that 50% PWM will result in
-// 50% voltage.
+// What decides the amount of thrust is the voltage of the motor, which is calculated by
+// duty cycle * supply voltage.
+// At a certain thrust command, there needs to be a corresponding motor voltage to 
+// achieve that thrust. That mapping is here fit with a third order polynomial, because
+// the thrust is correlated quadratic with the rpm, but there also is some saturation
+// taking place in a nonideal brushed DC motor with a quadratic load.
 //
-//  Thrust (g)    Supply Voltage    PWM (%)     Voltage needed
-//  0.0           4.01              0           0
-//  1.6           3.98              6.25        0.24875
-//  4.8           3.95              12.25       0.49375
-//  7.9           3.82              18.75       0.735
-//  10.9          3.88              25          0.97
-//  13.9          3.84              31.25       1.2
-//  17.3          3.80              37.5        1.425
-//  21.0          3.76              43.25       1.6262
-//  24.4          3.71              50          1.855
-//  28.6          3.67              56.25       2.06438
-//  32.8          3.65              62.5        2.28125
-//  37.3          3.62              68.75       2.48875
-//  41.7          3.56              75          2.67
-//  46.0          3.48              81.25       2.8275
-//  51.9          3.40              87.5        2.975
-//  57.9          3.30              93.75       3.09375
+// In this case however, we have the thrust given and need to calculate the necessary 
+// motor voltage. For that reason, an inversion of the mapping is done below.
+// To achieve a motor voltage, the duty cycle needs to be adapted based on 
+// the given supply voltage, see the above eq. 
 //
-// To get Voltage needed from wanted thrust we can get the quadratic
-// polyfit coefficients using GNU octave:
-//
-// thrust = [0.0 1.6 4.8 7.9 10.9 13.9 17.3 21.0 ...
-//           24.4 28.6 32.8 37.3 41.7 46.0 51.9 57.9]
-//
-// volts  = [0.0 0.24875 0.49375 0.735 0.97 1.2 1.425 1.6262 1.855 ...
-//           2.064375 2.28125 2.48875 2.67 2.8275 2.975 3.09375]
-//
-// p = polyfit(thrust, volts, 2)
-//
-// => p = -0.00062390   0.08835522   0.06865956
-//
-// We will not use the constant term, since we want zero thrust to equal
-// zero PWM.
-//
-// And to get the PWM as a percentage we would need to divide the
-// Voltage needed with the Supply voltage.
+// For more information see the corresponding blog entry on "PWM to Thrust"
 float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVoltage)
 {
   #ifdef CONFIG_ENABLE_THRUST_BAT_COMPENSATED
@@ -216,10 +186,10 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
     }
     else 
     {
-      // motor voltage to thrust is a cubic fit
+      // Motor voltage to thrust is a cubic fit
       // q, r, p to calculate the inverse of the third order polynomial
       // For more info see https://math.vanderbilt.edu/schectex/courses/cubic/
-      // q and thus qrp need to be calculated each time
+      // q and thus qrp need to be calculated each time while p and r are constant
       static const float p = -p_vmotor2thrust[2] / (3*p_vmotor2thrust[3]);
       float q = p*p*p + (p_vmotor2thrust[2]*p_vmotor2thrust[1]-3*p_vmotor2thrust[3]*(p_vmotor2thrust[0]-thrust)) / (6*p_vmotor2thrust[3]*p_vmotor2thrust[3]);
       static const float r = p_vmotor2thrust[1] / (3*p_vmotor2thrust[3]);
@@ -229,12 +199,6 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
       float ratio = motorVoltage / supplyVoltage;
       return UINT16_MAX * ratio;
     }
-
-    // Old version
-    // float thrust = (iThrust / 65536.0f) * 60;
-    // float volts = -0.0006239f * thrust * thrust + 0.088f * thrust;
-    // float ratio = volts / supplyVoltage;
-    // return UINT16_MAX * ratio;
     
   }
   #endif
