@@ -282,6 +282,9 @@ uint8_t espDeckFlasherPropertiesQuery()
 
   #ifdef CONFIG_DECK_AI_WIFI_SETUP_AP
     DEBUG_PRINT("AI-deck will become access point\n");
+    if (sizeof(CONFIG_DECK_AI_PASSWORD) < 8) {
+      DEBUG_PRINT("Password too short, AP setup will fail\n");
+    }
   #endif
 
     cpxInitRoute(CPX_T_STM32, CPX_T_ESP32, CPX_F_WIFI_CTRL, &cpxTx.route);
