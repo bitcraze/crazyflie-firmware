@@ -110,22 +110,46 @@ class CalibScale:
 
         self._cf.close_link()
 
-        z = np.polyfit(readings, weights, 1)
-        p = np.poly1d(z)
-
-        xp = np.linspace(readings[0], readings[-1], 100)
-
-        plt.plot(readings, weights, '.', label="data")
-        plt.plot(xp, p(xp), '--', label="calibration")
-        # old values for comparison
-        if self.calib_a is not None and self.calib_b is not None:
+        # If there is a previous value, we can simply change the intercept (b)
+        # This is possible because a is constant. Allows for quicker calibration in case the battery is changed
+        # One should still fully recalibrate after moving the loadcell or mounting a different drone
+        if len(readings) == 1 and self.calib_a is not None and self.calib_b is not None:
+            ...
             p_old = np.poly1d([self.calib_a, self.calib_b])
+            xp = readings[0]
+            yp = p_old(xp)
+            delta = yp - weights[0]
+
+            self.calib_b -= delta
+
+            xp = np.linspace(readings[0], readings[0]-1e6, 100)
+            plt.plot(readings, weights, '.', label="data")
             plt.plot(xp, p_old(xp), ':', label="previous calibration")
-        plt.xlabel("Loadcell reading")
-        plt.ylabel("Weight in [g]")
-        plt.legend()
-        plt.show()
-        return float(z[0]), float(z[1])
+            p_new = np.poly1d([self.calib_a, self.calib_b])
+            plt.plot(xp, p_new(xp), ':', label="calibration")
+            plt.xlabel("Loadcell reading")
+            plt.ylabel("Weight in [g]")
+            plt.legend()
+            plt.show()
+
+            return float(self.calib_a), float(self.calib_b)
+        else:
+            z = np.polyfit(readings, weights, 1)
+            p = np.poly1d(z)
+
+            xp = np.linspace(readings[0], readings[-1], 100)
+
+            plt.plot(readings, weights, '.', label="data")
+            plt.plot(xp, p(xp), '--', label="calibration")
+            # old values for comparison
+            if self.calib_a is not None and self.calib_b is not None:
+                p_old = np.poly1d([self.calib_a, self.calib_b])
+                plt.plot(xp, p_old(xp), ':', label="previous calibration")
+            plt.xlabel("Loadcell reading")
+            plt.ylabel("Weight in [g]")
+            plt.legend()
+            plt.show()
+            return float(z[0]), float(z[1])
 
 
 if __name__ == '__main__':
