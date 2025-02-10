@@ -42,6 +42,11 @@ config CONTROLLER_BRESCIANINI
     help
         Use the Brescianini controller as default
 
+config CONTROLLER_LEE
+    bool "Lee controller"
+    help
+        Use the Lee controller as default
+
 endchoice
 
 config CONTROLLER_OOT
