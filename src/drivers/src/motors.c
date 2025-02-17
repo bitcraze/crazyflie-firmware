@@ -55,15 +55,15 @@ static uint16_t motor_ratios[] = {0, 0, 0, 0};  // actual PWM signals
 static uint8_t batCompEnable = 1; // TODO
 // Depending on the configuration of motors/propellers, the thrust curve changes
 #if (CONFIG_THRUST_BAT_COMPENSATION_TYPE == 1) // 2.1+ propellers
-static const float p_vmotor2thrust[] = {-0.02427920377129026f, 0.06433042290821364f, -0.026401054210489865f, 0.006731877887386432f};
+static const float p_vmotor2thrust[] = {-0.02476537915958403f, 0.06523793527519485f, -0.026792504967750107f, 0.006776789303971145f};
 static float thrust_min = 0.02f;
 static float thrust_max = 0.1125f;
 #elif (CONFIG_THRUST_BAT_COMPENSATION_TYPE == 2) // Thrust upgrade kit
-static const float p_vmotor2thrust[] = {-0.03837021192237189f, 0.1069971903229056f, -0.05376881228518654f, 0.015904765173435587f};
+static const float p_vmotor2thrust[] = {-0.03978221591250353f, 0.10979738851226176f, -0.05545304285403245f, 0.016215002062640885f};
 static float thrust_min = 0.03f;
 static float thrust_max = 0.1625f;
 #else                                            // default case, legacy propellers
-static const float p_vmotor2thrust[] = {-0.014277758669699159f, 0.04615310129202505f, -0.01792897132252934f, 0.00588008743242753f};
+static const float p_vmotor2thrust[] = {-0.014830744918356092f, 0.04724465241828281f, -0.01847364358025878f, 0.005960923942142f};
 static float thrust_min = 0.02f;
 static float thrust_max = 0.1125f;
 #endif
