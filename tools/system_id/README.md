@@ -14,8 +14,8 @@ This folder contains scripts to measure propellers and motors using the systemId
   * QRD1114 (RPM)
 * Calibration weights
 * M2/M3 Nylon screws
-* CF Mount (3D printed) TODO upload
-* Loadcell mount (3D printed, optional) TODO upload
+* CF Mount (3D printed)
+* Loadcell mount (3D printed, optional)
 
 Mount CF upside down (to avoid downwash)
 
@@ -24,18 +24,18 @@ Mount CF upside down (to avoid downwash)
 ### Common
 
 1. Mount CF
-2. Switch to crazyflie-lib-python with branch `feature-emergency-stop` in order to be able to CTRL+C a script safely. TODO how?
+2. Switch to crazyflie-lib-python with branch `feature-emergency-stop` in order to be able to CTRL+C a script safely. (TODO not featured anymore?)
 3. Build firmware with configuration `make sysid_defconfig` and `make -j$(nproc)`
 4. Flash firmware by bringing the Crazyflie into flash mode and running `make cload`
-5. Run `python3 calibscale.py --uri <URI>` and follow the prompts to calibrate the load cell. This will create an output file `calibration.yaml` with the calibration data. The other scripts will read this file (other name can be specified as command line argument).
+5. Run `python3 calibscale.py --uri <URI>` and follow the prompts to calibrate the load cell. This will create an output file `calibration.yaml` with the calibration data. The other scripts will read this file (other name can be specified as command line argument). After changing the battery, you don't have to do a whole new calibration. Instead, you can simply set the 0 value for the new battery. It is assumed that the slope of the calibration is the same.
 
 ### Ramping Motors
 
 This test will simply ramp the motors up and down. The results can be visualized with the correcsponding plot script. Is is not really needed and just for fun. 
 
 ```
-python3 collect_data.py --uri <URI> --mode=ramp_motors --comb=<COMB> 
-python3 plot_data_ramp_motors.py --file=<FILENAME>
+python3 collect_data.py --uri <URI> --mode ramp_motors --comb <COMB> 
+python3 plot_data_ramp_motors.py --file <FILENAME>
 ```
 
 ### System identification
@@ -44,58 +44,35 @@ The system identification is done in three steps, each called a different mode: 
 
 The scheme for all data collection and identification script is the same:
 ```
-python3 collect_data.py --uri=<URI> --mode=<MODE> --comb=<COMB> 
-python3 system_id.py --mode=<MODE> --comb=<COMB> 
+python3 collect_data.py --uri <URI> --mode <MODE> --comb <COMB> 
+python3 system_id.py --mode <MODE> --comb <COMB> 
 ```
 
 The collected data is then saved accordingly to `data_<MODE>_<COMB>.csv`.
 
 The combination of propellers, motors, and battery needs to be given by COMB. In theory, you can put whatever you want for COMB or even leave it empty. We've come up with the following scheme to distinguish different setups easily:
 
-| Chars                   | Option 1    | Option 2    | Option 3      |
-| --------                | -------     | -------     | -------       |
-| 1: Propeller type       | old: -      | 2.1+: +     |
-| 2: Motor type           | 17mm: B     | 20mm: T     | Brushless: L  |
-| 3-5: Battery capacity   | 250mAh: 250 | 350mAh: 350 |
+The motors and propellers are given by the first character. **L** for the legacy propellers with the 17mm motors. **P** for the 2.1+ propellers with the 17mm motors. **T** for the thrust upgrade kit propellers and 20mm motors. **B** for the brushless setup.
 
-As an example: The Crazyflies 2.1+ gets shipped with the new propellers, 17mm motors, and a 250mAh battery, so we would set `COMB=+B250`.
+The number following is simply the capacity in mAh of the used battery.
+
+As an example: The Crazyflies 2.1+ gets shipped with the new propellers, 17mm motors, and a 250mAh battery, so we would set `COMB=P250`.
 
 #### Static parameters
 `mode = static`
 
 In this mode, the motors are given random commands in a valid range and all the important data is stored. From that we can calculate the most important curve: Vmotors [V] -> Thrust [N], where Vmotors = PWM_CMD / PWM_MAX * Vbat. This curve helps us to calculate the needed PWM_CMD from a thrust command and the current battery voltage Vbat. Additionally, the RPM -> Thrust [N] curve and the efficiency is identified.
 
-The important parameters will be stored in params_<COMB>.yaml
+The important parameters will be stored in `params_<COMB>.yaml`
 
 #### Verification
 
-TODO
+To verify the parameters, we need to add the new set of values to the firmware. In `motors.c`, we can find the arrays for the battery compensation called the same as in the yaml file (p_vmotor2thrust). After adding the new values and flashing, we run the data collection `mode = static_verification`, where the motors are again given random commands, but the thrust is battery compensated. Note: You need to set the correct compensation mode in the sysid_defconfig!
+
+In the system_id part, we should see all values beeing on the plane in the first plot or the line in the second plot. That means the battery compensation works.
 
 #### Dynamic parameters
 
-TODO
+Lastly, we want to know how fast the motors can change speed/thrust. In `mode = dynamic`, data is first collected with motors changing speed from lowest PWM to highest PWM command, once with and once without battery compensation.
 
-
-### System identification
-
-This test will randomly select sample a PWM value and average the resulting force and measured vbat over a short period of time. With that information we can identify the system. The system_id script calculates a mapping from vmotor, which is vbat*PWM/65535, to thrust. This helps to know how the battery compensation needs to be set. Additionally, this script calculates the efficiency in g/W. The results are also stored in the .yaml file used for the calibration data. TODO actually implement that. TODO RPM2THRUST
-
-```
-python3 collect_data.py --uri <URI> --mode=max_thrust --comb=<COMB> 
-python3 system_id.py
-```
-
-To verify the results, we first need to add the new battery compensation values to the battery compensation in `motors.c`. We can then activate the battery compensation by using `make sysverif_defconfig`. After building and flashing, data can be collected with `mode=verification`. To visualize the results, run the following script. All data points should be in the same plane as in the plot.
-
-```
-python3 system_id_verification.py
-```
-
-### Motor Delay
-
-This test uses a higher sampling rate and visualizes the delayed motor response given a step input. TODO. TODO include the RPM2THRUST dynamics
-
-```
-python3 collect_data.py --uri <URI> --mode=motor_delay --comb=<COMB> 
-python3 plot_data_motor_delay.py
-```
+In the system_id part, we can observe a first order thrust dynamic: $\dot{thrust} = \tau (thrust_{CMD}-thrust)$. The parameter $\tau$ gets identified.
