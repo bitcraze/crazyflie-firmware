@@ -33,6 +33,10 @@
 #define USE_SERIAL_4WAY_BLHELI_BOOTLOADER
 #ifdef  USE_SERIAL_4WAY_BLHELI_INTERFACE
 
+//FreeRTOS includes
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include "motors.h"
 #include "usec_time.h"
 #include "led.h"
@@ -151,6 +155,18 @@ uint8_t esc4wayInit(void)
     for (volatile uint8_t i = 0; i < NBR_OF_MOTORS; i++) {
       motorsEnablePassthough(i);
       escCount++;
+    }
+
+    // Let ESCs enter bootloader mode
+    vTaskDelay(M2T(200));
+
+    // Make them stay in bootloader mode.
+    for (volatile uint8_t i = 0; i < NBR_OF_MOTORS; i++) {
+      motorsESCSetOutput(i);
+      motorsESCSetLo(i);
+      vTaskDelay(M2T(1));
+      motorsESCSetInput(i);
+      motorsESCSetHi(i);
     }
 
     return escCount;

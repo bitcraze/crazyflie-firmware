@@ -24,16 +24,22 @@
  * power_distribution_quadrotor.c - Crazyflie stock power distribution code
  */
 
+
 #include "power_distribution.h"
 
 #include <string.h>
+#include "debug.h"
 #include "log.h"
 #include "param.h"
 #include "num.h"
 #include "autoconf.h"
 #include "config.h"
 #include "math.h"
+#include "platform_defaults.h"
 
+#if (!defined(CONFIG_MOTORS_REQUIRE_ARMING) || (CONFIG_MOTORS_REQUIRE_ARMING == 0)) && defined(CONFIG_MOTORS_DEFAULT_IDLE_THRUST) && (CONFIG_MOTORS_DEFAULT_IDLE_THRUST > 0)
+    #error "CONFIG_MOTORS_REQUIRE_ARMING must be defined and not set to 0 if CONFIG_MOTORS_DEFAULT_IDLE_THRUST is greater than 0"
+#endif
 #ifndef CONFIG_MOTORS_DEFAULT_IDLE_THRUST
 #  define DEFAULT_IDLE_THRUST 0
 #else
@@ -41,10 +47,12 @@
 #endif
 
 static uint32_t idleThrust = DEFAULT_IDLE_THRUST;
-static float armLength = 0.046f; // m;
+static float armLength = ARM_LENGTH; // m
 static float thrustToTorque = 0.005964552f;
 
 // thrust = a * pwm^2 + b * pwm
+//    where PWM is normalized (range 0...1)
+//          thrust is in Newtons (per rotor)
 static float pwmToThrustA = 0.091492681f;
 static float pwmToThrustB = 0.067673604f;
 
@@ -60,6 +68,11 @@ uint16_t powerDistributionStopRatio(uint32_t id)
 
 void powerDistributionInit(void)
 {
+  #if (!defined(CONFIG_MOTORS_REQUIRE_ARMING) || (CONFIG_MOTORS_REQUIRE_ARMING == 0))
+  if(idleThrust > 0) {
+    DEBUG_PRINT("WARNING: idle thrust will be overridden with value 0. Autoarming can not be on while idle thrust is higher than 0. If you want to use idle thust please use use arming\n");
+  }
+  #endif
 }
 
 bool powerDistributionTest(void)
@@ -160,14 +173,25 @@ bool powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUnca
   for (int motorIndex = 0; motorIndex < STABILIZER_NR_OF_MOTORS; motorIndex++)
   {
     int32_t thrustCappedUpper = motorThrustBatCompUncapped->list[motorIndex] - reduction;
-    motorPwm->list[motorIndex] = capMinThrust(thrustCappedUpper, idleThrust);
+    motorPwm->list[motorIndex] = capMinThrust(thrustCappedUpper, powerDistributionGetIdleThrust());
   }
 
   return isCapped;
 }
 
-uint32_t powerDistributionGetIdleThrust() {
-  return idleThrust;
+uint32_t powerDistributionGetIdleThrust()
+{
+  int32_t thrust = idleThrust;
+  #if (!defined(CONFIG_MOTORS_REQUIRE_ARMING) || (CONFIG_MOTORS_REQUIRE_ARMING == 0))
+    thrust = 0;
+  #endif
+  return thrust;
+}
+
+float powerDistributionGetMaxThrust() {
+  // max thrust per rotor occurs if normalized PWM is 1
+  // pwmToThrustA * pwm * pwm + pwmToThrustB * pwm = pwmToThrustA + pwmToThrustB
+  return STABILIZER_NR_OF_MOTORS * (pwmToThrustA + pwmToThrustB);
 }
 
 /**

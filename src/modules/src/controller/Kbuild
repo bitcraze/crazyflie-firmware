@@ -6,3 +6,4 @@ obj-y += controller_pid.o
 obj-y += controller_brescianini.o
 obj-y += position_controller_indi.o
 obj-y += position_controller_pid.o
+obj-y += controller_lee.o

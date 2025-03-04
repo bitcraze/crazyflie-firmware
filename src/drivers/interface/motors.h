@@ -58,7 +58,6 @@
 #define MOTORS_TIM_DBG_CFG        DBGMCU_APB2PeriphConfig
 #define MOTORS_GPIO_AF_CFG(a,b,c) GPIO_PinAFConfig(a,b,c)
 
-
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_ONESHOT125
 /**
  * *WARNING* Make sure the brushless driver is configured correctly as on the Crazyflie with normal
@@ -224,6 +223,7 @@ typedef struct
   uint32_t      gpioPowerswitchPerif;
   GPIO_TypeDef* gpioPowerswitchPort;
   uint16_t      gpioPowerswitchPin;
+  bool          hasPC15ESCReset;
   uint32_t      timPerif;
   TIM_TypeDef*  tim;
   uint16_t      timPolarity;
@@ -323,9 +323,9 @@ void motorsBurstDshot();
 void motorsSetRatio(uint32_t id, uint16_t ratio);
 
 /**
- * Get the PWM ratio of the motor 'id'. Return -1 if wrong ID.
+ * Get the PWM ratio of the motor 'id'.
  */
-int motorsGetRatio(uint32_t id);
+uint16_t motorsGetRatio(uint32_t id);
 
 /**
  * FreeRTOS Task to test the Motors driver

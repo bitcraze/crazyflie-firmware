@@ -69,7 +69,7 @@
 #define USBD_PRODUCT_HS_STRING          "STM32 Virtual ComPort in HS mode"
 #define USBD_SERIALNUMBER_HS_STRING     "00000000050B"
 
-#define USBD_PRODUCT_FS_STRING          "Crazyflie 2.X"
+#define USBD_PRODUCT_FS_STRING          "Crazyflie 2.x"
 #define USBD_SERIALNUMBER_FS_STRING     "00000000050C"
 
 #define USBD_CONFIGURATION_HS_STRING    "VCP Config"

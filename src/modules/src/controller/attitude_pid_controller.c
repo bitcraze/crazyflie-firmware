@@ -143,14 +143,14 @@ void attitudeControllerCorrectRatePID(
        float rollRateDesired, float pitchRateDesired, float yawRateDesired)
 {
   pidSetDesired(&pidRollRate, rollRateDesired);
-  rollOutput = saturateSignedInt16(pidUpdate(&pidRollRate, rollRateActual, true));
+  rollOutput = saturateSignedInt16(pidUpdate(&pidRollRate, rollRateActual, false));
 
   pidSetDesired(&pidPitchRate, pitchRateDesired);
-  pitchOutput = saturateSignedInt16(pidUpdate(&pidPitchRate, pitchRateActual, true));
+  pitchOutput = saturateSignedInt16(pidUpdate(&pidPitchRate, pitchRateActual, false));
 
   pidSetDesired(&pidYawRate, yawRateDesired);
 
-  yawOutput = saturateSignedInt16(pidUpdate(&pidYawRate, yawRateActual, true));
+  yawOutput = saturateSignedInt16(pidUpdate(&pidYawRate, yawRateActual, false));
 }
 
 void attitudeControllerCorrectAttitudePID(
@@ -159,41 +159,35 @@ void attitudeControllerCorrectAttitudePID(
        float* rollRateDesired, float* pitchRateDesired, float* yawRateDesired)
 {
   pidSetDesired(&pidRoll, eulerRollDesired);
-  *rollRateDesired = pidUpdate(&pidRoll, eulerRollActual, true);
+  *rollRateDesired = pidUpdate(&pidRoll, eulerRollActual, false);
 
   // Update PID for pitch axis
   pidSetDesired(&pidPitch, eulerPitchDesired);
-  *pitchRateDesired = pidUpdate(&pidPitch, eulerPitchActual, true);
+  *pitchRateDesired = pidUpdate(&pidPitch, eulerPitchActual, false);
 
   // Update PID for yaw axis
-  float yawError;
-  yawError = eulerYawDesired - eulerYawActual;
-  if (yawError > 180.0f)
-    yawError -= 360.0f;
-  else if (yawError < -180.0f)
-    yawError += 360.0f;
-  pidSetError(&pidYaw, yawError);
-  *yawRateDesired = pidUpdate(&pidYaw, eulerYawActual, false);
+  pidSetDesired(&pidYaw, eulerYawDesired);
+  *yawRateDesired = pidUpdate(&pidYaw, eulerYawActual, true);
 }
 
-void attitudeControllerResetRollAttitudePID(void)
+void attitudeControllerResetRollAttitudePID(float rollActual)
 {
-    pidReset(&pidRoll);
+    pidReset(&pidRoll, rollActual);
 }
 
-void attitudeControllerResetPitchAttitudePID(void)
+void attitudeControllerResetPitchAttitudePID(float pitchActual)
 {
-    pidReset(&pidPitch);
+    pidReset(&pidPitch, pitchActual);
 }
 
-void attitudeControllerResetAllPID(void)
+void attitudeControllerResetAllPID(float rollActual, float pitchActual, float yawActual)
 {
-  pidReset(&pidRoll);
-  pidReset(&pidPitch);
-  pidReset(&pidYaw);
-  pidReset(&pidRollRate);
-  pidReset(&pidPitchRate);
-  pidReset(&pidYawRate);
+  pidReset(&pidRoll, rollActual);
+  pidReset(&pidPitch, pitchActual);
+  pidReset(&pidYaw, yawActual);
+  pidReset(&pidRollRate, 0);
+  pidReset(&pidPitchRate, 0);
+  pidReset(&pidYawRate, 0);
 }
 
 void attitudeControllerGetActuatorOutput(int16_t* roll, int16_t* pitch, int16_t* yaw)

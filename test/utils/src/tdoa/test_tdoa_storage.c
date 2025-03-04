@@ -599,7 +599,7 @@ void testThatNoTimeOfFlightIsReturnedWhenRemoteAnchorIsNotInStorage() {
   tdoaStorageGetCreateAnchorCtx(storage, anchor, storageTime, &context);
 
   // Test
-  int64_t actual = tdoaStorageGetTimeOfFlight(&context, remoteAnchor);
+  int64_t actual = tdoaStorageGetRemoteTimeOfFlight(&context, remoteAnchor);
 
   // Assert
   TEST_ASSERT_EQUAL_INT64(expected, actual);
@@ -617,7 +617,7 @@ void testThatTimeOfFlightIsReturnedWhenSet() {
   fixtureSetTof(&context, anchor, storageTime, remoteAnchor, expected);
 
   // Test
-  int64_t actual = tdoaStorageGetTimeOfFlight(&context, remoteAnchor);
+  int64_t actual = tdoaStorageGetRemoteTimeOfFlight(&context, remoteAnchor);
 
   // Assert
   TEST_ASSERT_EQUAL_INT64(expected, actual);
@@ -638,7 +638,7 @@ void testThatTimeOfFlightIsReturnedWhenSetASecondTime() {
   fixtureSetTof(&context, anchor, storageTime, remoteAnchor, expected);
 
   // Test
-  int64_t actual = tdoaStorageGetTimeOfFlight(&context, remoteAnchor);
+  int64_t actual = tdoaStorageGetRemoteTimeOfFlight(&context, remoteAnchor);
 
   // Assert
   TEST_ASSERT_EQUAL_INT64(expected, actual);
@@ -675,11 +675,31 @@ void testThatTofReplacesTheOldestEntryWhenStorageIsFull() {
   fixtureSetTof(&context, anchor, verificationStorageTime, verificationRemoteAnchor, verificationTof);
 
   // Assert
-  const int64_t actualVerification = tdoaStorageGetTimeOfFlight(&context, verificationRemoteAnchor);
+  const int64_t actualVerification = tdoaStorageGetRemoteTimeOfFlight(&context, verificationRemoteAnchor);
   TEST_ASSERT_EQUAL_INT64(verificationTof, actualVerification);
 
-  const int64_t actualReplaced = tdoaStorageGetTimeOfFlight(&context, oldestRemoteAnchor);
+  const int64_t actualReplaced = tdoaStorageGetRemoteTimeOfFlight(&context, oldestRemoteAnchor);
   TEST_ASSERT_EQUAL_INT64(0, actualReplaced);
+}
+
+// Not possible to put the ifdef outside the test function due to the way the test framework is implemented
+void testThatTimeOfFlightIsSet() {
+#ifdef CONFIG_DECK_LOCO_TDOA3_HYBRID_MODE
+  // Fixture
+  uint32_t storageTime_ms = 1234;
+  int64_t expectedToF = 4747474747;
+
+  tdoaAnchorContext_t context;
+  tdoaStorageGetCreateAnchorCtx(storage, 0, 0, &context);
+
+  // Test
+  tdoaStorageSetTimeOfFlight(&context, expectedToF, storageTime_ms);
+
+  // Assert
+  TEST_ASSERT_EQUAL_UINT64(expectedToF, tdoaStorageGetTimeOfFlight(&context, storageTime_ms - 1));
+  TEST_ASSERT_EQUAL_UINT64(expectedToF, tdoaStorageGetTimeOfFlight(&context, storageTime_ms));
+  TEST_ASSERT_EQUAL_UINT64(0, tdoaStorageGetTimeOfFlight(&context, storageTime_ms + 1));
+#endif
 }
 
 
@@ -692,5 +712,5 @@ static void fixtureSetRemoteRxTime(tdoaAnchorContext_t* context, const uint8_t a
 
 static void fixtureSetTof(tdoaAnchorContext_t* context, const uint8_t anchor, const uint32_t storageTime, const uint8_t remoteAnchor, const uint64_t tof) {
   tdoaStorageGetCreateAnchorCtx(storage, anchor, storageTime, context);
-  tdoaStorageSetTimeOfFlight(context, remoteAnchor, tof);
+  tdoaStorageSetRemoteTimeOfFlight(context, remoteAnchor, tof);
 }

@@ -37,6 +37,7 @@ typedef enum {
     supervisorStateWarningLevelOut,
     supervisorStateExceptFreeFall,
     supervisorStateLocked,
+    supervisorStateCrashed,
     supervisorState_NrOfStates,
 } supervisorState_t;
 
@@ -48,6 +49,9 @@ typedef enum {
   supervisorConditionCommanderWdtWarning,
   supervisorConditionCommanderWdtTimeout,
   supervisorConditionEmergencyStop,
+  supervisorConditionIsCrashed,
+  supervisorConditionPreflightTimeout,
+  supervisorConditionLandingTimeout,
   supervisorCondition_NrOfConditions,
 } supervisorConditions_t;
 
@@ -61,6 +65,9 @@ typedef uint32_t supervisorConditionBits_t;
 #define SUPERVISOR_CB_COMMANDER_WDT_WARNING (1 << supervisorConditionCommanderWdtWarning)
 #define SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT (1 << supervisorConditionCommanderWdtTimeout)
 #define SUPERVISOR_CB_EMERGENCY_STOP (1 << supervisorConditionEmergencyStop)
+#define SUPERVISOR_CB_CRASHED (1 << supervisorConditionIsCrashed)
+#define SUPERVISOR_CB_PREFLIGHT_TIMEOUT (1 << supervisorConditionPreflightTimeout)
+#define SUPERVISOR_CB_LANDING_TIMEOUT (1 << supervisorConditionLandingTimeout)
 
 
 // Enum that is used to describe how to combine the bits in the required field

@@ -1,3 +1,5 @@
 obj-y += exptest.o
+obj-y += exptestCfBl.o
 obj-y += exptestRR.o
 obj-y += exptestBolt11.o
+obj-y += radiotest.o

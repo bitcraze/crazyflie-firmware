@@ -107,12 +107,14 @@ typedef float * (*paramGetterFloat)(void);
 /* Macros */
 
 #define PARAM_ADD_FULL(TYPE, NAME, ADDRESS, CALLBACK, DEFAULT_GETTER) \
-    { .type = ((TYPE) <= 0xFF) ? (TYPE) : (((TYPE) | PARAM_EXTENDED) & 0xFF), \
+    { .type = ((TYPE) <= 0xFF) ? ((TYPE) & 0xFF) : (((TYPE) | PARAM_EXTENDED) & 0xFF), \
       .extended_type = (((TYPE) & 0xFF00) >> 8), \
       .name = #NAME, \
       .address = (void*)(ADDRESS), \
       .callback = (void *)CALLBACK, \
       .getter = (void *)DEFAULT_GETTER, },
+// Storing (TYPE) & 0xFF instead of just (TYPE) in the first branch is a no-op,
+// but it prevents noisy spurious warnings when compiling bindings with Clang.
 
 #define PARAM_ADD(TYPE, NAME, ADDRESS) \
     PARAM_ADD_FULL(TYPE, NAME, ADDRESS, 0, 0)

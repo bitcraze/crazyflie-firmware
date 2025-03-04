@@ -27,17 +27,17 @@ choice
 
 config PLATFORM_CF2
     bool "Build for CF2"
-    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_BMP3XX
     select SENSORS_MPU9250_LPS25H
 
 config PLATFORM_BOLT
     bool "Build for Bolt"
-    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_BMP3XX
     select SENSORS_BMI088_SPI
 
 config PLATFORM_TAG
     bool "Build for the roadrunner"
-    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_BMP3XX
 
 endchoice
 ```
@@ -53,21 +53,21 @@ choice
 
 config PLATFORM_CF2
     bool "Build for CF2"
-    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_BMP3XX
     select SENSORS_MPU9250_LPS25H
 
 config PLATFORM_BOLT
     bool "Build for Bolt"
-    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_BMP3XX
     select SENSORS_BMI088_SPI
 
 config PLATFORM_TAG
     bool "Build for the roadrunner"
-    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_BMP3XX
 
 config PLATFORM_RINCEWIND
     bool "Build for the Rincewind platform"
-    select SENSORS_BMI088_BMP388
+    select SENSORS_BMI088_BMP3XX
     select SENSORS_BMI088_SPI
 
 endchoice
@@ -81,6 +81,7 @@ We need to add a entry point for your platform. The way the build system determi
 ```Makefile
 obj-$(CONFIG_PLATFORM_BOLT) += platform_bolt.o
 obj-$(CONFIG_PLATFORM_CF2) += platform_cf2.o
+obj-$(CONFIG_PLATFORM_CF21BL) += platform_cf21bl.o
 obj-$(CONFIG_PLATFORM_TAG) += platform_tag.o
 obj-y += platform.o
 obj-y += platform_stm32f4.o
@@ -92,6 +93,7 @@ Let's add `RINCEWIND`:
 ```Makefile
 obj-$(CONFIG_PLATFORM_BOLT) += platform_bolt.o
 obj-$(CONFIG_PLATFORM_CF2) += platform_cf2.o
+obj-$(CONFIG_PLATFORM_CF21BL) += platform_cf21bl.o
 obj-$(CONFIG_PLATFORM_TAG) += platform_tag.o
 obj-$(CONFIG_PLATFORM_RINCEWIND) += platform_rincewind.o
 obj-y += platform.o
@@ -116,7 +118,7 @@ static platformConfig_t configs[] = {
   {
     .deviceType = "CB10",
     .deviceTypeName = "Rincewind",
-    .sensorImplementation = SensorImplementation_bmi088_spi_bmp388,
+    .sensorImplementation = SensorImplementation_bmi088_spi_bmp3xx,
     .physicalLayoutAntennasAreClose = false,
     .motorMap = motorMapBoltBrushless,
   }
@@ -156,6 +158,9 @@ Your platform need to define suitable default values to (persistent) parameters.
 #ifdef CONFIG_PLATFORM_CF2
     #include "platform_defaults_cf2.h"
 #endif
+#ifdef CONFIG_PLATFORM_CF21BL
+    #include "platform_defaults_cf21bl.h"
+#endif
 #ifdef CONFIG_PLATFORM_BOLT
     #include "platform_defaults_bolt.h"
 #endif
@@ -174,6 +179,9 @@ Becomes:
 
 #ifdef CONFIG_PLATFORM_CF2
     #include "platform_defaults_cf2.h"
+#endif
+#ifdef CONFIG_PLATFORM_CF21BL
+    #include "platform_defaults_cf21bl.h"
 #endif
 #ifdef CONFIG_PLATFORM_BOLT
     #include "platform_defaults_bolt.h"

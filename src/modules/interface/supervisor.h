@@ -110,9 +110,26 @@ bool supervisorCanArm();
 bool supervisorIsArmed();
 
 /**
- * @brief Query if the system is locked (due to a crash)
+ * @brief Query if the system is locked (due to an emergency stop or watchdog timeout)
  *
  * @return true
  * @return false
  */
 bool supervisorIsLocked();
+
+/**
+ * @brief Query if the system is crashed
+ *
+ * @return true
+ * @return false
+ */
+bool supervisorIsCrashed();
+
+/**
+ * @brief Request the system to be recover if crashed.
+ *
+ * @param doRecover true - request recovery. false - request crashed.
+ * @return true   The request was granted
+ * @return false  The request could not be granted
+ */
+bool supervisorRequestCrashRecovery(const bool doRecover);

@@ -47,9 +47,9 @@
 #include "log.h"
 #include "param.h"
 
-static bool motorSetEnable = false;
+static uint8_t motorSetEnable = 0;
 static uint16_t motorPowerSet[] = {0, 0, 0, 0}; // user-requested PWM signals (overrides)
-static uint32_t motor_ratios[] = {0, 0, 0, 0};  // actual PWM signals
+static uint16_t motor_ratios[] = {0, 0, 0, 0};  // actual PWM signals
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
 static DMA_InitTypeDef DMA_InitStructureShare;
@@ -98,6 +98,7 @@ const MotorHealthTestDef unknownMotorHealthTestSettings = {
 static bool isInit = false;
 static uint64_t lastCycleTime;
 static uint32_t cycleTime;
+
 
 /* Private functions */
 
@@ -223,6 +224,20 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
 
   DEBUG_PRINT("Using %s motor driver\n", motorMap[0]->drvType == BRUSHED ? "brushed" : "brushless");
 
+  if (motorMap[MOTOR_M1]->hasPC15ESCReset)
+  {
+    MOTORS_RCC_GPIO_CMD(RCC_AHB1Periph_GPIOC, ENABLE);
+    // Configure the GPIO for CF-BL ESC RST
+    GPIO_StructInit(&GPIO_InitStructure);
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+    GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_15;
+    GPIO_Init(GPIOC, &GPIO_InitStructure);
+    // Hold reset for all CF-BL ESC:s by pulling low.
+    GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_RESET);
+  }
+
   for (i = 0; i < NBR_OF_MOTORS; i++)
   {
     //Clock the gpio and the timers
@@ -272,9 +287,11 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
     motorMap[i]->ocInit(motorMap[i]->tim, &TIM_OCInitStructure);
     motorMap[i]->preloadConfig(motorMap[i]->tim, TIM_OCPreload_Enable);
   }
+
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
   motorsDshotDMASetup();
 #endif
+
   // Start the timers
   for (i = 0; i < NBR_OF_MOTORS; i++)
   {
@@ -285,6 +302,12 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
 
   // Output zero power
   motorsStop();
+
+  if (motorMap[MOTOR_M1]->hasPC15ESCReset)
+  {
+    // Release reset for all CF-BL ESC:s after motor signal is activated
+    GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_SET);
+  }
 }
 
 void motorsDeInit(const MotorPerifDef** motorMapSelect)
@@ -340,7 +363,10 @@ void motorsStop()
   }
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
-  motorsBurstDshot();
+  if (motorMap[0]->drvType == BRUSHLESS)
+  {
+    motorsBurstDshot();
+  }
 #endif
 }
 
@@ -467,7 +493,13 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
 
     uint16_t ratio = ithrust;
 
-    if (motorSetEnable) {
+    // Override ratio in case of motorSetEnable
+    if (motorSetEnable == 2)
+    {
+      ratio = motorPowerSet[MOTOR_M1];
+    }
+    else if (motorSetEnable == 1)
+    {
       ratio = motorPowerSet[id];
     }
 
@@ -561,7 +593,7 @@ int motorsESCIsLo(uint32_t id)
   return GPIO_ReadInputDataBit(motorMap[id]->gpioPort, motorMap[id]->gpioPin) == Bit_RESET;
 }
 
-int motorsGetRatio(uint32_t id)
+uint16_t motorsGetRatio(uint32_t id)
 {
   ASSERT(id < NBR_OF_MOTORS);
 
@@ -717,17 +749,17 @@ LOG_GROUP_START(motor)
 /**
  * @brief Motor power (PWM value) for M1 [0 - UINT16_MAX]
  */
-LOG_ADD_CORE(LOG_UINT32, m1, &motor_ratios[MOTOR_M1])
+LOG_ADD_CORE(LOG_UINT16, m1, &motor_ratios[MOTOR_M1])
 /**
  * @brief Motor power (PWM value) for M2 [0 - UINT16_MAX]
  */
-LOG_ADD_CORE(LOG_UINT32, m2, &motor_ratios[MOTOR_M2])
+LOG_ADD_CORE(LOG_UINT16, m2, &motor_ratios[MOTOR_M2])
 /**
  * @brief Motor power (PWM value) for M3 [0 - UINT16_MAX]
  */
-LOG_ADD_CORE(LOG_UINT32, m3, &motor_ratios[MOTOR_M3])
+LOG_ADD_CORE(LOG_UINT16, m3, &motor_ratios[MOTOR_M3])
 /**
  * @brief Motor power (PWM value) for M4 [0 - UINT16_MAX]
  */
-LOG_ADD_CORE(LOG_UINT32, m4, &motor_ratios[MOTOR_M4])
+LOG_ADD_CORE(LOG_UINT16, m4, &motor_ratios[MOTOR_M4])
 LOG_GROUP_STOP(motor)

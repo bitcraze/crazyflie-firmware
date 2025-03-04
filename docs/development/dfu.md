@@ -43,9 +43,9 @@ First compile the firmware as normal with `make`.
 
 Now it is time to boot the STM32F405 in the DFU update mode
 
-     1. Connect a micro-USB cable to you computer but not yet to the Crazyflie 2.X
-     2. Disconnect the Crazyflie 2.X battery if it is connected
-     3. Now hold down the push button (on/off) while inserting the USB cable in the Crazyflie 2.X
+     1. Connect a micro-USB cable to you computer but not yet to the Crazyflie 2.x
+     2. Disconnect the Crazyflie 2.x battery if it is connected
+     3. Now hold down the push button (on/off) while inserting the USB cable in the Crazyflie 2.x
      4. Hold down the button for about 5 seconds until you reach the second blink rate (1Hz). Then you can release the button.
      5. The STM32F405 is now in DFU mode
 

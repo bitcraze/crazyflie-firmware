@@ -3,6 +3,7 @@ menu "Controllers and Estimators"
 choice
     prompt "Default controller"
     default CONFIG_CONTROLLER_AUTO_SELECT
+    depends on !CONTROLLER_OOT
 
 config CONTROLLER_AUTO_SELECT
     bool "Auto select Controller"
@@ -40,6 +41,11 @@ config CONTROLLER_BRESCIANINI
     bool "Brescianini controller"
     help
         Use the Brescianini controller as default
+
+config CONTROLLER_LEE
+    bool "Lee controller"
+    help
+        Use the Lee controller as default
 
 endchoice
 
@@ -150,16 +156,6 @@ config MOTORS_REQUIRE_ARMING
         When enabled, system must be armed to be able to take off. Arming can
         be done in several ways, e.g. though cfclient or external transmitter.
 
-config MOTORS_DEFAULT_IDLE_THRUST
-    int "Default idle thrust for motors in armed state"
-    range 0 65535
-    default 0
-    depends on MOTORS_REQUIRE_ARMING
-    help
-        Default thrust for motors when idling in armed state, expressed as an
-        integer in the range 0 to 65535. This can be overridden with parameters;
-        the value specified here applies to the case when the persistent storage
-        does not contain an idle thrust value.
 
 config MOTORS_DEFAULT_PROP_TEST_PWM_RATIO
     int "Override default PWM ratio to use during motor tests"
@@ -192,7 +188,7 @@ choice
 
 config POWER_DISTRIBUTION_QUADROTOR
     bool "Quadrotor power distribution"
-    depends on PLATFORM_CF2 || PLATFORM_BOLT || PLATFORM_TAG
+    depends on PLATFORM_CF2 || PLATFORM_CF21BL|| PLATFORM_BOLT || PLATFORM_TAG
     help
         Power distribution function for quadrotors
 config POWER_DISTRIBUTION_FLAPPER
@@ -215,7 +211,7 @@ config ENABLE_THRUST_BAT_COMPENSATED
     help
         Compensate thrust depending on battery voltage so it will produce about the same
         amount of thrust independent of the battery voltage.
-        The compensation is based on thrust measurements, which are only valid for CF2.X stock configuration.
+        The compensation is based on thrust measurements, which are only valid for CF2.1 stock configuration.
         Not applied for brushless motor setup.
 
 config LOG_MOTOR_CAP_WARNING
@@ -238,5 +234,13 @@ config PARAM_SILENT_UPDATES
         break some functionality in clients that expect to receive feedback
         about parameter updates, so this option should be enabled if you know
         what you are doing.
+
+config DEFRAG_STORAGE_ON_STARTUP
+    bool "Defrag_on_startup"
+    default y
+    help
+        This enables defragmentation of parameter storage memory everytime the
+        CPU is started. It increases startup time, depending on
+        fragmentation level.
 
 endmenu

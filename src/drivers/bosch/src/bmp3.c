@@ -694,6 +694,8 @@ static int8_t get_err_status(struct bmp3_dev *dev);
  */
 static int8_t convert_frames_to_bytes(uint16_t *watermark_len, const struct bmp3_dev *dev);
 
+uint8_t bmp3_chip_id = 0;
+
 /****************** Global Function Definitions *******************************/
 /*!
  *  @brief This API is the entry point.
@@ -723,7 +725,14 @@ int8_t bmp3_init(struct bmp3_dev *dev)
 		/* Proceed if everything is fine until now */
 		if (rslt == BMP3_OK) {
 			/* Check for chip id validity */
-			if (chip_id == BMP3_CHIP_ID) {
+			if (chip_id == BMP388_CHIP_ID) {
+				bmp3_chip_id = BMP388_CHIP_ID;
+			}
+			else if (chip_id == BMP390_CHIP_ID) {
+				bmp3_chip_id = BMP390_CHIP_ID;
+			}
+
+			if (bmp3_chip_id){
 				dev->chip_id = chip_id;
 				/* Reset the sensor */
 				rslt = bmp3_soft_reset(dev);

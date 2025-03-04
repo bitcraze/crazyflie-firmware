@@ -18,7 +18,7 @@ Note that the Loco deck is only transmitting in TWR mode or when setting anchor 
 Loco deck does not increase the space that a TDoA system covers.
 
 To change to full power:
-1. In a terminal, run `make meuconfig`
+1. In a terminal, run `make menuconfig`
 2. Go to `Expansion deck configuration`
 3. Check the `Full TX power` option under the `Support the Loco positioning deck` section
 4. Save and exit

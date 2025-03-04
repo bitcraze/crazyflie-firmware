@@ -31,7 +31,7 @@
 // A position controller calculate the thrust, roll, pitch to approach
 // a 3D position setpoint
 void positionControllerInit();
-void positionControllerResetAllPID();
+void positionControllerResetAllPID(float xActual, float yActual, float zActual);
 void positionControllerResetAllfilters();
 void positionController(float* thrust, attitude_t *attitude, const setpoint_t *setpoint,
                                                              const state_t *state);

@@ -619,84 +619,68 @@ LOG_GROUP_STOP(twr)
  * Log group for distances (ranges) to anchors aquired by Two Way Ranging (TWR)
  */
 LOG_GROUP_START(ranging)
-#if (LOCODECK_NR_OF_TWR_ANCHORS > 0)
 /**
  * @brief Distance to anchor 0 [m]
  */
 LOG_ADD(LOG_FLOAT, distance0, &state.distance[0])
-#endif
-
-#if (LOCODECK_NR_OF_TWR_ANCHORS > 1)
 /**
  * @brief Distance to anchor 1 [m]
  */
 LOG_ADD(LOG_FLOAT, distance1, &state.distance[1])
-#endif
-
-#if (LOCODECK_NR_OF_TWR_ANCHORS > 2)
 /**
  * @brief Distance to anchor 2 [m]
  */
 LOG_ADD(LOG_FLOAT, distance2, &state.distance[2])
-#endif
-
-#if (LOCODECK_NR_OF_TWR_ANCHORS > 3)
 /**
  * @brief Distance to anchor 3 [m]
  */
 LOG_ADD(LOG_FLOAT, distance3, &state.distance[3])
-#endif
-
-#if (LOCODECK_NR_OF_TWR_ANCHORS > 4)
 /**
  * @brief Distance to anchor 4 [m]
  */
 LOG_ADD(LOG_FLOAT, distance4, &state.distance[4])
-#endif
-
-#if (LOCODECK_NR_OF_TWR_ANCHORS > 5)
 /**
  * @brief Distance to anchor 5 [m]
  */
 LOG_ADD(LOG_FLOAT, distance5, &state.distance[5])
-#endif
-
-#if (LOCODECK_NR_OF_TWR_ANCHORS > 6)
 /**
  * @brief Distance to anchor 6 [m]
  */
 LOG_ADD(LOG_FLOAT, distance6, &state.distance[6])
-#endif
-
-#if (LOCODECK_NR_OF_TWR_ANCHORS > 7)
 /**
  * @brief Distance to anchor 7 [m]
  */
 LOG_ADD(LOG_FLOAT, distance7, &state.distance[7])
-#endif
-
-#if (LOCODECK_NR_OF_TWR_ANCHORS > 0)
+/**
+ * @brief ASL of anchor 0 [m]
+ */
 LOG_ADD(LOG_FLOAT, pressure0, &state.pressures[0])
-#endif
-#if (LOCODECK_NR_OF_TWR_ANCHORS > 1)
+/**
+ * @brief ASL of anchor 1 [m]
+ */
 LOG_ADD(LOG_FLOAT, pressure1, &state.pressures[1])
-#endif
-#if (LOCODECK_NR_OF_TWR_ANCHORS > 2)
+/**
+ * @brief ASL of anchor 2 [m]
+ */
 LOG_ADD(LOG_FLOAT, pressure2, &state.pressures[2])
-#endif
-#if (LOCODECK_NR_OF_TWR_ANCHORS > 3)
+/**
+ * @brief ASL of anchor 3 [m]
+ */
 LOG_ADD(LOG_FLOAT, pressure3, &state.pressures[3])
-#endif
-#if (LOCODECK_NR_OF_TWR_ANCHORS > 4)
+/**
+ * @brief ASL of anchor 4 [m]
+ */
 LOG_ADD(LOG_FLOAT, pressure4, &state.pressures[4])
-#endif
-#if (LOCODECK_NR_OF_TWR_ANCHORS > 5)
+/**
+ * @brief ASL of anchor 5 [m]
+ */
 LOG_ADD(LOG_FLOAT, pressure5, &state.pressures[5])
-#endif
-#if (LOCODECK_NR_OF_TWR_ANCHORS > 6)
+/**
+ * @brief ASL of anchor 6 [m]
+ */
 LOG_ADD(LOG_FLOAT, pressure6, &state.pressures[6])
-#endif
-#if (LOCODECK_NR_OF_TWR_ANCHORS > 7)
+/**
+ * @brief ASL of anchor 7 [m]
+ */
 LOG_ADD(LOG_FLOAT, pressure7, &state.pressures[7])
-#endif
 LOG_GROUP_STOP(ranging)

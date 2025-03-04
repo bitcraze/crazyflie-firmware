@@ -47,6 +47,7 @@ static const char* const stateNames[] = {
   "Warning, level out",
   "Exception, free fall",
   "Locked",
+  "Crashed",
 };
 static_assert(sizeof(stateNames) / sizeof(stateNames[0]) == supervisorState_NrOfStates);
 
@@ -57,14 +58,11 @@ static const char* const conditionNames[] = {
   "commanderWdtWarning",
   "commanderWdtTimeout",
   "emergencyStop",
+  "isCrashed",
+  "preflightTimeout",
+  "landingTimeout",
 };
 static_assert(sizeof(conditionNames) / sizeof(conditionNames[0]) == supervisorCondition_NrOfConditions);
-
-#if SUPERVISOR_TUMBLE_CHECK_ENABLE
-  #define SUPERVISOR_CB_CONF_IS_TUMBLED (SUPERVISOR_CB_IS_TUMBLED)
-#else
-  #define SUPERVISOR_CB_CONF_IS_TUMBLED (SUPERVISOR_CB_NONE)
-#endif
 
 // State transition definitions
 static SupervisorStateTransition_t transitionsNotInitialized[] = {
@@ -90,7 +88,7 @@ static SupervisorStateTransition_t transitionsPreFlChecksNotPassed[] = {
 
     .triggerCombiner = supervisorAlways,
 
-    .blockers = SUPERVISOR_CB_CONF_IS_TUMBLED,
+    .blockers = SUPERVISOR_CB_IS_TUMBLED,
     .negatedBlockers = SUPERVISOR_CB_NONE,
     .blockerCombiner = supervisorAny,
   }
@@ -109,7 +107,7 @@ static SupervisorStateTransition_t transitionsPreFlChecksPassed[] = {
   {
     .newState = supervisorStatePreFlChecksNotPassed,
 
-    .triggers = SUPERVISOR_CB_CONF_IS_TUMBLED,
+    .triggers = SUPERVISOR_CB_IS_TUMBLED,
     .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAny,
 
@@ -122,7 +120,7 @@ static SupervisorStateTransition_t transitionsPreFlChecksPassed[] = {
     .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAll,
 
-    .blockers = SUPERVISOR_CB_CONF_IS_TUMBLED,
+    .blockers = SUPERVISOR_CB_IS_TUMBLED,
     .negatedBlockers = SUPERVISOR_CB_NONE,
     .blockerCombiner = supervisorAny,
   },
@@ -141,7 +139,7 @@ static SupervisorStateTransition_t transitionsReadyToFly[] = {
   {
     .newState = supervisorStatePreFlChecksNotPassed,
 
-    .triggers = SUPERVISOR_CB_CONF_IS_TUMBLED,
+    .triggers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_PREFLIGHT_TIMEOUT,
     .negatedTriggers = SUPERVISOR_CB_ARMED,
     .triggerCombiner = supervisorAny,
 
@@ -162,9 +160,27 @@ static SupervisorStateTransition_t transitionsFlying[] = {
   {
     .newState = supervisorStateExceptFreeFall,
 
-    .triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_CONF_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
-    .negatedTriggers = SUPERVISOR_CB_ARMED,
+    .triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_EMERGENCY_STOP,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAny,
+
+    .blockerCombiner = supervisorNever,
+  },
+  {
+    .newState = supervisorStateCrashed,
+
+    .triggers = SUPERVISOR_CB_IS_TUMBLED,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAny,
+
+    .blockerCombiner = supervisorNever,
+  },
+  {
+    .newState = supervisorStateReset,
+
+    .triggers = SUPERVISOR_CB_NONE,
+    .negatedTriggers = SUPERVISOR_CB_ARMED,
+    .triggerCombiner = supervisorAll,
 
     .blockerCombiner = supervisorNever,
   },
@@ -192,10 +208,21 @@ static SupervisorStateTransition_t transitionsLanded[] = {
   {
     .newState = supervisorStateReset,
 
-    .triggerCombiner = supervisorAlways,
+    .triggers = SUPERVISOR_CB_LANDING_TIMEOUT,
+    .negatedTriggers = SUPERVISOR_CB_ARMED,
+    .triggerCombiner = supervisorAny,
 
     .blockerCombiner = supervisorNever,
   },
+  {
+    .newState = supervisorStateFlying,
+
+    .triggers = SUPERVISOR_CB_IS_FLYING,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAll,
+
+    .blockerCombiner = supervisorNever,
+  }
 };
 
 static SupervisorStateTransition_t transitionsReset[] = {
@@ -212,8 +239,8 @@ static SupervisorStateTransition_t transitionsWarningLevelOut[] = {
   {
     .newState = supervisorStateExceptFreeFall,
 
-    .triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_CONF_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
-    .negatedTriggers = SUPERVISOR_CB_ARMED,
+    .triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAny,
 
     .blockerCombiner = supervisorNever,
@@ -249,6 +276,28 @@ static SupervisorStateTransition_t transitionsLocked[] = {
   },
 };
 
+
+static SupervisorStateTransition_t transitionsTumbled[] = {
+  {
+    .newState = supervisorStatePreFlChecksNotPassed,
+
+    .triggers = SUPERVISOR_CB_NONE,
+    .negatedTriggers = SUPERVISOR_CB_CRASHED | SUPERVISOR_CB_IS_TUMBLED,
+    .triggerCombiner = supervisorAll,
+
+    .blockerCombiner = supervisorNever
+  },
+  {
+    .newState = supervisorStateLocked,
+
+    .triggers = SUPERVISOR_CB_EMERGENCY_STOP,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAll,
+
+    .blockerCombiner = supervisorNever
+  },
+};
+
 SupervisorStateTransitionList_t transitionLists[] = {
   {SUPERVISOR_TRANSITION_ENTRY(transitionsNotInitialized)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsPreFlChecksNotPassed)},
@@ -260,6 +309,7 @@ SupervisorStateTransitionList_t transitionLists[] = {
   {SUPERVISOR_TRANSITION_ENTRY(transitionsWarningLevelOut)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsExceptFreeFall)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsLocked)},
+  {SUPERVISOR_TRANSITION_ENTRY(transitionsTumbled)},
 };
 static_assert(sizeof(transitionLists) / sizeof(transitionLists[0]) == supervisorState_NrOfStates);
 

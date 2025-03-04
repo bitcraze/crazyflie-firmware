@@ -29,6 +29,7 @@
 #include "num.h"
 #include <math.h>
 #include <float.h>
+#include "autoconf.h"
 
 void pidInit(PidObject* pid, const float desired, const float kp,
              const float ki, const float kd, const float kff, const float dt,
@@ -36,7 +37,7 @@ void pidInit(PidObject* pid, const float desired, const float kp,
              bool enableDFilter)
 {
   pid->error         = 0;
-  pid->prevError     = 0;
+  pid->prevMeasured  = 0;
   pid->integ         = 0;
   pid->deriv         = 0;
   pid->desired       = desired;
@@ -54,93 +55,105 @@ void pidInit(PidObject* pid, const float desired, const float kp,
   }
 }
 
-float pidUpdate(PidObject* pid, const float measured, const bool updateError)
+float pidUpdate(PidObject* pid, const float measured, const bool isYawAngle)
 {
-    float output = 0.0f;
+  float output = 0.0f;
 
-    if (updateError)
+  pid->error = pid->desired - measured;
+  
+  if (isYawAngle){
+    if (pid->error > 180.0f){
+      pid->error -= 360.0f;
+    } else if (pid->error < -180.0f){
+      pid->error += 360.0f;
+    }
+  }
+  
+  pid->outP = pid->kp * pid->error;
+  output += pid->outP;
+
+  /*
+  * Note: The derivative term in this PID controller is implemented based on the
+  * derivative of the measured process variable instead of the error.
+  * This approach avoids derivative kick, which can occur due to sudden changes
+  * in the setpoint. By using the process variable for the derivative calculation, we achieve
+  * smoother and more stable control during setpoint changes.
+  */
+  float delta = -(measured - pid->prevMeasured);
+
+  // For yaw measurements, take care of spikes when crossing 180deg <-> -180deg  
+  if (isYawAngle){
+    if (delta > 180.0f){
+      delta -= 360.0f;
+    } else if (delta < -180.0f){
+      delta += 360.0f;
+    }
+  }
+  
+  #if CONFIG_CONTROLLER_PID_FILTER_ALL
+    pid->deriv = delta / pid->dt;
+  #else
+    if (pid->enableDFilter){
+      pid->deriv = lpf2pApply(&pid->dFilter, delta / pid->dt);
+    } else {
+      pid->deriv = delta / pid->dt;
+    }
+  #endif
+  if (isnan(pid->deriv)) {
+    pid->deriv = 0;
+  }
+  pid->outD = pid->kd * pid->deriv;
+  output += pid->outD;
+
+  pid->integ += pid->error * pid->dt;
+
+  // Constrain the integral (unless the iLimit is zero)
+  if(pid->iLimit != 0)
+  {
+    pid->integ = constrain(pid->integ, -pid->iLimit, pid->iLimit);
+  }
+
+  pid->outI = pid->ki * pid->integ;
+  output += pid->outI;
+
+  pid->outFF = pid->kff * pid->desired;
+  output += pid->outFF;
+  
+  #if CONFIG_CONTROLLER_PID_FILTER_ALL
+    //filter complete output instead of only D component to compensate for increased noise from increased barometer influence
+    if (pid->enableDFilter)
     {
-        pid->error = pid->desired - measured;
+      output = lpf2pApply(&pid->dFilter, output);
     }
-
-    pid->outP = pid->kp * pid->error;
-    output += pid->outP;
-
-    float deriv = (pid->error - pid->prevError) / pid->dt;
-    
-    #if CONFIG_CONTROLLER_PID_FILTER_ALL
-      pid->deriv = deriv;
-    #else
-      if (pid->enableDFilter){
-        pid->deriv = lpf2pApply(&pid->dFilter, deriv);
-      } else {
-        pid->deriv = deriv;
-      }
-    #endif
-    if (isnan(pid->deriv)) {
-      pid->deriv = 0;
+    else {
+      output = output;
     }
-    pid->outD = pid->kd * pid->deriv;
-    output += pid->outD;
-
-    pid->integ += pid->error * pid->dt;
-
-    // Constrain the integral (unless the iLimit is zero)
-    if(pid->iLimit != 0)
-    {
-    	pid->integ = constrain(pid->integ, -pid->iLimit, pid->iLimit);
+    if (isnan(output)) {
+      output = 0;
     }
+  #endif
 
-    pid->outI = pid->ki * pid->integ;
-    output += pid->outI;
+  // Constrain the total PID output (unless the outputLimit is zero)
+  if(pid->outputLimit != 0)
+  {
+    output = constrain(output, -pid->outputLimit, pid->outputLimit);
+  }
 
-    pid->outFF = pid->kff * pid->desired;
-    output += pid->outFF;
-    
-    #if CONFIG_CONTROLLER_PID_FILTER_ALL
-      //filter complete output instead of only D component to compensate for increased noise from increased barometer influence
-      if (pid->enableDFilter)
-      {
-        output = lpf2pApply(&pid->dFilter, output);
-      }
-      else {
-        output = output;
-      }
-      if (isnan(output)) {
-        output = 0;
-      }
-     #endif
-      
-    
+  pid->prevMeasured = measured;
 
-    // Constrain the total PID output (unless the outputLimit is zero)
-    if(pid->outputLimit != 0)
-    {
-      output = constrain(output, -pid->outputLimit, pid->outputLimit);
-    }
-
-
-    pid->prevError = pid->error;
-
-    return output;
+  return output;
 }
 
 void pidSetIntegralLimit(PidObject* pid, const float limit) {
     pid->iLimit = limit;
 }
 
-
-void pidReset(PidObject* pid)
+void pidReset(PidObject* pid, const float actual)
 {
-  pid->error     = 0;
-  pid->prevError = 0;
-  pid->integ     = 0;
-  pid->deriv     = 0;
-}
-
-void pidSetError(PidObject* pid, const float error)
-{
-  pid->error = error;
+  pid->error        = 0;
+  pid->prevMeasured = actual;
+  pid->integ        = 0;
+  pid->deriv        = 0;
 }
 
 void pidSetDesired(PidObject* pid, const float desired)

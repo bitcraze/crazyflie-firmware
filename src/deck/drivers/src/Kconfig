@@ -57,7 +57,7 @@ config DECK_BIGQUAD
     bool "Support the BigQuad deck"
     default n
     help
-        With the BigQuad deck you can transform your Crazyflie 2.X to a
+        With the BigQuad deck you can transform your Crazyflie 2.x to a
         bigger quad by connecting external Electronic speed controllers
         (ESCs) to the breakout connectors on the deck. The autodetection
         of the deck makes this transformation possible to do in seconds.
@@ -182,7 +182,7 @@ config DECK_FLOW
     select DECK_ZRANGER
     select DECK_ZRANGER2
     help
-        The Flow deck gives the Crazyflie 2.X the ability to understand
+        The Flow deck gives the Crazyflie 2.x the ability to understand
         when it’s moving in any direction. The VL53L1x ToF sensor measures
         the distance to the ground with high precision and the PMW3901
         optical flow sensor measures movements in relation to the ground.
@@ -290,7 +290,7 @@ config DECK_LOCO
     help
         The Loco Positioning deck is a Tag in a Loco Positioning system
         and measures the distances to Anchors. The distances are used to
-        estimate the absolute position of the Crazyflie 2.X in the room,
+        estimate the absolute position of the Crazyflie 2.x in the room,
         which can be used for autonomous flight. The position is calculated
         on-board of the Crazyflie and there is no need for an external
         computer for position estimation.
@@ -350,6 +350,15 @@ config DECK_LOCO_LONGER_RANGE
     help
         Note that anchors need to be built with support for this as well
 
+config DECK_LOCO_TDOA3_HYBRID_MODE
+    bool "Support TDoA3 hybrid mode"
+    depends on DECK_LOCO
+    default n
+    help
+        In the standard TDoA3 mode anchors are transmitting while the Crazyflies only receive. In hybrid mode the
+        Crazyflies can also transmit and thus do TWR, either for positioning them selfs or to act as an anchor for
+        other Crazyflies.
+
 config DECK_LOCO_TDMA
     bool "Use Time Division Multiple Access"
     depends on DECK_LOCO_ALGORITHM_TWR
@@ -383,7 +392,7 @@ config DECK_MULTIRANGER
     bool "Support the Multi-ranger deck"
     default y
     help
-        The Multi-ranger deck  gives the Crazyflie 2.X the ability to
+        The Multi-ranger deck  gives the Crazyflie 2.x the ability to
         detect objects around it. This is done by measuring the distance
         to objects in the following 5 directions: front/back/left/right/up
         with mm precision up to 4 meters.
@@ -393,6 +402,37 @@ config DECK_OA
     default y
     help
         Codename: Obstacle Avoidance driver, obsolete deck.
+
+config DECK_SERVO
+    bool "Support the servo deck (prototype/via BigQuad deck)"
+    default n
+    help
+      Servo PWM driver.
+
+choice
+    prompt "Servo pin"
+    depends on DECK_SERVO
+    default DECK_SERVO_USE_TX2
+
+    config DECK_SERVO_USE_TX2
+        bool "PA2/TX2"
+    
+    config DECK_SERVO_USE_RX2
+        bool "PA3/RX2"
+
+    config DECK_SERVO_USE_IO1
+        bool "PB8/IO_1"
+
+    config DECK_SERVO_USE_IO2
+        bool "PB5/IO_2"
+
+    config DECK_SERVO_USE_IO3
+        bool "PB4/IO_3"
+
+    config DECK_SERVO_USE_MOSI
+        bool "PA7/MOSI"
+
+endchoice
 
 config DECK_USD
     bool "Support the Micro SD card deck"
@@ -449,3 +489,22 @@ config DECK_CPX_HOST_ON_UART2
       forced, since this is intended to be used without actually having a proper
       deck attached (i.e there will be no 1-wire memory to automatically detect
       and start the driver).
+
+config DECK_ACS37800
+    bool "Support for the power measurement deck"
+    default n
+    help
+        Enables the support for the ACS37800 chip that can measure power/current/voltage.
+      
+config DECK_RPM
+    bool "Support the rpm deck"
+    default y
+    help
+        Enables the rpm deck that can be usfull in testing.
+      
+config DECK_LOADCELL
+    bool "Support for loadcell NAU7802"
+    default n
+    help
+        Enables the support for the NAU7802 loadcell.
+      
