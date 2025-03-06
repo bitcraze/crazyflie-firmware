@@ -65,10 +65,17 @@ bool vl53l1xInit(VL53L1_Dev_t *pdev, I2C_Dev *I2Cx)
   taskENTER_CRITICAL();
   newAddress = nextI2CAddress++;
   taskEXIT_CRITICAL();
+  if(newAddress > RANGER_DECKS_ADDRESS_END)
+  {
+	status = VL53L1_ERROR_UNDEFINED;
+  }
 
-  vl53l1xSetI2CAddress(pdev, newAddress);
+  if (status == VL53L1_ERROR_NONE)
+  {
+  	vl53l1xSetI2CAddress(pdev, newAddress);
 
-  status = VL53L1_DataInit(pdev);
+	status = VL53L1_DataInit(pdev);
+  }
 
   if (status == VL53L1_ERROR_NONE)
   {

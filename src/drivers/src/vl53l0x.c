@@ -124,6 +124,10 @@ bool vl53l0xInit(VL53L0xDev* dev, I2C_Dev *I2Cx, bool io_2V8)
   taskENTER_CRITICAL();
   newAddress = nextI2CAddress++;
   taskEXIT_CRITICAL();
+  if(newAddress > RANGER_DECKS_ADDRESS_END)
+  {
+    return false;
+  }
 
   return vl53l0xSetI2CAddress(dev, newAddress);
 }
