@@ -76,7 +76,6 @@
 #define ACSREG_DSP_STATUS   0x2D
 #define ACSREG_ACCESS_CODE  0x2F
 
-#define ACS_I2C_ADDR        0x7F
 #define ACS_ACCESS_CODE     0x4F70656E
 
 

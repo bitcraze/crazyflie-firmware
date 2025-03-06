@@ -66,7 +66,6 @@ INCBIN(bootloader, "bootloader.bin");
 #define LH_SPI_CS DECK_GPIO_IO1
 #define LH_FPGA_RESET DECK_GPIO_RX2
 
-#define LH_I2C_ADDR         0x2F
 #define LH_FLASH_PAGE_SIZE  256
 #define LH_WRITE_BUF_SIZE   (5 + 4 + LH_FLASH_PAGE_SIZE)
 

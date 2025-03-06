@@ -29,8 +29,6 @@
 
 #include "i2cdev.h"
 
-#define VL53L0X_DEFAULT_ADDRESS 0b0101001
-
 #define VL53L0X_RA_SYSRANGE_START                              0x00
 
 #define VL53L0X_REG_I2C_SLAVE_DEVICE_ADDRESS                   0x8a
@@ -156,7 +154,7 @@ typedef struct
 } VL53L0xDev;
 
 /** Default constructor, uses external I2C address.
- * @see VL53L0X_DEFAULT_ADDRESS
+ * @see RANGER_DECKS_DEFAULT_ADDRESS
  */
 bool vl53l0xInit(VL53L0xDev* dev, I2C_Dev *I2Cx, bool io_2V8);
 
