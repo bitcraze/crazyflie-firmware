@@ -29,7 +29,7 @@
 #include "crtp.h"
 
 #define APPCHANNEL_WAIT_FOREVER (-1)
-#define APPCHANNEL_MTU (31)
+#define APPCHANNEL_MTU (30)
 
 /**
  * Send an app-channel packet - deprecated (removed after August 2023). Use appchannelSendDataPacketBlock() instead.
