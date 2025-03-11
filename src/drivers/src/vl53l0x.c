@@ -96,16 +96,16 @@ static uint16_t vl53l0xReadReg16Bit(VL53L0xDev* dev, uint8_t reg);
 static bool vl53l0xWriteReg16Bit(VL53L0xDev* dev, uint8_t reg, uint16_t val);
 static bool vl53l0xWriteReg32Bit(VL53L0xDev* dev, uint8_t reg, uint32_t val);
 
-static int nextI2CAddress = VL53L0X_DEFAULT_ADDRESS+1;
+static int nextI2CAddress = RANGER_DECKS_ADDRESS_START+1;
 
 /** Default constructor, uses default I2C address.
- * @see VL53L0X_DEFAULT_ADDRESS
+ * @see RANGER_DECKS_DEFAULT_ADDRESS
  */
 
 bool vl53l0xInit(VL53L0xDev* dev, I2C_Dev *I2Cx, bool io_2V8)
 {
   dev->I2Cx = I2Cx;
-  dev->devAddr = VL53L0X_DEFAULT_ADDRESS;
+  dev->devAddr = RANGER_DECKS_DEFAULT_ADDRESS;
 
   dev->io_timeout = 0;
   dev->did_timeout = 0;
@@ -124,6 +124,10 @@ bool vl53l0xInit(VL53L0xDev* dev, I2C_Dev *I2Cx, bool io_2V8)
   taskENTER_CRITICAL();
   newAddress = nextI2CAddress++;
   taskEXIT_CRITICAL();
+  if(newAddress > RANGER_DECKS_ADDRESS_END)
+  {
+    return false;
+  }
 
   return vl53l0xSetI2CAddress(dev, newAddress);
 }
