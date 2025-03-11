@@ -27,19 +27,25 @@
 
 
 void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasurement_t *sweepInfo, const uint32_t nowMs, OutlierFilterLhState_t* sweepOutlierFilterState) {
-  // Rotate the sensor position from CF reference frame to global reference frame,
-  // using the CF roatation matrix
+  // Sensor position in global reference frame
   vec3d s;
-  arm_matrix_instance_f32 Rcf_ = {3, 3, (float32_t *)this->R};
-  arm_matrix_instance_f32 scf_ = {3, 1, (float32_t *)*sweepInfo->sensorPos};
   arm_matrix_instance_f32 s_ = {3, 1, s};
+  // Rotation matrix from Crazyflie to global reference frame
+  arm_matrix_instance_f32 Rcf_ = {3, 3, (float32_t *)this->R};
+  // Sensor position in Crazyflie reference frame
+  arm_matrix_instance_f32 scf_ = {3, 1, (float32_t *)*sweepInfo->sensorPos};
+
+  // Rotate the sensor position to the global reference frame
   mat_mult(&Rcf_, &scf_, &s_);
 
-  // Get the current state values of the position of the crazyflie (global reference frame) and add the relative sensor pos
+  // Crazyflie position in global reference frame
+  // Gets the current state values of the position of the Crazyflie in the global reference frame and add the relative sensor pos
   vec3d pcf = {this->S[KC_STATE_X] + s[0], this->S[KC_STATE_Y] + s[1], this->S[KC_STATE_Z] + s[2]};
 
-  // Calculate the difference between the rotor and the sensor on the CF (global reference frame)
+  // Rotor position in global reference frame
+  // Calculates the difference between the rotor and the sensor on the Crazyflie in global reference frame
   const vec3d* pr = sweepInfo->rotorPos;
+  // Difference in position between the rotor and the sensor on the Crazyflie in global reference frame
   vec3d stmp = {pcf[0] - (*pr)[0], pcf[1] - (*pr)[1], pcf[2] - (*pr)[2]};
   arm_matrix_instance_f32 stmp_ = {3, 1, stmp};
 
@@ -70,12 +76,23 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
     const float qNum = r2 - z_tan_t * z_tan_t;
     // Avoid singularity
     if (qNum > 0.0001f) {
+      // Position Jacobians: ∂α/∂X, ∂α/∂Y, ∂α/∂Z
+
       const float q = tan_t / arm_sqrt(qNum);
+
+      // Jacobian of the sweep angle measurement α w.r.t sensor position (x, y, z)
+      // Computed in the rotor reference frame:
+      // gr = [ ∂α/∂x, ∂α/∂y, ∂α/∂z ] (rotor frame)
+      //
+      // For derivation review the paper:
+      // Taffanel et al. (2021), "Lighthouse positioning system: Dataset, accuracy, and precision for UAV research", arXiv:2104.11523
       vec3d gr = {(-y - x * z * q) / r2, (x - y * z * q) / r2 , q};
 
-      // gr is in the rotor reference frame, rotate back to the global
-      // reference frame using the rotor rotation matrix
+      // Jacobian of the sweep angle measurement α w.r.t sensor position,
+      // rotated from rotor frame (gr) into the global reference frame:
+      // g = [ ∂α/∂X, ∂α/∂Y, ∂α/∂Z ] (global frame)
       vec3d g;
+
       arm_matrix_instance_f32 gr_ = {3, 1, gr};
       arm_matrix_instance_f32 Rr_ = {3, 3, (float32_t *)(*sweepInfo->rotorRot)};
       arm_matrix_instance_f32 g_ = {3, 1, g};
