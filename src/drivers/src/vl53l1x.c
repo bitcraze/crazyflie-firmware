@@ -57,7 +57,7 @@ bool vl53l1xInit(VL53L1_Dev_t *pdev, I2C_Dev *I2Cx)
   VL53L1_Error status = VL53L1_ERROR_NONE;
 
   pdev->I2Cx = I2Cx;
-  pdev->devAddr = RANGER_DECKS_ADDRESS_START;
+  pdev->devAddr = RANGER_DECKS_DEFAULT_ADDRESS;
 
   /* Move initialized sensor to a new I2C address */
   int newAddress;
