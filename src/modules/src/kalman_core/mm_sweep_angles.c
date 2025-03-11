@@ -99,9 +99,34 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
       mat_mult(&Rr_, &gr_, &g_);
 
       float h[KC_STATE_DIM] = {0};
-      h[KC_STATE_X] = g[0];
-      h[KC_STATE_Y] = g[1];
-      h[KC_STATE_Z] = g[2];
+      h[KC_STATE_X] = g[0]; // ∂α/∂X
+      h[KC_STATE_Y] = g[1]; // ∂α/∂Y
+      h[KC_STATE_Z] = g[2]; // ∂α/∂Z
+
+      // Orientation Jacobians: ∂α/∂φ, ∂α/∂θ, ∂α/∂ψ
+      //
+      // Applying the chain rule ∂α/∂φ = ∂α/∂x * ∂x/∂φ + ∂α/∂y * ∂y/∂φ + ∂α/∂z * ∂z/∂φ
+      // Similar for ∂α/∂θ, ∂α/∂ψ
+      //
+      // We already have ∂α/∂X, ∂α/∂Y, ∂α/∂Z from the position Jacobians
+      // We need ∂x/∂φ, ∂y/∂φ, ∂z/∂φ, ∂x/∂θ, ∂y/∂θ, ∂z/∂θ, ∂x/∂ψ, ∂y/∂ψ, ∂z/∂ψ
+      // These can be derived from the rotation matrices
+
+      float dx_droll = 0.0f; // ∂x/∂φ
+      float dy_droll = -s[2]; // ∂y/∂φ
+      float dz_droll = s[1]; // ∂z/∂φ
+
+      float dx_dpitch = -s[2]; // ∂x/∂θ
+      float dy_dpitch = 0.0f; // ∂y/∂θ
+      float dz_dpitch = s[0]; // ∂z/∂θ
+
+      float dx_dyaw = -s[1]; // ∂x/∂ψ
+      float dy_dyaw = s[0]; // ∂y/∂ψ
+      float dz_dyaw = 0.0f; // ∂z/∂ψ
+
+      h[KC_STATE_D0] = dx_droll*g[0] + dy_droll*g[1] + dz_droll*g[2]; // ∂α/∂φ
+      h[KC_STATE_D1] = dx_dpitch*g[0] + dy_dpitch*g[1] + dz_dpitch*g[2]; // ∂α/∂θ
+      h[KC_STATE_D2] = dx_dyaw*g[0] + dy_dyaw*g[1] + dz_dyaw*g[2]; // ∂α/∂ψ
 
       arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
       kalmanCoreScalarUpdate(this, &H, error, sweepInfo->stdDev);
