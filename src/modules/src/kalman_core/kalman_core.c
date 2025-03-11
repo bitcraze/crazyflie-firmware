@@ -69,6 +69,8 @@
 // the reversion of pitch and roll to zero
 #ifdef CONFIG_DECK_LOCO_2D_POSITION
 #define ROLLPITCH_ZERO_REVERSION (0.0f)
+#elif defined(CONFIG_DECK_LIGHTHOUSE) // implement a check if we are using lighthouse / mocap or anything where we don't want "zero reversion". This reversion to 0 is good for anything that relies on the IMU only for attitude
+#define ROLLPITCH_ZERO_REVERSION (0.0f)
 #else
 #define ROLLPITCH_ZERO_REVERSION (0.001f)
 #endif
