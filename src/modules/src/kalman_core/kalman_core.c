@@ -65,11 +65,16 @@
 #include "static_mem.h"
 
 // #define DEBUG_STATE_CHECK
+#define USE_EXTERNAL_POSITIONING
 
 // the reversion of pitch and roll to zero
 #ifdef CONFIG_DECK_LOCO_2D_POSITION
 #define ROLLPITCH_ZERO_REVERSION (0.0f)
-#elif defined(CONFIG_DECK_LIGHTHOUSE) // implement a check if we are using lighthouse / mocap or anything where we don't want "zero reversion". This reversion to 0 is good for anything that relies on the IMU only for attitude
+#elif defined(USE_EXTERNAL_POSITIONING)
+// When using an external positioning system (e.g., Lighthouse/MoCap) that provides an absolute orientation reference,
+// we disable zero reversion—meaning we do not force the attitude states back to zero.
+// Zero reversion is useful for systems relying solely on the IMU (which tends to drift) to maintain a near-zero error,
+// but with an external reference, we want the filter to rely on that accurate absolute measurement instead.
 #define ROLLPITCH_ZERO_REVERSION (0.0f)
 #else
 #define ROLLPITCH_ZERO_REVERSION (0.001f)
@@ -126,12 +131,21 @@ static void assertStateNotNaN(const kalmanCoreData_t* this)
 
 void kalmanCoreDefaultParams(kalmanCoreParams_t* params)
 {
-  // Initial variances, uncertain of position, but know we're stationary and roughly flat
+  // Initial variances, uncertain of position, but know we're stationary and roughly level
   params->stdDevInitialPosition_xy = 100;
   params->stdDevInitialPosition_z = 1;
   params->stdDevInitialVelocity = 0.01;
   params->stdDevInitialAttitude_rollpitch = 0.01;
-  params->stdDevInitialAttitude_yaw = 0.01;
+  #ifdef USE_EXTERNAL_POSITIONING
+      // External positioning provides an absolute reference for orientation.
+      // In this case, the drone may start with an arbitrary yaw (even up to 180°),
+      // so we allow a higher initial uncertainty to enable the filter to quickly converge to the correct yaw.
+      params->stdDevInitialAttitude_yaw = 100;
+  #else
+      // Without an external positioning system, we assume the drone is initialized with yaw ≈ 0.
+      // Therefore, a low initial uncertainty is appropriate.
+      params->stdDevInitialAttitude_yaw = 0.01;
+  #endif
 
   params->procNoiseAcc_xy = 0.5f;
   params->procNoiseAcc_z = 1.0f;
