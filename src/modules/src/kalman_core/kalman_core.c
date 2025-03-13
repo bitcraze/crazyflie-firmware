@@ -68,11 +68,16 @@
 #include "static_mem.h"
 
 // #define DEBUG_STATE_CHECK
+#define USE_EXTERNAL_POSITIONING
 
 // the reversion of pitch and roll to zero
 #ifdef CONFIG_DECK_LOCO_2D_POSITION
 #define ROLLPITCH_ZERO_REVERSION (0.0f)
-#elif defined(CONFIG_DECK_LIGHTHOUSE) // implement a check if we are using lighthouse / mocap or anything where we don't want "zero reversion". This reversion to 0 is good for anything that relies on the IMU only for attitude
+#elif defined(USE_EXTERNAL_POSITIONING)
+// When using an external positioning system (e.g., Lighthouse/MoCap) that provides an absolute orientation reference,
+// we disable zero reversion—meaning we do not force the attitude states back to zero.
+// Zero reversion is useful for systems relying solely on the IMU (which tends to drift) to maintain a near-zero error,
+// but with an external reference, we want the filter to rely on that accurate absolute measurement instead.
 #define ROLLPITCH_ZERO_REVERSION (0.0f)
 #else
 #define ROLLPITCH_ZERO_REVERSION (0.001f)
