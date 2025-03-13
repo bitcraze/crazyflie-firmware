@@ -103,14 +103,18 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
       h[KC_STATE_Y] = g[1]; // ∂α/∂Y
       h[KC_STATE_Z] = g[2]; // ∂α/∂Z
 
-      // Orientation Jacobians: ∂α/∂φ, ∂α/∂θ, ∂α/∂ψ
+      // Orientation Jacobians: ∂α/∂(δφ), ∂α/∂(δθ), ∂α/∂(δψ)
       //
-      // Applying the chain rule ∂α/∂φ = ∂α/∂x * ∂x/∂φ + ∂α/∂y * ∂y/∂φ + ∂α/∂z * ∂z/∂φ
-      // Similar for ∂α/∂θ, ∂α/∂ψ
+      // Applying the chain rule, we get:
+      // ∂α/∂(∂φ) = ∂α/∂x * ∂x/∂(∂φ) + ∂α/∂y * ∂y/∂(∂φ) + ∂α/∂z * ∂z/∂(∂φ)
+      //          = ∂α/∂x * ∂x/∂φ * ∂φ/∂(∂φ) + ∂α/∂x * ∂x/∂θ * ∂θ/∂(∂φ) + ∂α/∂x * ∂x/∂ψ * ∂ψ/∂(∂φ) + ...
       //
       // We already have ∂α/∂X, ∂α/∂Y, ∂α/∂Z from the position Jacobians
+      // We still need the partial derivatives of position w.r.t the Euler angles,
+      //  and the partial derivatives of the Euler angles w.r.t the orientation error
+      //
       // We need ∂x/∂φ, ∂y/∂φ, ∂z/∂φ, ∂x/∂θ, ∂y/∂θ, ∂z/∂θ, ∂x/∂ψ, ∂y/∂ψ, ∂z/∂ψ
-      // These can be derived from the rotation matrices
+      // These can be derived from the rotation matrices:
 
       float dx_droll = 0.0f; // ∂x/∂φ
       float dy_droll = -s[2]; // ∂y/∂φ
@@ -124,9 +128,34 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
       float dy_dyaw = s[0]; // ∂y/∂ψ
       float dz_dyaw = 0.0f; // ∂z/∂ψ
 
-      h[KC_STATE_D0] = dx_droll*g[0] + dy_droll*g[1] + dz_droll*g[2]; // ∂α/∂φ
-      h[KC_STATE_D1] = dx_dpitch*g[0] + dy_dpitch*g[1] + dz_dpitch*g[2]; // ∂α/∂θ
-      h[KC_STATE_D2] = dx_dyaw*g[0] + dy_dyaw*g[1] + dz_dyaw*g[2]; // ∂α/∂ψ
+      // We also need ∂φ/∂(∂φ), ∂θ/∂(∂φ), ∂ψ/∂(∂φ), ∂φ/∂(∂θ), ∂θ/∂(∂θ), ∂ψ/∂(∂θ), ∂φ/∂(∂ψ), ∂θ/∂(∂ψ), ∂ψ/∂(∂ψ)
+      // These can be approached by the Euler angles:
+
+      float phi = atan2f(2*(this->q[0]*this->q[1] + this->q[2]*this->q[3]), 1 - 2*(this->q[1]*this->q[1] + this->q[2]*this->q[2]));
+      float theta = asinf(2*(this->q[0]*this->q[2] - this->q[3]*this->q[1]));
+      // float psi = atan2f(2*(this->q[0]*this->q[3] + this->q[1]*this->q[2]), 1 - 2*(this->q[2]*this->q[2] + this->q[3]*this->q[3]));
+
+      float droll_dv0 = 1.0f; // ∂φ/∂(δφ)
+      float droll_dv1 = sin(phi)*tan(theta); // ∂φ/∂(δθ)
+      float droll_dv2 = cos(phi)*tan(theta); // ∂φ/∂(δψ)
+
+      float dpitch_dv0 = 0.0f; // ∂θ/∂(δφ)
+      float dpitch_dv1 = cos(phi); // ∂θ/∂(δθ)
+      float dpitch_dv2 = -sin(phi); // ∂θ/∂(δψ)
+
+      float dyaw_dv0 = 0.0f; // ∂ψ/∂(δφ)
+      float dyaw_dv1 = sin(phi)/cos(theta); // ∂ψ/∂(δθ)
+      float dyaw_dv2 = cos(phi)/cos(theta); // ∂ψ/∂(δψ)
+
+      h[KC_STATE_D0] = g[0]*dx_droll*droll_dv0 + g[0]*dx_dpitch*dpitch_dv0 + g[0]*dx_dyaw*dyaw_dv0 +
+                      g[1]*dy_droll*droll_dv0 + g[1]*dy_dpitch*dpitch_dv0 + g[1]*dy_dyaw*dyaw_dv0 +
+                      g[2]*dz_droll*droll_dv0 + g[2]*dz_dpitch*dpitch_dv0 + g[2]*dz_dyaw*dyaw_dv0; // ∂α/∂(δφ)
+      h[KC_STATE_D1] = g[0]*dx_droll*droll_dv1 + g[0]*dx_dpitch*dpitch_dv1 + g[0]*dx_dyaw*dyaw_dv1 +
+                      g[1]*dy_droll*droll_dv1 + g[1]*dy_dpitch*dpitch_dv1 + g[1]*dy_dyaw*dyaw_dv1 +
+                      g[2]*dz_droll*droll_dv1 + g[2]*dz_dpitch*dpitch_dv1 + g[2]*dz_dyaw*dyaw_dv1; // ∂α/∂(δθ)
+      h[KC_STATE_D2] = g[0]*dx_droll*droll_dv2 + g[0]*dx_dpitch*dpitch_dv2 + g[0]*dx_dyaw*dyaw_dv2 +
+                      g[1]*dy_droll*droll_dv2 + g[1]*dy_dpitch*dpitch_dv2 + g[1]*dy_dyaw*dyaw_dv2 +
+                      g[2]*dz_droll*droll_dv2 + g[2]*dz_dpitch*dpitch_dv2 + g[2]*dz_dyaw*dyaw_dv2; // ∂α/∂(δ\ψ)
 
       arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
       kalmanCoreScalarUpdate(this, &H, error, sweepInfo->stdDev);
