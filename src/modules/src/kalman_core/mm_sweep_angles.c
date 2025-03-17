@@ -116,10 +116,6 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
       // We need ∂x/∂φ, ∂y/∂φ, ∂z/∂φ, ∂x/∂θ, ∂y/∂θ, ∂z/∂θ, ∂x/∂ψ, ∂y/∂ψ, ∂z/∂ψ
       // These can be derived from the rotation matrices:
 
-      float dx_droll = 0.0f; // ∂x/∂φ
-      float dy_droll = -s[2]; // ∂y/∂φ
-      float dz_droll = s[1]; // ∂z/∂φ
-
       float dx_dpitch = -s[2]; // ∂x/∂θ
       float dy_dpitch = 0.0f; // ∂y/∂θ
       float dz_dpitch = s[0]; // ∂z/∂θ
@@ -134,6 +130,19 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
       float phi = atan2f(2*(this->q[0]*this->q[1] + this->q[2]*this->q[3]), 1 - 2*(this->q[1]*this->q[1] + this->q[2]*this->q[2]));
       float theta = asinf(2*(this->q[0]*this->q[2] - this->q[3]*this->q[1]));
       // float psi = atan2f(2*(this->q[0]*this->q[3] + this->q[1]*this->q[2]), 1 - 2*(this->q[2]*this->q[2] + this->q[3]*this->q[3]));
+      //
+      //
+      //             [1    0        0   ]
+      // R_roll(φ) = [0  cos(φ)  -sin(φ)]
+      //             [0  sin(φ)   cos(φ)]
+      //
+      // ∂x/∂φ = 0
+      // ∂y/∂φ = -y*sin(φ) - z*cos(φ)
+      // ∂y/∂φ  = y*cos(φ) - z*sin(φ)
+      //
+      float dx_droll = 0.0f; // ∂x/∂φ
+      float dy_droll = -s[1]*sin(phi) - s[2]*cos(phi); // ∂y/∂φ
+      float dz_droll = s[1]*cos(phi) - s[2]*sin(phi); // ∂z/∂φ
 
       float droll_dv0 = 1.0f; // ∂φ/∂(δφ)
       float droll_dv1 = sin(phi)*tan(theta); // ∂φ/∂(δθ)
