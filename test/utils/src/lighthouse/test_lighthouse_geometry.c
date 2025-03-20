@@ -136,13 +136,13 @@ void testThatNoIntersectionPointIsFoundForLineParallelToPlane() {
 void testThatSensorPositionIsTranslated() {
   // Fixture
   vec3d cfPos = {1, 2, 3};
-  vec3d sensorPos = {-0.015, -0.0075, 0.0};
+  vec3d sensorPos = {-0.015, -0.0075, 0.075};
 
   float r[3][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
   arm_matrix_instance_f32 R = {3, 3, (float*)r};
 
   // Sensor 1 is in the right back corner of the deck
-  vec3d expected = {1 - 0.015, 2 - 0.0075, 3};
+  vec3d expected = {1 - 0.015, 2 - 0.0075, 3 + 0.075};
 
   vec3d actual;
 
@@ -156,14 +156,14 @@ void testThatSensorPositionIsTranslated() {
 void testThatSensorPositionIsRotated() {
   // Fixture
   vec3d cfPos = {1, 2, 3};
-  vec3d sensorPos = {-0.015, -0.0075, 0.0};
+  vec3d sensorPos = {-0.015, -0.0075, 0.075};
 
   // Rotate 90 degrees about the Y-axis
   float r[3][3] = {{0, 0, 1}, {0, 1, 0}, {-1, 0, 0}};
   arm_matrix_instance_f32 R = {3, 3, (float*)r};
 
   // Sensor 1 is in the right back corner of the deck
-  vec3d expected = {1, 2 - 0.0075, 3 + 0.015};
+  vec3d expected = {1.075, 2 - 0.0075, 3 + 0.015};
 
   vec3d actual;
 
