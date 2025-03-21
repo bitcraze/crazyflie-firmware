@@ -40,12 +40,12 @@
 * @{
 */
 
-/** @defgroup USB_BSP
+/** @defgroup USB_BSP USB_BSP
 * @brief This file is responsible to offer board support package
 * @{
 */
 
-/** @defgroup USB_BSP_Private_Defines
+/** @defgroup USB_BSP_Private_Defines USB_BSP_Private_Defines
 * @{
 */
 /**
@@ -53,7 +53,7 @@
 */
 
 
-/** @defgroup USB_BSP_Private_TypesDefinitions
+/** @defgroup USB_BSP_Private_TypesDefinitions USB_BSP_Private_TypesDefinitions
 * @{
 */
 /**
@@ -64,14 +64,14 @@
 
 
 
-/** @defgroup USB_BSP_Private_Macros
+/** @defgroup USB_BSP_Private_Macros USB_BSP_Private_Macros
 * @{
 */
 /**
 * @}
 */
 
-/** @defgroup USBH_BSP_Private_Variables
+/** @defgroup USBH_BSP_Private_Variables USBH_BSP_Private_Variables
 * @{
 */
 
@@ -79,14 +79,14 @@
 * @}
 */
 
-/** @defgroup USBH_BSP_Private_FunctionPrototypes
+/** @defgroup USBH_BSP_Private_FunctionPrototypes USBH_BSP_Private_FunctionPrototypes
 * @{
 */
 /**
 * @}
 */
 
-/** @defgroup USB_BSP_Private_Functions
+/** @defgroup USB_BSP_Private_Functions USB_BSP_Private_Functions
 * @{
 */
 
@@ -94,7 +94,6 @@
 /**
 * @brief  USB_OTG_BSP_Init
 *         Initilizes BSP configurations
-* @param  None
 * @retval None
 */
 
@@ -247,7 +246,6 @@ void USB_OTG_BSP_Init(USB_OTG_CORE_HANDLE *pdev)
 /**
 * @brief  USB_OTG_BSP_EnableInterrupt
 *         Enabele USB Global interrupt
-* @param  None
 * @retval None
 */
 void USB_OTG_BSP_EnableInterrupt(USB_OTG_CORE_HANDLE *pdev)

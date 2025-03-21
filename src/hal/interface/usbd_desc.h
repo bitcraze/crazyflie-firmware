@@ -37,12 +37,12 @@
   * @{
   */
   
-/** @defgroup USB_DESC
+/** @defgroup USB_DESC USB_DESC
   * @brief general defines for the usb device library file
   * @{
   */ 
 
-/** @defgroup USB_DESC_Exported_Defines
+/** @defgroup USB_DESC_Exported_Defines USB_DESC_Exported_Defines
   * @{
   */
 #define USB_DEVICE_DESCRIPTOR_TYPE              0x01
@@ -58,7 +58,7 @@
   */ 
 
 
-/** @defgroup USBD_DESC_Exported_TypesDefinitions
+/** @defgroup USBD_DESC_Exported_TypesDefinitions USBD_DESC_Exported_TypesDefinitions
   * @{
   */
 /**
@@ -67,14 +67,14 @@
 
 
 
-/** @defgroup USBD_DESC_Exported_Macros
+/** @defgroup USBD_DESC_Exported_Macros USBD_DESC_Exported_Macros
   * @{
   */ 
 /**
   * @}
   */ 
 
-/** @defgroup USBD_DESC_Exported_Variables
+/** @defgroup USBD_DESC_Exported_Variables USBD_DESC_Exported_Variables
   * @{
   */ 
 extern  uint8_t USBD_DeviceDesc  [USB_SIZ_DEVICE_DESC];
@@ -87,7 +87,7 @@ extern  USBD_DEVICE USR_desc;
   * @}
   */ 
 
-/** @defgroup USBD_DESC_Exported_FunctionsPrototype
+/** @defgroup USBD_DESC_Exported_FunctionsPrototype USBD_DESC_Exported_FunctionsPrototype
   * @{
   */ 
 

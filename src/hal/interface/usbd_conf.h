@@ -41,6 +41,9 @@
 #define USBD_SELF_POWERED               
 
 #define USB_MAX_STR_DESC_SIZ            255 
+/**
+  * @}
+  */ 
 
 /** @defgroup USB_VCP_Class_Layer_Parameter USB VCP Class Layer Parameter
   * @{
