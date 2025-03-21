@@ -27,7 +27,7 @@
  ******************************************************************************/
 
 /**
- * @file   vl53l1_platform.c
+ * @file   vl53l1x.c
  * @brief  Code function definitions for Crazyflie
  *
  */

@@ -96,7 +96,7 @@ int uart2Putchar(int ch);
  * data has been read
  *
  * @param[in] size  Number of bytes to read
- * @param[out] data  Pointer to data
+ * @param[out] buffer  Pointer to data
  * 
  * @return number of bytes read
  */
@@ -107,7 +107,7 @@ int uart2GetData(size_t size, uint8_t * buffer);
  * data has been read or the timeout occurs.
  *
  * @param[in] size  Number of bytes to read
- * @param[out] data  Pointer to data
+ * @param[out] buffer  Pointer to data
  * @param[in] timeoutTicks timeout in ticks
  * 
  * @return number of bytes read

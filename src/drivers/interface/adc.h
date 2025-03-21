@@ -89,7 +89,7 @@ bool adcTest(void);
 
 /**
  * Converts a 12 bit ADC value to battery voltage
- * @param vbat  12 bit adc value
+ * @param v  12 bit adc value
  * @param vref  12 bit adc value of the internal voltage
  *              reference, 1.2V
  *
