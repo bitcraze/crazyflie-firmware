@@ -52,8 +52,12 @@ static lpsTwrAlgoOptions_t defaultOptions = {
      0xbccf000000000001,
      0xbccf000000000002,
      0xbccf000000000003,
+#if LOCODECK_NR_OF_TWR_ANCHORS > 4
      0xbccf000000000004,
+#endif
+#if LOCODECK_NR_OF_TWR_ANCHORS > 5
      0xbccf000000000005,
+#endif
  #if LOCODECK_NR_OF_TWR_ANCHORS > 6
      0xbccf000000000006,
  #endif
@@ -594,6 +598,7 @@ LOG_ADD(LOG_UINT8, rangingSuccessRate3, &rangingSuccessRate[3])
  */
 LOG_ADD(LOG_UINT8, rangingPerSec3, &rangingPerSec[3])
 
+#if LOCODECK_NR_OF_TWR_ANCHORS > 4
 /**
  * @brief Successful ranging ratio with anchor 4 [%]
  */
@@ -603,7 +608,9 @@ LOG_ADD(LOG_UINT8, rangingSuccessRate4, &rangingSuccessRate[4])
  * @brief Ranging attempt rate with anchor 4 [1/s]
  */
 LOG_ADD(LOG_UINT8, rangingPerSec4, &rangingPerSec[4])
+#endif
 
+#if LOCODECK_NR_OF_TWR_ANCHORS > 5
 /**
  * @brief Successful ranging ratio with anchor 5 [%]
  */
@@ -613,10 +620,35 @@ LOG_ADD(LOG_UINT8, rangingSuccessRate5, &rangingSuccessRate[5])
  * @brief Ranging attempt rate with anchor 5 [1/s]
  */
 LOG_ADD(LOG_UINT8, rangingPerSec5, &rangingPerSec[5])
+#endif
+
+#if LOCODECK_NR_OF_TWR_ANCHORS > 6
+/**
+ * @brief Successful ranging ratio with anchor 6 [%]
+ */
+LOG_ADD(LOG_UINT8, rangingSuccessRate6, &rangingSuccessRate[6])
+
+/**
+ * @brief Ranging attempt rate with anchor 6 [1/s]
+ */
+LOG_ADD(LOG_UINT8, rangingPerSec6, &rangingPerSec[6])
+#endif
+
+#if LOCODECK_NR_OF_TWR_ANCHORS > 7
+/**
+ * @brief Successful ranging ratio with anchor 7 [%]
+ */
+LOG_ADD(LOG_UINT8, rangingSuccessRate7, &rangingSuccessRate[7])
+
+/**
+ * @brief Ranging attempt rate with anchor 7 [1/s]
+ */
+LOG_ADD(LOG_UINT8, rangingPerSec7, &rangingPerSec[7])
+#endif
 LOG_GROUP_STOP(twr)
 
 /**
- * Log group for distances (ranges) to anchors aquired by Two Way Ranging (TWR)
+ * Log group for distances (ranges) to anchors acquired by Two Way Ranging (TWR)
  */
 LOG_GROUP_START(ranging)
 /**
@@ -635,22 +667,35 @@ LOG_ADD(LOG_FLOAT, distance2, &state.distance[2])
  * @brief Distance to anchor 3 [m]
  */
 LOG_ADD(LOG_FLOAT, distance3, &state.distance[3])
+
+#if LOCODECK_NR_OF_TWR_ANCHORS > 4
 /**
  * @brief Distance to anchor 4 [m]
  */
 LOG_ADD(LOG_FLOAT, distance4, &state.distance[4])
+#endif
+
+#if LOCODECK_NR_OF_TWR_ANCHORS > 5
 /**
  * @brief Distance to anchor 5 [m]
  */
 LOG_ADD(LOG_FLOAT, distance5, &state.distance[5])
+#endif
+
+#if LOCODECK_NR_OF_TWR_ANCHORS > 6
 /**
  * @brief Distance to anchor 6 [m]
  */
 LOG_ADD(LOG_FLOAT, distance6, &state.distance[6])
+#endif
+
+#if LOCODECK_NR_OF_TWR_ANCHORS > 7
 /**
  * @brief Distance to anchor 7 [m]
  */
 LOG_ADD(LOG_FLOAT, distance7, &state.distance[7])
+#endif
+
 /**
  * @brief ASL of anchor 0 [m]
  */
@@ -667,20 +712,32 @@ LOG_ADD(LOG_FLOAT, pressure2, &state.pressures[2])
  * @brief ASL of anchor 3 [m]
  */
 LOG_ADD(LOG_FLOAT, pressure3, &state.pressures[3])
+
+#if LOCODECK_NR_OF_TWR_ANCHORS > 4
 /**
  * @brief ASL of anchor 4 [m]
  */
 LOG_ADD(LOG_FLOAT, pressure4, &state.pressures[4])
+#endif
+
+#if LOCODECK_NR_OF_TWR_ANCHORS > 5
 /**
  * @brief ASL of anchor 5 [m]
  */
 LOG_ADD(LOG_FLOAT, pressure5, &state.pressures[5])
+#endif
+
+#if LOCODECK_NR_OF_TWR_ANCHORS > 6
 /**
  * @brief ASL of anchor 6 [m]
  */
 LOG_ADD(LOG_FLOAT, pressure6, &state.pressures[6])
+#endif
+
+#if LOCODECK_NR_OF_TWR_ANCHORS > 7
 /**
  * @brief ASL of anchor 7 [m]
  */
 LOG_ADD(LOG_FLOAT, pressure7, &state.pressures[7])
+#endif
 LOG_GROUP_STOP(ranging)
