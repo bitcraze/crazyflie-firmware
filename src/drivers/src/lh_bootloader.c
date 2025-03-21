@@ -34,7 +34,7 @@
 #include "debug.h"
 #include "i2cdev.h"
 
-#define LH_I2C_ADDR         0x2F
+
 #define LH_FW_SIZE          0x020000
 #define LH_FLASH_PAGE_SIZE  256
 #define LH_WRITE_BUF_SIZE   (5 + 4 + LH_FLASH_PAGE_SIZE)
@@ -96,7 +96,7 @@ bool lhblInit()
   if (isInit)
     return true;
 
-  devAddr = LH_I2C_ADDR;
+  devAddr = LIGHTHOUSE_DECK_I2C_ADDR;
 
   isInit = true;
 

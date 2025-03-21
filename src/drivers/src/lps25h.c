@@ -46,7 +46,7 @@ bool lps25hInit(I2C_Dev *i2cPort)
     return true;
 
   I2Cx = i2cPort;
-  devAddr = LPS25H_I2C_ADDR;
+  devAddr = PRESSURE_DECK_I2C_ADDRESS;
 
   vTaskDelay(M2T(5));
 
