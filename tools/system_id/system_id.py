@@ -1,8 +1,7 @@
 import argparse
 
 import numpy as np
-from sklearn.linear_model import LinearRegression, Ridge
-from scipy.optimize import curve_fit
+from sklearn.linear_model import LinearRegression
 from scipy.signal import savgol_filter
 import matplotlib.pyplot as plt
 from utils import loadFiles, cutData, poly, inversepoly, loadYAML, storeYAML
@@ -313,15 +312,15 @@ if __name__ == "__main__":
         if extra != "":
             comb = f"{comb}_{extra}"
         files = [
-            f"data_{mode}_{comb}_M1_00.csv",
-            f"data_{mode}_{comb}_M1_01.csv",
-            f"data_{mode}_{comb}_M1_02.csv",
+            # f"data_{mode}_{comb}_M1_00.csv",
+            # f"data_{mode}_{comb}_M1_01.csv",
+            # f"data_{mode}_{comb}_M1_02.csv",
             f"data_{mode}_{comb}_M2_00.csv",
-            f"data_{mode}_{comb}_M2_01.csv",
-            f"data_{mode}_{comb}_M2_02.csv",
-            f"data_{mode}_{comb}_M3_00.csv",
-            f"data_{mode}_{comb}_M3_01.csv",
-            f"data_{mode}_{comb}_M3_02.csv",
+            # f"data_{mode}_{comb}_M2_01.csv",
+            # f"data_{mode}_{comb}_M2_02.csv",
+            # f"data_{mode}_{comb}_M3_00.csv",
+            # f"data_{mode}_{comb}_M3_01.csv",
+            # f"data_{mode}_{comb}_M3_02.csv",
             # f"data_{mode}_{comb}_M4_00.csv",
             # f"data_{mode}_{comb}_M4_01.csv",
             # f"data_{mode}_{comb}_M4_02.csv",

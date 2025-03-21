@@ -729,35 +729,13 @@ void __attribute__((used)) DMA1_Stream7_IRQHandler(void) // M2
 #endif
 
 /**
- * Override battery compensation parameters.
- * Needed when using 350 mAh batteries
- */
-// PARAM_GROUP_START(batCompSet)
-
-// /**
-//  * @brief Zero to deactivate battery compensation
-//  */
-// PARAM_ADD_CORE(PARAM_UINT8, enable, &batCompEnable) TODO if added to core, no connection with cflib!
-
-// /**
-//  * @brief Minimum thrust command allowed per motor in N
-//  */
-// PARAM_ADD_CORE(PARAM_FLOAT, thrustMin, &thrust_min)
-
-// /**
-//  * @brief Maximum thrust command allowed per motor in N
-//  */
-// PARAM_ADD_CORE(PARAM_FLOAT, thrustMax, &thrust_max)
-
-// PARAM_GROUP_STOP(batCompSet)
-
-/**
  * Override power distribution to motors.
  */
 PARAM_GROUP_START(motorPowerSet)
 
 /**
- * @brief Nonzero to override controller with set values
+ * @brief Nonzero to override controller with set values.
+ * 1 to hand PWM right to the motors, 2 to hand m1 to all motors, 3 to hand m1 to all motors and activate battery compensation.
  */
 PARAM_ADD_CORE(PARAM_UINT8, enable, &motorSetEnable)
 

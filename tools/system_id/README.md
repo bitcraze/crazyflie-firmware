@@ -67,7 +67,7 @@ The important parameters will be stored in `params_<COMB>.yaml`
 
 #### Verification
 
-To verify the parameters, we need to add the new set of values to the firmware. In `motors.c`, we can find the arrays for the battery compensation called the same as in the yaml file (p_vmotor2thrust). After adding the new values and flashing, we run the data collection `mode = static_verification`, where the motors are again given random commands, but the thrust is battery compensated. Note: You need to set the correct compensation mode in the sysid_defconfig!
+To verify the parameters, we need to add the new set of values to the firmware. In `motors.c`, we can find the arrays for the battery compensation called the same as in the yaml file (p_vmotor2thrust). After adding the new values and flashing, we run the data collection `mode = static_verification`, where the motors are again given random commands, but the thrust is battery compensated. Note: You need to set the correct compensation mode in the `sysid_defconfig`!
 
 In the system_id part, we should see all values beeing on the plane in the first plot or the line in the second plot. That means the battery compensation works.
 
@@ -75,4 +75,4 @@ In the system_id part, we should see all values beeing on the plane in the first
 
 Lastly, we want to know how fast the motors can change speed/thrust. In `mode = dynamic`, data is first collected with motors changing speed from lowest PWM to highest PWM command, once with and once without battery compensation.
 
-In the system_id part, we can observe a first order thrust dynamic: $\dot{thrust} = \tau (thrust_{CMD}-thrust)$. The parameter $\tau$ gets identified.
+In the system_id part, we can observe a first order thrust dynamic: $\dot{f} = \tau (f_{CMD}-f)$. The parameter $\tau$ gets identified. The resulting parameters get saved in the same file as before.
