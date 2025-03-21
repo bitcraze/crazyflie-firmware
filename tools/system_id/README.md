@@ -52,18 +52,14 @@ The collected data is then saved accordingly to `data_<MODE>_<COMB>.csv`.
 
 The combination of propellers, motors, and battery needs to be given by COMB. In theory, you can put whatever you want for COMB or even leave it empty. We've come up with the following scheme to distinguish different setups easily:
 
-The motors and propellers are given by the first character. **L** for the legacy propellers with the 17mm motors. **P** for the 2.1+ propellers with the 17mm motors. **T** for the thrust upgrade kit propellers and 20mm motors. **B** for the brushless setup.
-
-The number following is simply the capacity in mAh of the used battery.
-
-As an example: The Crazyflies 2.1+ gets shipped with the new propellers, 17mm motors, and a 250mAh battery, so we would set `COMB=P250`.
+The motors and propellers are given by the first character. **L** for the legacy propellers with the 17mm motors. **P** for the 2.1+ propellers with the 17mm motors. **T** for the thrust upgrade kit propellers and 20mm motors. **B** for the brushless setup. The number following is simply the capacity in mAh of the used battery. As an example: The Crazyflies 2.1+ gets shipped with the new propellers, 17mm motors, and a 250mAh battery, so we would set `COMB=P250`.
 
 #### Static parameters
 `mode = static`
 
 In this mode, the motors are given random commands in a valid range and all the important data is stored. From that we can calculate the most important curve: Vmotors [V] -> Thrust [N], where Vmotors = PWM_CMD / PWM_MAX * Vbat. This curve helps us to calculate the needed PWM_CMD from a thrust command and the current battery voltage Vbat. Additionally, the RPM -> Thrust [N] curve and the efficiency is identified.
 
-The important parameters will be stored in `params_<COMB>.yaml`
+The important parameters will be stored in `params_<COMB>.yaml`. We advise to take multiple datasets from multiple different drones for best results.
 
 #### Verification
 
@@ -75,4 +71,4 @@ In the system_id part, we should see all values beeing on the plane in the first
 
 Lastly, we want to know how fast the motors can change speed/thrust. In `mode = dynamic`, data is first collected with motors changing speed from lowest PWM to highest PWM command, once with and once without battery compensation.
 
-In the system_id part, we can observe a first order thrust dynamic: $\dot{f} = \tau (f_{CMD}-f)$. The parameter $\tau$ gets identified. The resulting parameters get saved in the same file as before.
+In the system_id part, we can observe a first order thrust dynamic (approximately): $\dot{f} = \tau (f_{CMD}-f)$. The parameter $\tau$ gets identified. The resulting parameters get saved in the same file as before.
