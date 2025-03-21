@@ -120,6 +120,7 @@ void i2cdrvCreateMessage(I2cMessage *message,
  * @param message       pointer to message struct that will be filled in.
  * @param slaveAddress  i2c slave address
  * @param IsInternal16  It true 16bit reg address else 8bit.
+ * @param intAddress    Internal address of device.
  * @param direction     i2cWrite or i2cRead
  * @param length        Length of message
  * @param buffer        pointer to buffer of send/receive data

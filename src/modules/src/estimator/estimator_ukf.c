@@ -29,6 +29,7 @@
  * on the paper:
  *
  * BIBTEX ENTRIES:
+ * \verbatim
       @INPROCEEDINGS{9841385,
       author={Kefferpütz, Klaus and McGuire, Kimberly},
       booktitle={2022 25th International Conference on Information Fusion (FUSION)},
@@ -38,6 +39,7 @@
       number={},
       pages={01-08},
       doi={10.23919/FUSION49751.2022.9841385}}
+ * \endverbatim
  *
  * ============================================================================
  *

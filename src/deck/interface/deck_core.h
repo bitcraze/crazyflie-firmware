@@ -150,7 +150,7 @@ typedef struct deckInfo_s {
 /**
  * @brief Definition of function that is called when a block of a new firmware is uploaded to the deck.
  * The upload will be done in small but continouse pieces.
- * @param address: Address where the buffer should be written. The start of the firmware is at address 0.
+ * @param vAddr: Address where the buffer should be written. The start of the firmware is at address 0.
  * @param len: Buffer length
  * @param buffer: Buffer to write in the firmware memory
  * @param memDef: The memory def for the device the write is related to
@@ -163,7 +163,7 @@ typedef bool (deckMemoryWrite)(const uint32_t vAddr, const uint8_t len, const ui
 /**
  * @brief Definition of function to read the firmware
  *
- * @param addr: Address where the data should be read. The start of the firmware is at address 0.
+ * @param vAddr: Address where the data should be read. The start of the firmware is at address 0.
  * @param len: Length to read.
  * @param buffer: Buffer where to output the data
  *

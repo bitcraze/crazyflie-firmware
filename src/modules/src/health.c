@@ -110,7 +110,7 @@ static float variance(float *buffer, uint32_t length)
  * @param low The low limit of the self test
  * @param high The high limit of the self test
  * @param value The value to compare with.
- * @param string A pointer to a string describing the value.
+ * @param motor The motor to evaluate
  * @return True if self test within low - high limit, false otherwise
  */
 static bool evaluatePropTest(float low, float high, float value, uint8_t motor)

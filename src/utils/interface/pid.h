@@ -105,7 +105,7 @@ float pidUpdate(PidObject* pid, const float measured, const bool isYawAngle);
  * Set a new set point for the PID to track.
  *
  * @param[in] pid   A pointer to the pid object.
- * @param[in] angle The new set point
+ * @param[in] desired The new set point
  */
 void pidSetDesired(PidObject* pid, const float desired);
 
