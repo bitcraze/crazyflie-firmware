@@ -9,6 +9,9 @@ You'll need to use either the [Crazyflie VM](https://github.com/bitcraze/bitcraz
 [the toolbelt](https://github.com/bitcraze/toolbelt) or
 install some ARM toolchain.
 
+There is also experimental support for [building with nix](./nix.md).
+This allows to build the firmware in a reproducable way.
+
 ### Install a toolchain
 
 #### Toolchain and compiler version policy
