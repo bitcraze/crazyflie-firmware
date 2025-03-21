@@ -371,9 +371,10 @@ static void stabilizerTask(void* param)
       calcSensorToOutputLatency(&sensorData);
       stabilizerStep++;
       STATS_CNT_RATE_EVENT(&stabilizerRate);
-
-      xSemaphoreGive(xRateSupervisorSemaphore);
     }
+
+    xSemaphoreGive(xRateSupervisorSemaphore);
+
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
     motorsBurstDshot();
 #endif

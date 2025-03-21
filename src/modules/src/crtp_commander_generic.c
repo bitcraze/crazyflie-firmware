@@ -63,14 +63,17 @@ typedef void (*packetDecoder_t)(setpoint_t *setpoint, uint8_t type, const void *
 
 /* ---===== 1 - packetType_e enum =====--- */
 enum packet_type {
-  stopType          = 0,
-  velocityWorldType = 1,
-  zDistanceType     = 2,
-  cppmEmuType       = 3,
-  altHoldType       = 4,
-  hoverType         = 5,
-  fullStateType     = 6,
-  positionType      = 7,
+  stopType                = 0,
+  legacyVelocityWorldType = 1,
+  legacyZDistanceType     = 2,
+  cppmEmuType             = 3,
+  altHoldType             = 4,
+  legacyHoverType         = 5,
+  fullStateType           = 6,
+  positionType            = 7,
+  velocityWorldType       = 8,
+  zDistanceType           = 9,
+  hoverType               = 10,
 };
 
 /* ---===== 2 - Decoding functions =====--- */
@@ -86,16 +89,39 @@ static void stopDecoder(setpoint_t *setpoint, uint8_t type, const void *data, si
   return;
 }
 
-/* velocityDecoder
- * Set the Crazyflie velocity in the world coordinate system
- */
 struct velocityPacket_s {
   float vx;        // m in the world frame of reference
   float vy;        // ...
   float vz;        // ...
   float yawrate;  // deg/s
 } __attribute__((packed));
+
+/* velocityDecoder
+ * Set the Crazyflie velocity in the world coordinate system
+ */
 static void velocityDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
+{
+  const struct velocityPacket_s *values = data;
+
+  ASSERT(datalen == sizeof(struct velocityPacket_s));
+
+  setpoint->mode.x = modeVelocity;
+  setpoint->mode.y = modeVelocity;
+  setpoint->mode.z = modeVelocity;
+
+  setpoint->velocity.x = values->vx;
+  setpoint->velocity.y = values->vy;
+  setpoint->velocity.z = values->vz;
+
+  setpoint->mode.yaw = modeVelocity;
+
+  setpoint->attitudeRate.yaw = values->yawrate;
+}
+
+/* legacyVelocityDecoder
+ * Set the Crazyflie velocity in the world coordinate system
+ */
+static void legacyVelocityDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
 {
   const struct velocityPacket_s *values = data;
 
@@ -114,16 +140,44 @@ static void velocityDecoder(setpoint_t *setpoint, uint8_t type, const void *data
   setpoint->attitudeRate.yaw = -values->yawrate;
 }
 
-/* zDistanceDecoder
- * Set the Crazyflie absolute height and roll/pitch angles
- */
 struct zDistancePacket_s {
   float roll;            // deg
   float pitch;           // ...
   float yawrate;         // deg/s
   float zDistance;        // m in the world frame of reference
 } __attribute__((packed));
+
+/* zDistanceDecoder
+ * Set the Crazyflie absolute height and roll/pitch angles
+ */
 static void zDistanceDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
+{
+  const struct zDistancePacket_s *values = data;
+
+
+  ASSERT(datalen == sizeof(struct zDistancePacket_s));
+
+  setpoint->mode.z = modeAbs;
+
+  setpoint->position.z = values->zDistance;
+
+
+  setpoint->mode.yaw = modeVelocity;
+
+  setpoint->attitudeRate.yaw = values->yawrate;
+
+
+  setpoint->mode.roll = modeAbs;
+  setpoint->mode.pitch = modeAbs;
+
+  setpoint->attitude.roll = values->roll;
+  setpoint->attitude.pitch = values->pitch;
+}
+
+/* legacyZDistanceDecoder
+ * Set the Crazyflie absolute height and roll/pitch angles
+ */
+static void legacyZDistanceDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
 {
   const struct zDistancePacket_s *values = data;
 
@@ -286,7 +340,7 @@ static void altHoldDecoder(setpoint_t *setpoint, uint8_t type, const void *data,
 
   setpoint->mode.yaw = modeVelocity;
 
-  setpoint->attitudeRate.yaw = -values->yawrate;
+  setpoint->attitudeRate.yaw = values->yawrate;
 
 
   setpoint->mode.roll = modeAbs;
@@ -296,16 +350,43 @@ static void altHoldDecoder(setpoint_t *setpoint, uint8_t type, const void *data,
   setpoint->attitude.pitch = values->pitch;
 }
 
-/* hoverDecoder
- * Set the Crazyflie absolute height and velocity in the body coordinate system
- */
 struct hoverPacket_s {
   float vx;           // m/s in the body frame of reference
   float vy;           // ...
   float yawrate;      // deg/s
   float zDistance;    // m in the world frame of reference
 } __attribute__((packed));
+
+/* hoverDecoder
+ * Set the Crazyflie absolute height and velocity in the body coordinate system
+ */
+
 static void hoverDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
+{
+  const struct hoverPacket_s *values = data;
+
+  ASSERT(datalen == sizeof(struct hoverPacket_s));
+
+  setpoint->mode.z = modeAbs;
+  setpoint->position.z = values->zDistance;
+
+
+  setpoint->mode.yaw = modeVelocity;
+  setpoint->attitudeRate.yaw = values->yawrate;
+
+
+  setpoint->mode.x = modeVelocity;
+  setpoint->mode.y = modeVelocity;
+  setpoint->velocity.x = values->vx;
+  setpoint->velocity.y = values->vy;
+
+  setpoint->velocity_body = true;
+}
+
+/* legacyHoverDecoder
+* Set the Crazyflie absolute height and velocity in the body coordinate system
+ */
+static void legacyHoverDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
 {
   const struct hoverPacket_s *values = data;
 
@@ -354,7 +435,7 @@ static void fullStateDecoder(setpoint_t *setpoint, uint8_t type, const void *dat
   setpoint->velocity.x = (values->v ## x) / 1000.0f; \
   setpoint->acceleration.x = (values->a ## x) / 1000.0f; \
   setpoint->jerk.x = 0.0f; \
-  
+
   UNPACK(x)
   UNPACK(y)
   UNPACK(z)
@@ -401,14 +482,17 @@ static void positionDecoder(setpoint_t *setpoint, uint8_t type, const void *data
 
  /* ---===== 3 - packetDecoders array =====--- */
 const static packetDecoder_t packetDecoders[] = {
-  [stopType]          = stopDecoder,
-  [velocityWorldType] = velocityDecoder,
-  [zDistanceType]     = zDistanceDecoder,
-  [cppmEmuType]       = cppmEmuDecoder,
-  [altHoldType]       = altHoldDecoder,
-  [hoverType]         = hoverDecoder,
-  [fullStateType]     = fullStateDecoder,
-  [positionType]      = positionDecoder,
+  [stopType]                = stopDecoder,
+  [legacyVelocityWorldType] = legacyVelocityDecoder,
+  [legacyZDistanceType]     = legacyZDistanceDecoder,
+  [cppmEmuType]             = cppmEmuDecoder,
+  [altHoldType]             = altHoldDecoder,
+  [legacyHoverType]         = legacyHoverDecoder,
+  [fullStateType]           = fullStateDecoder,
+  [positionType]            = positionDecoder,
+  [velocityWorldType]       = velocityDecoder,
+  [zDistanceType]           = zDistanceDecoder,
+  [hoverType]               = hoverDecoder,
 };
 
 /* Decoder switch */
@@ -436,7 +520,7 @@ void crtpCommanderGenericDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
  * configure the maximum angle/rate output given a maximum stick input
  * for CRTP packets with emulated CPPM channels (e.g. RC transmitters connecting
  * directly to the NRF radio, often with a 4-in-1 Multimodule), or for CPPM channels
- * from an external receiver.  
+ * from an external receiver.
  */
 PARAM_GROUP_START(cppm)
 

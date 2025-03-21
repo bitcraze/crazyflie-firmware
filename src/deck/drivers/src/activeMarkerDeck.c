@@ -80,7 +80,7 @@ EVENTTRIGGER(activeMarkerModeChanged, uint8, mode)
 static bool activeMarkerDeckCanStart = false;
 #endif
 
-#define DECK_I2C_ADDRESS 0x2E
+
 #define VERSION_STRING_LEN 12
 
 enum version_e {
@@ -105,7 +105,7 @@ static void activeMarkerDeckInit(DeckInfo *info) {
 
 #ifndef ACTIVE_MARKER_DECK_TEST
   memset(versionString, 0, VERSION_STRING_LEN + 1);
-  i2cOk = i2cdevReadReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_VER, VERSION_STRING_LEN, (uint8_t*)versionString);
+  i2cOk = i2cdevReadReg8(I2C1_DEV, ACTIVE_MARKER_DECK_I2C_ADDRESS, MEM_ADR_VER, VERSION_STRING_LEN, (uint8_t*)versionString);
   DEBUG_PRINT("Deck FW %s\n", versionString);
 #endif
 
@@ -146,14 +146,14 @@ static void handleIdUpdate() {
   }
 
   if (isDifferent) {
-      i2cdevWriteReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_LED, LED_COUNT, currentId);
+      i2cdevWriteReg8(I2C1_DEV, ACTIVE_MARKER_DECK_I2C_ADDRESS, MEM_ADR_LED, LED_COUNT, currentId);
   }
 }
 
 static void handleModeUpdate() {
   if (currentDeckMode != requestedDeckMode) {
     currentDeckMode = requestedDeckMode;
-    i2cdevWriteReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_MODE, 1, &currentDeckMode);
+    i2cdevWriteReg8(I2C1_DEV, ACTIVE_MARKER_DECK_I2C_ADDRESS, MEM_ADR_MODE, 1, &currentDeckMode);
 
     eventTrigger_activeMarkerModeChanged_payload.mode = currentDeckMode;
     eventTrigger(&eventTrigger_activeMarkerModeChanged);
@@ -164,7 +164,7 @@ static void handleButtonSensorRead() {
   if (doPollDeckButtonSensor) {
     uint32_t now = xTaskGetTickCount();
     if (now > nextPollTime) {
-      i2cdevReadReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_BUTTON_SENSOR, 1, &deckButtonSensorValue);
+      i2cdevReadReg8(I2C1_DEV, ACTIVE_MARKER_DECK_I2C_ADDRESS, MEM_ADR_BUTTON_SENSOR, 1, &deckButtonSensorValue);
       nextPollTime = now + pollIntervall;
     }
   }
@@ -177,7 +177,7 @@ static void task(void *param) {
   while (!activeMarkerDeckCanStart) {
     vTaskDelay(100);
   }
-  i2cOk = i2cdevReadReg8(I2C1_DEV, DECK_I2C_ADDRESS, MEM_ADR_VER, VERSION_STRING_LEN, (uint8_t*)versionString);
+  i2cOk = i2cdevReadReg8(I2C1_DEV, ACTIVE_MARKER_DECK_I2C_ADDRESS, MEM_ADR_VER, VERSION_STRING_LEN, (uint8_t*)versionString);
 #endif
 
   while (1) {

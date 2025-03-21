@@ -9,7 +9,7 @@ To do modeling, simulations or to improve the flight algorithms the physical par
 
 ### External research on System Identification Crazyflie
 
-Here is a list of papers of several external contributors and universities doing system identification on the Crazyflie:
+Here is a list of papers of several external contributors and universities doing system identification on the Crazyflie 2.1:
 
 * Shi, G., Hönig, W., Shi, X., Yue, Y., & Chung, S. J. (2021). Neural-swarm2: Planning and control of heterogeneous multirotor swarms using learned interactions. IEEE Transactions on Robotics, 38(2), 1063-1079. [pdf](https://whoenig.github.io/publications/2021_T-RO_Shi.pdf)
 * Förster, Julian. _System identification of the crazyflie 2.0 nano quadrocopter_. BS thesis. ETH Zurich, 2015. [pdf](https://www.research-collection.ethz.ch/handle/20.500.11850/214143.I)
@@ -109,3 +109,10 @@ So when we are applying the PWM the voltage will be a percentage of the supply v
 Another quite interesting curve is the rpm to thrust. The polyfit function gives the values: 1.0942e-07*rpm^2 - 2.1059e-04*rpm + 1.5417e-01.
 
 ![rpm thrust](/docs/images/rpm_thrust.png)
+
+
+## Battery compensation
+
+To get an even flight independent of the battery charge we compensate for the drop in voltage using the above mentioned table.
+
+**NOTE: These values are measured on the stock propellers and motors that come with the Crazyflie 2.1. If you are using the Crazyflie 2.1+ or have upgraded your Crazyflie using the thurst upgrade kit, you can disable this algorithm using ```ENABLE_THRUST_BAT_COMPENSATED``` in the kconfig file.**
