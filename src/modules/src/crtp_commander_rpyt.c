@@ -83,6 +83,7 @@ static bool modeSet = false;
 /**
  * Rotate Yaw so that the Crazyflie will change what is considered front.
  *
+ * @param setpoint Setpoint to rotate.
  * @param yawRad Amount of radians to rotate yaw.
  */
 static void rotateYaw(setpoint_t *setpoint, float yawRad)

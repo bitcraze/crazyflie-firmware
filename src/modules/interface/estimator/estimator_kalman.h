@@ -29,6 +29,7 @@
  *
  * Academic citation would be appreciated.
  *
+ * \verbatim
  * BIBTEX ENTRIES:
       @INPROCEEDINGS{MuellerHamerUWB2015,
       author  = {Mueller, Mark W and Hamer, Michael and D'Andrea, Raffaello},
@@ -47,6 +48,7 @@
       pages={1--7},
       year={2016},
       publisher={American Institute of Aeronautics and Astronautics}}
+ * \endverbatim
  *
  * ============================================================================
  */

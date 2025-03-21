@@ -74,7 +74,7 @@ void consoleFlush(void);
  * Macro implementing consolePrintf with eprintf
  *
  * @param FMT String format
- * @patam ... Parameters to print
+ * @param ... Parameters to print
  */
 #define consolePrintf(FMT, ...) eprintf(consolePutchar, FMT, ## __VA_ARGS__)
 
