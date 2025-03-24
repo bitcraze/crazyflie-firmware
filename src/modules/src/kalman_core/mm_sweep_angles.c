@@ -27,26 +27,25 @@
 
 
 void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasurement_t *sweepInfo, const uint32_t nowMs, OutlierFilterLhState_t* sweepOutlierFilterState) {
-  // Sensor position in global reference frame
+  // Relative sensor position in global reference frame
   vec3d s;
   arm_matrix_instance_f32 s_ = {3, 1, s};
   // Rotation matrix from Crazyflie to global reference frame
   arm_matrix_instance_f32 Rcf_ = {3, 3, (float32_t *)this->R};
-  // Sensor position in Crazyflie reference frame
+  // Relative sensor position in Crazyflie reference frame
   arm_matrix_instance_f32 scf_ = {3, 1, (float32_t *)*sweepInfo->sensorPos};
 
-  // Rotate the sensor position to the global reference frame
+  // Rotate the relative sensor position to the global reference frame
   mat_mult(&Rcf_, &scf_, &s_);
 
-  // Crazyflie position in global reference frame
+  // Sensor position in global reference frame
   // Gets the current state values of the position of the Crazyflie in the global reference frame and add the relative sensor pos
-  vec3d pcf = {this->S[KC_STATE_X] + s[0], this->S[KC_STATE_Y] + s[1], this->S[KC_STATE_Z] + s[2]};
+  vec3d ps = {this->S[KC_STATE_X] + s[0], this->S[KC_STATE_Y] + s[1], this->S[KC_STATE_Z] + s[2]};
 
   // Rotor position in global reference frame
-  // Calculates the difference between the rotor and the sensor on the Crazyflie in global reference frame
   const vec3d* pr = sweepInfo->rotorPos;
-  // Difference in position between the rotor and the sensor on the Crazyflie in global reference frame
-  vec3d stmp = {pcf[0] - (*pr)[0], pcf[1] - (*pr)[1], pcf[2] - (*pr)[2]};
+  // Difference in position between the rotor and the sensor in global reference frame
+  vec3d stmp = {ps[0] - (*pr)[0], ps[1] - (*pr)[1], ps[2] - (*pr)[2]};
   arm_matrix_instance_f32 stmp_ = {3, 1, stmp};
 
   // Rotate the difference in position to the rotor reference frame,
@@ -76,7 +75,7 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
     const float qNum = r2 - z_tan_t * z_tan_t;
     // Avoid singularity
     if (qNum > 0.0001f) {
-      // Position Jacobians: ∂α/∂X, ∂α/∂Y, ∂α/∂Z
+      // Position Jacobians: ∂α/∂x, ∂α/∂y, ∂α/∂z, where x y and z are the sensor position in the global reference frame
 
       const float q = tan_t / arm_sqrt(qNum);
 
