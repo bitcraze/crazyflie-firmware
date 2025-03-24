@@ -91,7 +91,7 @@ typedef struct
 * @param *receiverPacket Pointer to receiver packet struct, which will be filled with the response
 * @param *senderPacket Pointer to sender packet struct, which will be used to fill the send buffer header
 * @param sendBufferFunction Function pointer to the function that sends the buffer (split into pages) to the ESP
-* @param getDataWithTimeoutFunction Function pointer to the function that receives data (byte by byte) from the ESP
+* @param getDataWithTimeout Function pointer to the function that receives data (byte by byte) from the ESP
 * @param timeoutTicks Number of ticks to wait for a response from the ESP
 *
 * @return true if ESP responds with a status byte indicating success.

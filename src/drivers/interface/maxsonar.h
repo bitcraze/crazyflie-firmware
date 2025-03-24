@@ -40,10 +40,10 @@
 
 #include <stdint.h>
 
-/**
- * \def MAXSONAR_ENABLED
- * Enable the MaxSonar driver (used by the proximity measurement subsystem).
- */
+// /**
+//  * \def MAXSONAR_ENABLED
+//  * Enable the MaxSonar driver (used by the proximity measurement subsystem).
+//  */
 //#define MAXSONAR_ENABLED
 
 /**
@@ -52,10 +52,10 @@
  */
 #define MAXSONAR_DECK_GPIO DECK_GPIO_TX2
 
-/**
- * \def MAXSONAR_LOG_ENABLED
- * Uncomment to enable log variables for this driver.
- */
+// /**
+//  * \def MAXSONAR_LOG_ENABLED
+//  * Uncomment to enable log variables for this driver.
+//  */
 //#define MAXSONAR_LOG_ENABLED
 
 /**
