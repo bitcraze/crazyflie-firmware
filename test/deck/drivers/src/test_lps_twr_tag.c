@@ -1,3 +1,5 @@
+// @IGNORE_IF_NOT CONFIG_DECK_LOCO
+
 // File under test lpsTwrTag.h
 #include "lpsTwrTag.h"
 
