@@ -102,30 +102,34 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
       h[KC_STATE_Y] = g[1]; // ∂α/∂Y
       h[KC_STATE_Z] = g[2]; // ∂α/∂Z
 
-      // Orientation Jacobians: ∂α/∂φ, ∂α/∂θ, ∂α/∂ψ
+      // Define δφ, δθ, δψ as the orientation error (small change in orientation) in the global reference frame
+      // Then, our orientation Jacobians are: ∂α/∂(δφ), ∂α/∂(δθ), ∂α/∂(δψ)
       //
-      // Applying the chain rule ∂α/∂φ = ∂α/∂x * ∂x/∂φ + ∂α/∂y * ∂y/∂φ + ∂α/∂z * ∂z/∂φ
-      // Similar for ∂α/∂θ, ∂α/∂ψ
+      // Applying the chain rule, we get:
+      // ∂α/∂(∂φ) = ∂α/∂x * ∂x/∂(δφ) + ∂α/∂y * ∂y/∂(δφ) + ∂α/∂z * ∂z/∂(δφ)
       //
-      // We already have ∂α/∂X, ∂α/∂Y, ∂α/∂Z from the position Jacobians
-      // We need ∂x/∂φ, ∂y/∂φ, ∂z/∂φ, ∂x/∂θ, ∂y/∂θ, ∂z/∂θ, ∂x/∂ψ, ∂y/∂ψ, ∂z/∂ψ
-      // These can be derived from the rotation matrices
+      // We know ∂α/∂X, ∂α/∂Y, ∂α/∂Z from the position Jacobians
+      // We still need the partial derivatives of position w.r.t the orientation error
+      //
+      // We need ∂x/∂(δφ), ∂z/∂(δφ), ∂x/∂(δθ), ∂z/∂(δθ), ∂x/∂(δψ), ∂z/∂(δψ)
+      // These can be derived from the rotation matrices.
+      // Let's fall back to the Crazyflie body frame for the orientation error, because we know how to derive the rotation matrices in that frame
 
-      float dx_droll = 0.0f; // ∂x/∂φ
-      float dy_droll = -s[2]; // ∂y/∂φ
-      float dz_droll = s[1]; // ∂z/∂φ
+      float dx_droll = 0.0f; // ∂x/∂(δφ)
+      float dy_droll = -s[2]; // ∂y/∂(δφ)
+      float dz_droll = s[1]; // ∂z/∂(δφ)
 
-      float dx_dpitch = -s[2]; // ∂x/∂θ
-      float dy_dpitch = 0.0f; // ∂y/∂θ
-      float dz_dpitch = s[0]; // ∂z/∂θ
+      float dx_dpitch = -s[2]; // ∂x/∂(δθ)
+      float dy_dpitch = 0.0f; // ∂y/∂(δθ)
+      float dz_dpitch = s[0]; // ∂z/∂(δθ)
 
-      float dx_dyaw = -s[1]; // ∂x/∂ψ
-      float dy_dyaw = s[0]; // ∂y/∂ψ
-      float dz_dyaw = 0.0f; // ∂z/∂ψ
+      float dx_dyaw = -s[1]; // ∂x/∂(δψ)
+      float dy_dyaw = s[0]; // ∂y/∂(δψ)
+      float dz_dyaw = 0.0f; // ∂z/∂(δψ)
 
-      h[KC_STATE_D0] = dx_droll*g[0] + dy_droll*g[1] + dz_droll*g[2]; // ∂α/∂φ
-      h[KC_STATE_D1] = dx_dpitch*g[0] + dy_dpitch*g[1] + dz_dpitch*g[2]; // ∂α/∂θ
-      h[KC_STATE_D2] = dx_dyaw*g[0] + dy_dyaw*g[1] + dz_dyaw*g[2]; // ∂α/∂ψ
+      h[KC_STATE_D0] = g[0]*dx_droll + g[1]*dy_droll + g[2]*dz_droll;
+      h[KC_STATE_D1] = g[0]*dx_dpitch + g[1]*dy_dpitch + g[2]*dz_dpitch;
+      h[KC_STATE_D2] = g[0]*dx_dyaw + g[1]*dy_dyaw + g[2]*dz_dyaw;
 
       arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
       kalmanCoreScalarUpdate(this, &H, error, sweepInfo->stdDev);
