@@ -362,7 +362,7 @@ static void predictDt(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float d
    * \dot{d} = \omega
    *
    * where [[.]] is the cross-product matrix of .
-   *       \omega are the gyro measurements
+   *       \omega are the gyro measurements (angular velocity)
    *       e3 is the column vector [0 0 1]'
    *       I is the identity
    *       R is the current attitude as a rotation matrix
