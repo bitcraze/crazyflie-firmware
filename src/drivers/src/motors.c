@@ -41,10 +41,10 @@
 #include "nvicconf.h"
 #include "usec_time.h"
 #include "platform_defaults.h"
-// FreeRTOS includes
+ //FreeRTOS includes
 #include "task.h"
 
-// Logging includes
+ //Logging includes
 #include "log.h"
 #include "param.h"
 
@@ -82,11 +82,11 @@ void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio);
 
 #include "motors_def.c"
 
-const MotorPerifDef **motorMap; /* Current map configuration */
+ const MotorPerifDef** motorMap;  /* Current map configuration */
 
-const uint32_t MOTORS[] = {MOTOR_M1, MOTOR_M2, MOTOR_M3, MOTOR_M4};
+ const uint32_t MOTORS[] = { MOTOR_M1, MOTOR_M2, MOTOR_M3, MOTOR_M4 };
 
-const uint16_t testsound[NBR_OF_MOTORS] = {A4, A5, F5, D5};
+ const uint16_t testsound[NBR_OF_MOTORS] = {A4, A5, F5, D5 };
 
 const MotorHealthTestDef brushedMotorHealthTestSettings = {
     .onPeriodMsec = HEALTH_BRUSHED_ON_PERIOD_MSEC,
@@ -101,7 +101,7 @@ const MotorHealthTestDef brushlessMotorHealthTestSettings = {
     .offPeriodMsec = HEALTH_BRUSHLESS_OFF_PERIOD_MSEC,
     .varianceMeasurementStartMsec = HEALTH_BRUSHLESS_VARIANCE_START_MSEC,
     .onPeriodPWMRatioProp = 0, /* user must set health.propTestPWMRatio explicitly */
-    .onPeriodPWMRatioBat = 0,  /* user must set health.batTestPWMRatio explicitly */
+     .onPeriodPWMRatioBat = 0, /* user must set health.batTestPWMRatio explicitly */
 };
 
 const MotorHealthTestDef unknownMotorHealthTestSettings = {
@@ -115,6 +115,7 @@ const MotorHealthTestDef unknownMotorHealthTestSettings = {
 static bool isInit = false;
 static uint64_t lastCycleTime;
 static uint32_t cycleTime;
+ 
 
 /* Private functions */
 
@@ -135,14 +136,16 @@ GPIO_InitTypeDef GPIO_PassthroughInput =
         .GPIO_Mode = GPIO_Mode_IN,
         .GPIO_Speed = GPIO_Speed_2MHz,
         .GPIO_OType = GPIO_OType_OD,
-        .GPIO_PuPd = GPIO_PuPd_UP};
+     .GPIO_PuPd = GPIO_PuPd_UP
+ };
 
 GPIO_InitTypeDef GPIO_PassthroughOutput =
     {
         .GPIO_Mode = GPIO_Mode_OUT,
         .GPIO_Speed = GPIO_Speed_2MHz,
         .GPIO_OType = GPIO_OType_PP,
-        .GPIO_PuPd = GPIO_PuPd_UP};
+     .GPIO_PuPd = GPIO_PuPd_UP
+ };
 
 // What decides the amount of thrust is the voltage of the motor, which is calculated by
 // duty cycle * supply voltage.
@@ -209,14 +212,14 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
 
 /* Public functions */
 
-// Initialization. Will set all motors ratio to 0%
-void motorsInit(const MotorPerifDef **motorMapSelect)
+ //Initialization. Will set all motors ratio to 0%
+ void motorsInit(const MotorPerifDef** motorMapSelect)
 {
   int i;
-  // Init structures
+   //Init structures
   GPIO_InitTypeDef GPIO_InitStructure;
-  TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
-  TIM_OCInitTypeDef TIM_OCInitStructure;
+   TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+   TIM_OCInitTypeDef  TIM_OCInitStructure;
 
   if (isInit)
   {
@@ -244,7 +247,7 @@ void motorsInit(const MotorPerifDef **motorMapSelect)
 
   for (i = 0; i < NBR_OF_MOTORS; i++)
   {
-    // Clock the gpio and the timers
+     //Clock the gpio and the timers
     MOTORS_RCC_GPIO_CMD(motorMap[i]->gpioPerif, ENABLE);
     MOTORS_RCC_GPIO_CMD(motorMap[i]->gpioPowerswitchPerif, ENABLE);
     MOTORS_RCC_TIM_CMD(motorMap[i]->timPerif, ENABLE);
@@ -269,10 +272,10 @@ void motorsInit(const MotorPerifDef **motorMapSelect)
     GPIO_InitStructure.GPIO_Pin = motorMap[i]->gpioPin;
     GPIO_Init(motorMap[i]->gpioPort, &GPIO_InitStructure);
 
-    // Map timers to alternate functions
+     //Map timers to alternate functions
     MOTORS_GPIO_AF_CFG(motorMap[i]->gpioPort, motorMap[i]->gpioPinSource, motorMap[i]->gpioAF);
 
-    // Timer configuration
+     //Timer configuration
     TIM_TimeBaseStructure.TIM_Period = motorMap[i]->timPeriod;
     TIM_TimeBaseStructure.TIM_Prescaler = motorMap[i]->timPrescaler;
     TIM_TimeBaseStructure.TIM_ClockDivision = 0;
@@ -314,7 +317,7 @@ void motorsInit(const MotorPerifDef **motorMapSelect)
   }
 }
 
-void motorsDeInit(const MotorPerifDef **motorMapSelect)
+ void motorsDeInit(const MotorPerifDef** motorMapSelect)
 {
   int i;
   GPIO_InitTypeDef GPIO_InitStructure;
@@ -326,10 +329,10 @@ void motorsDeInit(const MotorPerifDef **motorMapSelect)
     GPIO_InitStructure.GPIO_Pin = motorMap[i]->gpioPin;
     GPIO_Init(motorMap[i]->gpioPort, &GPIO_InitStructure);
 
-    // Map timers to alternate functions
+     //Map timers to alternate functions
     GPIO_PinAFConfig(motorMap[i]->gpioPort, motorMap[i]->gpioPinSource, 0x00);
 
-    // Deinit timer
+     //Deinit timer
     TIM_DeInit(motorMap[i]->tim);
   }
 }
@@ -343,7 +346,7 @@ bool motorsTest(void)
     if (motorMap[i]->drvType == BRUSHED)
     {
 #ifdef ACTIVATE_STARTUP_SOUND
-      motorsBeep(MOTORS[i], true, testsound[i], (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / A4) / 20);
+       motorsBeep(MOTORS[i], true, testsound[i], (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / A4)/ 20);
       vTaskDelay(M2T(MOTORS_TEST_ON_TIME_MS));
       motorsBeep(MOTORS[i], false, 0, 0);
       vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME_MS));
@@ -394,7 +397,7 @@ static void motorsDshotDMASetup()
   DMA_InitStructureShare.DMA_Mode = DMA_Mode_Normal;
   DMA_InitStructureShare.DMA_Priority = DMA_Priority_High;
   DMA_InitStructureShare.DMA_FIFOMode = DMA_FIFOMode_Disable;
-  DMA_InitStructureShare.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull;
+   DMA_InitStructureShare.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull ;
 
   for (int i = 0; i < NBR_OF_MOTORS; i++)
   {
@@ -434,14 +437,14 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
 
   for (int i = 0; i < 3; i++)
   {
-    cs ^= csData; // xor data by nibbles
+         cs ^=  csData; // xor data by nibbles
     csData >>= 4;
   }
 
   cs &= 0xf;
   dshotBits = (dshotBits << 4) | cs;
 
-  for (int i = 0; i < DSHOT_FRAME_SIZE; i++)
+   for(int i = 0; i < DSHOT_FRAME_SIZE; i++)
   {
     dshotDmaBuffer[id][i] = (dshotBits & 0x8000) ? MOTORS_TIM_VALUE_FOR_1 : MOTORS_TIM_VALUE_FOR_0;
     dshotBits <<= 1;
@@ -449,7 +452,7 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
   dshotDmaBuffer[id][16] = 0; // Set to 0 gives low output afterwards
 
   // Wait for DMA to be free. Can happen at startup but doesn't seem to wait afterwards.
-  while (DMA_GetCmdStatus(motorMap[id]->DMA_stream) != DISABLE)
+   while(DMA_GetCmdStatus(motorMap[id]->DMA_stream) != DISABLE)
   {
     dmaWait++;
   }
@@ -491,8 +494,7 @@ void motorsBurstDshot()
 // Ithrust is thrust mapped for 65536 <==> max thrust
 void motorsSetRatio(uint32_t id, uint16_t ithrust)
 {
-  if (isInit)
-  {
+   if (isInit) {
     ASSERT(id < NBR_OF_MOTORS);
 
     uint16_t ratio = ithrust;
@@ -623,7 +625,7 @@ uint16_t motorsGetRatio(uint32_t id)
 
 void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio)
 {
-  TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
+   TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
 
   ASSERT(id < NBR_OF_MOTORS);
 
@@ -647,14 +649,15 @@ void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio)
     motorMap[id]->setCompare(motorMap[id]->tim, ratio);
   }
 }
+ 
 
 // Play a tone with a given frequency and a specific duration in milliseconds (ms)
 void motorsPlayTone(uint16_t frequency, uint16_t duration_msec)
 {
-  motorsBeep(MOTOR_M1, true, frequency, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / frequency) / 20);
-  motorsBeep(MOTOR_M2, true, frequency, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / frequency) / 20);
-  motorsBeep(MOTOR_M3, true, frequency, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / frequency) / 20);
-  motorsBeep(MOTOR_M4, true, frequency, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / frequency) / 20);
+   motorsBeep(MOTOR_M1, true, frequency, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / frequency)/ 20);
+   motorsBeep(MOTOR_M2, true, frequency, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / frequency)/ 20);
+   motorsBeep(MOTOR_M3, true, frequency, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / frequency)/ 20);
+   motorsBeep(MOTOR_M4, true, frequency, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / frequency)/ 20);
   vTaskDelay(M2T(duration_msec));
   motorsBeep(MOTOR_M1, false, frequency, 0);
   motorsBeep(MOTOR_M2, false, frequency, 0);
@@ -666,8 +669,8 @@ void motorsPlayTone(uint16_t frequency, uint16_t duration_msec)
 void motorsPlayMelody(uint16_t *notes)
 {
   int i = 0;
-  uint16_t note;     // Note in hz
-  uint16_t duration; // Duration in ms
+   uint16_t note;      // Note in hz
+   uint16_t duration;  // Duration in ms
 
   do
   {
@@ -677,7 +680,7 @@ void motorsPlayMelody(uint16_t *notes)
   } while (duration != 0);
 }
 
-const MotorHealthTestDef *motorsGetHealthTestSettings(uint32_t id)
+ const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id)
 {
   if (id >= NBR_OF_MOTORS)
   {
@@ -698,13 +701,13 @@ const MotorHealthTestDef *motorsGetHealthTestSettings(uint32_t id)
 }
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
-void __attribute__((used)) DMA1_Stream1_IRQHandler(void) // M4
+ void __attribute__((used)) DMA1_Stream1_IRQHandler(void)  // M4
 {
   TIM_DMACmd(TIM2, TIM_DMA_CC3, DISABLE);
   DMA_ClearITPendingBit(DMA1_Stream1, DMA_IT_TCIF1);
   DMA_ITConfig(DMA1_Stream1, DMA_IT_TC, DISABLE);
 }
-void __attribute__((used)) DMA1_Stream5_IRQHandler(void) // M3
+ void __attribute__((used)) DMA1_Stream5_IRQHandler(void)  // M3
 {
   TIM_DMACmd(TIM2, TIM_DMA_CC1, DISABLE);
   DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_TCIF5);
@@ -720,13 +723,14 @@ void __attribute__((used)) DMA1_Stream6_IRQHandler(void) // M1
   /* Enable DMA TIM Stream */
   DMA_Cmd(motorMap[1]->DMA_stream, ENABLE);
 }
-void __attribute__((used)) DMA1_Stream7_IRQHandler(void) // M2
+ void __attribute__((used)) DMA1_Stream7_IRQHandler(void)  // M2
 {
   TIM_DMACmd(TIM2, TIM_DMA_CC4, DISABLE);
   DMA_ClearITPendingBit(DMA1_Stream7, DMA_IT_TCIF7);
   DMA_ITConfig(DMA1_Stream7, DMA_IT_TC, DISABLE);
 }
 #endif
+ 
 
 /**
  * Override power distribution to motors.
@@ -760,6 +764,7 @@ PARAM_ADD_CORE(PARAM_UINT16, m3, &motorPowerSet[2])
 PARAM_ADD_CORE(PARAM_UINT16, m4, &motorPowerSet[3])
 
 PARAM_GROUP_STOP(motorPowerSet)
+ 
 
 /**
  * Motor output related log variables.
