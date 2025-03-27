@@ -41,10 +41,10 @@
 #include "nvicconf.h"
 #include "usec_time.h"
 #include "platform_defaults.h"
- //FreeRTOS includes
+//FreeRTOS includes
 #include "task.h"
 
- //Logging includes
+//Logging includes
 #include "log.h"
 #include "param.h"
 
@@ -82,18 +82,18 @@ void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio);
 
 #include "motors_def.c"
 
- const MotorPerifDef** motorMap;  /* Current map configuration */
+const MotorPerifDef** motorMap;  /* Current map configuration */
 
- const uint32_t MOTORS[] = { MOTOR_M1, MOTOR_M2, MOTOR_M3, MOTOR_M4 };
+const uint32_t MOTORS[] = { MOTOR_M1, MOTOR_M2, MOTOR_M3, MOTOR_M4 };
 
- const uint16_t testsound[NBR_OF_MOTORS] = {A4, A5, F5, D5 };
+const uint16_t testsound[NBR_OF_MOTORS] = {A4, A5, F5, D5 };
 
 const MotorHealthTestDef brushedMotorHealthTestSettings = {
-    .onPeriodMsec = HEALTH_BRUSHED_ON_PERIOD_MSEC,
-    .offPeriodMsec = HEALTH_BRUSHED_OFF_PERIOD_MSEC,
-    .varianceMeasurementStartMsec = HEALTH_BRUSHED_VARIANCE_START_MSEC,
-    .onPeriodPWMRatioProp = HEALTH_BRUSHED_PROP_ON_PERIOD_PWM_RATIO,
-    .onPeriodPWMRatioBat = HEALTH_BRUSHED_BAT_ON_PERIOD_PWM_RATIO,
+   .onPeriodMsec = HEALTH_BRUSHED_ON_PERIOD_MSEC,
+   .offPeriodMsec = HEALTH_BRUSHED_OFF_PERIOD_MSEC,
+   .varianceMeasurementStartMsec = HEALTH_BRUSHED_VARIANCE_START_MSEC,
+   .onPeriodPWMRatioProp = HEALTH_BRUSHED_PROP_ON_PERIOD_PWM_RATIO,
+   .onPeriodPWMRatioBat = HEALTH_BRUSHED_BAT_ON_PERIOD_PWM_RATIO,
 };
 
 const MotorHealthTestDef brushlessMotorHealthTestSettings = {
@@ -101,7 +101,7 @@ const MotorHealthTestDef brushlessMotorHealthTestSettings = {
     .offPeriodMsec = HEALTH_BRUSHLESS_OFF_PERIOD_MSEC,
     .varianceMeasurementStartMsec = HEALTH_BRUSHLESS_VARIANCE_START_MSEC,
     .onPeriodPWMRatioProp = 0, /* user must set health.propTestPWMRatio explicitly */
-     .onPeriodPWMRatioBat = 0, /* user must set health.batTestPWMRatio explicitly */
+    .onPeriodPWMRatioBat = 0, /* user must set health.batTestPWMRatio explicitly */
 };
 
 const MotorHealthTestDef unknownMotorHealthTestSettings = {
@@ -115,7 +115,7 @@ const MotorHealthTestDef unknownMotorHealthTestSettings = {
 static bool isInit = false;
 static uint64_t lastCycleTime;
 static uint32_t cycleTime;
- 
+
 
 /* Private functions */
 
@@ -132,94 +132,94 @@ static uint16_t motorsConv16ToBits(uint16_t bits)
 }
 
 GPIO_InitTypeDef GPIO_PassthroughInput =
-    {
-        .GPIO_Mode = GPIO_Mode_IN,
-        .GPIO_Speed = GPIO_Speed_2MHz,
-        .GPIO_OType = GPIO_OType_OD,
-     .GPIO_PuPd = GPIO_PuPd_UP
- };
+{
+    .GPIO_Mode = GPIO_Mode_IN,
+    .GPIO_Speed = GPIO_Speed_2MHz,
+    .GPIO_OType = GPIO_OType_OD,
+    .GPIO_PuPd = GPIO_PuPd_UP
+};
 
 GPIO_InitTypeDef GPIO_PassthroughOutput =
-    {
-        .GPIO_Mode = GPIO_Mode_OUT,
-        .GPIO_Speed = GPIO_Speed_2MHz,
-        .GPIO_OType = GPIO_OType_PP,
-     .GPIO_PuPd = GPIO_PuPd_UP
- };
+{
+    .GPIO_Mode = GPIO_Mode_OUT,
+    .GPIO_Speed = GPIO_Speed_2MHz,
+    .GPIO_OType = GPIO_OType_PP,
+    .GPIO_PuPd = GPIO_PuPd_UP
+};
 
 // What decides the amount of thrust is the voltage of the motor, which is calculated by
 // duty cycle * supply voltage.
-// At a certain thrust command, there needs to be a corresponding motor voltage to
+// At a certain thrust command, there needs to be a corresponding motor voltage to 
 // achieve that thrust. That mapping is here fit with a third order polynomial, because
 // the thrust is correlated quadratic with the rpm, but there also is some saturation
 // taking place in a nonideal brushed DC motor with a quadratic load.
 //
-// In this case however, we have the thrust given and need to calculate the necessary
+// In this case however, we have the thrust given and need to calculate the necessary 
 // motor voltage. For that reason, an inversion of the mapping is done below.
-// To achieve a motor voltage, the duty cycle needs to be adapted based on
-// the given supply voltage, see the above eq.
+// To achieve a motor voltage, the duty cycle needs to be adapted based on 
+// the given supply voltage, see the above eq. 
 //
 // For more information see the corresponding blog entry on "PWM to Thrust"
 float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVoltage)
 {
-#ifdef CONFIG_ENABLE_THRUST_BAT_COMPENSATED
+  #ifdef CONFIG_ENABLE_THRUST_BAT_COMPENSATED
   ASSERT(id < NBR_OF_MOTORS);
 
   if (batCompEnable > 0)
   {
-    if (motorMap[id]->drvType == BRUSHED)
+  if (motorMap[id]->drvType == BRUSHED)
+  {
+    /*
+    * A LiPo battery is supposed to be 4.2V charged, 3.7V mid-charge and 3V
+    * discharged.
+    *
+    * A suitable sanity check for disabling the voltage compensation would be
+    * under 2V. That would suggest a damaged battery. This protects against
+    * rushing the motors on bugs and invalid voltage levels.
+    */
+    if (supplyVoltage < 2.0f)
     {
-      /*
-       * A LiPo battery is supposed to be 4.2V charged, 3.7V mid-charge and 3V
-       * discharged.
-       *
-       * A suitable sanity check for disabling the voltage compensation would be
-       * under 2V. That would suggest a damaged battery. This protects against
-       * rushing the motors on bugs and invalid voltage levels.
-       */
-      if (supplyVoltage < 2.0f)
-      {
         return 0.0f; // iThrust;
       }
 
-      float thrust = (iThrust / 65535.0f) * thrust_max; // rescaling integer thrust to N
-      if (thrust < thrust_min)                          // Make sure sqrt function doesn't crash
-      {
-        return 0.0f;
-      }
-      else
-      {
-        // Motor voltage to thrust is a cubic fit
-        // q, r, p to calculate the inverse of the third order polynomial
-        // For more info see https://math.vanderbilt.edu/schectex/courses/cubic/
-        // q and thus qrp need to be calculated each time while p and r are constant
+    float thrust = (iThrust / 65535.0f) * thrust_max; // rescaling integer thrust to N
+    if (thrust < thrust_min)                          // Make sure sqrt function gets positive values
+    {
+      return 0.0f;
+    }
+    else 
+    {
+      // Motor voltage to thrust is a cubic fit
+      // q, r, p to calculate the inverse of the third order polynomial
+      // For more info see https://math.vanderbilt.edu/schectex/courses/cubic/
+      // q and thus qrp need to be calculated each time while p and r are constant
         static const float p = -p_vmotor2thrust[2] / (3 * p_vmotor2thrust[3]);
         float q = p * p * p + (p_vmotor2thrust[2] * p_vmotor2thrust[1] - 3 * p_vmotor2thrust[3] * (p_vmotor2thrust[0] - thrust)) / (6 * p_vmotor2thrust[3] * p_vmotor2thrust[3]);
         static const float r = p_vmotor2thrust[1] / (3 * p_vmotor2thrust[3]);
         float qrp = sqrtf(q * q + (r - p * p) * (r - p * p) * (r - p * p));
 
         float motorVoltage = cbrtf(q + qrp) + cbrtf(q - qrp) + p;
-        float ratio = motorVoltage / supplyVoltage;
-        return UINT16_MAX * ratio;
-      }
+      float ratio = motorVoltage / supplyVoltage;
+      return UINT16_MAX * ratio;
+    }
     }
   }
 
-#endif
+  #endif
 
   return iThrust;
 }
 
 /* Public functions */
 
- //Initialization. Will set all motors ratio to 0%
- void motorsInit(const MotorPerifDef** motorMapSelect)
+//Initialization. Will set all motors ratio to 0%
+void motorsInit(const MotorPerifDef** motorMapSelect)
 {
   int i;
-   //Init structures
+  //Init structures
   GPIO_InitTypeDef GPIO_InitStructure;
-   TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
-   TIM_OCInitTypeDef  TIM_OCInitStructure;
+  TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+  TIM_OCInitTypeDef  TIM_OCInitStructure;
 
   if (isInit)
   {
@@ -247,7 +247,7 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
 
   for (i = 0; i < NBR_OF_MOTORS; i++)
   {
-     //Clock the gpio and the timers
+    //Clock the gpio and the timers
     MOTORS_RCC_GPIO_CMD(motorMap[i]->gpioPerif, ENABLE);
     MOTORS_RCC_GPIO_CMD(motorMap[i]->gpioPowerswitchPerif, ENABLE);
     MOTORS_RCC_TIM_CMD(motorMap[i]->timPerif, ENABLE);
@@ -272,10 +272,10 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
     GPIO_InitStructure.GPIO_Pin = motorMap[i]->gpioPin;
     GPIO_Init(motorMap[i]->gpioPort, &GPIO_InitStructure);
 
-     //Map timers to alternate functions
+    //Map timers to alternate functions
     MOTORS_GPIO_AF_CFG(motorMap[i]->gpioPort, motorMap[i]->gpioPinSource, motorMap[i]->gpioAF);
 
-     //Timer configuration
+    //Timer configuration
     TIM_TimeBaseStructure.TIM_Period = motorMap[i]->timPeriod;
     TIM_TimeBaseStructure.TIM_Prescaler = motorMap[i]->timPrescaler;
     TIM_TimeBaseStructure.TIM_ClockDivision = 0;
@@ -317,7 +317,7 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
   }
 }
 
- void motorsDeInit(const MotorPerifDef** motorMapSelect)
+void motorsDeInit(const MotorPerifDef** motorMapSelect)
 {
   int i;
   GPIO_InitTypeDef GPIO_InitStructure;
@@ -329,10 +329,10 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
     GPIO_InitStructure.GPIO_Pin = motorMap[i]->gpioPin;
     GPIO_Init(motorMap[i]->gpioPort, &GPIO_InitStructure);
 
-     //Map timers to alternate functions
+    //Map timers to alternate functions
     GPIO_PinAFConfig(motorMap[i]->gpioPort, motorMap[i]->gpioPinSource, 0x00);
 
-     //Deinit timer
+    //Deinit timer
     TIM_DeInit(motorMap[i]->tim);
   }
 }
@@ -346,7 +346,7 @@ bool motorsTest(void)
     if (motorMap[i]->drvType == BRUSHED)
     {
 #ifdef ACTIVATE_STARTUP_SOUND
-       motorsBeep(MOTORS[i], true, testsound[i], (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / A4)/ 20);
+      motorsBeep(MOTORS[i], true, testsound[i], (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / A4)/ 20);
       vTaskDelay(M2T(MOTORS_TEST_ON_TIME_MS));
       motorsBeep(MOTORS[i], false, 0, 0);
       vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME_MS));
@@ -397,7 +397,7 @@ static void motorsDshotDMASetup()
   DMA_InitStructureShare.DMA_Mode = DMA_Mode_Normal;
   DMA_InitStructureShare.DMA_Priority = DMA_Priority_High;
   DMA_InitStructureShare.DMA_FIFOMode = DMA_FIFOMode_Disable;
-   DMA_InitStructureShare.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull ;
+  DMA_InitStructureShare.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull ;
 
   for (int i = 0; i < NBR_OF_MOTORS; i++)
   {
@@ -437,14 +437,14 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
 
   for (int i = 0; i < 3; i++)
   {
-         cs ^=  csData; // xor data by nibbles
-    csData >>= 4;
+        cs ^=  csData; // xor data by nibbles
+        csData >>= 4;
   }
 
   cs &= 0xf;
   dshotBits = (dshotBits << 4) | cs;
 
-   for(int i = 0; i < DSHOT_FRAME_SIZE; i++)
+  for(int i = 0; i < DSHOT_FRAME_SIZE; i++)
   {
     dshotDmaBuffer[id][i] = (dshotBits & 0x8000) ? MOTORS_TIM_VALUE_FOR_1 : MOTORS_TIM_VALUE_FOR_0;
     dshotBits <<= 1;
@@ -452,7 +452,7 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
   dshotDmaBuffer[id][16] = 0; // Set to 0 gives low output afterwards
 
   // Wait for DMA to be free. Can happen at startup but doesn't seem to wait afterwards.
-   while(DMA_GetCmdStatus(motorMap[id]->DMA_stream) != DISABLE)
+  while(DMA_GetCmdStatus(motorMap[id]->DMA_stream) != DISABLE)
   {
     dmaWait++;
   }
@@ -466,35 +466,35 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
 void motorsBurstDshot()
 {
 
-  motorMap[0]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
-  motorMap[1]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
-  /* Enable TIM DMA Requests M1*/
-  TIM_DMACmd(motorMap[0]->tim, motorMap[0]->TIM_DMASource, ENABLE);
-  DMA_ITConfig(motorMap[0]->DMA_stream, DMA_IT_TC, ENABLE);
-  DMA_ITConfig(motorMap[1]->DMA_stream, DMA_IT_TC, ENABLE);
-  /* Enable DMA TIM Stream */
-  DMA_Cmd(motorMap[0]->DMA_stream, ENABLE);
+    motorMap[0]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
+    motorMap[1]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
+    /* Enable TIM DMA Requests M1*/
+    TIM_DMACmd(motorMap[0]->tim, motorMap[0]->TIM_DMASource, ENABLE);
+    DMA_ITConfig(motorMap[0]->DMA_stream, DMA_IT_TC, ENABLE);
+    DMA_ITConfig(motorMap[1]->DMA_stream, DMA_IT_TC, ENABLE);
+    /* Enable DMA TIM Stream */
+    DMA_Cmd(motorMap[0]->DMA_stream, ENABLE);
 
-  motorMap[2]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
-  /* Enable TIM DMA Requests M3*/
-  TIM_DMACmd(motorMap[2]->tim, motorMap[2]->TIM_DMASource, ENABLE);
-  DMA_ITConfig(motorMap[2]->DMA_stream, DMA_IT_TC, ENABLE);
-  /* Enable DMA TIM Stream */
-  DMA_Cmd(motorMap[2]->DMA_stream, ENABLE);
+    motorMap[2]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
+    /* Enable TIM DMA Requests M3*/
+    TIM_DMACmd(motorMap[2]->tim, motorMap[2]->TIM_DMASource, ENABLE);
+    DMA_ITConfig(motorMap[2]->DMA_stream, DMA_IT_TC, ENABLE);
+    /* Enable DMA TIM Stream */
+    DMA_Cmd(motorMap[2]->DMA_stream, ENABLE);
 
-  motorMap[3]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
-  /* Enable TIM DMA Requests M4*/
-  TIM_DMACmd(motorMap[3]->tim, motorMap[3]->TIM_DMASource, ENABLE);
-  DMA_ITConfig(motorMap[3]->DMA_stream, DMA_IT_TC, ENABLE);
-  /* Enable DMA TIM Stream */
-  DMA_Cmd(motorMap[3]->DMA_stream, ENABLE);
+    motorMap[3]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
+    /* Enable TIM DMA Requests M4*/
+    TIM_DMACmd(motorMap[3]->tim, motorMap[3]->TIM_DMASource, ENABLE);
+    DMA_ITConfig(motorMap[3]->DMA_stream, DMA_IT_TC, ENABLE);
+    /* Enable DMA TIM Stream */
+    DMA_Cmd(motorMap[3]->DMA_stream, ENABLE);
 }
 #endif
 
 // Ithrust is thrust mapped for 65536 <==> max thrust
 void motorsSetRatio(uint32_t id, uint16_t ithrust)
 {
-   if (isInit) {
+  if (isInit) {
     ASSERT(id < NBR_OF_MOTORS);
 
     uint16_t ratio = ithrust;
@@ -513,7 +513,7 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
       float b = 0.01f; // 0.2f = Convergence (95%) in ~10 steps = ~20ms
       static float supplyVoltage = 4.2;
       // only update the voltage for the first motor and use the same for the others, as done in stabilizer.c
-      if (id == 0)
+      if (id == 0) 
       {
         supplyVoltage = supplyVoltage + b * (pmGetBatteryVoltage() - supplyVoltage);
       }
@@ -625,7 +625,7 @@ uint16_t motorsGetRatio(uint32_t id)
 
 void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio)
 {
-   TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+  TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
 
   ASSERT(id < NBR_OF_MOTORS);
 
@@ -649,15 +649,15 @@ void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio)
     motorMap[id]->setCompare(motorMap[id]->tim, ratio);
   }
 }
- 
+
 
 // Play a tone with a given frequency and a specific duration in milliseconds (ms)
 void motorsPlayTone(uint16_t frequency, uint16_t duration_msec)
 {
-   motorsBeep(MOTOR_M1, true, frequency, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / frequency)/ 20);
-   motorsBeep(MOTOR_M2, true, frequency, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / frequency)/ 20);
-   motorsBeep(MOTOR_M3, true, frequency, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / frequency)/ 20);
-   motorsBeep(MOTOR_M4, true, frequency, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / frequency)/ 20);
+  motorsBeep(MOTOR_M1, true, frequency, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / frequency)/ 20);
+  motorsBeep(MOTOR_M2, true, frequency, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / frequency)/ 20);
+  motorsBeep(MOTOR_M3, true, frequency, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / frequency)/ 20);
+  motorsBeep(MOTOR_M4, true, frequency, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / frequency)/ 20);
   vTaskDelay(M2T(duration_msec));
   motorsBeep(MOTOR_M1, false, frequency, 0);
   motorsBeep(MOTOR_M2, false, frequency, 0);
@@ -669,8 +669,8 @@ void motorsPlayTone(uint16_t frequency, uint16_t duration_msec)
 void motorsPlayMelody(uint16_t *notes)
 {
   int i = 0;
-   uint16_t note;      // Note in hz
-   uint16_t duration;  // Duration in ms
+  uint16_t note;      // Note in hz
+  uint16_t duration;  // Duration in ms
 
   do
   {
@@ -680,7 +680,7 @@ void motorsPlayMelody(uint16_t *notes)
   } while (duration != 0);
 }
 
- const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id)
+const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id)
 {
   if (id >= NBR_OF_MOTORS)
   {
@@ -701,13 +701,13 @@ void motorsPlayMelody(uint16_t *notes)
 }
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
- void __attribute__((used)) DMA1_Stream1_IRQHandler(void)  // M4
+void __attribute__((used)) DMA1_Stream1_IRQHandler(void)  // M4
 {
   TIM_DMACmd(TIM2, TIM_DMA_CC3, DISABLE);
   DMA_ClearITPendingBit(DMA1_Stream1, DMA_IT_TCIF1);
   DMA_ITConfig(DMA1_Stream1, DMA_IT_TC, DISABLE);
 }
- void __attribute__((used)) DMA1_Stream5_IRQHandler(void)  // M3
+void __attribute__((used)) DMA1_Stream5_IRQHandler(void)  // M3
 {
   TIM_DMACmd(TIM2, TIM_DMA_CC1, DISABLE);
   DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_TCIF5);
@@ -723,14 +723,14 @@ void __attribute__((used)) DMA1_Stream6_IRQHandler(void) // M1
   /* Enable DMA TIM Stream */
   DMA_Cmd(motorMap[1]->DMA_stream, ENABLE);
 }
- void __attribute__((used)) DMA1_Stream7_IRQHandler(void)  // M2
+void __attribute__((used)) DMA1_Stream7_IRQHandler(void)  // M2
 {
   TIM_DMACmd(TIM2, TIM_DMA_CC4, DISABLE);
   DMA_ClearITPendingBit(DMA1_Stream7, DMA_IT_TCIF7);
   DMA_ITConfig(DMA1_Stream7, DMA_IT_TC, DISABLE);
 }
 #endif
- 
+
 
 /**
  * Override power distribution to motors.
@@ -764,7 +764,7 @@ PARAM_ADD_CORE(PARAM_UINT16, m3, &motorPowerSet[2])
 PARAM_ADD_CORE(PARAM_UINT16, m4, &motorPowerSet[3])
 
 PARAM_GROUP_STOP(motorPowerSet)
- 
+
 
 /**
  * Motor output related log variables.
