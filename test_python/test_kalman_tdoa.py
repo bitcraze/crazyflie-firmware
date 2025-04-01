@@ -10,7 +10,7 @@ def test_kalman_core_with_tdoa3():
     fixture_base = 'test_python/fixtures/kalman_core'
     anchor_positions = read_loco_anchor_positions(fixture_base + '/anchor_positions.yaml')
     runner = SdCardFileRunner(fixture_base + '/log05')
-    emulator = EstimatorKalmanEmulator(anchor_positions)
+    emulator = EstimatorKalmanEmulator(anchor_positions=anchor_positions)
 
     # Test
     actual = runner.run_estimator_loop(emulator)

@@ -215,7 +215,7 @@ MOD_INC = src/modules/interface
 MOD_SRC = src/modules/src
 
 bindings_python build/cffirmware.py: bindings/setup.py $(MOD_SRC)/*.c
-	swig -python -I$(MOD_INC) -Isrc/hal/interface -Isrc/utils/interface -I$(MOD_INC)/controller -Isrc/platform/interface -I$(MOD_INC)/outlierfilter -I$(MOD_INC)/kalman_core -o build/cffirmware_wrap.c bindings/cffirmware.i
+	swig -python -I$(MOD_INC) -Isrc/hal/interface -Isrc/utils/interface -Isrc/utils/interface/lighthouse -I$(MOD_INC)/controller -Isrc/platform/interface -I$(MOD_INC)/outlierfilter -I$(MOD_INC)/kalman_core -o build/cffirmware_wrap.c bindings/cffirmware.i
 	$(PYTHON) bindings/setup.py build_ext --inplace
 	cp cffirmware_setup.py build/setup.py
 
