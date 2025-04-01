@@ -50,7 +50,10 @@ fw_sources = [
     "src/modules/src/axis3fSubSampler.c",
     "src/modules/src/kalman_core/kalman_core.c",
     "src/modules/src/kalman_core/mm_tdoa.c",
+    "src/modules/src/kalman_core/mm_sweep_angles.c",
     "src/modules/src/outlierfilter/outlierFilterTdoa.c",
+    "src/modules/src/outlierfilter/outlierFilterLighthouse.c",
+    "src/utils/src/lighthouse/lighthouse_calibration.c",
 ]
 
 cffirmware = Extension(

@@ -25,6 +25,10 @@
 #include "outlierFilterTdoa.h"
 #include "kalman_core.h"
 #include "mm_tdoa.h"
+#include "mm_sweep_angles.h"
+#include "outlierFilterLighthouse.h"
+#include "lighthouse_calibration.h"
+#include "lighthouse_types.h"
 %}
 
 %include "math3d.h"
@@ -42,9 +46,18 @@
 %include "outlierFilterTdoa.h"
 %include "kalman_core.h"
 %include "mm_tdoa.h"
+%include "mm_sweep_angles.h"
+%include "outlierFilterLighthouse.h"
+%include "lighthouse_calibration.h"
+%include "lighthouse_types.h"
 
 
 %inline %{
+void set_calibration_model(sweepAngleMeasurement_t *sweep, lighthouseCalibrationSweep_t *calib_in)
+{
+    sweep->calibrationMeasurementModel = lighthouseCalibrationMeasurementModelLh2;
+    sweep->calib = calib_in;
+}
 struct poly4d* piecewise_get(struct piecewise_traj *pp, int i)
 {
     return &pp->pieces[i];
@@ -105,6 +118,32 @@ void assertFail(char *exp, char *file, int line) {
     sprintf(buf, "%s in File: \"%s\", line %d\n", exp, file, line);
 
     PyErr_SetString(PyExc_AssertionError, buf);
+}
+
+vec3d* make_vec3d(float x, float y, float z) {
+    vec3d* v = (vec3d*)malloc(sizeof(vec3d));
+    (*v)[0] = x;
+    (*v)[1] = y;
+    (*v)[2] = z;
+    return v;
+}
+
+void free_vec3d(vec3d* v) {
+    free(v);
+}
+
+mat3d* make_mat3d(float m00, float m01, float m02,
+                  float m10, float m11, float m12,
+                  float m20, float m21, float m22) {
+    mat3d* m = (mat3d*)malloc(sizeof(mat3d));
+    (*m)[0][0] = m00; (*m)[0][1] = m01; (*m)[0][2] = m02;
+    (*m)[1][0] = m10; (*m)[1][1] = m11; (*m)[1][2] = m12;
+    (*m)[2][0] = m20; (*m)[2][1] = m21; (*m)[2][2] = m22;
+    return m;
+}
+
+void free_mat3d(mat3d* m) {
+    free(m);
 }
 %}
 
