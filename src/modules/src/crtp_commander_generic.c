@@ -74,6 +74,7 @@ enum packet_type {
   velocityWorldType       = 8,
   zDistanceType           = 9,
   hoverType               = 10,
+  manualType              = 11,
 };
 
 /* ---===== 2 - Decoding functions =====--- */
@@ -87,6 +88,46 @@ enum packet_type {
 static void stopDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
 {
   return;
+}
+
+struct manualPacket_s {
+  float roll;  //deg or deg/s depending on 'rate'
+  float pitch;  //deg or deg/s depending on 'rate'
+  float yawrate;  // deg/s
+  uint16_t thrust;
+  char rate;  // True if roll/pitch in velocity mode
+} __attribute__((packed));
+
+/* manualDecoder
+ *
+ */
+static void manualDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
+{
+  const struct manualPacket_s *values = data;
+
+
+  ASSERT(datalen == sizeof(struct manualPacket_s));
+
+  if(values->rate == true)
+  {
+    setpoint->mode.roll = modeVelocity;
+    setpoint->mode.pitch = modeVelocity;
+    setpoint->attitudeRate.roll = values->roll;
+    setpoint->attitudeRate.pitch = values->pitch;
+  }
+  else
+  {
+    setpoint->mode.roll = modeAbs;
+    setpoint->mode.pitch = modeAbs;
+    setpoint->attitude.roll = values->roll;
+    setpoint->attitude.pitch = values->pitch;
+  }
+
+  setpoint->mode.yaw = modeVelocity;
+
+  setpoint->attitudeRate.yaw = values->yawrate;
+
+  setpoint->thrust = values->thrust;
 }
 
 struct velocityPacket_s {
@@ -493,6 +534,7 @@ const static packetDecoder_t packetDecoders[] = {
   [velocityWorldType]       = velocityDecoder,
   [zDistanceType]           = zDistanceDecoder,
   [hoverType]               = hoverDecoder,
+  [manualType]              = manualDecoder,
 };
 
 /* Decoder switch */
