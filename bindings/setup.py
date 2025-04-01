@@ -55,6 +55,9 @@ fw_sources = [
     "src/modules/src/kalman_core/mm_tof.c",
     "src/modules/src/kalman_core/mm_flow.c",
     "src/modules/src/kalman_core/mm_distance.c",
+    "src/modules/src/kalman_core/mm_sweep_angles.c",
+    "src/modules/src/outlierfilter/outlierFilterLighthouse.c",
+    "src/utils/src/lighthouse/lighthouse_calibration.c",
 ]
 
 cffirmware = Extension(

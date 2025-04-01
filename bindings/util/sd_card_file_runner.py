@@ -23,7 +23,7 @@ class SdCardFileRunner:
         result = []
         while len(self.samples):
             now_ms, external_state = emulator.run_one_1khz_iteration(self.samples)
-            result.append((now_ms, (external_state.position.x, external_state.position.y, external_state.position.z)))
+            result.append((now_ms, (external_state.position.x, external_state.position.y, external_state.position.z, external_state.attitude.roll, external_state.attitude.pitch, external_state.attitude.yaw)))
 
         return result
 
