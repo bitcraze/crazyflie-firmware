@@ -218,7 +218,7 @@
  * This is the threshold for a propeller/motor to pass. It calculates the variance of the accelerometer X+Y
  * when the propeller is spinning.
  */
-#define PROPELLER_BALANCE_TEST_THRESHOLD  2.5f
+#define PROPELLER_BALANCE_TEST_THRESHOLD  0.0f
 
 /**
  * \def BAT_LOADING_SAG_THRESHOLD
