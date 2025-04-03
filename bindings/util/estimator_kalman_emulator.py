@@ -200,6 +200,15 @@ class EstimatorKalmanEmulator:
 
             cffirmware.kalmanCoreUpdateWithPose(self.coreData, ext_pose)
 
+        elif sample[0] == 'estYawError':
+            self.logger.debug('Processing a yaw error sample')
+            yaw_error_data  = sample[1]
+            yaw_error = cffirmware.yawErrorMeasurement_t()
+            yaw_error.yawError = float(yaw_error_data['yawError'])
+            yaw_error.stdDev = 0.01
+
+            cffirmware.kalmanCoreUpdateWithYawError(self.coreData, yaw_error)
+
         elif sample[0] == 'estSweepAngle':
             self.logger.debug('Processing a sweep angle sample')
             sweep_data = sample[1]
