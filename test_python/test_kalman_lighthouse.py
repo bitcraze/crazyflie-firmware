@@ -3,92 +3,173 @@ import matplotlib.pyplot as plt
 from bindings.util.estimator_kalman_emulator import EstimatorKalmanEmulator
 from bindings.util.sd_card_file_runner import SdCardFileRunner
 from bindings.util.lighthouse_utils import load_lighthouse_calibration
+from scipy.spatial.transform import Rotation
 import logging
-
-def test_kalman_core_with_sweeps():
-    # Fixture
-    fixture_base = 'test_python/fixtures/kalman_core'
-    runner = SdCardFileRunner(fixture_base + '/log18')
-    bs_calib, bs_geo = load_lighthouse_calibration(fixture_base + '/geometry.yaml')
-    emulator = EstimatorKalmanEmulator(basestation_calibration=bs_calib, basestation_poses=bs_geo)
-
-    # Test
-    onboard_estimates = extract_onboard_estimates(runner.samples)
-    actual = runner.run_estimator_loop(emulator)
-    plot_positions(actual, onboard_estimates)
-
-def extract_onboard_estimates(samples):
-    estimates = []
-    for entry_type, data in samples:
-        if entry_type == 'fixedFrequency':
-            timestamp = float(data['timestamp'])
-            x = float(data.get('stateEstimate.x', 0.0))
-            y = float(data.get('stateEstimate.y', 0.0))
-            z = float(data.get('stateEstimate.z', 0.0))
-            roll = float(data.get('stateEstimate.roll', 0.0))
-            pitch = float(data.get('stateEstimate.pitch', 0.0))
-            yaw = float(data.get('stateEstimate.yaw', 0.0))
-            estimates.append((timestamp, (x, y, z, roll, pitch, yaw)))
-    return estimates
+import csv
+import numpy as np
 
 
-def plot_positions(actual, onboard=None):
-    timestamps = [t for t, _ in actual]
-    xs = [pos[0] for _, pos in actual]
-    ys = [pos[1] for _, pos in actual]
-    zs = [pos[2] for _, pos in actual]
-    rolls = [pos[3] for _, pos in actual]
-    pitchs = [pos[4] for _, pos in actual]
-    yaws = [pos[5] for _, pos in actual]
+class EstimatorSource:
+    def __init__(self, name):
+        self.name = name
+        self.estimates = []
 
-    fig, axs = plt.subplots(6, 1, sharex=True, figsize=(10, 10))
+    def extract_estimates(self):
+        raise NotImplementedError
 
-    axs[0].plot(timestamps, xs, label='Emulator')
-    axs[0].set_ylabel('X Position')
-    axs[0].grid(True)
+    def align_timestamps(self, reference_timestamps):
+        pass  # Optional to override
 
-    axs[1].plot(timestamps, ys, label='Emulator')
-    axs[1].set_ylabel('Y Position')
-    axs[1].grid(True)
+    def get_estimates(self):
+        return self.estimates
 
-    axs[2].plot(timestamps, zs, label='Emulator')
-    axs[2].set_ylabel('Z Position')
-    axs[2].grid(True)
 
-    axs[3].plot(timestamps, rolls, label='Emulator')
-    axs[3].set_ylabel('Roll')
-    axs[3].grid(True)
+class OnboardSource(EstimatorSource):
+    def __init__(self, samples):
+        super().__init__('Onboard')
+        self.samples = samples or []  # Handle missing samples
+        self.extract_estimates()
 
-    axs[4].plot(timestamps, pitchs, label='Emulator')
-    axs[4].set_ylabel('Pitch')
-    axs[4].grid(True)
+    def extract_estimates(self):
+        for entry_type, data in self.samples:
+            if entry_type == 'fixedFrequency':
+                timestamp = float(data['timestamp'])
+                x = float(data.get('stateEstimate.x', 0.0))
+                y = float(data.get('stateEstimate.y', 0.0))
+                z = float(data.get('stateEstimate.z', 0.0))
+                roll = float(data.get('stateEstimate.roll', 0.0))
+                pitch = float(data.get('stateEstimate.pitch', 0.0))
+                yaw = float(data.get('stateEstimate.yaw', 0.0))
+                self.estimates.append((timestamp, (x, y, z, roll, pitch, yaw)))
 
-    axs[5].plot(timestamps, yaws, label='Emulator')
-    axs[5].set_ylabel('Yaw')
-    axs[5].set_xlabel('Time (ms)')
-    axs[5].grid(True)
 
-    if onboard:
-        onboard_t = [t for t, _ in onboard]
-        onboard_x = [pos[0] for _, pos in onboard]
-        onboard_y = [pos[1] for _, pos in onboard]
-        onboard_z = [pos[2] for _, pos in onboard]
-        onboard_roll = [pos[3] for _, pos in onboard]
-        onboard_pitch = [pos[4] for _, pos in onboard]
-        onboard_yaw = [pos[5] for _, pos in onboard]
+class OffboardSource(EstimatorSource):
+    def __init__(self, runner, emulator):
+        super().__init__('Offboard')
+        self.runner = runner
+        self.emulator = emulator
+        self.estimates = []
+        if runner and emulator:
+            self.extract_estimates()
+        else:
+            logging.warning("Runner or Emulator not provided for OffboardSource")
 
-        axs[0].plot(onboard_t, onboard_x, label='Onboard', linestyle='--')
-        axs[1].plot(onboard_t, onboard_y, label='Onboard', linestyle='--')
-        axs[2].plot(onboard_t, onboard_z, label='Onboard', linestyle='--')
-        axs[3].plot(onboard_t, onboard_roll, label='Onboard', linestyle='--')
-        axs[4].plot(onboard_t, onboard_pitch, label='Onboard', linestyle='--')
-        axs[5].plot(onboard_t, onboard_yaw, label='Onboard', linestyle='--')
+    def extract_estimates(self):
+        self.estimates = self.runner.run_estimator_loop(self.emulator)
 
-    for ax in axs:
-        ax.legend()
 
-    plt.tight_layout()
-    plt.show()
+class MocapSource(EstimatorSource):
+    def __init__(self, filepath):
+        super().__init__('Mocap')
+        self.filepath = filepath
+        self.timestamps = []
+        self.data_points = []
+        self.extract_estimates()
+
+    def extract_estimates(self):
+        try:
+            with open(self.filepath, 'r') as file:
+                reader = csv.reader(file)
+                header = next(reader)
+
+                for row in reader:
+                    timestamp, x, y, z, q0, q1, q2, q3 = map(float, row)
+                    roll, pitch, yaw = Rotation.from_quat([q0, q1, q2, q3]).as_euler('xyz', degrees=True)
+                    self.timestamps.append(timestamp)
+                    self.data_points.append((x, y, z, roll, -pitch, yaw))
+
+        except (FileNotFoundError, ValueError) as e:
+            logging.warning(f"Error reading Mocap file '{self.filepath}': {e}")
+
+    def align_timestamps(self, reference_timestamps):
+        if not self.timestamps:
+            logging.warning("No timestamps available in MocapSource for alignment.")
+            return
+
+        min_diff = float('inf')
+        gap_index = 0
+
+        for i in range(1, len(self.timestamps)):
+            diff = abs(self.timestamps[i] - self.timestamps[i - 1] - 1.0)
+            if diff < min_diff:
+                min_diff = diff
+                gap_index = i+190
+
+
+        if gap_index:
+            if min_diff > 0.01:
+                logging.warning("Time aligning likely failed, large gap detected.")
+            time_shift = reference_timestamps[0] - (self.timestamps[gap_index] * 1000)
+            self.estimates = [((t * 1000) + time_shift, pos) for t, pos in zip(self.timestamps[gap_index:], self.data_points[gap_index:])]
+
+
+class Plotter:
+    @staticmethod
+    def plot(data_sources):
+        fig, axs = plt.subplots(6, 1, sharex=True, figsize=(10, 10))
+        labels = ['X Position', 'Y Position', 'Z Position', 'Roll', 'Pitch', 'Yaw']
+
+        for label_index, label in enumerate(labels):
+            for source in data_sources:
+                data = source.get_estimates()
+                if data:
+                    timestamps = np.array([t for t, _ in data])
+                    values = np.array([pos[label_index] for _, pos in data])
+
+                    axs[label_index].plot(timestamps, values, label=source.name)
+
+            axs[label_index].set_ylabel(label)
+            axs[label_index].grid(True)
+            axs[label_index].legend()
+
+        axs[-1].set_xlabel('Time (ms)')
+        plt.tight_layout()
+        plt.show()
+
+
+class Evaluator:
+    @staticmethod
+    def calculate_mse(source, reference):
+        reference_data = {t: pos for t, pos in reference.get_estimates()}
+        source_times = np.array([t for t, _ in source.get_estimates()])
+        reference_times = np.array([t for t, _ in reference.get_estimates()])
+
+        if not len(reference_times) or not len(source_times):
+            logging.warning(f"No data available for MSE calculation between {source.name} and {reference.name}.")
+            return
+
+        interpolated_reference_values = []
+        labels = ['X', 'Y', 'Z', 'Roll', 'Pitch', 'Yaw']
+
+        for i in range(6):
+            ref_values = np.array([pos[i] for _, pos in reference.get_estimates()])
+            interpolated_values = np.interp(source_times, reference_times, ref_values)
+            interpolated_reference_values.append(interpolated_values)
+
+        interpolated_reference_values = np.array(interpolated_reference_values).T
+
+        source_values = np.array([pos for _, pos in source.get_estimates()])
+        mse = np.mean((source_values - interpolated_reference_values) ** 2, axis=0)
+
+        print(f"MSE between {source.name} and {reference.name}:")
+        for i, label in enumerate(labels):
+            print(f"{label}: {mse[i]}")
+
+
 
 logging.basicConfig(level=logging.INFO)
-test_kalman_core_with_sweeps()
+
+fixture_base = 'test_python/fixtures/kalman_core'
+runner = SdCardFileRunner(fixture_base + '/log19')
+mocap_data = fixture_base + '/pose_data11.csv'
+bs_calib, bs_geo = load_lighthouse_calibration(fixture_base + '/geometry.yaml')
+emulator = EstimatorKalmanEmulator(basestation_calibration=bs_calib, basestation_poses=bs_geo)
+
+onboard_source = OnboardSource(runner.samples)
+offboard_source = OffboardSource(runner, emulator)
+mocap_source = MocapSource(mocap_data)
+mocap_source.align_timestamps([t for t, _ in offboard_source.get_estimates()])
+
+Plotter.plot([onboard_source, offboard_source, mocap_source])
+Evaluator.calculate_mse(onboard_source, mocap_source)
+Evaluator.calculate_mse(offboard_source, mocap_source)
