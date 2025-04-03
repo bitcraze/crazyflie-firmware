@@ -30,7 +30,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-
+#define __fp16 uint16_t
 
 #define OOTX_MAX_FRAME_LENGTH 43
 
