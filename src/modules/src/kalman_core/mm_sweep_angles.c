@@ -43,13 +43,9 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
 
   // Crazyflie position in global reference frame
   vec3d pcf = {this->S[KC_STATE_X], this->S[KC_STATE_Y], this->S[KC_STATE_Z]};
-  arm_matrix_instance_f32 pcf_ = {3, 1, pcf};
 
   // Sensor position in global reference frame
-  vec3d ps;
-  arm_matrix_instance_f32 ps_ = {3, 1, ps};
-  arm_mat_add_f32(&temp_ps_, &pcf_, &ps_);
-
+  vec3d ps = {pcf[0] + temp_ps[0], pcf[1] + temp_ps[1], pcf[2] + temp_ps[2]};
   // Rotor position in global reference frame
   const vec3d* pr = sweepInfo->rotorPos;
 
