@@ -186,3 +186,8 @@
 #endif
 
 
+// This is the threshold for a propeller/motor to pass. It calculates the
+// variance of the accelerometer X+Y when the propeller is spinning.
+#ifndef HEALTH_PROPELLER_TEST_THRESHOLD
+    #define HEALTH_PROPELLER_TEST_THRESHOLD  0.0f
+#endif

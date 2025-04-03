@@ -48,12 +48,14 @@
 
 #include "static_mem.h"
 
+#include "platform_defaults.h"
+
 #define PROPTEST_NBR_OF_VARIANCE_VALUES   100
 
 static bool startPropTest = false;
 static bool startBatTest = false;
 
-static float propTestThreshold = PROPELLER_BALANCE_TEST_THRESHOLD;
+static float propTestThreshold = HEALTH_PROPELLER_TEST_THRESHOLD;
 
 static uint16_t propTestPWMRatio = CONFIG_MOTORS_DEFAULT_PROP_TEST_PWM_RATIO;
 static uint16_t batTestPWMRatio = CONFIG_MOTORS_DEFAULT_BAT_TEST_PWM_RATIO;
