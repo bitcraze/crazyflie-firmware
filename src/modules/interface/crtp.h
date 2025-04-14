@@ -30,7 +30,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define CRTP_PROTOCOL_VERSION 8
+#define CRTP_PROTOCOL_VERSION 9
 
 #define CRTP_MAX_DATA_SIZE 30
 

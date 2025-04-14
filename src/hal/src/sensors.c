@@ -145,6 +145,7 @@ static const sensorsImplementation_t sensorImplementations[SensorImplementation_
 static const sensorsImplementation_t* activeImplementation;
 static bool isInit = false;
 static const sensorsImplementation_t* findImplementation(SensorImplementation_t implementation);
+static bool sensorsSuspended = false;
 
 void sensorsInit(void) {
   if (isInit) {
@@ -208,12 +209,18 @@ void sensorsSetAccMode(accModes accMode) {
 void sensorsSuspend()
 {
   NVIC_DisableIRQ(EXTI15_10_IRQn);
+  sensorsSuspended = true;
 }
 
 void sensorsResume()
 {
   NVIC_EnableIRQ(EXTI15_10_IRQn);
+  sensorsSuspended = false;
+}
 
+bool isSensorsSuspended(void)
+{
+  return sensorsSuspended;
 }
 
 void __attribute__((used)) EXTI14_Callback(void) {

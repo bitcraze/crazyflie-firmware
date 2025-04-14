@@ -1,0 +1,15 @@
+# Name of the RUST lib crate to include in the build
+CRATE_NAME := cfapprs
+
+# The crate's output lib will become app.o to make KBUILD happy 
+obj-y += app.o
+
+# Flag required to link the whole static library into built-in.o, noexecstack matches the default behavior of LLVM
+EXTRA_LDFLAGS += -Wl,--whole-archive -z noexecstack
+
+# Always build the Rust lib crate and copy it to app.o
+$(obj)/app.o: FORCE
+	cargo build --release --target thumbv7em-none-eabihf
+	cp $(obj)/target/thumbv7em-none-eabihf/release/lib$(CRATE_NAME).a $@
+
+FORCE:

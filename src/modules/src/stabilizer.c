@@ -269,9 +269,12 @@ void rateSupervisorTask(void *pvParameters) {
         }
       }
     } else {
-      // Handle the case where the semaphore was not given within the timeout
-      DEBUG_PRINT("ERROR: stabilizerTask is blocking\n");
-      ASSERT(false); // For safety, assert if the stabilizer task is blocking to ensure motor shutdown
+      // Don't assert if sensors are suspended
+      if (isSensorsSuspended() == false) {
+        // Handle the case where the semaphore was not given within the timeout
+        DEBUG_PRINT("ERROR: stabilizerTask is blocking\n");
+        ASSERT(false); // For safety, assert if the stabilizer task is blocking to ensure motor shutdown
+      }
     }
   }
 }
@@ -365,9 +368,10 @@ static void stabilizerTask(void* param)
       calcSensorToOutputLatency(&sensorData);
       stabilizerStep++;
       STATS_CNT_RATE_EVENT(&stabilizerRate);
-
-      xSemaphoreGive(xRateSupervisorSemaphore);
     }
+
+    xSemaphoreGive(xRateSupervisorSemaphore);
+
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
     motorsBurstDshot();
 #endif

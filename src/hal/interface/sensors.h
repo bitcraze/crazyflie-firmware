@@ -60,6 +60,11 @@ void sensorsSuspend();
 void sensorsResume();
 
 /**
+ * Check if sensors are suspended (sensor interrupts disabled)
+ * @return true if they are, else false
+ */
+bool isSensorsSuspended();
+/**
  * Set acc mode, one of accModes enum
  */
 void sensorsSetAccMode(accModes accMode);

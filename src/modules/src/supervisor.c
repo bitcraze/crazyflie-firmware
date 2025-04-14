@@ -61,6 +61,7 @@
   #define AUTO_ARMING 0
 #endif
 
+static uint16_t preflightTimeoutDuration = PREFLIGHT_TIMEOUT_MS;
 static uint16_t landingTimeoutDuration = LANDING_TIMEOUT_MS;
 
 typedef struct {
@@ -72,14 +73,14 @@ typedef struct {
   uint16_t infoBitfield;
   uint8_t paramEmergencyStop;
 
-  // Deprecated, remove after 2024-06-01
-  int8_t deprecatedArmParam;
-
   // The time (in ticks) of the first tumble event. 0=no tumble
   uint32_t initialTumbleTick;
 
   // The time (in ticks) of the latest high thrust event. 0=no high thrust event yet
   uint32_t latestThrustTick;
+
+  // The time (in ticks) of the latest arming event. 0=no arming event yet
+  uint32_t latestArmingTick;
 
   // The time (in ticks) of the latest landing event. 0=no landing event yet
   uint32_t latestLandingTick;
@@ -114,7 +115,7 @@ bool supervisorCanArm() {
 }
 
 bool supervisorIsArmed() {
-  return supervisorMem.isArmingActivated || supervisorMem.deprecatedArmParam;
+  return supervisorMem.isArmingActivated;
 }
 
 bool supervisorIsLocked() {
@@ -125,8 +126,21 @@ bool supervisorIsCrashed() {
   return supervisorMem.isCrashed;
 }
 
+static void supervisorSetLatestArmingTime(SupervisorMem_t* this, const uint32_t currentTick) {
+  this->latestArmingTick = currentTick;
+}
+
 static void supervisorSetLatestLandingTime(SupervisorMem_t* this, const uint32_t currentTick) {
   this->latestLandingTick = currentTick;
+}
+
+bool supervisorIsPreflightTimeout(SupervisorMem_t *this, const uint32_t currentTick) {
+  if (supervisorStateReadyToFly != this->state) {
+    return false;
+  }
+
+  const uint32_t preflightTime = currentTick - this->latestArmingTick;
+  return preflightTime > M2T(preflightTimeoutDuration);
 }
 
 bool supervisorIsLandingTimeout(SupervisorMem_t* this, const uint32_t currentTick) {
@@ -257,15 +271,21 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
   const supervisorState_t newState = this->state;
 
   if (newState == supervisorStateReadyToFly) {
-    DEBUG_PRINT("Ready to fly\n");
+    if (!AUTO_ARMING){
+      DEBUG_PRINT("Ready to fly\n");
+    }
+    supervisorSetLatestArmingTime(this, currentTick);
   }
 
   if (newState == supervisorStateLanded) {
     supervisorSetLatestLandingTime(this, currentTick);
   }
 
-  if ((previousState == supervisorStateFlying || previousState == supervisorStateLanded) && (newState == supervisorStateReset)) {
-    DEBUG_PRINT("Disarming\n");
+  if (((previousState == supervisorStateFlying || previousState == supervisorStateLanded) && (newState == supervisorStateReset))
+       || (previousState == supervisorStateReadyToFly && newState == supervisorStatePreFlChecksPassed)) {
+    if (!AUTO_ARMING){
+      DEBUG_PRINT("Disarming\n");
+    }
   }
 
   if (newState == supervisorStateLocked) {
@@ -277,11 +297,6 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
     supervisorRequestCrashRecovery(false);
   }
 
-  if ((previousState == supervisorStateNotInitialized || previousState == supervisorStateReadyToFly || previousState == supervisorStateFlying) &&
-      newState != supervisorStateReadyToFly && newState != supervisorStateFlying && newState != supervisorStateLanded) {
-    DEBUG_PRINT("Can not fly\n");
-  }
-
   if (newState != supervisorStateReadyToFly &&
       newState != supervisorStateFlying &&
       newState != supervisorStateWarningLevelOut &&
@@ -290,7 +305,7 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
   }
 
   // We do not require an arming action by the user, auto arm
-  if (AUTO_ARMING || this->deprecatedArmParam) {
+  if (AUTO_ARMING) {
     if (newState == supervisorStatePreFlChecksPassed) {
       supervisorRequestArming(true);
     }
@@ -343,6 +358,10 @@ static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* th
     conditions |= SUPERVISOR_CB_CRASHED;
   }
 
+  if (supervisorIsPreflightTimeout(this, currentTick)) {
+    conditions |= SUPERVISOR_CB_PREFLIGHT_TIMEOUT;
+  }
+
   if (supervisorIsLandingTimeout(this, currentTick)) {
     conditions |= SUPERVISOR_CB_LANDING_TIMEOUT;
   }
@@ -362,7 +381,7 @@ static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t
   if (supervisorIsArmed()) {
     this->infoBitfield |= 0x0002;
   }
-  if(AUTO_ARMING || this->deprecatedArmParam) {
+  if(AUTO_ARMING) {
     this->infoBitfield |= 0x0004;
   }
   if (this->canFly) {
@@ -494,17 +513,6 @@ PARAM_ADD_CORE(PARAM_UINT8, stop, &supervisorMem.paramEmergencyStop)
 PARAM_GROUP_STOP(stabilizer)
 
 
-PARAM_GROUP_START(system)
-
-/**
- * @brief Set to nonzero to arm the system. A nonzero value enables the auto arm functionality
- *
- * Deprecated, will be removed after 2024-06-01. Use the CRTP `PlatformCommand` `armSystem` on the CRTP_PORT_PLATFORM port instead.
- */
-PARAM_ADD_CORE(PARAM_INT8, arm, &supervisorMem.deprecatedArmParam)
-PARAM_GROUP_STOP(system)
-
-
 /**
  * The purpose of the supervisor is to monitor the system and its state. Depending on the situation, the supervisor
  * can enable/disable functionality as well as take action to protect the system or humans close by.
@@ -533,6 +541,12 @@ PARAM_GROUP_START(supervisor)
  * @brief Set to nonzero to dump information about the current supervisor state to the console log
  */
 PARAM_ADD(PARAM_UINT8, infdmp, &supervisorMem.doinfodump)
+
+/**
+ * @brief Preflight timeout duration (ms)
+ * The time the system is allowed to be armed before it must be flying.
+ */
+PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, prefltTimeout, &preflightTimeoutDuration)
 
 /**
  * @brief Landing timeout duration (ms)
