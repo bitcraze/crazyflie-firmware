@@ -230,10 +230,10 @@
 // Define to force initialization of expansion board drivers. For test-rig and programming.
 //#define FORCE_EXP_DETECT
 
-/**
- * \def PRINT_OS_DEBUG_INFO
- * Print with an interval information about freertos mem/stack usage to console.
- */
+// /**
+//  * \def PRINT_OS_DEBUG_INFO
+//  * Print with an interval information about freertos mem/stack usage to console.
+//  */
 //#define PRINT_OS_DEBUG_INFO
 
 
@@ -246,11 +246,11 @@
 //#define T_LAUCH_MOTORS
 //#define T_LAUCH_MOTOR_TEST
 //#define MOTOR_RAMPUP_TEST
-/**
- * \def ADC_OUTPUT_RAW_DATA
- * When defined the gyro data will be written to the UART channel.
- * The UART must be configured to run really fast, e.g. in 2Mb/s.
- */
+// /**
+//  * \def ADC_OUTPUT_RAW_DATA
+//  * When defined the gyro data will be written to the UART channel.
+//  * The UART must be configured to run really fast, e.g. in 2Mb/s.
+//  */
 //#define ADC_OUTPUT_RAW_DATA
 
 #if defined(UART_OUTPUT_TRACE_DATA) && defined(ADC_OUTPUT_RAW_DATA)

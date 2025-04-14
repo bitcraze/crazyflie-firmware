@@ -64,7 +64,7 @@ static inline bool logVarIdIsValid(logVarId_t varId) {
 
 /** Return the logging type
  *
- * @param varId variable ID, returned by logGetVarId()
+ * @param varid variable ID, returned by logGetVarId()
  * @return Type of the variable. The value correspond to the defines used when
  *         declaring a param variable.
  */
@@ -72,9 +72,9 @@ int logGetType(logVarId_t varid);
 
 /** Get group and name strings of a parameter
  *
- * @param varId variable ID, returned by logGetVarId()
+ * @param varid variable ID, returned by logGetVarId()
  * @param group Pointer to a char* that will be filled with the group name
- * @param group Pointer to a char* that will be filled with the variable name
+ * @param name Pointer to a char* that will be filled with the variable name
  *
  * The string buffers must be able to hold at least 32 bytes.
  */
@@ -82,7 +82,7 @@ void logGetGroupAndName(logVarId_t varid, char** group, char** name);
 
 /** Get address of the logging variable
  *
- * @param varId variable ID, returned by logGetVarId()
+ * @param varid variable ID, returned by logGetVarId()
  * @return Address of the location of log variable
  *  */
 void* logGetAddress(logVarId_t varid);
@@ -96,21 +96,21 @@ uint8_t logVarSize(int type);
 
 /** Return float value of a logging variable
  *
- * @param varId variable ID, returned by logGetVarId()
+ * @param varid variable ID, returned by logGetVarId()
  * @return Current value of the variable
  */
 float logGetFloat(logVarId_t varid);
 
 /** Return int value of a logging variable
  *
- * @param varId variable ID, returned by logGetVarId()
+ * @param varid variable ID, returned by logGetVarId()
  * @return Current value of the variable
  */
 int logGetInt(logVarId_t varid);
 
 /** Return Unsigned int value of a logging variable
  *
- * @param varId variable ID, returned by paramGetVarId()
+ * @param varid variable ID, returned by paramGetVarId()
  * @return Current value of the variable
  */
 unsigned int logGetUint(logVarId_t varid);

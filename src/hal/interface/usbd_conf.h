@@ -32,7 +32,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "usb_conf.h"
 
-/** @defgroup USB_CONF_Exported_Defines
+/** @defgroup USB_CONF_Exported_Defines USB Configuration Exported Defines
   * @{
   */ 
 #define USBD_CFG_MAX_NUM                1
@@ -41,8 +41,11 @@
 #define USBD_SELF_POWERED               
 
 #define USB_MAX_STR_DESC_SIZ            255 
+/**
+  * @}
+  */ 
 
-/** @defgroup USB_VCP_Class_Layer_Parameter
+/** @defgroup USB_VCP_Class_Layer_Parameter USB VCP Class Layer Parameter
   * @{
   */ 
 
@@ -68,7 +71,7 @@
   * @}
   */ 
 
-/** @defgroup USB_CONF_Exported_Types
+/** @defgroup USB_CONF_Exported_Types USB Configuration Exported Types
   * @{
   */ 
 /**
@@ -76,21 +79,21 @@
   */ 
 
 
-/** @defgroup USB_CONF_Exported_Macros
+/** @defgroup USB_CONF_Exported_Macros USB Configuration Exported Macros
   * @{
   */ 
 /**
   * @}
   */ 
 
-/** @defgroup USB_CONF_Exported_Variables
+/** @defgroup USB_CONF_Exported_Variables USB Configuration Exported Variables
   * @{
   */ 
 /**
   * @}
   */ 
 
-/** @defgroup USB_CONF_Exported_FunctionsPrototype
+/** @defgroup USB_CONF_Exported_FunctionsPrototype USB Configuration Exported Functions Prototype
   * @{
   */ 
 /**

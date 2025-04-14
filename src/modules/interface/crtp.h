@@ -152,7 +152,7 @@ int crtpGetFreeTxQueuePackets(void);
  * Wait for a packet to arrive for the specified taskID
  *
  * @param[in]  taskId The id of the CRTP task
- * @paran[out] p      The CRTP Packet with information
+ * @param[out] p      The CRTP Packet with information
  *
  * @return status of fetch from queue
  */

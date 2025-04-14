@@ -24,7 +24,7 @@ typedef struct {
  * @param angles1 - array with 2 angles, horizontal and vertical sweep angle for base station 1
  * @param angles2 - array with 2 angles, horizontal and vertical sweep angle for base station 2
  * @param position - (output) the closest point between the rays
- * @param postion_delta - (output) the distance between the rays at the closest point
+ * @param position_delta - (output) the distance between the rays at the closest point
  */
 bool lighthouseGeometryGetPositionFromRayIntersection(const baseStationGeometry_t* geo1, const baseStationGeometry_t* geo2, float angles1[2], float angles2[2], vec3d position, float *position_delta);
 
@@ -32,7 +32,7 @@ bool lighthouseGeometryGetPositionFromRayIntersection(const baseStationGeometry_
  * @brief Get the base station position from the base station geometry in world reference frame. This position can be seen as the
  * point where the lazers originate from.
  *
- * @param baseStation - Geometry data for the base statsion (position and orientation)
+ * @param baseStationGeometry - Geometry data for the base statsion (position and orientation)
  * @param baseStationPos - (output) the base station position
  */
 void lighthouseGeometryGetBaseStationPosition(const baseStationGeometry_t* baseStationGeometry, vec3d baseStationPos);
@@ -41,7 +41,7 @@ void lighthouseGeometryGetBaseStationPosition(const baseStationGeometry_t* baseS
  * @brief Get a normalized vector representing the direction of a ray in world reference frame, based on
  * sweep angles and base station orientation.
  *
- * @param baseStation - Geometry data for the base statsion (position and orientation)
+ * @param baseStationGeometry - Geometry data for the base statsion (position and orientation)
  * @param angle1 - horizontal sweep angle
  * @param angle2 - vertical sweep angle
  * @param ray - (output) the resulting normalized vector
