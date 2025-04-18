@@ -85,6 +85,13 @@ config DECK_BIGQUAD_ENABLE_PM
     bool "Enable Bigquad deck PM"
     default n
 
+config DECK_BIGQUAD_ENABLE_CPPM
+    depends on DECK_BIGQUAD
+    bool "Enable Bigquad deck CPPM"
+    default n
+    help
+      This enables external CPPM input.
+
 config DECK_BUZZ
     bool "Support the Buzzer deck"
     default y

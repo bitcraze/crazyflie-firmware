@@ -129,3 +129,7 @@
 #define PID_POS_VEL_X_MAX 1.0f
 #define PID_POS_VEL_Y_MAX 1.0f
 #define PID_POS_VEL_Z_MAX 1.0f
+
+#if defined(CONFIG_DECK_BIGQUAD) && defined(MOTORS_REQUIRE_ARMING)
+    #define CONFIG_MOTORS_DEFAULT_IDLE_THRUST 7000
+#endif
