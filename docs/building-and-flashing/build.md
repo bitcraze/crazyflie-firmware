@@ -25,9 +25,10 @@ $ sudo apt-get install make gcc-arm-none-eabi
 ```
 
 ##### macOS
+The required toolchain on macOS can be installed using [homebrew]([url](https://brew.sh/))
+
 ```
-$ brew tap PX4/homebrew-px4
-$ brew install gcc-arm-none-eabi
+$ brew install gcc-arm-embedded
 ```
 
 ##### Windows
