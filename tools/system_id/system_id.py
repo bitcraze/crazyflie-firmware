@@ -112,12 +112,12 @@ def system_id_static(filenames, validations=[]):
     axs[0].legend()
 
     axs[1].scatter(data["rpm_avg"], data["thrust"], label="data")
-    X = np.vstack((data["rpm_avg"] ** 2))
-    reg = LinearRegression(fit_intercept=False).fit(X, data["thrust"])
-    p_rpm_thrust = [0, 0, reg.coef_[0]]
-    storeYAML(comb, reg.coef_[0], "kf")
+    X = np.vstack((data["rpm_avg"], data["rpm_avg"] ** 2)).T
+    reg = LinearRegression(fit_intercept=True).fit(X, data["thrust"])
+    p_rpm2thrust = [reg.intercept_, reg.coef_[0], reg.coef_[1]]
+    storeYAML(comb, p_rpm2thrust, "p_rpm2thrust")
     rpms = np.linspace(000, 30000, 1000)
-    axs[1].plot(rpms, poly(rpms, p_rpm_thrust, 2), label="fit", color="tab:green")
+    axs[1].plot(rpms, poly(rpms, p_rpm2thrust, 2), label="fit", color="tab:green")
     axs[1].set_xlabel("Motor RPM")
     axs[1].set_ylabel("Thrust [N]")
     axs[1].legend()
@@ -125,8 +125,7 @@ def system_id_static(filenames, validations=[]):
     axs[0].title.set_text("Motor voltage to RPM and RPM to thrust")
     plt.show()
 
-    print("Thrust = kf * RPM^2")
-    print(f"kf = {reg.coef_[0]}")
+    print(f"Thrust = {reg.intercept_} + {reg.coef_[0]}*RPM + {reg.coef_[1]}*RPM^2")
 
     ### power -> thrust (+ efficiency)
     print("#########################################################")
@@ -215,8 +214,10 @@ def system_id_dynamic(filenames, validations=[]):
     data = loadFiles(filenames)
     data = cutData(data, tStart=19, tEnd=34)
     p_vmotor2thrust = loadYAML(comb, "p_vmotor2thrust", 4)
+    p_rpm2thrust = loadYAML(comb, "p_rpm2thrust", 3)
 
     thrustCMD = data["cmd"] / PWM_MAX * THRUST_MAX * 4
+    rpmCMD = inversepoly(thrustCMD, p_rpm2thrust, 2)
     VmotorCMD = np.zeros_like(data["cmd"])
     for i in range(len(data["cmd"])):
         if thrustCMD[i] < THRUST_MIN:
@@ -227,37 +228,65 @@ def system_id_dynamic(filenames, validations=[]):
     Vmotor = data["vbat"] * data["pwm"] / PWM_MAX
 
     ### Fit dynamics
-    # thrust_dot = tau * (thrust_cmd - thrust)
-    # everything is known, except tau => solving for tau
+    # There are two possible ways to calculate the thrust dynamics:
+    # The first one is to assume the motor speed as a first order
+    # system, which is physically correct, if we ignore the drag
+    # and DC motor electrical dynamics. The equation is
+    # rpm_dot = 1/tau_rpm * (rpm_cmd - rpm)
+    # Since we have 4 motors, we average the rpms
+    # Alternatively, we can assume the thrust itself to be a first
+    # order system: thrust_dot = 1/tau_f * (thrust_cmd - thrust)
+
     # Smoothing the data for better gradient
+    rpm_filtered = savgol_filter(data["rpm_avg"], 10, 4)
+    rpm_dot = np.gradient(rpm_filtered, data["time"])
     thrust_filtered = savgol_filter(data["thrust"], 10, 4)
     thrust_dot = np.gradient(thrust_filtered, data["time"])
 
+    A = (rpmCMD - rpm_filtered).reshape(-1, 1)
+    b = rpm_dot.reshape(-1, 1)
+    k, _, _, _ = np.linalg.lstsq(A, b, rcond=None)
+    tau_rpm = 1 / k[0, 0]
+
     A = (thrustCMD - thrust_filtered).reshape(-1, 1)
     b = thrust_dot.reshape(-1, 1)
-    tau, _, _, _ = np.linalg.lstsq(A, b, rcond=None)
+    k, _, _, _ = np.linalg.lstsq(A, b, rcond=None)
+    tau_f = 1 / k[0, 0]
 
-    tau = tau[0, 0]
-
-    def thrust_dynamics(thrust, thrustCMD, dt):
-        delta = thrustCMD - thrust
-        dTdt = tau * delta
-        return thrust + dTdt * dt
+    def first_order_system(x, u, tau, dt):
+        x_dot = 1 / tau * (u - x)
+        return x + x_dot * dt
 
     dts = np.diff(data["time"])
+    rpmPred = [rpmCMD[0]]
     thrustPred = [thrustCMD[0]]
     for i, dt in enumerate(dts):
-        t = thrust_dynamics(thrustPred[-1], thrustCMD[i], dt)
-        thrustPred.append(t)
+        rpm = first_order_system(rpmPred[-1], rpmCMD[i], tau_rpm, dt)
+        rpmPred.append(rpm)
+        thrust = first_order_system(thrustPred[-1], thrustCMD[i], tau_f, dt)
+        thrustPred.append(thrust)
 
-    print(f"tau = {tau}")
-    storeYAML(comb, tau, "TAU")
+    print(f"tau_rpm = {tau_rpm}")
+    storeYAML(comb, tau_rpm, "TAU_RPM")
+    print(f"tau_f = {tau_f}")
+    storeYAML(comb, tau_f, "TAU_F")
 
     plt.tight_layout()
 
     plt.plot(data["time"], thrust_filtered, label="Thrust Measurement (filtered)")
     plt.plot(data["time"], thrustCMD, label="Thrust CMD")
-    plt.plot(data["time"], thrustPred, "--", label="Thrust Prediction")
+    plt.plot(
+        data["time"],
+        thrustPred,
+        "--",
+        label="Thrust Prediction from thrust dynamics",
+    )
+    plt.plot(
+        data["time"],
+        poly(np.array(rpmPred), p_rpm2thrust, 2),
+        "--",
+        label="Thrust Prediction from RPM dynamics",
+    )
     plt.xlabel("Time [s]")
     plt.ylabel("Total Thrust [N]")
     plt.title("Thrust Delay")
