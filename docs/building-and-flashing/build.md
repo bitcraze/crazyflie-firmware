@@ -25,7 +25,7 @@ $ sudo apt-get install make gcc-arm-none-eabi
 ```
 
 ##### macOS
-The required toolchain on macOS can be installed using [homebrew]([url](https://brew.sh/))
+The required toolchain on macOS can be installed using [homebrew](https://brew.sh/)
 
 ```
 $ brew install gcc-arm-embedded
