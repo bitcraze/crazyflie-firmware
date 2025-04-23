@@ -82,7 +82,9 @@ static void bigquadInit(DeckInfo *info)
 
   DEBUG_PRINT("Switching to brushless.\n");
   motorsInit(motorMapBigQuadDeck);
-  extRxInit();
+  #ifdef CONFIG_DECK_BIGQUAD_ENABLE_CPPM
+    extRxInit();
+  #endif
 
   // Ignore charging/charged state to allow low-battery warning.
   pmIgnoreChargedState(true);
