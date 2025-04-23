@@ -27,9 +27,11 @@
 
 void kalmanCoreUpdateWithYawError(kalmanCoreData_t *this, yawErrorMeasurement_t *error)
 {
+    #ifndef LH_IGNORE
     float h[KC_STATE_DIM] = {0};
     arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
 
     h[KC_STATE_D2] = 1;
     kalmanCoreScalarUpdate(this, &H, this->S[KC_STATE_D2] - error->yawError, error->stdDev);
+    #endif
 }

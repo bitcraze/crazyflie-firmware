@@ -74,6 +74,7 @@
 #include "physicalConstants.h"
 #include "supervisor.h"
 #include "axis3fSubSampler.h"
+#include "usddeck.h"
 
 #include "statsCnt.h"
 #include "rateSupervisor.h"
@@ -218,6 +219,15 @@ static void kalmanTask(void* parameters) {
     xSemaphoreTake(runTaskSemaphore, portMAX_DELAY);
     nowMs = T2M(xTaskGetTickCount()); // would be nice if this had a precision higher than 1ms...
 
+    static bool initialStateLogged = false;
+    // Log the state first time so we can initialize the Python bindings
+    if (initialStateLogged == false && usddeckLoggingEnabled()) {
+      initialStateLogged = true;
+      // initial idea was to log Kalman state to use it in the replay, but we can also just reset the kalman state
+      resetEstimation = true;
+      DEBUG_PRINT("Started logging, resetting Kalman\n");
+    }
+
     if (resetEstimation) {
       estimatorKalmanInit();
       resetEstimation = false;
@@ -298,6 +308,7 @@ static void updateQueuedMeasurements(const uint32_t nowMs, const bool quadIsFlyi
   while (estimatorDequeue(&m)) {
     switch (m.type) {
       case MeasurementTypeTDOA:
+        // DEBUG_PRINT("Got TDOA measurement\n");
         if(robustTdoa){
           // robust KF update with TDOA measurements
           kalmanCoreRobustUpdateWithTdoa(&coreData, &m.data.tdoa, &outlierFilterTdoaState);
@@ -307,12 +318,15 @@ static void updateQueuedMeasurements(const uint32_t nowMs, const bool quadIsFlyi
         }
         break;
       case MeasurementTypePosition:
+        // DEBUG_PRINT("Got position measurement\n");
         kalmanCoreUpdateWithPosition(&coreData, &m.data.position);
         break;
       case MeasurementTypePose:
+        // DEBUG_PRINT("Got pose measurement\n");
         kalmanCoreUpdateWithPose(&coreData, &m.data.pose);
         break;
       case MeasurementTypeDistance:
+        // DEBUG_PRINT("Got distance measurement\n");
         if(robustTwr){
             // robust KF update with UWB TWR measurements
             kalmanCoreRobustUpdateWithDistance(&coreData, &m.data.distance);
@@ -322,15 +336,19 @@ static void updateQueuedMeasurements(const uint32_t nowMs, const bool quadIsFlyi
         }
         break;
       case MeasurementTypeTOF:
+        // DEBUG_PRINT("Got TOF measurement\n");
         kalmanCoreUpdateWithTof(&coreData, &m.data.tof);
         break;
       case MeasurementTypeAbsoluteHeight:
+        // DEBUG_PRINT("Got absolute height measurement\n");
         kalmanCoreUpdateWithAbsoluteHeight(&coreData, &m.data.height);
         break;
       case MeasurementTypeFlow:
+        // DEBUG_PRINT("Got flow measurement\n");
         kalmanCoreUpdateWithFlow(&coreData, &m.data.flow, &gyroLatest);
         break;
       case MeasurementTypeYawError:
+        // DEBUG_PRINT("Got yaw error measurement\n");
         kalmanCoreUpdateWithYawError(&coreData, &m.data.yawError);
         break;
       case MeasurementTypeSweepAngle:
@@ -344,8 +362,9 @@ static void updateQueuedMeasurements(const uint32_t nowMs, const bool quadIsFlyi
         axis3fSubSamplerAccumulate(&accSubSampler, &m.data.acceleration.acc);
         accLatest = m.data.acceleration.acc;
         break;
-      case MeasurementTypeBarometer:
+        case MeasurementTypeBarometer:
         if (useBaroUpdate) {
+          // DEBUG_PRINT("Got barometer measurement\n");
           kalmanCoreUpdateWithBaro(&coreData, &coreParams, m.data.barometer.baro.asl, quadIsFlying);
         }
         break;

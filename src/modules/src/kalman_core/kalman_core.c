@@ -80,7 +80,6 @@
 #define ROLLPITCH_ZERO_REVERSION (0.001f)
 #endif
 
-
 /**
  * Supporting and utility functions
  */
@@ -136,7 +135,7 @@ void kalmanCoreDefaultParams(kalmanCoreParams_t* params)
   params->stdDevInitialPosition_z = 1;
   params->stdDevInitialVelocity = 0.01;
   params->stdDevInitialAttitude_rollpitch = 0.01;
-  #ifdef USE_EXTERNAL_POSITIONING
+  #if defined(USE_EXTERNAL_POSITIONING) && !defined(OLD_YAW_ESTIMATION)
       // External positioning provides an absolute reference for orientation.
       // In this case, the drone may start with an arbitrary yaw (even up to 180°),
       // so we allow a higher initial uncertainty to enable the filter to quickly converge to the correct yaw.
@@ -547,6 +546,7 @@ static void predictDt(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float d
     this->S[KC_STATE_PZ] += dt * (acc->z + gyro->y * tmpSPX - gyro->x * tmpSPY - GRAVITY_MAGNITUDE * this->R[2][2]);
   }
 
+  #ifdef USE_GYRO_FOR_ORIENTATION
   // attitude update (rotate by gyroscope), we do this in quaternions
   // this is the gyroscope angular velocity integrated over the sample period
   float dtwx = dt*gyro->x;
@@ -582,6 +582,7 @@ static void predictDt(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float d
   // normalize and store the result
   float norm = arm_sqrt(tmpq0*tmpq0 + tmpq1*tmpq1 + tmpq2*tmpq2 + tmpq3*tmpq3) + EPS;
   this->q[0] = tmpq0/norm; this->q[1] = tmpq1/norm; this->q[2] = tmpq2/norm; this->q[3] = tmpq3/norm;
+  #endif
   assertStateNotNaN(this);
 
   this->isUpdated = true;
@@ -634,6 +635,14 @@ void kalmanCoreAddProcessNoise(kalmanCoreData_t *this, const kalmanCoreParams_t 
 
 bool kalmanCoreFinalize(kalmanCoreData_t* this)
 {
+  // static bool initialStateLogged = false;
+  // // Log the state first time so we can initialize the Python bindings
+  // if (initialStateLogged == false && usddeckLoggingEnabled()) {
+  //   initialStateLogged = true;
+  //   // initial idea was to log this->S and this->q and this->R and perhaps this->P,
+  //   // but to match the Python bindings "replay" we can also just reset the kalman state
+  // }
+
   // Only finalize if data is updated
   if (! this->isUpdated) {
     return false;

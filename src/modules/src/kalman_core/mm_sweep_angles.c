@@ -132,6 +132,7 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
       // R(ψ) = [sin(ψ)   cos(ψ)  0]
       //        [  0        0     1]
 
+      #ifndef OLD_YAW_ESTIMATION
       float dx_droll = 0.0f; // ∂x/∂(δφ)
       float dy_droll = -ps[2]; // ∂y/∂(δφ)
       float dz_droll = ps[1]; // ∂z/∂(δφ)
@@ -148,6 +149,7 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
       h[KC_STATE_D0] = g[0]*dx_droll + g[1]*dy_droll + g[2]*dz_droll;
       h[KC_STATE_D1] = g[0]*dx_dpitch + g[1]*dy_dpitch + g[2]*dz_dpitch;
       h[KC_STATE_D2] = g[0]*dx_dyaw + g[1]*dy_dyaw + g[2]*dz_dyaw;
+      #endif
 
       arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
       kalmanCoreScalarUpdate(this, &H, error, sweepInfo->stdDev);

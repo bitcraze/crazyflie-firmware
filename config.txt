@@ -1,0 +1,23 @@
+1     # version
+11264  # buffer size in bytes
+log   # file name
+0     # enable on startup (0/1)
+on:estSweepAngle
+# on:fixedFrequency
+# 250     # frequency
+# 1     # mode (0: disabled, 1: synchronous stabilizer, 2: asynchronous)
+# stateEstimate.x
+# stateEstimate.y
+# stateEstimate.z
+# stateEstimate.roll
+# stateEstimate.pitch
+# stateEstimate.yaw
+on:estGyroscope
+gyro.x
+gyro.y
+gyro.z
+on:estAcceleration
+acc.x
+acc.y
+acc.z
+on:estYawError

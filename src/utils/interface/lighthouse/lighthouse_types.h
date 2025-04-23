@@ -29,3 +29,5 @@ typedef struct {
  *
  */
 typedef float (*lighthouseCalibrationMeasurementModel_t)(const float x, const float y, const float z, const float t, const lighthouseCalibrationSweep_t* calib);
+
+// #define OLD_YAW_ESTIMATION

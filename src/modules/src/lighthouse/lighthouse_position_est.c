@@ -219,7 +219,7 @@ static vec3d sensorDeckPositions[4] = {
 
 static positionMeasurement_t ext_pos;
 static float sweepStd = 0.0004;
-static float sweepStdLh2 = 0.001;
+static float sweepStdLh2 = 0.001; // consider changing this
 
 static vec3d position;
 static vec3d positionLog;
@@ -475,6 +475,9 @@ void lighthousePositionEstimatePoseCrossingBeams(const pulseProcessor_t *state, 
 void lighthousePositionEstimatePoseSweeps(const pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation) {
   if (state->bsGeometry[baseStation].valid) {
     estimatePositionSweeps(state, angles, baseStation);
+    #ifdef OLD_YAW_ESTIMATION
+      estimateYaw(state, angles, baseStation);
+    #endif
   }
 }
 

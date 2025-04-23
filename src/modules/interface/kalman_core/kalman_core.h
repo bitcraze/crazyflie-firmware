@@ -56,6 +56,12 @@
 #include "cf_math.h"
 #include "stabilizer_types.h"
 
+
+// Python bindings defines
+#define USE_GYRO_FOR_ORIENTATION
+// #define LH_IGNORE
+
+
 // Indexes to access the quad's state, stored as a column vector
 typedef enum
 {
