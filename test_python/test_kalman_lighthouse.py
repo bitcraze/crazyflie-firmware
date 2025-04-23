@@ -1,18 +1,19 @@
 #!/usr/bin/env python
-import matplotlib.pyplot as plt
 from bindings.util.estimator_kalman_emulator import EstimatorKalmanEmulator
 from bindings.util.sd_card_file_runner import SdCardFileRunner
 from bindings.util.lighthouse_utils import load_lighthouse_calibration
 from scipy.spatial.transform import Rotation
+from plot import Plotter
 import logging
 import csv
-import numpy as np
+import os
 
 
 class EstimatorSource:
-    def __init__(self, name):
+    def __init__(self, name, cutoff_time=None):
         self.name = name
         self.estimates = []
+        self.cutoff_time = cutoff_time
 
     def extract_estimates(self):
         raise NotImplementedError
@@ -20,15 +21,35 @@ class EstimatorSource:
     def align_timestamps(self, reference_timestamps):
         pass  # Optional to override
 
+    def apply_cutoff(self):
+        if self.cutoff_time is not None:
+            self.estimates = [
+                (t, pos) for t, pos in self.estimates if t <= self.cutoff_time
+            ]
+
     def get_estimates(self):
         return self.estimates
 
+    def save_estimates(self, directory='output'):
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        file_path = os.path.join(directory, f'{self.name}_estimates.csv')
+        with open(file_path, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(['timestamp', 'x', 'y', 'z', 'roll', 'pitch', 'yaw'])
+            for timestamp, (x, y, z, roll, pitch, yaw) in self.estimates:
+                writer.writerow([timestamp, x, y, z, roll, pitch, yaw])
+
+        print(f'Estimates saved to {file_path}')
+
 
 class OnboardSource(EstimatorSource):
-    def __init__(self, samples):
-        super().__init__('Onboard')
+    def __init__(self, samples, cutoff_time=None):
+        super().__init__('onboard', cutoff_time)
         self.samples = samples or []  # Handle missing samples
         self.extract_estimates()
+        self.apply_cutoff()  # Apply the cutoff after estimates are extracted
 
     def extract_estimates(self):
         for entry_type, data in self.samples:
@@ -44,27 +65,29 @@ class OnboardSource(EstimatorSource):
 
 
 class OffboardSource(EstimatorSource):
-    def __init__(self, runner, emulator):
-        super().__init__('Offboard')
+    def __init__(self, runner, emulator, cutoff_time=None):
+        super().__init__('offboard', cutoff_time)
         self.runner = runner
         self.emulator = emulator
         self.estimates = []
         if runner and emulator:
             self.extract_estimates()
+            self.apply_cutoff()  # Apply the cutoff after estimates are extracted
         else:
-            logging.warning("Runner or Emulator not provided for OffboardSource")
+            logging.warning('Runner or Emulator not provided for OffboardSource')
 
     def extract_estimates(self):
         self.estimates = self.runner.run_estimator_loop(self.emulator)
 
 
 class MocapSource(EstimatorSource):
-    def __init__(self, filepath):
-        super().__init__('Mocap')
+    def __init__(self, filepath, cutoff_time=None):
+        super().__init__('mocap', cutoff_time)
         self.filepath = filepath
         self.timestamps = []
         self.data_points = []
         self.extract_estimates()
+        self.apply_cutoff()
 
     def extract_estimates(self):
         try:
@@ -74,7 +97,9 @@ class MocapSource(EstimatorSource):
 
                 for row in reader:
                     timestamp, x, y, z, q0, q1, q2, q3 = map(float, row)
-                    roll, pitch, yaw = Rotation.from_quat([q0, q1, q2, q3]).as_euler('xyz', degrees=True)
+                    roll, pitch, yaw = Rotation.from_quat([q0, q1, q2, q3]).as_euler(
+                        'xyz', degrees=True
+                    )
                     self.timestamps.append(timestamp)
                     self.data_points.append((x, y, z, roll, -pitch, yaw))
 
@@ -83,93 +108,84 @@ class MocapSource(EstimatorSource):
 
     def align_timestamps(self, reference_timestamps):
         if not self.timestamps:
-            logging.warning("No timestamps available in MocapSource for alignment.")
+            logging.warning('No timestamps available in MocapSource for alignment.')
             return
+
+        # Convert all timestamps from microseconds to milliseconds.
+        ms_timestamps = [t / 1010.0 for t in self.timestamps]
+
+        # In milliseconds, a 1-second gap is 1000.
+        expected_gap = 1000
+        tolerance = 10  # Roughly equivalent to 0.01 seconds.
 
         min_diff = float('inf')
         gap_index = 0
 
-        for i in range(1, len(self.timestamps)):
-            diff = abs(self.timestamps[i] - self.timestamps[i - 1] - 1.0)
+        # Step 1: Find the index where a large gap (~1 second) occurs.
+        for i in range(1, int(len(ms_timestamps) / 4)):
+            diff = abs(ms_timestamps[i] - ms_timestamps[i - 1] - expected_gap)
             if diff < min_diff:
                 min_diff = diff
-                gap_index = i+190
+                gap_index = i
 
-
+        logging_delay = 750
         if gap_index:
-            if min_diff > 0.01:
-                logging.warning("Time aligning likely failed, large gap detected.")
-            time_shift = reference_timestamps[0] - (self.timestamps[gap_index] * 1000)
-            self.estimates = [((t * 1000) + time_shift, pos) for t, pos in zip(self.timestamps[gap_index:], self.data_points[gap_index:])]
+            if min_diff > tolerance:
+                logging.warning('Time aligning likely failed, large gap detected.')
 
+            # Now, we want to find the timestamp closest to exactly 1 second after the detected gap, plus delay for mecap
+            target_time = ms_timestamps[gap_index] + logging_delay
+            closest_index = gap_index
+            closest_diff = float('inf')
 
-class Plotter:
-    @staticmethod
-    def plot(data_sources):
-        fig, axs = plt.subplots(6, 1, sharex=True, figsize=(10, 10))
-        labels = ['X Position', 'Y Position', 'Z Position', 'Roll', 'Pitch', 'Yaw']
+            for i in range(gap_index + 1, len(ms_timestamps)):
+                current_diff = abs(ms_timestamps[i] - target_time)
+                if current_diff < closest_diff:
+                    closest_diff = current_diff
+                    closest_index = i
 
-        for label_index, label in enumerate(labels):
-            for source in data_sources:
-                data = source.get_estimates()
-                if data:
-                    timestamps = np.array([t for t, _ in data])
-                    values = np.array([pos[label_index] for _, pos in data])
+                # Early exit if the diff is almost perfect
+                if current_diff < 1e-3:
+                    break
 
-                    axs[label_index].plot(timestamps, values, label=source.name)
-
-            axs[label_index].set_ylabel(label)
-            axs[label_index].grid(True)
-            axs[label_index].legend()
-
-        axs[-1].set_xlabel('Time (ms)')
-        plt.tight_layout()
-        plt.show()
-
-
-class Evaluator:
-    @staticmethod
-    def calculate_mse(source, reference):
-        reference_data = {t: pos for t, pos in reference.get_estimates()}
-        source_times = np.array([t for t, _ in source.get_estimates()])
-        reference_times = np.array([t for t, _ in reference.get_estimates()])
-
-        if not len(reference_times) or not len(source_times):
-            logging.warning(f"No data available for MSE calculation between {source.name} and {reference.name}.")
-            return
-
-        interpolated_reference_values = []
-        labels = ['X', 'Y', 'Z', 'Roll', 'Pitch', 'Yaw']
-
-        for i in range(6):
-            ref_values = np.array([pos[i] for _, pos in reference.get_estimates()])
-            interpolated_values = np.interp(source_times, reference_times, ref_values)
-            interpolated_reference_values.append(interpolated_values)
-
-        interpolated_reference_values = np.array(interpolated_reference_values).T
-
-        source_values = np.array([pos for _, pos in source.get_estimates()])
-        mse = np.mean((source_values - interpolated_reference_values) ** 2, axis=0)
-
-        print(f"MSE between {source.name} and {reference.name}:")
-        for i, label in enumerate(labels):
-            print(f"{label}: {mse[i]}")
-
+            # Now align from the closest index instead of the gap_index
+            time_shift = reference_timestamps[0] - ms_timestamps[closest_index]
+            self.estimates = [
+                (t + time_shift, pos)
+                for t, pos in zip(
+                    ms_timestamps[closest_index:], self.data_points[closest_index:]
+                )
+            ]
+        self.apply_cutoff()
 
 
 logging.basicConfig(level=logging.INFO)
 
 fixture_base = 'test_python/fixtures/kalman_core'
-runner = SdCardFileRunner(fixture_base + '/log19')
-mocap_data = fixture_base + '/pose_data11.csv'
+runner = SdCardFileRunner(fixture_base + '/logc')
+mocap_data = fixture_base + '/pose_datac.csv'
+cutoff_time = 750000  # in milliseconds
 bs_calib, bs_geo = load_lighthouse_calibration(fixture_base + '/geometry.yaml')
-emulator = EstimatorKalmanEmulator(basestation_calibration=bs_calib, basestation_poses=bs_geo)
+emulator = EstimatorKalmanEmulator(
+    basestation_calibration=bs_calib, basestation_poses=bs_geo
+)
 
-onboard_source = OnboardSource(runner.samples)
-offboard_source = OffboardSource(runner, emulator)
-mocap_source = MocapSource(mocap_data)
+onboard_source = OnboardSource(runner.samples, cutoff_time=cutoff_time)
+offboard_source = OffboardSource(runner, emulator, cutoff_time=cutoff_time)
+mocap_source = MocapSource(mocap_data, cutoff_time=cutoff_time)
 mocap_source.align_timestamps([t for t, _ in offboard_source.get_estimates()])
 
-Plotter.plot([onboard_source, offboard_source, mocap_source])
-Evaluator.calculate_mse(onboard_source, mocap_source)
-Evaluator.calculate_mse(offboard_source, mocap_source)
+onboard_source.save_estimates()
+offboard_source.save_estimates()
+mocap_source.save_estimates()
+
+file_paths = [
+    'output/onboard_estimates.csv',
+    'output/offboard_estimates.csv',
+    'output/mocap_estimates.csv',
+]
+file_labels = ['Onboard', 'Offboard', 'Mocap']
+
+fig_time = Plotter.plot_time_series(file_paths, file_labels)
+fig_time.show()
+input('Press Enter to close plots...')

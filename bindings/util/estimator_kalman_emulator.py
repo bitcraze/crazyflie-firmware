@@ -33,6 +33,7 @@ class EstimatorKalmanEmulator:
         self.outlierFilterTDOA = cffirmware.OutlierFilterTdoaState_t()
         self.outlierFilterLH = cffirmware.OutlierFilterLhState_t()
         self.onboard_state_estimate = []
+        self.yaw_sample_cnt = 0
 
         # Simplification, assume always flying
         self.logger.warning(
@@ -41,7 +42,7 @@ class EstimatorKalmanEmulator:
             'states, ensure this matches your recorded data. Automatic handling is not '
             'currently implemented.'
         )
-        self.quad_is_flying = True
+        self.quad_is_flying = False
 
         self.TDOA_ENGINE_MEASUREMENT_NOISE_STD = 0.30
         self.PREDICT_RATE = 100
@@ -148,10 +149,15 @@ class EstimatorKalmanEmulator:
             self.logger.debug('Processing an acceleration sample')
             acc_data = sample[1]
 
+
             acc = cffirmware.Axis3f()
             acc.x = float(acc_data['acc.x'])
             acc.y = float(acc_data['acc.y'])
             acc.z = float(acc_data['acc.z'])
+            if not self.quad_is_flying:
+                if (acc.z > 1.1):
+                    self.quad_is_flying = True
+                    print("Quad estimated to start flying at time: ", self.now_ms)
 
             cffirmware.axis3fSubSamplerAccumulate(self.accSubSampler, acc)
 
@@ -167,16 +173,19 @@ class EstimatorKalmanEmulator:
             cffirmware.axis3fSubSamplerAccumulate(self.gyroSubSampler, gyro)
 
         if sample[0] == 'estYawError':
-            self.logger.debug('Processing a yaw error sample')
+            # Note that running on yaw error samples means that you are basing the result on the state estimator results while recording the data (on board). So you cannot use this to test changes to your local firmware beasides to changes to the kalmanCoreUpdateWithYawError.
+            # If you want that you need to do a full implementation of the yaw estimation fn but this was a pain since it relies on a lot of other parts of the firmware and we are deprecating this anyways. I didn't want to investigate tweaking it. Just wanted this to compare to new method.
+            # So; this is not as well implemented as the other ones.
             yaw_error_data  = sample[1]
             yaw_error = cffirmware.yawErrorMeasurement_t()
             yaw_error.yawError = float(yaw_error_data['yawError'])
             yaw_error.stdDev = 0.01
 
-            cffirmware.kalmanCoreUpdateWithYawError(self.coreData, yaw_error)
+            # cffirmware.kalmanCoreUpdateWithYawError(self.coreData, yaw_error)
 
         if sample[0] == 'estSweepAngle':
             self.logger.debug('Processing a sweep angle sample')
+            # print('Processing a sweep angle sample')
             sweep_data = sample[1]
 
             sweep = cffirmware.sweepAngleMeasurement_t()
