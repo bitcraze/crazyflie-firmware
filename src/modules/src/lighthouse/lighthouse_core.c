@@ -575,7 +575,7 @@ void lighthouseCoreTask(void *param) {
       // Now we are receiving items
       else if(!frame.isSyncFrame) {
         STATS_CNT_RATE_EVENT_DEBUG(&frameRate);
-	lighthouseTransmitProcessFrame(&frame);
+	      lighthouseTransmitProcessFrame(&frame);
 
         deckHealthCheck(&lighthouseCoreState, &frame, now_ms);
         lighthouseUpdateSystemType();
