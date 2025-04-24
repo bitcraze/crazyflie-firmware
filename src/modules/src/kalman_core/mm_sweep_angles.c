@@ -31,15 +31,15 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
   // sensor's temporary position in the global reference frame due to Crazyflie's rotation.
   // Then, we add the result to the Crazyflie's global position.
   // Relative sensor position in global reference frame
-  vec3d ps;
-  arm_matrix_instance_f32 ps_ = {3, 1, ps};
+  vec3d temp_ps;
+  arm_matrix_instance_f32 temp_ps_ = {3, 1, temp_ps};
   // Rotation matrix from Crazyflie to global reference frame
   arm_matrix_instance_f32 Rcf_ = {3, 3, (float32_t *)this->R};
   // Relative sensor position in Crazyflie reference frame
   arm_matrix_instance_f32 scf_ = {3, 1, (float32_t *)*sweepInfo->sensorPos};
 
   // Rotate the relative sensor position to the global reference frame
-  mat_mult(&Rcf_, &scf_, &ps_);
+  mat_mult(&Rcf_, &scf_, &temp_ps_);
 
   // Sensor position in global reference frame
   // Gets the current state values of the position of the Crazyflie in the global reference frame and add the relative sensor pos
