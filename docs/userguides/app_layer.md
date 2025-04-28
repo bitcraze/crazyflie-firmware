@@ -96,7 +96,7 @@ It is possible to run LED sequences from the app layer to control the four LEDs 
 ## App channel: packet based communication between the Crazyflie and the Python lib
 
 The Appchannel API allows to communicate using radio packets with an app.
-The packets can contain anything of a size up to 31 bytes, the protocol is defined by the app.
+The packets can contain anything of a size up to 30 bytes, the protocol is defined by the app.
 
 For more information about the API see the header file `src/modules/interface/app_channel.h`.
 An example of how to use the app channel is in `examples/app_appchannel_test/`
