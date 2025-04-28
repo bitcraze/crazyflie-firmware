@@ -82,6 +82,7 @@ config ESTIMATOR_OUTLIER_FILTERS
 choice
     prompt "Default estimator"
     default CONFIG_ESTIMATOR_AUTO_SELECT
+    depends on !ESTIMATOR_OOT
 
 config ESTIMATOR_AUTO_SELECT
     bool "Auto select Estimator"
