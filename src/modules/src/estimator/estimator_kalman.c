@@ -223,7 +223,10 @@ static void kalmanTask(void* parameters) {
       resetEstimation = false;
     }
 
-    bool quadIsFlying = supervisorIsFlying();
+    // Disabling the flying mode as this is not useful in the umwelt project.
+    // I don't think the supervisor would ever return true here in the umwelt usecase anyway, but just to make sure.
+    // bool quadIsFlying = supervisorIsFlying();
+    bool quadIsFlying = false;
 
   #ifdef KALMAN_DECOUPLE_XY
     kalmanCoreDecoupleXY(&coreData);
