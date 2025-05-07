@@ -70,7 +70,11 @@
 #ifdef CONFIG_DECK_LOCO_2D_POSITION
 #define ROLLPITCH_ZERO_REVERSION (0.0f)
 #else
-#define ROLLPITCH_ZERO_REVERSION (0.001f)
+// Setting to zero to disable the functionality in the umwelt project.
+// This functionality is useful for the Loco and Flow decks and has been enabled for all decks as it has not caused any
+// big problems. The propper generic solution here would be to enable this functionality based on installed decks
+// or possibly a build flag.
+#define ROLLPITCH_ZERO_REVERSION (0.0f)
 #endif
 
 
