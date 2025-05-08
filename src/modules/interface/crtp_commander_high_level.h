@@ -220,7 +220,6 @@ int crtpCommanderHighLevelGoTo2(const float x, const float y, const float z, con
  * @param dz          altitude gain (m), positive to climb, negative to descent
  * @param duration_s  time it should take to reach the end of the spiral (s)
  * @param sideways    true if crazyflie should spiral sideways instead of forward
- * @param clockwise   true if crazyflie should spiral clockwise instead of counter-clockwise
  * @return zero if the command succeeded, an error code otherwise
  */
 int crtpCommanderHighLevelSpiral(const float phi, const float r0, const float rf, const float dz, const float duration_s, const bool sideways);
@@ -269,7 +268,7 @@ uint32_t crtpCommanderHighLevelTrajectoryMemSize();
  *
  * @param offset    offset in uploaded memory (bytes)
  * @param length    Length of the data (bytes) to copy to the trajectory memory
- * @param data[in]  pointer to the trajectory data source
+ * @param data  pointer to the trajectory data source
  *
  * @return true   If data was copied
  * @return false  If data is too large

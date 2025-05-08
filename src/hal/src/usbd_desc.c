@@ -40,12 +40,12 @@
   */
 
 
-/** @defgroup USBD_DESC 
+/** @defgroup USBD_DESC  USBD descriptors
   * @brief USBD descriptors module
   * @{
   */ 
 
-/** @defgroup USBD_DESC_Private_TypesDefinitions
+/** @defgroup USBD_DESC_Private_TypesDefinitions USBD_DESC_Private_TypesDefinitions
   * @{
   */ 
 /**
@@ -53,14 +53,14 @@
   */ 
 
 
-/** @defgroup USBD_DESC_Private_Defines
+/** @defgroup USBD_DESC_Private_Defines USBD_DESC_Private_Defines
   * @{
   */ 
 #define USBD_VID                        0x0483
 
 #define USBD_PID                        0x5740
 
-/** @defgroup USB_String_Descriptors
+/** @defgroup USB_String_Descriptors USB String Descriptors
   * @{
   */ 
 #define USBD_LANGID_STRING              0x409
@@ -82,7 +82,7 @@
   */ 
 
 
-/** @defgroup USBD_DESC_Private_Macros
+/** @defgroup USBD_DESC_Private_Macros USBD_DESC_Private_Macros
   * @{
   */ 
 /**
@@ -90,7 +90,7 @@
   */ 
 
 
-/** @defgroup USBD_DESC_Private_Variables
+/** @defgroup USBD_DESC_Private_Variables USBD_DESC_Private_Variables
   * @{
   */ 
 
@@ -180,7 +180,7 @@ NO_DMA_CCM_SAFE_ZERO_INIT __ALIGN_BEGIN uint8_t USBD_StrDesc[USB_MAX_STR_DESC_SI
   */ 
 
 
-/** @defgroup USBD_DESC_Private_FunctionPrototypes
+/** @defgroup USBD_DESC_Private_FunctionPrototypes USBD_DESC_Private_FunctionPrototypes
   * @{
   */ 
 /**
@@ -188,7 +188,7 @@ NO_DMA_CCM_SAFE_ZERO_INIT __ALIGN_BEGIN uint8_t USBD_StrDesc[USB_MAX_STR_DESC_SI
   */ 
 
 
-/** @defgroup USBD_DESC_Private_Functions
+/** @defgroup USBD_DESC_Private_Functions USBD_DESC_Private_Functions
   * @{
   */ 
 
@@ -340,6 +340,10 @@ uint8_t *USBD_USR_InterfaceStrDescriptor( uint8_t speed , uint16_t *length)
 
 
 /**
+  * @}
+  */ 
+
+  /**
   * @}
   */ 
 

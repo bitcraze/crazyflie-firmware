@@ -124,7 +124,7 @@ TESTABLE_STATIC bool isSync(pulseProcessorV1_t *stateV1, unsigned int timestamp)
  * This function looks at the pulse position modulo FRAME_LENGTH in relation to
  * the latest sync0. Values ~0 means a Sync0 pulse, ~19200 means a Sync1.
  *
- * @param state State of the pulse processor
+ * @param stateV1 State of the pulse processor
  * @param timestamp Timestamp of the syn to process
  * @return 0 for Sync0, 1 for Sync1
  */
