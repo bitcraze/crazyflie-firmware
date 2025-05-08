@@ -12,6 +12,21 @@ branch off from the 2017.06 tag.
 See the [building and flashing instructions](https://github.com/bitcraze/crazyflie-firmware/blob/master/docs/building-and-flashing/build.md) in the github docs folder.
 
 
+This specific branch contains modifications for the Umwelt project, aiming at using a Crazyflie and the Lighthouse to
+track human motion.
+The intention is that the changes in this branch will be done at a high pace of development and experimentation, and
+should be considered closer to a POC than production code. Useful stuff will possibly be moved to master at a later
+stage.
+
+
+NOTE: To get started and build the code use the "umwelt_defconfig".
+
+1. Clone the project `git clone --recursive https://github.com/bitcraze/crazyflie-firmware.git`
+2. Initialize the config `make umwelt_defconfig`
+3. Build it `make`
+
+
+
 ## Official Documentation
 
 Check out the [Bitcraze crazyflie-firmware documentation](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/) on our website.
