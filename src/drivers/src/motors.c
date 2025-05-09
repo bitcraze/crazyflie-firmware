@@ -52,22 +52,6 @@ static uint8_t motorSetEnable = 0;
 static uint16_t motorPowerSet[] = {0, 0, 0, 0}; // user-requested PWM signals (overrides)
 static uint16_t motor_ratios[] = {0, 0, 0, 0};  // actual PWM signals
 
-static uint8_t batCompEnable = 1; // TODO
-// Depending on the configuration of motors/propellers, the thrust curve changes
-#if (CONFIG_THRUST_BAT_COMPENSATION_TYPE == 1) // 2.1+ propellers
-static const float p_vmotor2thrust[] = {-0.02476537915958403f, 0.06523793527519485f, -0.026792504967750107f, 0.006776789303971145f};
-static float thrust_min = 0.02f;
-static float thrust_max = 0.1125f;
-#elif (CONFIG_THRUST_BAT_COMPENSATION_TYPE == 2) // Thrust upgrade kit
-static const float p_vmotor2thrust[] = {-0.03978221591250353f, 0.10979738851226176f, -0.05545304285403245f, 0.016215002062640885f};
-static float thrust_min = 0.03f;
-static float thrust_max = 0.1625f;
-#else                                            // default case, legacy propellers
-static const float p_vmotor2thrust[] = {-0.014830744918356092f, 0.04724465241828281f, -0.01847364358025878f, 0.005960923942142f};
-static float thrust_min = 0.02f;
-static float thrust_max = 0.1125f;
-#endif
-
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
 static DMA_InitTypeDef DMA_InitStructureShare;
 // Memory buffer for DSHOT bits
@@ -165,8 +149,6 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
   #ifdef CONFIG_ENABLE_THRUST_BAT_COMPENSATED
   ASSERT(id < NBR_OF_MOTORS);
 
-  if (batCompEnable > 0)
-  {
   if (motorMap[id]->drvType == BRUSHED)
   {
     /*
@@ -182,8 +164,8 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
         return 0.0f; // iThrust;
       }
 
-    float thrust = (iThrust / 65535.0f) * thrust_max; // rescaling integer thrust to N
-    if (thrust < thrust_min)                          // Make sure sqrt function gets positive values
+    float thrust = (iThrust / 65535.0f) * THRUST_MAX; // rescaling integer thrust to N
+    if (thrust < THRUST_MIN)                          // Make sure sqrt function gets positive values
     {
       return 0.0f;
     }
@@ -193,15 +175,14 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
       // q, r, p to calculate the inverse of the third order polynomial
       // For more info see https://math.vanderbilt.edu/schectex/courses/cubic/
       // q and thus qrp need to be calculated each time while p and r are constant
-        static const float p = -p_vmotor2thrust[2] / (3 * p_vmotor2thrust[3]);
-        float q = p * p * p + (p_vmotor2thrust[2] * p_vmotor2thrust[1] - 3 * p_vmotor2thrust[3] * (p_vmotor2thrust[0] - thrust)) / (6 * p_vmotor2thrust[3] * p_vmotor2thrust[3]);
-        static const float r = p_vmotor2thrust[1] / (3 * p_vmotor2thrust[3]);
-        float qrp = sqrtf(q * q + (r - p * p) * (r - p * p) * (r - p * p));
+      static const float p = -VMOTOR2THRUST2 / (3 * VMOTOR2THRUST3);
+      float q = p * p * p + (VMOTOR2THRUST2 * VMOTOR2THRUST1 - 3 * VMOTOR2THRUST3 * (VMOTOR2THRUST0 - thrust)) / (6 * VMOTOR2THRUST3 * VMOTOR2THRUST3);
+      static const float r = VMOTOR2THRUST1 / (3 * VMOTOR2THRUST3);
+      float qrp = sqrtf(q * q + (r - p * p) * (r - p * p) * (r - p * p));
 
-        float motorVoltage = cbrtf(q + qrp) + cbrtf(q - qrp) + p;
+      float motorVoltage = cbrtf(q + qrp) + cbrtf(q - qrp) + p;
       float ratio = motorVoltage / supplyVoltage;
       return UINT16_MAX * ratio;
-    }
     }
   }
 
