@@ -48,11 +48,6 @@
 // Update this value with the mass of your specific setup if different.
 #define CF_MASS 0.0393f  // kg
 // Thrust coefficients
-// There is not battery compensation for brushless motors -> we put placeholder values
-#define VMOTOR2THRUST0  0.0f
-#define VMOTOR2THRUST1  0.0f
-#define VMOTOR2THRUST2  0.0f
-#define VMOTOR2THRUST3  0.0f
 #define THRUST_MIN      0.02f // TODO, value is for the legacy propellers
 #define THRUST_MAX      0.1125f // TODO, value is for the legacy propellers
 #define THRUST2TORQUE   0.005964552f // TODO, value is for the legacy propellers
