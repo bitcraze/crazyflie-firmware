@@ -9,6 +9,9 @@ You'll need to use either the [Crazyflie VM](https://github.com/bitcraze/bitcraz
 [the toolbelt](https://github.com/bitcraze/toolbelt) or
 install some ARM toolchain.
 
+There is also experimental support for [building with nix](./nix.md).
+This allows to build the firmware in a reproducable way.
+
 ### Install a toolchain
 
 #### Toolchain and compiler version policy
@@ -22,9 +25,10 @@ $ sudo apt-get install make gcc-arm-none-eabi
 ```
 
 ##### macOS
+The required toolchain on macOS can be installed using [homebrew](https://brew.sh/)
+
 ```
-$ brew tap PX4/homebrew-px4
-$ brew install gcc-arm-none-eabi
+$ brew install gcc-arm-embedded
 ```
 
 ##### Windows

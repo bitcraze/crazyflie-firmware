@@ -214,13 +214,6 @@
 #define RADIO_ADDRESS 0xE7E7E7E7E7ULL
 
 /**
- * \def PROPELLER_BALANCE_TEST_THRESHOLD
- * This is the threshold for a propeller/motor to pass. It calculates the variance of the accelerometer X+Y
- * when the propeller is spinning.
- */
-#define PROPELLER_BALANCE_TEST_THRESHOLD  2.5f
-
-/**
  * \def BAT_LOADING_SAG_THRESHOLD
  * This is the threshold for a battery and connector to pass. It loads the power path by spinning all 4 motors
  * and measure the voltage sag. The threshold is very experimental and dependent on stock configuration. It is

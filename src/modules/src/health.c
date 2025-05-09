@@ -48,10 +48,14 @@
 
 #include "static_mem.h"
 
+#include "platform_defaults.h"
+
 #define PROPTEST_NBR_OF_VARIANCE_VALUES   100
 
 static bool startPropTest = false;
 static bool startBatTest = false;
+
+static float propTestThreshold = HEALTH_PROPELLER_TEST_THRESHOLD;
 
 static uint16_t propTestPWMRatio = CONFIG_MOTORS_DEFAULT_PROP_TEST_PWM_RATIO;
 static uint16_t batTestPWMRatio = CONFIG_MOTORS_DEFAULT_BAT_TEST_PWM_RATIO;
@@ -115,13 +119,26 @@ static float variance(float *buffer, uint32_t length)
  */
 static bool evaluatePropTest(float low, float high, float value, uint8_t motor)
 {
-  if (value < low || value > high)
+  if (high != 0)
   {
-    DEBUG_PRINT("Propeller test on M%d [FAIL]. low: %0.2f, high: %0.2f, measured: %0.2f\n",
-                motor + 1, (double)low, (double)high, (double)value);
-    return false;
+    if (value < low || value > high)
+    {
+      DEBUG_PRINT("Propeller test on M%d [FAIL]. low: %0.2f, high: %0.2f, measured: %0.2f\n",
+                  motor + 1, (double)low, (double)high, (double)value);
+      return false;
+    }
+    else if (value > low && value < high)
+    {
+      DEBUG_PRINT("Propeller test on M%d [PASS]. low: %0.2f, high: %0.2f, measured: %0.2f\n",
+        motor + 1, (double)low, (double)high, (double)value);
+      return true;
+    }
   }
-
+  else
+  {
+    DEBUG_PRINT("Propeller test on M%d. No threshold set. measured: %0.2f\n",
+      motor + 1, (double)value);
+  }
   motorPass |= (1 << motor);
 
   return true;
@@ -289,7 +306,7 @@ void healthRunTests(sensorData_t *sensors)
   {
     for (int m = 0; m < NBR_OF_MOTORS; m++)
     {
-      if (!evaluatePropTest(0, PROPELLER_BALANCE_TEST_THRESHOLD,  accVarX[m] + accVarY[m], m))
+      if (!evaluatePropTest(0, propTestThreshold,  accVarX[m] + accVarY[m], m))
       {
         nrFailedTests++;
         for (int j = 0; j < 3; j++)
@@ -333,6 +350,11 @@ PARAM_ADD_CORE(PARAM_UINT8, startPropTest, &startPropTest)
  * @brief Set nonzero to initiate test of battery
  */
 PARAM_ADD_CORE(PARAM_UINT8, startBatTest, &startBatTest)
+
+/**
+ * @brief Set nonzero to create a threshold ([0 - propTestThreshold]) for the propeller test.
+ */
+PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, propTestThreshold, &propTestThreshold)
 
 /**
  * @brief PWM ratio to use when testing propellers. Required for brushless motors. [0 - UINT16_MAX]
