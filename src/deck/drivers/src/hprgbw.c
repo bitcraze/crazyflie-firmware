@@ -41,6 +41,10 @@
 
 static bool isInit = false;
 static uint32_t rgbw8888;
+// static struct RGBW {
+//   uint32_t bot;
+//   uint32_t top;
+// } rgbw8888;
 
 #define DECK_I2C_ADDRESS 0x10
 
@@ -92,5 +96,7 @@ static const DeckDriver hprgbw_deck = {
 DECK_DRIVER(hprgbw_deck);
 
 PARAM_GROUP_START(hprgbw)
+// PARAM_ADD_WITH_CALLBACK(PARAM_UINT32, topRGBW, &rgbw8888.top, &updateDeck)
+// PARAM_ADD_WITH_CALLBACK(PARAM_UINT32, botRGBW, &rgbw8888.bot, &updateDeck)
 PARAM_ADD_WITH_CALLBACK(PARAM_UINT32, rgbw8888, &rgbw8888, &updateDeck)
 PARAM_GROUP_STOP(hprgbw)
