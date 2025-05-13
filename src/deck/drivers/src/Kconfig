@@ -258,6 +258,12 @@ config DECK_LIGHTHOUSE
         precision positioning. The deck has 4 receivers which gives the
         full pose of the Crazyflie.
 
+config DECK_LIGHTHOUSEV2
+    bool "Support the Lighthouse V2 positioning deck"
+    default y
+    depends on !DEBUG_PRINT_ON_UART1
+    select ESTIMATOR_KALMAN_ENABLE
+
 config DECK_LIGHTHOUSE_AS_GROUNDTRUTH
     bool "Use Lighthouse system as groundtruth"
     depends on DECK_LIGHTHOUSE
