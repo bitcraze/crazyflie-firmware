@@ -45,6 +45,15 @@
 #include "lighthouse.h"
 #include "lighthouse_core.h"
 
+struct measurement_frame {
+    uint32_t sensor_id:2;
+    uint32_t polynomial_id:6;
+    uint32_t dummy:24;
+    uint32_t lfsr_location;
+    uint32_t timestamp;
+} __attribute__((packed));
+typedef struct measurement_frame measurement_frame_t;
+
 #define LIGHTHOUSE_UART_BAUDRATE 230400
 #define LIGHTHOUSE_UART_FRAME_LENGTH 12
 
@@ -53,7 +62,6 @@ struct lh2_measurement {
     uint32_t timestamp;
     uint8_t selected_polynomial;
     uint32_t lfsr_location;
-    uint32_t beamword;
 };
 
 static bool isInit = false;
@@ -84,7 +92,7 @@ static bool receiveFrame(struct lh2_measurement *frame)
   // Read the frame from the UART
   uart1GetBytesWithDefaultTimeout(LIGHTHOUSE_UART_FRAME_LENGTH, buffer);
 
-  if (!( (buffer[5]&0xFE) == 0 && (buffer[8]&0xFE) == 0)) {
+  if (!(  buffer[1] == 0 && buffer[2] == 0 && buffer[3] == 0)) {
     // Not a valid frame, check if it is a sync frame
     if (buffer[0] == 0xff && buffer[1] == 0xff &&
         buffer[2] == 0xff && buffer[3] == 0xff &&
@@ -101,10 +109,11 @@ static bool receiveFrame(struct lh2_measurement *frame)
   }
 
   // Decode the frame
-  frame->sensor = buffer[0]&0x03;
-  frame->selected_polynomial = (buffer[0]>>2)&0x3F;
-  frame->lfsr_location = buffer[3] | (buffer[4]<<8) | (buffer[5]<<16);
-  frame->timestamp = buffer[9] | (buffer[10]<<8) | (buffer[11]<<16);
+  measurement_frame_t *m = (measurement_frame_t *)buffer;
+  frame->sensor = m->sensor_id;
+  frame->lfsr_location = m->lfsr_location;
+  frame->timestamp = m->timestamp;
+  frame->selected_polynomial = m->polynomial_id;
 
   return true;
 }
