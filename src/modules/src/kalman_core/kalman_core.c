@@ -136,7 +136,7 @@ void kalmanCoreDefaultParams(kalmanCoreParams_t* params)
   params->stdDevInitialAttitude_yaw = 0.01;
 
   params->procNoiseAcc_xy = 0.5f;
-  params->procNoiseAcc_z = 1.0f;
+  params->procNoiseAcc_z = 0.5f;
   params->procNoiseVel = 0;
   params->procNoisePos = 0;
   params->procNoiseAtt = 0;
