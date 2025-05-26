@@ -938,7 +938,7 @@ static void sensorsAccAlignToGravity(Axis3f* in, Axis3f* out)
   // Rotate around y-axis
   ry.x = rx.x * cosPitch - rx.z * sinPitch;
   ry.y = rx.y;
-  ry.z = -rx.x * sinPitch + rx.z * cosPitch;
+  ry.z = rx.x * sinPitch + rx.z * cosPitch;
 
   out->x = ry.x;
   out->y = ry.y;
