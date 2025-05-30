@@ -978,7 +978,7 @@ uint8_t mpu6500GetMasterClockSpeed()
   return buffer[0];
 }
 /** Set I2C master clock speed.
- * @reparam speed Current I2C master clock speed
+ * @param speed Current I2C master clock speed
  * @see MPU6500_RA_I2C_MST_CTRL
  */
 void mpu6500SetMasterClockSpeed(uint8_t speed)
@@ -1594,7 +1594,7 @@ bool mpu6500GetFSyncInterruptLevel()
   return buffer[0];
 }
 /** Set FSYNC interrupt logic level mode.
- * @param mode New FSYNC interrupt mode (0=active-high, 1=active-low)
+ * @param level New FSYNC interrupt mode (0=active-high, 1=active-low)
  * @see getFSyncInterruptMode()
  * @see MPU6500_RA_INT_PIN_CFG
  * @see MPU6500_INTCFG_FSYNC_INT_LEVEL_BIT
@@ -2789,7 +2789,7 @@ void mpu6500SetClockSource(uint8_t source)
  * 1            | 2.5 Hz
  * 2            | 5 Hz
  * 3            | 10 Hz
- * <pre>
+ * </pre>
  *
  * For further information regarding the MPU-60X0's power modes, please refer to
  * Register 107.
@@ -2825,7 +2825,7 @@ bool mpu6500GetStandbyXAccelEnabled()
   return buffer[0];
 }
 /** Set X-axis accelerometer standby enabled status.
- * @param New X-axis standby enabled status
+ * @param enabled X-axis standby enabled status
  * @see getStandbyXAccelEnabled()
  * @see MPU6500_RA_PWR_MGMT_2
  * @see MPU6500_PWR2_STBY_XA_BIT
@@ -2846,7 +2846,7 @@ bool mpu6500GetStandbyYAccelEnabled()
   return buffer[0];
 }
 /** Set Y-axis accelerometer standby enabled status.
- * @param New Y-axis standby enabled status
+ * @param enabled Y-axis standby enabled status
  * @see getStandbyYAccelEnabled()
  * @see MPU6500_RA_PWR_MGMT_2
  * @see MPU6500_PWR2_STBY_YA_BIT
@@ -2867,7 +2867,7 @@ bool mpu6500GetStandbyZAccelEnabled()
   return buffer[0];
 }
 /** Set Z-axis accelerometer standby enabled status.
- * @param New Z-axis standby enabled status
+ * @param enabled Z-axis standby enabled status
  * @see getStandbyZAccelEnabled()
  * @see MPU6500_RA_PWR_MGMT_2
  * @see MPU6500_PWR2_STBY_ZA_BIT
@@ -2888,7 +2888,7 @@ bool mpu6500GetStandbyXGyroEnabled()
   return buffer[0];
 }
 /** Set X-axis gyroscope standby enabled status.
- * @param New X-axis standby enabled status
+ * @param enabled X-axis standby enabled status
  * @see getStandbyXGyroEnabled()
  * @see MPU6500_RA_PWR_MGMT_2
  * @see MPU6500_PWR2_STBY_XG_BIT
@@ -2909,7 +2909,7 @@ bool mpu6500GetStandbyYGyroEnabled()
   return buffer[0];
 }
 /** Set Y-axis gyroscope standby enabled status.
- * @param New Y-axis standby enabled status
+ * @param enabled Y-axis standby enabled status
  * @see getStandbyYGyroEnabled()
  * @see MPU6500_RA_PWR_MGMT_2
  * @see MPU6500_PWR2_STBY_YG_BIT
@@ -2930,7 +2930,7 @@ bool mpu6500GetStandbyZGyroEnabled()
   return buffer[0];
 }
 /** Set Z-axis gyroscope standby enabled status.
- * @param New Z-axis standby enabled status
+ * @param enabled Z-axis standby enabled status
  * @see getStandbyZGyroEnabled()
  * @see MPU6500_RA_PWR_MGMT_2
  * @see MPU6500_PWR2_STBY_ZG_BIT

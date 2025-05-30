@@ -697,7 +697,6 @@ static uint8_t  *usbd_cf_GetCfgDesc (uint8_t speed, uint16_t *length)
 /**
 * @brief  USBD_USR_Init
 *         Displays the message on LCD for host lib initialization
-* @param  None
 * @retval None
 */
 void USBD_USR_Init(void)
@@ -717,7 +716,6 @@ void USBD_USR_DeviceReset(uint8_t speed)
 
 /**
 * @brief  USBD_USR_DeviceConfigured
-* @param  None
 * @retval Staus
 */
 void USBD_USR_DeviceConfigured(void)
@@ -726,7 +724,6 @@ void USBD_USR_DeviceConfigured(void)
 
 /**
 * @brief  USBD_USR_DeviceSuspended
-* @param  None
 * @retval None
 */
 void USBD_USR_DeviceSuspended(void)
@@ -738,7 +735,6 @@ void USBD_USR_DeviceSuspended(void)
 
 /**
 * @brief  USBD_USR_DeviceResumed
-* @param  None
 * @retval None
 */
 void USBD_USR_DeviceResumed(void)
@@ -748,7 +744,6 @@ void USBD_USR_DeviceResumed(void)
 
 /**
 * @brief  USBD_USR_DeviceConnected
-* @param  None
 * @retval Staus
 */
 void USBD_USR_DeviceConnected(void)
@@ -758,7 +753,6 @@ void USBD_USR_DeviceConnected(void)
 
 /**
 * @brief  USBD_USR_DeviceDisonnected
-* @param  None
 * @retval Staus
 */
 void USBD_USR_DeviceDisconnected(void)
