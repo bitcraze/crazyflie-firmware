@@ -44,11 +44,11 @@
 
 // The following defines gives a PWM of 8 bits at ~328KHz for a sysclock of 168MHz
 // CF2 PWM ripple is filtered better at 328kHz. At 168kHz the NCP702 regulator is affected.
-#define TIM_CLOCK_HZ 84000000
+#define TIM_CLOCK_HZ 84000000L
 #define MOTORS_PWM_BITS           8
 #define MOTORS_PWM_PERIOD         ((1<<MOTORS_PWM_BITS) - 1)
 #define MOTORS_PWM_PRESCALE       0
-#define MOTORS_TIM_BEEP_CLK_FREQ  (84000000L / 5)
+#define MOTORS_TIM_BEEP_CLK_FREQ  (TIM_CLOCK_HZ / 5)
 #define MOTORS_POLARITY           TIM_OCPolarity_High
 
 // Abstraction of ST lib functions
@@ -338,8 +338,8 @@ void motorsTestTask(void* params);
  * The higher the ratio the higher the given power to the motors.
  * ATTENTION: To much ratio can push your crazyflie into the air and hurt you!
  * Example:
- *     motorsBeep(true, 1000, (uint16_t)(72000000L / frequency)/ 20);
- *     motorsBeep(false, 0, 0); *
+ *     motorsBeep(4, true, 1000, (uint16_t)(TIM_CLOCK_HZ / frequency)/ 20);
+ *     motorsBeep(0, false, 0, 0); *
  * */
 void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio);
 
