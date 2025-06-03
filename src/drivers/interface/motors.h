@@ -338,7 +338,7 @@ void motorsTestTask(void* params);
  * The higher the ratio the higher the given power to the motors.
  * ATTENTION: To much ratio can push your crazyflie into the air and hurt you!
  * Example:
- *     motorsBeep(4, true, 1000, (uint16_t)(TIM_CLOCK_HZ / frequency)/ 20);
+ *     motorsBeep(4, true, 1000, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / frequency)/ 20);
  *     motorsBeep(0, false, 0, 0); *
  * */
 void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio);
