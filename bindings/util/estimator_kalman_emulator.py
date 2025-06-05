@@ -55,8 +55,8 @@ class EstimatorKalmanEmulator:
             cffirmware.axis3fSubSamplerFinalize(self.accSubSampler)
             cffirmware.axis3fSubSamplerFinalize(self.gyroSubSampler)
 
-            cffirmware.kalmanCorePredict(self.coreData, self.accSubSampler.subSample, self.gyroSubSampler.subSample,
-                                            self.now_ms, quad_is_flying)
+            cffirmware.kalmanCorePredict(self.coreData, self.coreParams, self.accSubSampler.subSample,
+                                         self.gyroSubSampler.subSample, self.now_ms, quad_is_flying)
 
             self.next_prediction_ms += self.PREDICT_STEP_MS
 
@@ -86,6 +86,10 @@ class EstimatorKalmanEmulator:
 
         self.coreParams = cffirmware.kalmanCoreParams_t()
         cffirmware.kalmanCoreDefaultParams(self.coreParams)
+        # Note: If the emulator is used with data from a deck that uses roll/pitch/yaw zero reversion, this should be
+        # set to a non-zero value to behave like the CF. See estimatorKalmanInit() in estimator_kalman.c
+        # self.coreParams.AttitudeReversion = 0.001
+
         cffirmware.outlierFilterTdoaReset(self.outlierFilterState)
         cffirmware.kalmanCoreInit(self.coreData, self.coreParams, self.now_ms)
 
