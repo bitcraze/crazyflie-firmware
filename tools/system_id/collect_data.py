@@ -197,7 +197,7 @@ class CollectData(ABC):
                     float(self._cf.param.get_value("loadcell.b")), self.calib_b
                 )
                 self.all_params_ok = True
-            except:
+            except Exception:
                 print("Loadcell parameter a could not be set correctly... Retrying")
                 self._cf.param.set_value("loadcell.a", str(self.calib_a))
                 self._cf.param.set_value("loadcell.b", str(self.calib_b))
@@ -251,13 +251,12 @@ class CollectDataRamp(CollectData):
         while self.is_connected and pwm >= 0:
             pwm += pwm_step * pwm_mult
             if pwm > max_pwm:
-                # if thrust >= 20000 or thrust < 0:
                 pwm_mult *= -1
                 pwm += pwm_step * pwm_mult
             if pwm < 0:
                 break
-            print(f"commanded PWM = {pwm}")
-            # self._cf.commander.send_setpoint(roll, pitch, yawrate, thrust)
+            if self.verbose:
+                print(f"Commanded PWM = {pwm}")
             self._localization.send_emergency_stop_watchdog()
             self._cf.param.set_value("motorPowerSet.m1", str(pwm))
             time.sleep(time_step)
@@ -396,7 +395,7 @@ class CollectDataDynamic(CollectData):
                 )
                 super()._check_parameters()
                 self.all_params_ok = True
-            except:
+            except Exception:
                 print("Loadcell parameter a could not be set correctly... Retrying")
                 self._cf.param.set_value("loadcell.sampleRate", str(self.samplerate))
                 time.sleep(2)
@@ -509,10 +508,13 @@ if __name__ == "__main__":
         raise NotImplementedError(
             f"Data Collection Type {args.mode} is not implemented."
         )
-    time.sleep(1)
+    time.sleep(2)
 
-    # The Crazyflie lib doesn't contain anything to keep the application alive,
-    # so this is where your application should do something. In our case we
-    # are just waiting until we are disconnected.
-    while le.is_connected:
+    # This will block until the the Crazyflie is disconnected
+    # and catch a KeyboardInterrupt to securely stop the script
+    try:
+        while le.is_connected:
+            time.sleep(2)
+    except KeyboardInterrupt:
+        le.is_connected = False
         time.sleep(2)

@@ -24,10 +24,9 @@ Mount CF upside down (to avoid downwash)
 ### Common
 
 1. Mount CF
-2. Switch to crazyflie-lib-python with branch `feature-emergency-stop` in order to be able to CTRL+C a script safely. (TODO not featured anymore?)
-3. Build firmware with configuration `make sysid_defconfig` and `make -j$(nproc)`
-4. Flash firmware by bringing the Crazyflie into flash mode and running `make cload`
-5. Run `python3 calibscale.py --uri <URI>` and follow the prompts to calibrate the load cell. This will create an output file `calibration.yaml` with the calibration data. The other scripts will read this file (other name can be specified as command line argument). After changing the battery, you don't have to do a whole new calibration. Instead, you can simply set the 0 value for the new battery. It is assumed that the slope of the calibration is the same.
+1. Build firmware with configuration `make sysid_defconfig` and `make -j$(nproc)`
+1. Flash firmware by bringing the Crazyflie into flash mode and running `make cload`
+1. Run `python3 calibscale.py --uri <URI>` and follow the prompts to calibrate the load cell. This will create an output file `calibration.yaml` with the calibration data. The other scripts will read this file (other name can be specified as command line argument). After changing the battery, you don't have to do a whole new calibration. Instead, you can simply set the 0 value for the new battery. It is assumed that the slope of the calibration is the same.
 
 ### Ramping Motors
 
