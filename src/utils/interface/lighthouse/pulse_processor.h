@@ -266,16 +266,6 @@ typedef struct {
  */
 typedef bool (*pulseProcessorProcessPulse_t)(pulseProcessor_t *state, const pulseProcessorFrame_t* frameData, pulseProcessorResult_t* angles, int *baseStation, int *axis, bool* calibDataIsDecoded);
 
-/**
- * @brief Apply calibration correction to all angles of all sensors for a particular baseStation
- *
- * @param state
- * @param angles
- * @param baseStation
- *
- * @return true, calibration data has been applied
- * @return false, calibration data is missing
- */
 bool pulseProcessorApplyCalibration(pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation);
 
 void pulseProcessorClearOutdated(pulseProcessor_t *appState, pulseProcessorResult_t* angles, int baseStation);

@@ -5,6 +5,7 @@
  * Artificial Intelligence, Toronto, ON, Canada.
  *
  * It can be cited as:
+ * \verbatim
    @ARTICLE{Zhao2021Learningbased,
     author={Zhao, Wenda and Panerati, Jacopo and Schoellig, Angela P.},
     title={Learning-based Bias Correction for Time Difference of Arrival
@@ -12,6 +13,7 @@
     journal={IEEE Robotics and Automation Letters},
     year={2021},
     publisher={IEEE}}
+ * \endverbatim
  *
  */
 

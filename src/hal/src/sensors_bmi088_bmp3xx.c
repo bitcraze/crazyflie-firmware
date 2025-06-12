@@ -182,6 +182,9 @@ STATIC_MEM_TASK_ALLOC(sensorsTask, SENSORS_TASK_STACKSIZE);
  * @brief Generic burst read
  *
  * @param [out] dev_id I2C address, SPI chip select or user desired identifier
+ * @param reg_addr Register address
+ * @param reg_data Pointer to the data buffer to store the read data
+ * @param len Number of bytes to read
  *
  * @return Zero if successful, otherwise an error code
  */
@@ -202,6 +205,9 @@ bstdr_ret_t bmi088_burst_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_dat
  * @brief Generic burst write
  *
  * @param [out] dev_id I2C address, SPI chip select or user desired identifier
+ * @param reg_addr
+ * @param reg_data
+ * @param len
  *
  * @return Zero if successful, otherwise an error code
  */

@@ -18,10 +18,12 @@
  * The float handling is verry limited and without exponential notation (ie.
  * works good for number around 0 and within int32 value range).
  *
+ * \verbatim
  * To use this printf a 'putc' function shall be implemented with the prototype
  * 'int putc(int)'. Then a macro calling eprintf can be created. For example:
  * int consolePutc(int c);
  * #define consolePrintf(FMT, ...) eprintf(consolePutc, FMT, ## __VA_ARGS__)
+ * \endverbatim
  */
 #include "eprintf.h"
 

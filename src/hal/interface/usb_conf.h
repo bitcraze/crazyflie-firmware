@@ -55,12 +55,12 @@
   * @{
   */
   
-/** @defgroup USB_CONF
+/** @defgroup USB_CONF USB configuration
   * @brief USB low level driver configuration file
   * @{
   */ 
 
-/** @defgroup USB_CONF_Exported_Defines
+/** @defgroup USB_CONF_Exported_Defines USB Configuration Exported Defines
   * @{
   */ 
 
@@ -239,7 +239,7 @@
   */ 
 
 
-/** @defgroup USB_CONF_Exported_Types
+/** @defgroup USB_CONF_Exported_Types USB Configuration Exported Types
   * @{
   */ 
 /**
@@ -247,21 +247,21 @@
   */ 
 
 
-/** @defgroup USB_CONF_Exported_Macros
+/** @defgroup USB_CONF_Exported_Macros USB Configuration Exported Macros
   * @{
   */ 
 /**
   * @}
   */ 
 
-/** @defgroup USB_CONF_Exported_Variables
+/** @defgroup USB_CONF_Exported_Variables USB Configuration Exported Variables
   * @{
   */ 
 /**
   * @}
   */ 
 
-/** @defgroup USB_CONF_Exported_FunctionsPrototype
+/** @defgroup USB_CONF_Exported_FunctionsPrototype USB Configuration Exported Functions Prototype
   * @{
   */ 
 /**

@@ -28,6 +28,7 @@
  * The error-state unscented Kalman filter implemented in this file is based
  * on the paper:
  * 
+ * \verbatim
  * BIBTEX ENTRIES:
       @INPROCEEDINGS{9841385,
       author={Kefferpütz, Klaus and McGuire, Kimberly},
@@ -39,6 +40,7 @@
       pages={01-08},
       doi={10.23919/FUSION49751.2022.9841385}}
  * 
+ * \endverbatim
  * ============================================================================
  * 
  * Authored by Klaus Kefferpütz, December 2022

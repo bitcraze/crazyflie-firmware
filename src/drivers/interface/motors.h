@@ -354,7 +354,7 @@ const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id);
  * Note: both input and output may be outside the valid PWM range.
  *
  * @param id The id of the motor
- * @param ithrust The desired thrust
+ * @param iThrust The desired thrust
  * @param supplyVoltage The battery voltage
  * @return float The PWM ratio required to get the desired thrust given the battery state.
  */

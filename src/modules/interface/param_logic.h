@@ -70,7 +70,7 @@ paramVarId_t paramGetVarIdFromComplete(const char* completeName);
 
 /** Return the parameter type
  *
- * @param varId variable ID, returned by paramGetVarId()
+ * @param varid variable ID, returned by paramGetVarId()
  * @return Type of the variable. The value correspond to the defines used when
  *         declaring a param variable.
  */
@@ -78,9 +78,9 @@ int paramGetType(paramVarId_t varid);
 
 /** Get group and name strings of a parameter
  *
- * @param varId variable ID, returned by paramGetVarId()
+ * @param varid variable ID, returned by paramGetVarId()
  * @param group Pointer to a char* that will be filled with the group name
- * @param group Pointer to a char* that will be filled with the variable name
+ * @param name Pointer to a char* that will be filled with the variable name
  *
  * The string buffers must be able to hold at least 32 bytes.
  */
@@ -95,21 +95,21 @@ uint8_t paramVarSize(int type);
 
 /** Return float value of a parameter
  *
- * @param varId variable ID, returned by paramGetVarId()
+ * @param varid variable ID, returned by paramGetVarId()
  * @return Current value of the variable
  */
 float paramGetFloat(paramVarId_t varid);
 
 /** Return int value of a parameter
  *
- * @param varId variable ID, returned by paramGetVarId()
+ * @param varid variable ID, returned by paramGetVarId()
  * @return Current value of the variable
  */
 int paramGetInt(paramVarId_t varid);
 
 /** Return Unsigned int value of a paramter
  *
- * @param varId variable ID, returned by paramGetVarId()
+ * @param varid variable ID, returned by paramGetVarId()
  * @return Current value of the variable
  */
 unsigned int paramGetUint(paramVarId_t varid);
@@ -118,7 +118,7 @@ unsigned int paramGetUint(paramVarId_t varid);
  *
  *  An update is also send to the client
  *
- * @param varId variable ID, returned by paramGetVarId()
+ * @param varid variable ID, returned by paramGetVarId()
  * @param valuei Value to set in the variable
  */
 void paramSetInt(paramVarId_t varid, int valuei);
@@ -127,7 +127,7 @@ void paramSetInt(paramVarId_t varid, int valuei);
  *
  *  An update is also send to the client
  *
- * @param varId variable ID, returned by paramGetVarId()
+ * @param varid variable ID, returned by paramGetVarId()
  * @param valuef Value to set in the variable
  */
 void paramSetFloat(paramVarId_t varid, float valuef);

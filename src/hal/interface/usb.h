@@ -64,7 +64,7 @@ struct crtpLinkOperations * usbGetLink();
 
 /**
  * Get data from rx queue with timeout.
- * @param[out] c  Byte of data
+ * @param in  Pointer to USBPacket structure to store data
  *
  * @return true if byte received, false if timout reached.
  */

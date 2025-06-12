@@ -24,12 +24,14 @@
  *
  * Academic citation would be appreciated.
  *
+ * \verbatim
  * BIBTEX ENTRIES:
       @ARTICLE{BrescianiniNonlinearController2013,
                title={Nonlinear quadrocopter attitude control},
                author={Brescianini, Dario and Hehn, Markus and D'Andrea, Raffaello},
                year={2013},
                publisher={ETH Zurich}}
+ * \endverbatim
  *
  * ============================================================================
  */

@@ -29,10 +29,10 @@
 
 #include <stdint.h>
 
-/**
- * \def PROXIMITY_ENABLED
- * Enable the proximity measurement subsystem.
- */
+// /**
+//  * \def PROXIMITY_ENABLED
+//  * Enable the proximity measurement subsystem.
+//  */
 //#define PROXIMITY_ENABLED
 
 /**
@@ -55,10 +55,10 @@
  */
 #define PROXIMITY_SWIN_SIZE 9
 
-/**
- * \def PROXIMITY_LOG_ENABLED
- * Uncomment to enable log variables.
- */
+// /**
+//  * \def PROXIMITY_LOG_ENABLED
+//  * Uncomment to enable log variables.
+//  */
 //#define PROXIMITY_LOG_ENABLED
 
 void proximityInit(void);
