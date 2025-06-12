@@ -106,6 +106,13 @@ config ESTIMATOR_OOT
     bool "Out-of-tree estimator"
     default n
 
+config ESTIMATOR_USE_RELATIVE_YAW
+    bool "Use relative yaw in trajectories"
+    default n
+    help
+        If enabled, the yaw angle in trajectories will be treated as relative
+        to the current yaw angle instead of absolute.
+
 endmenu
 
 menu "Motor configuration"

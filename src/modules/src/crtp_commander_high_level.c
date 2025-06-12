@@ -98,7 +98,11 @@ static bool isInit = false;
 static struct planner planner;
 static uint8_t group_mask;
 static bool isBlocked; // Are we blocked to do anything by the supervisor
-static bool isRelativeYaw; // Is yaw relative in relative mode?
+#ifdef CONFIG_ESTIMATOR_USE_RELATIVE_YAW
+static bool isRelativeYaw = true;
+#else
+static bool isRelativeYaw = false;
+#endif
 static struct vec pos; // last known setpoint (position [m])
 static struct vec vel; // last known setpoint (velocity [m/s])
 static float yaw; // last known setpoint yaw (yaw [rad])
@@ -895,11 +899,6 @@ bool crtpCommanderHighLevelIsTrajectoryFinished() {
  * landing, polynomial trajectories.
  */
 PARAM_GROUP_START(hlCommander)
-
-/**
- * @brief Boolean whether to use relative yaw in relative trajectories.
- */
-PARAM_ADD(PARAM_INT8, relativeYaw, &isRelativeYaw)
 
 /**
  * @brief Default take off velocity (m/s)
