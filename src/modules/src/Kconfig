@@ -67,6 +67,15 @@ config ESTIMATOR_KALMAN_TDOA_OUTLIERFILTER_FALLBACK
     help
         Use the 'old' TDoA outlier filter instead of the default one. Deprecated, will be removed after September 2023.
 
+config ESTIMATOR_KALMAN_GENERAL_PURPOSE
+    bool "Configure the Kalman estimator for general purpose use"
+    default n
+    depends on ESTIMATOR_KALMAN_ENABLE
+    help
+        Configure the Kalman estimator for general purpose use and not for flying. In this mode the estimator will not
+        use any drone specific information for state estimation, this is useful when using the Crazyflie as a general
+        positioning tag (tracker).
+
 config ESTIMATOR_UKF_ENABLE
     bool "Enable error-state UKF estimator"
     select ESTIMATOR_OUTLIER_FILTERS
