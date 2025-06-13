@@ -6,6 +6,12 @@ doxDir=$scriptDir/../../generated/dox
 xmlDir=$doxDir/xml
 apiDocsDir=$scriptDir/../../docs/api
 
+# submodules required for rendering documentation
+git submodule update --init --recursive
+
+# config required to generate documentation
+make cf2_defconfig
+
 # Generate xml from the source code
 mkdir -p $doxDir
 [ -d "$xmlDir" ] && rm -r $xmlDir
