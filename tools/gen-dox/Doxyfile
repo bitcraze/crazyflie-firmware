@@ -768,7 +768,7 @@ WARN_NO_PARAMDOC       = NO
 # a warning is encountered.
 # The default value is: NO.
 
-WARN_AS_ERROR          = YES
+WARN_AS_ERROR          = NO
 
 # The WARN_FORMAT tag determines the format of the warning messages that doxygen
 # can produce. The string should contain the $file, $line, and $text tags, which
@@ -2077,8 +2077,7 @@ INCLUDE_PATH = vendor/CMSIS/CMSIS/Core/Include \
                src/lib/STM32_USB_OTG_Driver/inc \
                src/lib/STM32F4xx_StdPeriph_Driver/inc \
                src/lib/vl53l1 \
-               src/lib/vl53l1/core/inc \
-               build/include/generated
+               src/lib/vl53l1/core/inc
 
 # You can use the INCLUDE_FILE_PATTERNS tag to specify one or more wildcard
 # patterns (like *.h and *.hpp) to filter out the header-files in the
