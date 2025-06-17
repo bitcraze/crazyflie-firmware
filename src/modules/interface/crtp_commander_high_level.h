@@ -294,4 +294,13 @@ bool crtpCommanderHighLevelReadTrajectory(const uint32_t offset, const uint32_t 
  */
 bool crtpCommanderHighLevelIsTrajectoryFinished();
 
+
+/**
+ * @brief Query the current state of the planner in high level control
+ *
+ * @return trajectory state enum defined in planner.h
+ */
+
+enum trajectory_state crtpCommanderHighLevelGetPlannerState();
+
 #endif /* CRTP_COMMANDER_HIGH_LEVEL_H_ */

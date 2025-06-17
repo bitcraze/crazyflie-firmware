@@ -46,6 +46,8 @@
 #define DEBUG_MODULE "SUP"
 #include "debug.h"
 
+#include "planner.h"
+#include "crtp_commander_high_level.h"
 
 #define DEFAULT_EMERGENCY_STOP_WATCHDOG_TIMEOUT (M2T(1000))
 
@@ -399,6 +401,19 @@ static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t
   if (this->isCrashed) {
     this->infoBitfield |= 0x0080;
   }
+
+  enum trajectory_state traj_state =  crtpCommanderHighLevelGetPlannerState();
+
+  if ((traj_state & TRAJECTORY_STATE_FLYING) == TRAJECTORY_STATE_FLYING) {
+      this->infoBitfield |= 0x0100;  // high level control is active (includes landing mode)
+  }
+  if (crtpCommanderHighLevelIsTrajectoryFinished()) {
+      this->infoBitfield |= 0x0200;   // high level control trajectory is finished
+  }
+  if (traj_state == TRAJECTORY_STATE_DISABLED) {
+      this->infoBitfield |= 0x0400;  // high level control is not producing setpoints
+  }
+
 }
 
 void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, stabilizerStep_t stabilizerStep) {

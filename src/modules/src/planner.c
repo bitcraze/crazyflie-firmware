@@ -78,6 +78,9 @@ void plan_stop(struct planner *p)
 
 bool plan_is_finished(struct planner *p, float t)
 {
+	if (p->trajectory == NULL) {
+		return 1;
+	}
 	switch (p->type) {
 		case TRAJECTORY_TYPE_PIECEWISE:
 			return piecewise_is_finished(p->trajectory, t);
