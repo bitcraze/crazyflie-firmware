@@ -542,6 +542,10 @@ LOG_GROUP_START(supervisor)
  * Bit 4 = is flying - the Crazyflie is flying.
  * Bit 5 = is tumbled - the Crazyflie is up side down.
  * Bit 6 = is locked - the Crazyflie is in the locked state and must be restarted.
+ * Bit 7 = is crashed - the Crazyflie has crashed.
+ * Bit 8 = high level control is actively flying the drone
+ * Bit 9 = high level trajectory has finished
+ * Bit 10 = high level control is disabled and not producing setpoints
  */
 LOG_ADD(LOG_UINT16, info, &supervisorMem.infoBitfield)
 LOG_GROUP_STOP(supervisor)
