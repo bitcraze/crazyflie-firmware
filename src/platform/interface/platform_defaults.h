@@ -57,6 +57,27 @@
     // kg
     #define CF_MASS     0.027f
 #endif
+#ifndef VMOTOR2THRUST0
+    #define VMOTOR2THRUST0  0.0f
+#endif
+#ifndef VMOTOR2THRUST1
+    #define VMOTOR2THRUST1  0.0f
+#endif
+#ifndef VMOTOR2THRUST2
+    #define VMOTOR2THRUST2  0.0f
+#endif
+#ifndef VMOTOR2THRUST3
+    #define VMOTOR2THRUST3  0.0f
+#endif
+#ifndef THRUST_MIN
+    #define THRUST_MIN      0.02f
+#endif
+#ifndef THRUST_MAX
+    #define THRUST_MAX      0.1125f
+#endif
+#ifndef THRUST2TORQUE
+    #define THRUST2TORQUE   0.005964552f
+#endif
 
 // IMU alignment on the airframe 
 #ifndef IMU_PHI
