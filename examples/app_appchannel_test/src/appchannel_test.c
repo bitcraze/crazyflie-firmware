@@ -22,7 +22,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * appchanel_test.c: Demonstrate the appchanel functionality
+ * appchannel_test.c: Demonstrate the appchannel functionality
  */
 
 #include "app.h"
