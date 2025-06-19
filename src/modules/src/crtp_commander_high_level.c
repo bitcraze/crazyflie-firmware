@@ -1007,6 +1007,11 @@ bool crtpCommanderHighLevelReadTrajectory(const uint32_t offset, const uint32_t 
   return result;
 }
 
+
+enum trajectory_state crtpCommanderHighLevelGetPlannerState() {
+  return planner.state;
+}
+
 bool crtpCommanderHighLevelIsTrajectoryFinished() {
   float t = usecTimestamp() / 1e6;
   return plan_is_finished(&planner, t);

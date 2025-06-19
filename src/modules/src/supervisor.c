@@ -46,6 +46,8 @@
 #define DEBUG_MODULE "SUP"
 #include "debug.h"
 
+#include "planner.h"
+#include "crtp_commander_high_level.h"
 
 #define DEFAULT_EMERGENCY_STOP_WATCHDOG_TIMEOUT (M2T(1000))
 
@@ -399,6 +401,19 @@ static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t
   if (this->isCrashed) {
     this->infoBitfield |= 0x0080;
   }
+
+  enum trajectory_state traj_state =  crtpCommanderHighLevelGetPlannerState();
+
+  if ((traj_state & TRAJECTORY_STATE_FLYING) == TRAJECTORY_STATE_FLYING) {
+      this->infoBitfield |= 0x0100;  // high level control is active (includes landing mode)
+  }
+  if (crtpCommanderHighLevelIsTrajectoryFinished()) {
+      this->infoBitfield |= 0x0200;   // high level control trajectory is finished
+  }
+  if (traj_state == TRAJECTORY_STATE_DISABLED) {
+      this->infoBitfield |= 0x0400;  // high level control is not producing setpoints
+  }
+
 }
 
 void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, stabilizerStep_t stabilizerStep) {
@@ -527,6 +542,10 @@ LOG_GROUP_START(supervisor)
  * Bit 4 = is flying - the Crazyflie is flying.
  * Bit 5 = is tumbled - the Crazyflie is up side down.
  * Bit 6 = is locked - the Crazyflie is in the locked state and must be restarted.
+ * Bit 7 = is crashed - the Crazyflie has crashed.
+ * Bit 8 = high level control is actively flying the drone
+ * Bit 9 = high level trajectory has finished
+ * Bit 10 = high level control is disabled and not producing setpoints
  */
 LOG_ADD(LOG_UINT16, info, &supervisorMem.infoBitfield)
 LOG_GROUP_STOP(supervisor)
