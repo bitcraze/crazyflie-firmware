@@ -591,6 +591,8 @@ static const DeckDriver dwm1000_deck = {
   #else
   .requiredLowInterferenceRadioMode = true,
   #endif
+  .requiredKalmanEstimatorAttitudeReversion = true,
+
 
   .init = dwm1000Init,
   .test = dwm1000Test,
