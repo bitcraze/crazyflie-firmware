@@ -80,7 +80,7 @@ Each CRTP packets carries one *port* number, a *channel* number as well as a
 Payload:
  - The `port` range between 0 and 15 (4 bits)
  - The `channel` ranges between 0 and 3 (2 bits)
- - The payload is a data buffer of up to 31 bytes
+ - The payload is a data buffer of up to 30 bytes
 
 The couple `port`:`channel` can be written separated by a color in this documentation.
 
