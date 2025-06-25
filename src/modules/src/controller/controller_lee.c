@@ -25,9 +25,9 @@ SOFTWARE.
 /*
 This controller is based on the following publication:
 
-Taeyoung Lee, Melvin Leok, and N. Harris McClamroch
-Geometric Tracking Control of a Quadrotor UAV on SE(3)
-CDC 2010
+Farhad Goodarzi, Daewon Lee, Taeyoung Lee
+Geometric nonlinear PID control of a quadrotor UAV on SE (3)
+ECC 2013
 
 * Difference to Mellinger:
   * Different angular velocity error
@@ -44,26 +44,22 @@ CDC 2010
 #include "platform_defaults.h"
 
 static controllerLee_t g_self = {
-  .mass = CF_MASS,
-
-  // Inertia matrix (diagonal matrix), see
-  // System Identification of the Crazyflie 2.0 Nano Quadrocopter
-  // BA theses, Julian Foerster, ETHZ
-  // https://polybox.ethz.ch/index.php/s/20dde63ee00ffe7085964393a55a91c7
+  .m = CF_MASS, // kg
   .J = {16.571710e-6, 16.655602e-6, 29.261652e-6}, // kg m^2
 
-  // Position PID
-  .Kpos_P = {7.0, 7.0, 7.0}, // Kp in paper
-  .Kpos_P_limit = 100,
-  .Kpos_D = {4.0, 4.0, 4.0}, // Kv in paper
-  .Kpos_D_limit = 100,
-  .Kpos_I = {0.0, 0.0, 0.0}, // not in paper
-  .Kpos_I_limit = 2,
+  .kx = 7.0,
+  .kv = 4.0,
+  .ki = 1.0,
+  .c1 = 3.6,
+  .sigma = 1.0,
 
-  // Attitude PID
-  .KR = {0.007, 0.007, 0.008},
-  .Komega = {0.00115, 0.00115, 0.002},
-  .KI = {0.03, 0.03, 0.03},
+  .kR = 0.007,
+  .kW = 0.002,
+  .kI = 0.0005,
+  .c2 = 0.8,
+
+  // Enable this for tracking aggressive maneuvers
+  .enable_attitude_rate_tracking = 1,
 };
 
 static inline struct vec vclampscl(struct vec value, float min, float max) {
@@ -73,187 +69,251 @@ static inline struct vec vclampscl(struct vec value, float min, float max) {
     clamp(value.z, min, max));
 }
 
-void controllerLeeReset(controllerLee_t* self)
-{
-  self->i_error_pos = vzero();
-  self->i_error_att = vzero();
+static inline struct vec mvee(struct mat33 R) {
+	return mkvec(R.m[2][1], R.m[0][2], R.m[1][0]);
 }
 
-void controllerLeeInit(controllerLee_t* self)
-{
+// Compute the matrix logarithm of a rotation matrix
+static inline struct mat33 mlog(struct mat33 R) {
+	float acosinput = (R.m[0][0] + R.m[1][1] + R.m[2][2] - 1.0f) / 2.0f;
+	if (acosinput >= 1.0f) {
+		return mzero();
+	} else if (acosinput <= -1.0f) {
+		struct vec omg;
+		if (!(fabsf(1.0f + R.m[2][2]) < 1e-6f)) {
+			omg = vdiv(mkvec(R.m[0][2], R.m[1][2], 1.0f + R.m[2][2]), sqrtf(2.0f * (1.0f + R.m[2][2])));
+		} else if (!(fabsf(1.0f + R.m[1][1]) < 1e-6f)) {
+			omg = vdiv(mkvec(R.m[0][1], 1.0f + R.m[1][1], R.m[2][1]), sqrtf(2.0f * (1.0f + R.m[1][1])));
+		} else {
+			omg = vdiv(mkvec(1.0f + R.m[0][0], R.m[1][0], R.m[2][0]), sqrtf(2.0f * (1.0f + R.m[0][0])));
+		}
+		return mcrossmat(vscl(M_PI_F, omg));
+	} else {
+		float theta = acosf(acosinput);
+		return mscl(theta / 2.0f / sinf(theta), msub(R, mtranspose(R)));
+	}
+}
+
+static inline struct vec averagingFilter(struct vec* arr, int size) {
+  float x = 0.0f;
+  float y = 0.0f;
+  float z = 0.0f;
+  for (int i = 0; i < size; i++) {
+    x += arr[i].x;
+    y += arr[i].y;
+    z += arr[i].z;
+  }
+  x /= size;
+  y /= size;
+  z /= size;
+
+  return mkvec(x, y, z);
+}
+
+void controllerLeeReset(controllerLee_t* self) {
+  self->ei = vzero();
+  self->eI = vzero();
+
+  for (int i = 0; i < FILTER_SIZE; i++) {
+    self->W_d_raw[i] = vzero();
+    self->W_d_dot_raw[i] = vzero();
+  }
+}
+
+void controllerLeeInit(controllerLee_t* self) {
   // copy default values (bindings), or NOP (firmware)
   *self = g_self;
+
+  self->f = 0;
+  self->M = vzero();
+  
+  self->ex = vzero();
+  self->ev = vzero();
+
+  self->eR = vzero();
+  self->eW = vzero();
+
+  self->R_d_prev = mcolumns(vrepeat(NAN), vrepeat(NAN), vrepeat(NAN));
+  self->W_d_prev = vrepeat(NAN);
+
+  self->W_d = vzero();
+  self->W_d_dot = vzero();
 
   controllerLeeReset(self);
 }
 
-bool controllerLeeTest(controllerLee_t* self)
-{
+bool controllerLeeTest(controllerLee_t* self) {
   return true;
 }
 
-void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *setpoint,
-                                         const sensorData_t *sensors,
-                                         const state_t *state,
-                                         const uint32_t tick)
-{
-
+void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *setpoint, const sensorData_t *sensors, const state_t *state, const uint32_t tick) {
   if (!RATE_DO_EXECUTE(ATTITUDE_RATE, tick)) {
     return;
   }
-
-  // uint64_t startTime = usecTimestamp();
-
+  
   float dt = (float)(1.0f/ATTITUDE_RATE);
-  // struct vec dessnap = vzero();
-  // Address inconsistency in firmware where we need to compute our own desired yaw angle
-  // Rate-controlled YAW is moving YAW angle setpoint
-  float desiredYaw = 0; //rad
+
+  // States
+  struct vec x = mkvec(state->position.x, state->position.y, state->position.z);
+  struct vec v = mkvec(state->velocity.x, state->velocity.y, state->velocity.z);
+  struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
+  struct mat33 R = quat2rotmat(q);
+  struct vec W = mkvec(radians(sensors->gyro.x), radians(sensors->gyro.y), radians(sensors->gyro.z));
+
+  float desiredYaw = 0;
   if (setpoint->mode.yaw == modeVelocity) {
     desiredYaw = radians(state->attitude.yaw + setpoint->attitudeRate.yaw * dt);
   } else if (setpoint->mode.yaw == modeAbs) {
     desiredYaw = radians(setpoint->attitude.yaw);
   } else if (setpoint->mode.quat == modeAbs) {
     struct quat setpoint_quat = mkquat(setpoint->attitudeQuaternion.x, setpoint->attitudeQuaternion.y, setpoint->attitudeQuaternion.z, setpoint->attitudeQuaternion.w);
-    self->rpy_des = quat2rpy(setpoint_quat);
-    desiredYaw = self->rpy_des.z;
+    desiredYaw = quat2rpy(setpoint_quat).z;
   }
+  
+  // Calculate f and R_d
+  struct mat33 R_d;
 
-  // Position controller
-  if (   setpoint->mode.x == modeAbs
-      || setpoint->mode.y == modeAbs
-      || setpoint->mode.z == modeAbs) {
-    struct vec pos_d = mkvec(setpoint->position.x, setpoint->position.y, setpoint->position.z);
-    struct vec vel_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);
-    struct vec acc_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z + GRAVITY_MAGNITUDE);
-    struct vec statePos = mkvec(state->position.x, state->position.y, state->position.z);
-    struct vec stateVel = mkvec(state->velocity.x, state->velocity.y, state->velocity.z);
+  // Position setpoint
+  if (setpoint->mode.x == modeAbs && setpoint->mode.y == modeAbs && setpoint->mode.z == modeAbs) {
+    struct vec x_d = mkvec(setpoint->position.x, setpoint->position.y, setpoint->position.z);
+    struct vec v_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);
+    struct vec a_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z);
+    struct vec b1_d = mkvec(cosf(desiredYaw), sinf(desiredYaw), 0);
 
-    // errors
-    struct vec pos_e = vclampscl(vsub(pos_d, statePos), -self->Kpos_P_limit, self->Kpos_P_limit);
-    struct vec vel_e = vclampscl(vsub(vel_d, stateVel), -self->Kpos_D_limit, self->Kpos_D_limit);
-    self->i_error_pos = vadd(self->i_error_pos, vscl(dt, pos_e));
-    self->p_error = pos_e;
-    self->v_error = vel_e;
-
-    struct vec F_d = vadd4(
-      acc_d,
-      veltmul(self->Kpos_D, vel_e),
-      veltmul(self->Kpos_P, pos_e),
-      veltmul(self->Kpos_I, self->i_error_pos));
-
-    struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
-    struct mat33 R = quat2rotmat(q);
-    struct vec z  = vbasis(2);
-    control->thrustSi = self->mass*vdot(F_d , mvmul(R, z));
-    self->thrustSi = control->thrustSi;
-    // Reset the accumulated error while on the ground
-    if (control->thrustSi < 0.01f) {
+    self->ex = vsub(x, x_d);
+    self->ev = vsub(v, v_d);
+    self->ei = vadd(self->ei, vscl(dt, vadd(self->ev, vscl(self->c1, self->ex))));
+    self->ei = vclampscl(self->ei, -self->sigma, self->sigma);
+    
+    struct vec F_d = vscl(self->m, vadd(vadd4(
+      vscl(-self->kx, self->ex),
+      vscl(-self->kv, self->ev),
+      vscl(-self->ki, self->ei),
+      a_d),
+      vscl(GRAVITY_MAGNITUDE, vbasis(2))));
+    self->f = vdot(F_d, mvmul(R, vbasis(2)));
+    
+    if (self->f < 0.01f) {
       controllerLeeReset(self);
     }
 
-    // Compute Desired Rotation matrix
-    float normFd = control->thrustSi;
+    struct vec b3_d = vnormalize(F_d);
+    struct vec b2_d = vnormalize(vcross(b3_d, b1_d));
+    R_d = mcolumns(vcross(b2_d, b3_d), b2_d, b3_d);
 
-    struct vec xdes = vbasis(0);
-    struct vec ydes = vbasis(1);
-    struct vec zdes = vbasis(2);
-   
-    if (normFd > 0) {
-      zdes = vnormalize(F_d);
-    } 
-    struct vec xcdes = mkvec(cosf(desiredYaw), sinf(desiredYaw), 0); 
-    struct vec zcrossx = vcross(zdes, xcdes);
-    float normZX = vmag(zcrossx);
+  // Velocity setpoint
+  } else if (setpoint->mode.x == modeVelocity && setpoint->mode.y == modeVelocity && setpoint->mode.z == modeVelocity) {
+    struct vec v_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);
+    struct vec a_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z);
+    struct vec b1_d = mkvec(cosf(desiredYaw), sinf(desiredYaw), 0);
 
-    if (normZX > 0) {
-      ydes = vnormalize(zcrossx);
-    } 
-    xdes = vcross(ydes, zdes);
-    
-    self->R_des = mcolumns(xdes, ydes, zdes);
+    self->ev = vsub(v, v_d);
+
+    struct vec F_d = vscl(self->m, vadd3(
+      vscl(-self->kv, self->ev),
+      a_d,
+      vscl(GRAVITY_MAGNITUDE, vbasis(2))));
+    self->f = vdot(F_d, mvmul(R, vbasis(2)));
+
+    if (self->f < 0.01f) {
+      controllerLeeReset(self);
+    }
+
+    struct vec b3_d = vnormalize(F_d);
+    struct vec b2_d = vnormalize(vcross(b3_d, b1_d));
+    R_d = mcolumns(vcross(b2_d, b3_d), b2_d, b3_d);
 
   } else {
-    if (setpoint->mode.z == modeDisable) {
-      if (setpoint->thrust < 1000) {
-          control->controlMode = controlModeForceTorque;
-          control->thrustSi  = 0;
-          control->torque[0] = 0;
-          control->torque[1] = 0;
-          control->torque[2] = 0;
-          controllerLeeReset(self);
-          return;
+    // zDistance setpoint
+    if (setpoint->mode.z == modeAbs) {
+      float x3 = state->position.z;
+      float x3_d = setpoint->position.z;
+
+      float v3 = state->velocity.z;
+      float v3_d = setpoint->velocity.z;
+
+      float a3_d = setpoint->acceleration.z;
+      
+      self->f = self->m*(-self->kx*(x3 - x3_d) - self->kv*(v3 - v3_d) + a3_d + GRAVITY_MAGNITUDE) / R.m[2][2];
+
+    // altHold setpoint
+    } else if (setpoint->mode.z == modeVelocity) {
+      float v3 = state->velocity.z;
+      float v3_d = setpoint->velocity.z;
+
+      float a3_d = setpoint->acceleration.z;
+      
+      self->f = self->m*(-self->kv*(v3 - v3_d) + a3_d + GRAVITY_MAGNITUDE) / R.m[2][2];
+
+    // Manual setpoint
+    } else {
+      if (setpoint->mode.z == modeDisable && setpoint->thrust < 1000) {
+        control->controlMode = controlModeForceTorque;
+        control->thrustSi  = 0;
+        control->torque[0] = 0;
+        control->torque[1] = 0;
+        control->torque[2] = 0;
+        controllerLeeReset(self);
+        return;
       }
+      
+      const float max_thrust = powerDistributionGetMaxThrust(); // N
+      self->f = setpoint->thrust / UINT16_MAX * max_thrust;
     }
-    const float max_thrust = powerDistributionGetMaxThrust(); // N
-    control->thrustSi = setpoint->thrust / UINT16_MAX * max_thrust;
 
-    struct quat q = rpy2quat(mkvec(
-        radians(setpoint->attitude.roll),
-        -radians(setpoint->attitude.pitch), // This is in the legacy coordinate system where pitch is inverted
-        desiredYaw));
-    self->R_des = quat2rotmat(q);
+    R_d = quat2rotmat(rpy2quat(mkvec(
+      radians(setpoint->attitude.roll),
+      -radians(setpoint->attitude.pitch), // This is in the legacy coordinate system where pitch is inverted
+      desiredYaw)));
   }
 
-  // Attitude controller
+  // Calculate M
+  if (vneq(mcolumn(self->R_d_prev, 0), vrepeat(NAN)) && vneq(mcolumn(self->R_d_prev, 1), vrepeat(NAN)) && vneq(mcolumn(self->R_d_prev, 2), vrepeat(NAN))) {
+    if (self->enable_attitude_rate_tracking) {
+      // Update W_d_raw buffer
+      for (int i = 0; i < FILTER_SIZE - 1; i++) {
+        self->W_d_raw[i] = self->W_d_raw[i + 1];
+      }
+      self->W_d_raw[FILTER_SIZE - 1] = vdiv(mvee(mlog(mmul(mtranspose(self->R_d_prev), R_d))), dt);
+      self->W_d = averagingFilter(self->W_d_raw, FILTER_SIZE);
+    } else {
+      self->W_d = vzero();
+    }
 
-  // current rotation [R]
-  struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
-  self->rpy = quat2rpy(q);
-  struct mat33 R = quat2rotmat(q);
+    if (vneq(self->W_d_prev, vrepeat(NAN))) {
+      if (self->enable_attitude_rate_tracking) {
+        // Update W_d_dot_raw buffer
+        for (int i = 0; i < FILTER_SIZE - 1; i++) {
+          self->W_d_dot_raw[i] = self->W_d_dot_raw[i + 1];
+        }
+        self->W_d_dot_raw[FILTER_SIZE - 1] = vdiv(vsub(self->W_d, self->W_d_prev), dt);
+        self->W_d_dot = averagingFilter(self->W_d_dot_raw, FILTER_SIZE);
+      } else {
+        self->W_d_dot = vzero();
+      }
 
-  // desired rotation [Rdes]
-  struct quat q_des = mat2quat(self->R_des);
-  self->rpy_des = quat2rpy(q_des);
+      self->eR = vscl(0.5f, mvee(msub(
+        mmul(mtranspose(R_d), R),
+        mmul(mtranspose(R), R_d))));
+      self->eW = vsub(W, mvmul(mtranspose(R), mvmul(R_d, self->W_d)));
+      self->eI = vadd(self->eI, vscl(dt, vadd(self->eW, vscl(self->c2, self->eR))));
 
-  // rotation error
-  struct mat33 eRM = msub(mmul(mtranspose(self->R_des), R), mmul(mtranspose(R), self->R_des));
-
-  struct vec eR = vscl(0.5f, mkvec(eRM.m[2][1], eRM.m[0][2], eRM.m[1][0]));
-
-  // angular velocity
-  self->omega = mkvec(
-    radians(sensors->gyro.x),
-    radians(sensors->gyro.y),
-    radians(sensors->gyro.z));
-
-  // Compute desired omega
-  struct vec xdes = mcolumn(self->R_des, 0);
-  struct vec ydes = mcolumn(self->R_des, 1);
-  struct vec zdes = mcolumn(self->R_des, 2);
-  struct vec hw = vzero();
-  // Desired Jerk and snap for now are zeros vector
-  struct vec desJerk = mkvec(setpoint->jerk.x, setpoint->jerk.y, setpoint->jerk.z);
-
-  if (control->thrustSi != 0) {
-    struct vec tmp = vsub(desJerk, vscl(vdot(zdes, desJerk), zdes));
-    hw = vscl(self->mass/control->thrustSi, tmp);
+      self->M = vadd(vadd4(
+        vscl(-self->kR, self->eR),
+        vscl(-self->kW, self->eW),
+        vscl(-self->kI, self->eI),
+        vcross(mvmul(mtranspose(R), mvmul(R_d, self->W_d)), veltmul(self->J, mvmul(mtranspose(R), mvmul(R_d, self->W_d))))),
+        veltmul(self->J, mvmul(mtranspose(R), mvmul(R_d, self->W_d_dot))));
+    }
+    self->W_d_prev = self->W_d;
   }
-  struct vec z_w = mkvec(0,0,1); 
-  float desiredYawRate = radians(setpoint->attitudeRate.yaw) * vdot(zdes,z_w);
-  struct vec omega_des = mkvec(-vdot(hw,ydes), vdot(hw,xdes), desiredYawRate);
-  
-  self->omega_r = mvmul(mmul(mtranspose(R), self->R_des), omega_des);
-
-  struct vec omega_error = vsub(self->omega, self->omega_r);
-  
-  // Integral part on angle
-  self->i_error_att = vadd(self->i_error_att, vscl(dt, eR));
-
-  // compute moments
-  // M = -kR eR - kw ew + w x Jw - J(w x wr)
-  self->u = vadd4(
-    vneg(veltmul(self->KR, eR)),
-    vneg(veltmul(self->Komega, omega_error)),
-    vneg(veltmul(self->KI, self->i_error_att)),
-    vcross(self->omega, veltmul(self->J, self->omega)));
+  self->R_d_prev = R_d;
 
   control->controlMode = controlModeForceTorque;
-  control->torque[0] = self->u.x;
-  control->torque[1] = self->u.y;
-  control->torque[2] = self->u.z;
-
-  // ticks = usecTimestamp() - startTime;
+  control->thrustSi = self->f;
+  control->torque[0] = self->M.x;
+  control->torque[1] = self->M.y;
+  control->torque[2] = self->M.z;
 }
 
 #ifdef CRAZYFLIE_FW
@@ -261,114 +321,79 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
 #include "param.h"
 #include "log.h"
 
-void controllerLeeFirmwareInit(void)
-{
+void controllerLeeFirmwareInit(void) {
   controllerLeeInit(&g_self);
 }
 
-bool controllerLeeFirmwareTest(void)
-{
+bool controllerLeeFirmwareTest(void) {
   return true;
 }
 
-void controllerLeeFirmware(control_t *control, const setpoint_t *setpoint,
-                                         const sensorData_t *sensors,
-                                         const state_t *state,
-                                         const uint32_t tick)
-{
+void controllerLeeFirmware(control_t *control, const setpoint_t *setpoint, const sensorData_t *sensors, const state_t *state, const uint32_t tick) {
   controllerLee(&g_self, control, setpoint, sensors, state, tick);
 }
 
 PARAM_GROUP_START(ctrlLee)
-PARAM_ADD(PARAM_FLOAT, KR_x, &g_self.KR.x)
-PARAM_ADD(PARAM_FLOAT, KR_y, &g_self.KR.y)
-PARAM_ADD(PARAM_FLOAT, KR_z, &g_self.KR.z)
-// Attitude I
-PARAM_ADD(PARAM_FLOAT, KI_x, &g_self.KI.x)
-PARAM_ADD(PARAM_FLOAT, KI_y, &g_self.KI.y)
-PARAM_ADD(PARAM_FLOAT, KI_z, &g_self.KI.z)
-// Attitude D
-PARAM_ADD(PARAM_FLOAT, Kw_x, &g_self.Komega.x)
-PARAM_ADD(PARAM_FLOAT, Kw_y, &g_self.Komega.y)
-PARAM_ADD(PARAM_FLOAT, Kw_z, &g_self.Komega.z)
 
-// J
-PARAM_ADD(PARAM_FLOAT, J_x, &g_self.J.x)
-PARAM_ADD(PARAM_FLOAT, J_y, &g_self.J.y)
-PARAM_ADD(PARAM_FLOAT, J_z, &g_self.J.z)
+PARAM_ADD(PARAM_FLOAT, m, &g_self.m)
 
-// Position P
-PARAM_ADD(PARAM_FLOAT, Kpos_Px, &g_self.Kpos_P.x)
-PARAM_ADD(PARAM_FLOAT, Kpos_Py, &g_self.Kpos_P.y)
-PARAM_ADD(PARAM_FLOAT, Kpos_Pz, &g_self.Kpos_P.z)
-PARAM_ADD(PARAM_FLOAT, Kpos_P_limit, &g_self.Kpos_P_limit)
-// Position D
-PARAM_ADD(PARAM_FLOAT, Kpos_Dx, &g_self.Kpos_D.x)
-PARAM_ADD(PARAM_FLOAT, Kpos_Dy, &g_self.Kpos_D.y)
-PARAM_ADD(PARAM_FLOAT, Kpos_Dz, &g_self.Kpos_D.z)
-PARAM_ADD(PARAM_FLOAT, Kpos_D_limit, &g_self.Kpos_D_limit)
-// Position I
-PARAM_ADD(PARAM_FLOAT, Kpos_Ix, &g_self.Kpos_I.x)
-PARAM_ADD(PARAM_FLOAT, Kpos_Iy, &g_self.Kpos_I.y)
-PARAM_ADD(PARAM_FLOAT, Kpos_Iz, &g_self.Kpos_I.z)
-PARAM_ADD(PARAM_FLOAT, Kpos_I_limit, &g_self.Kpos_I_limit)
+PARAM_ADD(PARAM_FLOAT, J1, &g_self.J.x)
+PARAM_ADD(PARAM_FLOAT, J2, &g_self.J.y)
+PARAM_ADD(PARAM_FLOAT, J3, &g_self.J.z)
 
-PARAM_ADD(PARAM_FLOAT, mass, &g_self.mass)
+PARAM_ADD(PARAM_FLOAT, kx, &g_self.kx)
+PARAM_ADD(PARAM_FLOAT, kv, &g_self.kv)
+PARAM_ADD(PARAM_FLOAT, ki, &g_self.ki)
+PARAM_ADD(PARAM_FLOAT, c1, &g_self.c1)
+PARAM_ADD(PARAM_FLOAT, sigma, &g_self.sigma)
+
+PARAM_ADD(PARAM_FLOAT, kR, &g_self.kR)
+PARAM_ADD(PARAM_FLOAT, kW, &g_self.kW)
+PARAM_ADD(PARAM_FLOAT, kI, &g_self.kI)
+PARAM_ADD(PARAM_FLOAT, c2, &g_self.c2)
+
+// PARAM_ADD(PARAM_UINT8, enable_attitude_rate_tracking, &g_self.enable_attitude_rate_tracking)
+
 PARAM_GROUP_STOP(ctrlLee)
 
 
 LOG_GROUP_START(ctrlLee)
 
-LOG_ADD(LOG_FLOAT, KR_x, &g_self.KR.x)
-LOG_ADD(LOG_FLOAT, KR_y, &g_self.KR.y)
-LOG_ADD(LOG_FLOAT, KR_z, &g_self.KR.z)
-LOG_ADD(LOG_FLOAT, Kw_x, &g_self.Komega.x)
-LOG_ADD(LOG_FLOAT, Kw_y, &g_self.Komega.y)
-LOG_ADD(LOG_FLOAT, Kw_z, &g_self.Komega.z)
+// Wrench
+LOG_ADD(LOG_FLOAT, f, &g_self.f)
+LOG_ADD(LOG_FLOAT, M1, &g_self.M.x)
+LOG_ADD(LOG_FLOAT, M2, &g_self.M.y)
+LOG_ADD(LOG_FLOAT, M3, &g_self.M.z)
 
-LOG_ADD(LOG_FLOAT,Kpos_Px, &g_self.Kpos_P.x)
-LOG_ADD(LOG_FLOAT,Kpos_Py, &g_self.Kpos_P.y)
-LOG_ADD(LOG_FLOAT,Kpos_Pz, &g_self.Kpos_P.z)
-LOG_ADD(LOG_FLOAT,Kpos_Dx, &g_self.Kpos_D.x)
-LOG_ADD(LOG_FLOAT,Kpos_Dy, &g_self.Kpos_D.y)
-LOG_ADD(LOG_FLOAT,Kpos_Dz, &g_self.Kpos_D.z)
+// Errors
+LOG_ADD(LOG_FLOAT, ex1, &g_self.ex.x)
+LOG_ADD(LOG_FLOAT, ex2, &g_self.ex.y)
+LOG_ADD(LOG_FLOAT, ex3, &g_self.ex.z)
 
+LOG_ADD(LOG_FLOAT, ev1, &g_self.ev.x)
+LOG_ADD(LOG_FLOAT, ev2, &g_self.ev.y)
+LOG_ADD(LOG_FLOAT, ev3, &g_self.ev.z)
 
-LOG_ADD(LOG_FLOAT, thrustSi, &g_self.thrustSi)
-LOG_ADD(LOG_FLOAT, torquex, &g_self.u.x)
-LOG_ADD(LOG_FLOAT, torquey, &g_self.u.y)
-LOG_ADD(LOG_FLOAT, torquez, &g_self.u.z)
+LOG_ADD(LOG_FLOAT, eR1, &g_self.eR.x)
+LOG_ADD(LOG_FLOAT, eR2, &g_self.eR.y)
+LOG_ADD(LOG_FLOAT, eR3, &g_self.eR.z)
 
-// current angles
-LOG_ADD(LOG_FLOAT, rpyx, &g_self.rpy.x)
-LOG_ADD(LOG_FLOAT, rpyy, &g_self.rpy.y)
-LOG_ADD(LOG_FLOAT, rpyz, &g_self.rpy.z)
+LOG_ADD(LOG_FLOAT, eW1, &g_self.eW.x)
+LOG_ADD(LOG_FLOAT, eW2, &g_self.eW.y)
+LOG_ADD(LOG_FLOAT, eW3, &g_self.eW.z)
 
-// desired angles
-LOG_ADD(LOG_FLOAT, rpydx, &g_self.rpy_des.x)
-LOG_ADD(LOG_FLOAT, rpydy, &g_self.rpy_des.y)
-LOG_ADD(LOG_FLOAT, rpydz, &g_self.rpy_des.z)
+LOG_ADD(LOG_FLOAT, eI1, &g_self.eI.x)
+LOG_ADD(LOG_FLOAT, eI2, &g_self.eI.y)
+LOG_ADD(LOG_FLOAT, eI3, &g_self.eI.z)
 
-// errors
-LOG_ADD(LOG_FLOAT, error_posx, &g_self.p_error.x)
-LOG_ADD(LOG_FLOAT, error_posy, &g_self.p_error.y)
-LOG_ADD(LOG_FLOAT, error_posz, &g_self.p_error.z)
+// Desired attitude rate
+LOG_ADD(LOG_FLOAT, W_d1, &g_self.W_d.x)
+LOG_ADD(LOG_FLOAT, W_d2, &g_self.W_d.y)
+LOG_ADD(LOG_FLOAT, W_d3, &g_self.W_d.z)
 
-LOG_ADD(LOG_FLOAT, error_velx, &g_self.v_error.x)
-LOG_ADD(LOG_FLOAT, error_vely, &g_self.v_error.y)
-LOG_ADD(LOG_FLOAT, error_velz, &g_self.v_error.z)
-
-// omega
-LOG_ADD(LOG_FLOAT, omegax, &g_self.omega.x)
-LOG_ADD(LOG_FLOAT, omegay, &g_self.omega.y)
-LOG_ADD(LOG_FLOAT, omegaz, &g_self.omega.z)
-
-// omega_r
-LOG_ADD(LOG_FLOAT, omegarx, &g_self.omega_r.x)
-LOG_ADD(LOG_FLOAT, omegary, &g_self.omega_r.y)
-LOG_ADD(LOG_FLOAT, omegarz, &g_self.omega_r.z)
-
-// LOG_ADD(LOG_UINT32, ticks, &ticks)
+LOG_ADD(LOG_FLOAT, W_d_dot1, &g_self.W_d_dot.x)
+LOG_ADD(LOG_FLOAT, W_d_dot2, &g_self.W_d_dot.y)
+LOG_ADD(LOG_FLOAT, W_d_dot3, &g_self.W_d_dot.z)
 
 LOG_GROUP_STOP(ctrlLee)
 

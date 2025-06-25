@@ -26,34 +26,50 @@ SOFTWARE.
 
 #include "stabilizer_types.h"
 
+#define FILTER_SIZE 50
+
 // This structure contains the mutable state and inmutable parameters
 typedef struct controllerLee_s {
-    float mass;
-    float thrustSi;
+    // Quadrotor parameters
+    float m;
     struct vec J; // Inertia matrix (diagonal matrix); kg m^2
 
-    // Position PID
-    struct vec Kpos_P; // Kp in paper
-    float Kpos_P_limit;
-    struct vec Kpos_D; // Kv in paper
-    float Kpos_D_limit;
-    struct vec Kpos_I; // not in paper
-    float Kpos_I_limit;
-    struct vec i_error_pos;
-    struct vec p_error;
-    struct vec v_error;
-    // Attitude PID
-    struct vec KR;
-    struct vec Komega;
-    struct vec KI;
-    struct vec i_error_att;
-    // Logging variables
-    struct vec rpy;
-    struct vec rpy_des;
-    struct mat33 R_des;
-    struct vec omega;
-    struct vec omega_r;
-    struct vec u;
+    // Gains
+    float kx;
+    float kv;
+    float ki;
+    float c1;
+    float sigma;
+
+    float kR;
+    float kW;
+    float kI;
+    float c2;
+
+    // Errors
+    struct vec ex;
+    struct vec ev;
+    struct vec ei;
+
+    struct vec eR;
+    struct vec eW;
+    struct vec eI;
+
+    // Wrench
+    float f;
+    struct vec M;
+
+    // Previous values
+    struct mat33 R_d_prev;
+    struct vec W_d_prev;
+
+    struct vec W_d_raw[FILTER_SIZE];
+    struct vec W_d_dot_raw[FILTER_SIZE];
+
+    struct vec W_d;
+    struct vec W_d_dot;
+
+    uint8_t enable_attitude_rate_tracking;
 } controllerLee_t;
 
 
