@@ -23,11 +23,18 @@ SOFTWARE.
 */
 
 /*
-This controller is based on the following publication:
+This controller is based on the following publications:
 
-Farhad Goodarzi, Daewon Lee, Taeyoung Lee
-Geometric nonlinear PID control of a quadrotor UAV on SE (3)
+[1] Taeyoung Lee, Melvin Leok, and N. Harris McClamroch
+Control of Complex Maneuvers for a Quadrotor UAV using Geometric Methods on SE(3)
+CDC 2010, updated on arXiv 2011
+https://arxiv.org/pdf/1003.2005
+
+[2] Farhad Goodarzi, Daewon Lee, Taeyoung Lee
+Geometric Nonlinear PID Control of a Quadrotor UAV on SE(3)
 ECC 2013
+https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=6669644
+
 
 * Difference to Mellinger:
   * Different angular velocity error
@@ -173,7 +180,7 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
   // Calculate f and R_d
   struct mat33 R_d;
 
-  // Position setpoint
+  // Position setpoint ([2] Sec. IV)
   if (setpoint->mode.x == modeAbs && setpoint->mode.y == modeAbs && setpoint->mode.z == modeAbs) {
     struct vec x_d = mkvec(setpoint->position.x, setpoint->position.y, setpoint->position.z);
     struct vec v_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);
@@ -201,7 +208,7 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
     struct vec b2_d = vnormalize(vcross(b3_d, b1_d));
     R_d = mcolumns(vcross(b2_d, b3_d), b2_d, b3_d);
 
-  // Velocity setpoint
+  // Velocity setpoint ([1] Sec. VI)
   } else if (setpoint->mode.x == modeVelocity && setpoint->mode.y == modeVelocity && setpoint->mode.z == modeVelocity) {
     struct vec v_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);
     struct vec a_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z);
@@ -224,7 +231,7 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
     R_d = mcolumns(vcross(b2_d, b3_d), b2_d, b3_d);
 
   } else {
-    // zDistance setpoint
+    // zDistance setpoint ([1] Sec. IV)
     if (setpoint->mode.z == modeAbs) {
       float x3 = state->position.z;
       float x3_d = setpoint->position.z;
@@ -236,7 +243,7 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
       
       self->f = self->m*(-self->kx*(x3 - x3_d) - self->kv*(v3 - v3_d) + a3_d + GRAVITY_MAGNITUDE) / R.m[2][2];
 
-    // altHold setpoint
+    // altHold setpoint (adapted from [1] Sec. IV)
     } else if (setpoint->mode.z == modeVelocity) {
       float v3 = state->velocity.z;
       float v3_d = setpoint->velocity.z;
@@ -268,6 +275,7 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
   }
 
   // Calculate M
+  // Attitude control ([2] Sec. III)
   if (vneq(mcolumn(self->R_d_prev, 0), vrepeat(NAN)) && vneq(mcolumn(self->R_d_prev, 1), vrepeat(NAN)) && vneq(mcolumn(self->R_d_prev, 2), vrepeat(NAN))) {
     if (self->enable_attitude_rate_tracking) {
       // Update W_d_raw buffer
