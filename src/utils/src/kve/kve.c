@@ -81,13 +81,13 @@ void kveDefrag(kveMemory_t *kve) {
             nextHoleAddress = kveStorageFindEnd(kve, itemAddress);
         }
 
-        size_t lenghtToMove = nextHoleAddress - itemAddress;
+        size_t lengthToMove = nextHoleAddress - itemAddress;
 
-        kveStorageMoveMemory(kve, itemAddress, holeAddress, lenghtToMove);
+        kveStorageMoveMemory(kve, itemAddress, holeAddress, lengthToMove);
 
-        kveStorageWriteHole(kve, holeAddress + lenghtToMove, itemAddress - holeAddress);
+        kveStorageWriteHole(kve, holeAddress + lengthToMove, itemAddress - holeAddress);
 
-        holeAddress = holeAddress + lenghtToMove;
+        holeAddress = holeAddress + lengthToMove;
     }
 }
 
