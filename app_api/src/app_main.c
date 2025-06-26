@@ -74,7 +74,7 @@ void appMain() {
     crtpCommanderHighLevelLandYaw(0.0f, 1.0f, 1.0f);
     crtpCommanderHighLevelStop();
     crtpCommanderHighLevelGoTo(1.0f, 0.0f, 0.0f, 0.0f, 1.0f, false);
-    crtpCommanderHighLevelStartTrajectory(3, 1.0f, true, false);
+    crtpCommanderHighLevelStartTrajectory(3, 1.0f, true, false, false);
     crtpCommanderHighLevelDefineTrajectory(3, CRTP_CHL_TRAJECTORY_TYPE_POLY4D_COMPRESSED, 0, 17);
     crtpCommanderHighLevelTrajectoryMemSize();
     crtpCommanderHighLevelWriteTrajectory(20, 10, dummyTrajectory);

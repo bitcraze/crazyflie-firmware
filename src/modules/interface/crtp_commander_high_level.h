@@ -239,10 +239,11 @@ bool crtpCommanderHighLevelIsTrajectoryDefined(uint8_t trajectoryId);
  *                                  >1.0: slower;
  *                                  <1.0: faster
  * @param relative     set to True, if trajectory should be shifted to current setpoint
+ * @param relativeYaw  set to True, if trajectory should be aligned to current yaw
  * @param reversed     set to True, if trajectory should be executed in reverse
  * @return zero if the command succeeded, an error code otherwise
  */
-int crtpCommanderHighLevelStartTrajectory(const uint8_t trajectoryId, const float timeScale, const bool relative, const bool reversed);
+int crtpCommanderHighLevelStartTrajectory(const uint8_t trajectoryId, const float timeScale, const bool relative, const bool relativeYaw, const bool reversed);
 
 /**
  * @brief Define a trajectory that has previously been uploaded to memory.
