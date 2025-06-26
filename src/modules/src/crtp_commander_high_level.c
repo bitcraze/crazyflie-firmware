@@ -258,7 +258,7 @@ struct data_start_trajectory {
 // starts executing a specified trajectory
 struct data_start_trajectory_2 {
   uint8_t groupMask; // mask for which CFs this should apply to
-  uint8_t relative;  // set to true, if trajectory should be shifted to current position
+  uint8_t relativePosition;  // set to true, if trajectory should be shifted to current position
   uint8_t relativeYaw; // set to true, if trajectory should be aligned to current yaw
   uint8_t reversed;  // set to true, if trajectory should be executed in reverse
   uint8_t trajectoryId; // id of the trajectory (previously defined by COMMAND_DEFINE_TRAJECTORY)
@@ -786,7 +786,7 @@ int start_trajectory2(const struct data_start_trajectory_2* data)
         trajectory.timescale = data->timescale;
         trajectory.n_pieces = trajDesc->trajectoryIdentifier.mem.n_pieces;
         trajectory.pieces = (struct poly4d*)&trajectories_memory[trajDesc->trajectoryIdentifier.mem.offset];
-        result = plan_start_trajectory(&planner, &trajectory, data->reversed, data->relative, data->relativeYaw, pos, yaw);
+        result = plan_start_trajectory(&planner, &trajectory, data->reversed, data->relativePosition, data->relativeYaw, pos, yaw);
         xSemaphoreGive(lockTraj);
       } else if (trajDesc->trajectoryLocation == TRAJECTORY_LOCATION_MEM
           && trajDesc->trajectoryType == CRTP_CHL_TRAJECTORY_TYPE_POLY4D_COMPRESSED) {
@@ -801,7 +801,7 @@ int start_trajectory2(const struct data_start_trajectory_2* data)
             &trajectories_memory[trajDesc->trajectoryIdentifier.mem.offset]
           );
           compressed_trajectory.t_begin = t;
-          result = plan_start_compressed_trajectory(&planner, &compressed_trajectory, data->relative, pos);
+          result = plan_start_compressed_trajectory(&planner, &compressed_trajectory, data->relativePosition, pos);
           xSemaphoreGive(lockTraj);
         }
       }
@@ -1010,13 +1010,13 @@ bool crtpCommanderHighLevelIsTrajectoryDefined(uint8_t trajectoryId)
   );
 }
 
-int crtpCommanderHighLevelStartTrajectory(const uint8_t trajectoryId, const float timeScale, const bool relative, const bool relativeYaw, const bool reversed)
+int crtpCommanderHighLevelStartTrajectory(const uint8_t trajectoryId, const float timeScale, const bool relativePosition, const bool relativeYaw, const bool reversed)
 {
   struct data_start_trajectory_2 data =
   {
     .trajectoryId = trajectoryId,
     .timescale = timeScale,
-    .relative = relative,
+    .relativePosition = relativePosition,
     .relativeYaw = relativeYaw,
     .reversed = reversed,
     .groupMask = ALL_GROUPS,

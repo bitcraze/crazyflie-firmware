@@ -325,14 +325,14 @@ int plan_spiral_from(struct planner *p, const struct traj_eval *curr_eval, bool 
 	return 0;
 }
 
-int plan_start_trajectory(struct planner *p, struct piecewise_traj* trajectory, bool reversed, bool relative, bool relative_yaw, struct vec start_from, float start_yaw)
+int plan_start_trajectory(struct planner *p, struct piecewise_traj* trajectory, bool reversed, bool relative_position, bool relative_yaw, struct vec start_from, float start_yaw)
 {
 	p->reversed = reversed;
 	p->state = TRAJECTORY_STATE_FLYING;
 	p->type = TRAJECTORY_TYPE_PIECEWISE;
 	p->trajectory = trajectory;
 
-	if (relative) {
+	if (relative_position) {
 		struct traj_eval traj_init;
 		trajectory->shift = vzero();
 		trajectory->shift_yaw = 0;
