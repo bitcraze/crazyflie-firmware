@@ -186,6 +186,9 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
   if (setpoint->mode.x == modeAbs && setpoint->mode.y == modeAbs && setpoint->mode.z == modeAbs) {
     struct vec x_d = mkvec(setpoint->position.x, setpoint->position.y, setpoint->position.z);
     struct vec v_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);
+    if (setpoint->velocity_body) {
+      v_d = mvmul(R, v_d); // Convert body frame velocity to world frame
+    }
     struct vec a_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z);
     struct vec b1_d = mkvec(cosf(desiredYaw), sinf(desiredYaw), 0);
 
@@ -211,8 +214,11 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
     R_d = mcolumns(vcross(b2_d, b3_d), b2_d, b3_d);
 
   // Velocity setpoint ([1] Sec. VI)
-  } else if (setpoint->mode.x == modeVelocity && setpoint->mode.y == modeVelocity && setpoint->mode.z == modeVelocity) {
+  } else if (setpoint->mode.x == modeVelocity && setpoint->mode.y == modeVelocity) {
     struct vec v_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);
+    if (setpoint->velocity_body) {
+      v_d = mvmul(R, v_d); // Convert body frame velocity to world frame
+    }
     struct vec a_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z);
     struct vec b1_d = mkvec(cosf(desiredYaw), sinf(desiredYaw), 0);
 
@@ -222,6 +228,15 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
       vscl(-self->kv, self->ev),
       a_d,
       vscl(GRAVITY_MAGNITUDE, vbasis(2))));
+
+    // Hover setpoint (velocity control in the x/y directions, position control in the z direction)
+    if (setpoint->mode.z == modeAbs) {
+      float x3 = state->position.z;
+      float x3_d = setpoint->position.z;
+
+      F_d.z += -self->m*self->kx*(x3 - x3_d);
+    }
+    
     self->f = vdot(F_d, mvmul(R, vbasis(2)));
 
     if (self->f < 0.01f) {
