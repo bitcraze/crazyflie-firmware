@@ -564,7 +564,7 @@ static int logAppendBlock(int id, struct ops_setting * settings, int len)
     }
     blockAppendOps(block, ops);
 
-    LOG_DEBUG("   Now lenght %d\n", blockCalcLength(block));
+    LOG_DEBUG("   Now length %d\n", blockCalcLength(block));
   }
 
   return 0;
@@ -632,7 +632,7 @@ static int logAppendBlockV2(int id, struct ops_setting_v2 * settings, int len)
     }
     blockAppendOps(block, ops);
 
-    LOG_DEBUG("   Now lenght %d\n", blockCalcLength(block));
+    LOG_DEBUG("   Now length %d\n", blockCalcLength(block));
   }
 
   return 0;
