@@ -40,6 +40,7 @@ extern uint32_t espDeckFlasherNewBinarySize;
 * @param memAddr The address in memory where the data should be written.
 * @param writeLen The length of the data to write.
 * @param *buffer Pointer to the data to write.
+* @param *memDef Pointer to the memory definition of the deck.
 *
 * @return true if the data was written successfully, false otherwise.
 **/

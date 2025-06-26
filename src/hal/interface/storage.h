@@ -92,7 +92,8 @@ typedef bool (*storageFunc_t)(const char *key, void *buffer, size_t length);
 /**
  * Call the function func for each storage that matches the key prefix.
  *
- * @param[prefix] Null terminated string for the key prefix. Its length must be between 1 and 255.
+ * @param prefix Null terminated string for the key prefix. Its length must be between 1 and 255.
+ * @param func
  *
  * @return true in case of success.
  */

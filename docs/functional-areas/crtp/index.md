@@ -9,8 +9,7 @@ subsystems. In the context of this documentation, the term `CRTP` is used both
 to describe the packet protocol and its format as well as the collection of
 data packets that are used to communicate with the Crazyflie.
 
-Unless otherwise noted, this protocol documentation covers `Crazyflie 2.x`, the
-`Crazyflie Bolt` and the `Roadrunner`.
+Unless otherwise noted, this protocol documentation covers `Crazyflie 2.x` (including `Crazyflie Bolt`) and the `Roadrunner`.
 
 ## Protocol version and stability guarantee
 
@@ -81,7 +80,7 @@ Each CRTP packets carries one *port* number, a *channel* number as well as a
 Payload:
  - The `port` range between 0 and 15 (4 bits)
  - The `channel` ranges between 0 and 3 (2 bits)
- - The payload is a data buffer of up to 31 bytes
+ - The payload is a data buffer of up to 30 bytes
 
 The couple `port`:`channel` can be written separated by a color in this documentation.
 

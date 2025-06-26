@@ -76,7 +76,6 @@
 #define ACSREG_DSP_STATUS   0x2D
 #define ACSREG_ACCESS_CODE  0x2F
 
-#define ACS_I2C_ADDR        0x7F
 #define ACS_ACCESS_CODE     0x4F70656E
 
 
@@ -168,12 +167,12 @@ float convertSignedFixedPoint(uint32_t inputValue, uint16_t binaryPoint, uint16_
 
 static bool asc37800Read32(uint8_t reg, uint32_t *data32)
 {
-  return i2cdevReadReg8(I2C1_DEV, ACS_I2C_ADDR, reg, 4, (uint8_t *)data32);
+  return i2cdevReadReg8(I2C1_DEV, ACS_DECK_I2C_ADDR, reg, 4, (uint8_t *)data32);
 }
 
 static bool asc37800Write32(uint8_t reg, uint32_t data32)
 {
-  return i2cdevWriteReg8(I2C1_DEV, ACS_I2C_ADDR, reg, 4, (uint8_t *)&data32);
+  return i2cdevWriteReg8(I2C1_DEV, ACS_DECK_I2C_ADDR, reg, 4, (uint8_t *)&data32);
 }
 
 static void ascFindAndSetAddress(void)
@@ -213,7 +212,7 @@ static void asc37800Init(DeckInfo *info)
     return;
   }
 
-  if (i2cdevWrite(I2C1_DEV, ACS_I2C_ADDR, 1, (uint8_t *)&dummy))
+  if (i2cdevWrite(I2C1_DEV, ACS_DECK_I2C_ADDR, 1, (uint8_t *)&dummy))
   {
     asc37800Write32(ACSREG_ACCESS_CODE, ACS_ACCESS_CODE);
     DEBUG_PRINT("ACS37800 I2C [OK]\n");

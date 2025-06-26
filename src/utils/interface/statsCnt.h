@@ -44,7 +44,7 @@ typedef struct {
 /**
  * @brief Initialize a statsCntRateLogger_t struct.
  *
- * @param logger The rste counter to initialize
+ * @param counter The rste counter to initialize
  * @param averagingIntervalMs The interval (in ms) between rate calculations
  */
 void statsCntRateCounterInit(statsCntRateCounter_t* counter, uint32_t averagingIntervalMs);
@@ -101,6 +101,7 @@ typedef struct {
  * @brief Macro to add a statsCntRateLogger_t as a rate log. Used in a similar way as
  * LOG_ADD() in a LOG_GROUP_START() - LOG_GROUP_STOP() block
  *
+ * @param NAME The name of the log
  * @param LOGGER A pointer to a statsCntRateLogger_t
  */
 #define STATS_CNT_RATE_LOG_ADD(NAME, LOGGER) LOG_ADD_BY_FUNCTION(LOG_FLOAT, NAME, LOGGER)

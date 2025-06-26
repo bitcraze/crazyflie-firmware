@@ -40,8 +40,10 @@
  *
  * @param state
  * @param frameData
+ * @param angles
  * @param baseStation
  * @param axis
+ * @param calibDataIsDecoded
  * @return true, angle, base station and axis are written
  * @return false, no valid result
  */

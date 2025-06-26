@@ -1097,10 +1097,14 @@ static void sym_check_print_recursive(struct symbol *last_sym)
 	struct symbol *sym, *next_sym;
 	struct menu *menu = NULL;
 	struct property *prop;
-	struct dep_stack cv_stack;
+	struct dep_stack *cv_stack = malloc(sizeof(struct dep_stack));
+	if (!cv_stack) {
+		fprintf(stderr, "failed to allocate memory for recursive dependency check\n");
+		return;
+	}
 
 	if (sym_is_choice_value(last_sym)) {
-		dep_stack_insert(&cv_stack, last_sym);
+		dep_stack_insert(cv_stack, last_sym);
 		last_sym = prop_get_symbol(sym_get_choice_prop(last_sym));
 	}
 
@@ -1109,6 +1113,7 @@ static void sym_check_print_recursive(struct symbol *last_sym)
 			break;
 	if (!stack) {
 		fprintf(stderr, "unexpected recursive dependency error\n");
+		free(cv_stack);
 		return;
 	}
 
@@ -1161,8 +1166,9 @@ static void sym_check_print_recursive(struct symbol *last_sym)
 		}
 	}
 
-	if (check_top == &cv_stack)
+	if (check_top == cv_stack)
 		dep_stack_remove();
+	free(cv_stack);
 }
 
 static struct symbol *sym_check_expr_deps(struct expr *e)

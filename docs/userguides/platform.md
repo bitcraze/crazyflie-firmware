@@ -50,7 +50,8 @@ An identifier is stored in the physical hardware of each device, which is ued to
 |----------|---------------------------------------------|
 | Platform | Supported hardware (device type)            |
 |----------|---------------------------------------------|
-| cf2      | Crazyflie 2.0 (CF20), Crazyflie 2.1 (CF21) |
+| cf2      | Crazyflie 2.0 (CF20), Crazyflie 2.1 (CF21)  |
+| cf21bl   | Crazyflie 2.1 Brushless (C21B)              |
 | bolt     | Crazyflie Bolt 1.0 (CB10)                   |
 | tag      | Roadrunner 1.0 (RR10)                       |
 |----------|---------------------------------------------|

@@ -35,7 +35,7 @@ void debugInitTrace(void);
 /**
  * Sends trace information using the UART1. This function is
  * used with the freertos traceTASK_SWITCHED_IN() macro.
- * @param Task number currently running
+ * @param taskNbr number currently running
  */
 void debugSendTraceInfo(unsigned int taskNbr);
 

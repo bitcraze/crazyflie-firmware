@@ -32,6 +32,7 @@
 
 #include "vl53l1_ll_def.h"
 #include "vl53l1_platform_user_data.h"
+#include "vl53l1_error_codes.h"
 #include "vl53l1_api.h"
 
 #ifdef __cplusplus
@@ -39,12 +40,11 @@ extern "C"
 {
 #endif
 
-#define VL53L1X_DEFAULT_ADDRESS 0b0101001
 
 #define USE_I2C_2V8
 
 /**
- * @file   vl53l1_platform.h
+ * @file   vl53l1x.h
  *
  * @brief  All end user OS/platform/application porting
  */
@@ -64,7 +64,7 @@ VL53L1_Error vl53l1xSetI2CAddress(VL53L1_Dev_t* pdev, uint8_t address);
  * @param[in]   count     : number of bytes in the supplied byte buffer
  *
  * @return   VL53L1_ERROR_NONE    Success
- * @return  "Other error code"    See ::VL53L1_Error
+ * @return  "Other error code"    See VL53L1_Error
  */
 
 VL53L1_Error VL53L1_WriteMulti(
@@ -83,7 +83,7 @@ VL53L1_Error VL53L1_WriteMulti(
  * @param[in]   count     : number of bytes to read
  *
  * @return   VL53L1_ERROR_NONE    Success
- * @return  "Other error code"    See ::VL53L1_Error
+ * @return  "Other error code"    See VL53L1_Error
  */
 
 VL53L1_Error VL53L1_ReadMulti(
@@ -101,7 +101,7 @@ VL53L1_Error VL53L1_ReadMulti(
  * @param[in]   data      : uint8_t data value to write
  *
  * @return   VL53L1_ERROR_NONE    Success
- * @return  "Other error code"    See ::VL53L1_Error
+ * @return  "Other error code"    See VL53L1_Error
  */
 
 VL53L1_Error VL53L1_WrByte(
@@ -121,7 +121,7 @@ VL53L1_Error VL53L1_WrByte(
  * @param[in]   data      : uin16_t data value write
  *
  * @return   VL53L1_ERROR_NONE    Success
- * @return  "Other error code"    See ::VL53L1_Error
+ * @return  "Other error code"    See VL53L1_Error
  */
 
 VL53L1_Error VL53L1_WrWord(
@@ -141,7 +141,7 @@ VL53L1_Error VL53L1_WrWord(
  * @param[in]   data      : uint32_t data value to write
  *
  * @return   VL53L1_ERROR_NONE    Success
- * @return  "Other error code"    See ::VL53L1_Error
+ * @return  "Other error code"    See VL53L1_Error
  */
 
 VL53L1_Error VL53L1_WrDWord(
@@ -159,7 +159,7 @@ VL53L1_Error VL53L1_WrDWord(
  * @param[out]  pdata     : pointer to uint8_t data value
  *
  * @return   VL53L1_ERROR_NONE    Success
- * @return  "Other error code"    See ::VL53L1_Error
+ * @return  "Other error code"    See VL53L1_Error
  *
  */
 
@@ -179,7 +179,7 @@ VL53L1_Error VL53L1_RdByte(
  * @param[out]  pdata     : pointer to uint16_t data value
  *
  * @return   VL53L1_ERROR_NONE    Success
- * @return  "Other error code"    See ::VL53L1_Error
+ * @return  "Other error code"    See VL53L1_Error
  */
 
 VL53L1_Error VL53L1_RdWord(
@@ -198,7 +198,7 @@ VL53L1_Error VL53L1_RdWord(
  * @param[out]  pdata     : pointer to uint32_t data value
  *
  * @return   VL53L1_ERROR_NONE    Success
- * @return  "Other error code"    See ::VL53L1_Error
+ * @return  "Other error code"    See VL53L1_Error
  */
 
 VL53L1_Error VL53L1_RdDWord(
@@ -215,7 +215,7 @@ VL53L1_Error VL53L1_RdDWord(
  * @param[in]   wait_us   : integer wait in micro seconds
  *
  * @return  VL53L1_ERROR_NONE     Success
- * @return  "Other error code"    See ::VL53L1_Error
+ * @return  "Other error code"    See VL53L1_Error
  */
 
 VL53L1_Error VL53L1_WaitUs(
@@ -230,7 +230,7 @@ VL53L1_Error VL53L1_WaitUs(
  * @param[in]   wait_ms   : integer wait in milliseconds
  *
  * @return  VL53L1_ERROR_NONE     Success
- * @return  "Other error code"    See ::VL53L1_Error
+ * @return  "Other error code"    See VL53L1_Error
  */
 
 VL53L1_Error VL53L1_WaitMs(
@@ -243,7 +243,7 @@ VL53L1_Error VL53L1_WaitMs(
  * @return  time_ms : current time in [ms]
  *
  * @return  VL53L1_ERROR_NONE     Success
- * @return  "Other error code"    See ::VL53L1_Error
+ * @return  "Other error code"    See VL53L1_Error
  */
 
 VL53L1_Error VL53L1_GetTickCount(
@@ -263,7 +263,7 @@ VL53L1_Error VL53L1_GetTickCount(
  * @param[in]   poll_delay_ms : polling delay been each read transaction in [ms]
  *
  * @return  VL53L1_ERROR_NONE     Success
- * @return  "Other error code"    See ::VL53L1_Error
+ * @return  "Other error code"    See VL53L1_Error
  */
 
 VL53L1_Error VL53L1_WaitValueMaskEx(

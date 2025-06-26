@@ -123,12 +123,13 @@ Answer:
 
 Returns a string representation of the device type the firmware is running on. The currently existing device types are:
 
-| Device Type | Device type name |
-|-------------|------------------|
-| RZ10        | Crazyflie Bolt    |
-| CF20        | Crazyflie 2.0    |
-| CF2.1       | Crazyflie 2.1    |
-| RR10        | Roadrunner 1.0   |
+| Device Type | Device type name        |
+|-------------|-------------------------|
+| RZ10        | Crazyflie Bolt          |
+| CF20        | Crazyflie 2.0           |
+| CF2.1       | Crazyflie 2.1           |
+| C21B        | Crazyflie 2.1 Brushless |
+| RR10        | Roadrunner 1.0          |
 
 ## App channel
 

@@ -69,9 +69,11 @@ void printAssertSnapshotData();
 void storeAssertFileData(const char *file, int line);
 /**
  * Store hardfault data to be read at startup if a reset is triggered (watchdog)
+ * \verbatim
  * Line information can be printed using:
  * > make gdb
  * gdb> info line *0x<PC>
+ * \endverbatim
  */
 void storeAssertHardfaultData(
     unsigned int r0,

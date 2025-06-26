@@ -27,7 +27,7 @@
  ******************************************************************************/
 
 /**
- * @file   vl53l1_platform.c
+ * @file   vl53l1x.c
  * @brief  Code function definitions for Crazyflie
  *
  */
@@ -49,7 +49,7 @@
 #endif
 
 // Set the start address 1 step after the VL53L0 dynamic addresses
-static int nextI2CAddress = VL53L1X_DEFAULT_ADDRESS+1;
+static int nextI2CAddress = RANGER_DECKS_ADDRESS_START +1;
 
 
 bool vl53l1xInit(VL53L1_Dev_t *pdev, I2C_Dev *I2Cx)
@@ -57,7 +57,7 @@ bool vl53l1xInit(VL53L1_Dev_t *pdev, I2C_Dev *I2Cx)
   VL53L1_Error status = VL53L1_ERROR_NONE;
 
   pdev->I2Cx = I2Cx;
-  pdev->devAddr = VL53L1X_DEFAULT_ADDRESS;
+  pdev->devAddr = RANGER_DECKS_DEFAULT_ADDRESS;
 
   /* Move initialized sensor to a new I2C address */
   int newAddress;
@@ -65,10 +65,17 @@ bool vl53l1xInit(VL53L1_Dev_t *pdev, I2C_Dev *I2Cx)
   taskENTER_CRITICAL();
   newAddress = nextI2CAddress++;
   taskEXIT_CRITICAL();
+  if(newAddress > RANGER_DECKS_ADDRESS_END)
+  {
+	status = VL53L1_ERROR_UNDEFINED;
+  }
 
-  vl53l1xSetI2CAddress(pdev, newAddress);
+  if (status == VL53L1_ERROR_NONE)
+  {
+  	vl53l1xSetI2CAddress(pdev, newAddress);
 
-  status = VL53L1_DataInit(pdev);
+	status = VL53L1_DataInit(pdev);
+  }
 
   if (status == VL53L1_ERROR_NONE)
   {

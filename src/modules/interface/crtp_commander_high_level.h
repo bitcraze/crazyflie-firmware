@@ -185,7 +185,7 @@ int crtpCommanderBlock(bool doBlock);
 bool crtpCommanderHighLevelIsBlocked();
 
 /**
- * @brief Go to an absolute or relative position
+ * @brief Go to an absolute or relative position (will be deprecated, use crtpCommanderHighLevelGoTo2)
  *
  * @param x          x (m)
  * @param y          y (m)
@@ -196,6 +196,33 @@ bool crtpCommanderHighLevelIsBlocked();
  * @return zero if the command succeeded, an error code otherwise
  */
 int crtpCommanderHighLevelGoTo(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative);
+
+/**
+ * @brief Go to an absolute or relative position
+ *
+ * @param x          x (m)
+ * @param y          y (m)
+ * @param z          z (m)
+ * @param yaw        yaw (rad)
+ * @param duration_s time it should take to reach the position (s)
+ * @param relative   true if x, y, z is relative to the current position
+ * @param linear     true if linear interpolation should be used instead of a smooth polynomial
+ * @return zero if the command succeeded, an error code otherwise
+ */
+int crtpCommanderHighLevelGoTo2(const float x, const float y, const float z, const float yaw, const float duration_s, const bool relative, const bool linear);
+
+/**
+ * @brief Follow a spiral segment (spline approximation of and arc for <= 90-degree segments)
+ *
+ * @param phi         spiral angle (rad), limited to +/- 2pi
+ * @param r0          initial radius (m), must be positive
+ * @param rf          final radius (m), must be positive
+ * @param dz          altitude gain (m), positive to climb, negative to descent
+ * @param duration_s  time it should take to reach the end of the spiral (s)
+ * @param sideways    true if crazyflie should spiral sideways instead of forward
+ * @return zero if the command succeeded, an error code otherwise
+ */
+int crtpCommanderHighLevelSpiral(const float phi, const float r0, const float rf, const float dz, const float duration_s, const bool sideways);
 
 /**
  * @brief Returns whether the trajectory with the given ID is defined
@@ -241,7 +268,7 @@ uint32_t crtpCommanderHighLevelTrajectoryMemSize();
  *
  * @param offset    offset in uploaded memory (bytes)
  * @param length    Length of the data (bytes) to copy to the trajectory memory
- * @param data[in]  pointer to the trajectory data source
+ * @param data  pointer to the trajectory data source
  *
  * @return true   If data was copied
  * @return false  If data is too large
@@ -266,5 +293,14 @@ bool crtpCommanderHighLevelReadTrajectory(const uint32_t offset, const uint32_t 
  * @return false  The trejectory is still running
  */
 bool crtpCommanderHighLevelIsTrajectoryFinished();
+
+
+/**
+ * @brief Query the current state of the planner in high level control
+ *
+ * @return trajectory state enum defined in planner.h
+ */
+
+enum trajectory_state crtpCommanderHighLevelGetPlannerState();
 
 #endif /* CRTP_COMMANDER_HIGH_LEVEL_H_ */

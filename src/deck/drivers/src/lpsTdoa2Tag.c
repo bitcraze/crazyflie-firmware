@@ -55,10 +55,18 @@ static lpsTdoa2AlgoOptions_t defaultOptions = {
      0xbccf000000000001,
      0xbccf000000000002,
      0xbccf000000000003,
+#if LOCODECK_NR_OF_TDOA2_ANCHORS > 4
      0xbccf000000000004,
+#endif
+#if LOCODECK_NR_OF_TDOA2_ANCHORS > 5
      0xbccf000000000005,
+#endif
+#if LOCODECK_NR_OF_TDOA2_ANCHORS > 6
      0xbccf000000000006,
+#endif
+#if LOCODECK_NR_OF_TDOA2_ANCHORS > 7
      0xbccf000000000007,
+#endif
    },
 };
 

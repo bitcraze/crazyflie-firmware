@@ -80,6 +80,7 @@ static ControllerType controllerType;
 static STATS_CNT_RATE_DEFINE(stabilizerRate, 500);
 static rateSupervisor_t rateSupervisorContext;
 static bool rateWarningDisplayed = false;
+SemaphoreHandle_t xRateSupervisorSemaphore;
 
 static struct {
   // position - mm
@@ -118,8 +119,10 @@ static struct {
 } setpointCompressed;
 
 STATIC_MEM_TASK_ALLOC(stabilizerTask, STABILIZER_TASK_STACKSIZE);
+STATIC_MEM_TASK_ALLOC(rateSupervisorTask, RATE_SUPERVISOR_TASK_STACKSIZE);
 
 static void stabilizerTask(void* param);
+static void rateSupervisorTask(void* param);
 
 static void calcSensorToOutputLatency(const sensorData_t *sensorData)
 {
@@ -204,7 +207,10 @@ bool stabilizerTest(void)
 
 static void batteryCompensation(const motors_thrust_uncapped_t* motorThrustUncapped, motors_thrust_uncapped_t* motorThrustBatCompUncapped)
 {
-  float supplyVoltage = pmGetBatteryVoltage();
+  // Low pass on the BatteryVoltage
+  float b = 0.01f; // 0.2f = Convergence (95%) in ~10 steps = ~20ms
+  static float supplyVoltage = 4.2;
+  supplyVoltage = supplyVoltage + b*(pmGetBatteryVoltage() - supplyVoltage);
 
   for (int motor = 0; motor < STABILIZER_NR_OF_MOTORS; motor++)
   {
@@ -254,6 +260,28 @@ static void controlMotors(const control_t* control) {
   setMotorRatios(&motorPwm);
 }
 
+void rateSupervisorTask(void *pvParameters) {
+  while (1) {
+    // Wait for the semaphore to be given by the stabilizerTask
+    if (xSemaphoreTake(xRateSupervisorSemaphore, M2T(2000)) == pdTRUE) {
+      // Validate the rate
+      if (!rateSupervisorValidate(&rateSupervisorContext, xTaskGetTickCount())) {
+        if (!rateWarningDisplayed) {
+          DEBUG_PRINT("WARNING: stabilizer loop rate is off (%lu)\n", rateSupervisorLatestCount(&rateSupervisorContext));
+          rateWarningDisplayed = true;
+        }
+      }
+    } else {
+      // Don't assert if sensors are suspended
+      if (isSensorsSuspended() == false) {
+        // Handle the case where the semaphore was not given within the timeout
+        DEBUG_PRINT("ERROR: stabilizerTask is blocking\n");
+        ASSERT(false); // For safety, assert if the stabilizer task is blocking to ensure motor shutdown
+      }
+    }
+  }
+}
+
 /* The stabilizer loop runs at 1kHz. It is the
  * responsibility of the different functions to run slower by skipping call
  * (ie. returning without modifying the output structure).
@@ -280,6 +308,8 @@ static void stabilizerTask(void* param)
   systemWaitStart();
   DEBUG_PRINT("Starting stabilizer loop\n");
   rateSupervisorInit(&rateSupervisorContext, xTaskGetTickCount(), M2T(1000), 997, 1003, 1);
+  xRateSupervisorSemaphore = xSemaphoreCreateBinary();
+  STATIC_MEM_TASK_CREATE(rateSupervisorTask, rateSupervisorTask, RATE_SUPERVISOR_TASK_NAME, NULL, RATE_SUPERVISOR_TASK_PRI);
 
   while(1) {
     // The sensor should unlock at 1kHz
@@ -341,14 +371,10 @@ static void stabilizerTask(void* param)
       calcSensorToOutputLatency(&sensorData);
       stabilizerStep++;
       STATS_CNT_RATE_EVENT(&stabilizerRate);
-
-      if (!rateSupervisorValidate(&rateSupervisorContext, xTaskGetTickCount())) {
-        if (!rateWarningDisplayed) {
-          DEBUG_PRINT("WARNING: stabilizer loop rate is off (%lu)\n", rateSupervisorLatestCount(&rateSupervisorContext));
-          rateWarningDisplayed = true;
-        }
-      }
     }
+
+    xSemaphoreGive(xRateSupervisorSemaphore);
+
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
     motorsBurstDshot();
 #endif
