@@ -69,7 +69,7 @@ typedef struct controllerLee_s {
     struct vec W_d;
     struct vec W_d_dot;
 
-    uint8_t enable_attitude_rate_tracking;
+    uint8_t track_attitude_rate;
 } controllerLee_t;
 
 

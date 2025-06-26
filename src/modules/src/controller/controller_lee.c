@@ -66,7 +66,9 @@ static controllerLee_t g_self = {
   .c2 = 0.8,
 
   // Enable this for tracking aggressive maneuvers
-  .enable_attitude_rate_tracking = 1,
+  // 0: W_d and W_d_dot are set to zero
+  // Nonzero: W_d and W_d_dot are calculated using an euler approximation
+  .track_attitude_rate = 1,
 };
 
 static inline struct vec vclampscl(struct vec value, float min, float max) {
@@ -277,7 +279,7 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
   // Calculate M
   // Attitude control ([2] Sec. III)
   if (vneq(mcolumn(self->R_d_prev, 0), vrepeat(NAN)) && vneq(mcolumn(self->R_d_prev, 1), vrepeat(NAN)) && vneq(mcolumn(self->R_d_prev, 2), vrepeat(NAN))) {
-    if (self->enable_attitude_rate_tracking) {
+    if (self->track_attitude_rate) {
       // Update W_d_raw buffer
       for (int i = 0; i < FILTER_SIZE - 1; i++) {
         self->W_d_raw[i] = self->W_d_raw[i + 1];
@@ -289,7 +291,7 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
     }
 
     if (vneq(self->W_d_prev, vrepeat(NAN))) {
-      if (self->enable_attitude_rate_tracking) {
+      if (self->track_attitude_rate) {
         // Update W_d_dot_raw buffer
         for (int i = 0; i < FILTER_SIZE - 1; i++) {
           self->W_d_dot_raw[i] = self->W_d_dot_raw[i + 1];
@@ -360,7 +362,7 @@ PARAM_ADD(PARAM_FLOAT, kW, &g_self.kW)
 PARAM_ADD(PARAM_FLOAT, kI, &g_self.kI)
 PARAM_ADD(PARAM_FLOAT, c2, &g_self.c2)
 
-// PARAM_ADD(PARAM_UINT8, enable_attitude_rate_tracking, &g_self.enable_attitude_rate_tracking)
+PARAM_ADD(PARAM_UINT8, track_att_rate, &g_self.track_attitude_rate)
 
 PARAM_GROUP_STOP(ctrlLee)
 
