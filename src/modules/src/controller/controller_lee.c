@@ -289,6 +289,17 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
     } else {
       self->W_d = vzero();
     }
+    
+    // If the attitude rate is in the setpoint, use the setpoint values instead of approximations
+    if (setpoint->mode.roll == modeVelocity) {
+      self->W_d.x = radians(setpoint->attitudeRate.roll);
+    }
+    if (setpoint->mode.pitch == modeVelocity) {
+      self->W_d.y = radians(setpoint->attitudeRate.pitch);
+    }
+    if (setpoint->mode.yaw == modeVelocity) {
+      self->W_d.z = radians(setpoint->attitudeRate.yaw);
+    }
 
     if (vneq(self->W_d_prev, vrepeat(NAN))) {
       if (self->track_attitude_rate) {
