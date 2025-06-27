@@ -133,8 +133,13 @@ void kalmanCoreDefaultParams(kalmanCoreParams_t* params)
   params->stdDevInitialAttitude_rollpitch = 0.01;
   params->stdDevInitialAttitude_yaw = 0.01;
 
+  #ifdef CONFIG_ESTIMATOR_KALMAN_GENERAL_PURPOSE
+  params->procNoiseAcc_xy = 0.5f;
+  params->procNoiseAcc_z = 0.5f;
+  #else
   params->procNoiseAcc_xy = 0.5f;
   params->procNoiseAcc_z = 1.0f;
+  #endif
   params->procNoiseVel = 0;
   params->procNoisePos = 0;
   params->procNoiseAtt = 0;
