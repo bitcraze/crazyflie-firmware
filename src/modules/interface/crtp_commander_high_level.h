@@ -234,15 +234,16 @@ bool crtpCommanderHighLevelIsTrajectoryDefined(uint8_t trajectoryId);
 /**
  * @brief starts executing a specified trajectory
  *
- * @param trajectoryId id of the trajectory (previously defined by define_trajectory)
- * @param timeScale    time factor; 1.0 = original speed;
- *                                  >1.0: slower;
- *                                  <1.0: faster
- * @param relative     set to True, if trajectory should be shifted to current setpoint
- * @param reversed     set to True, if trajectory should be executed in reverse
- * @return zero if the command succeeded, an error code otherwise
+ * @param trajectoryId     id of the trajectory (previously defined by define_trajectory)
+ * @param timeScale        time factor; 1.0 = original speed;
+ *                                      >1.0: slower;
+ *                                      <1.0: faster
+ * @param relativePosition set to True, if trajectory should be shifted to current setpoint
+ * @param relativeYaw      set to True, if trajectory should be aligned to current yaw
+ * @param reversed         set to True, if trajectory should be executed in reverse
+ * @return                 zero if the command succeeded, an error code otherwise
  */
-int crtpCommanderHighLevelStartTrajectory(const uint8_t trajectoryId, const float timeScale, const bool relative, const bool reversed);
+int crtpCommanderHighLevelStartTrajectory(const uint8_t trajectoryId, const float timeScale, const bool relativePosition, const bool relativeYaw, const bool reversed);
 
 /**
  * @brief Define a trajectory that has previously been uploaded to memory.

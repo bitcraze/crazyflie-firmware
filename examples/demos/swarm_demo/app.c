@@ -311,7 +311,7 @@ static void appTimer(xTimerHandle timer) {
 
       if (crtpCommanderHighLevelIsTrajectoryFinished()) {
         DEBUG_PRINT("At initial position, starting trajectory...\n");
-        crtpCommanderHighLevelStartTrajectory(trajectoryId, SEQUENCE_SPEED, true, false);
+        crtpCommanderHighLevelStartTrajectory(trajectoryId, SEQUENCE_SPEED, true, false, false);
         remainingTrajectories = trajectoryCount - 1;
         state = STATE_RUNNING_TRAJECTORY;
       }
@@ -331,7 +331,7 @@ static void appTimer(xTimerHandle timer) {
         } else {
           if (remainingTrajectories > 0) {
             DEBUG_PRINT("Trajectory finished, restarting...\n");
-            crtpCommanderHighLevelStartTrajectory(trajectoryId, SEQUENCE_SPEED, true, false);
+            crtpCommanderHighLevelStartTrajectory(trajectoryId, SEQUENCE_SPEED, true, false, false);
           }
           remainingTrajectories--;
         }

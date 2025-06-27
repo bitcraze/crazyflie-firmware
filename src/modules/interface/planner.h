@@ -117,8 +117,9 @@ int plan_go_to_from(struct planner *p, const struct traj_eval *curr_eval, bool r
 // move along a spiral
 int plan_spiral_from(struct planner *p, const struct traj_eval *curr_eval, bool sideways, bool clockwise, float spiral_angle, float radius0, float radiusf, float ascent, float duration, float t);
 
-// start trajectory. start_from param is ignored if relative == false.
-int plan_start_trajectory(struct planner *p, struct piecewise_traj* trajectory, bool reversed, bool relative, struct vec start_from);
+// start trajectory. start_from and start_yaw params are ignored if relative == false.
+// relative_yaw is only relevant if relative == true, in which case it controls whether yaw is relative
+int plan_start_trajectory(struct planner *p, struct piecewise_traj* trajectory, bool reversed, bool relative_position, bool relative_yaw, struct vec start_from, float start_yaw);
 
 // start compressed trajectory. start_from param is ignored if relative == false.
 int plan_start_compressed_trajectory(struct planner *p, struct piecewise_traj_compressed* trajectory, bool relative, struct vec start_from);
