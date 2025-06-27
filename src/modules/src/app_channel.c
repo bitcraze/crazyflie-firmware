@@ -75,9 +75,9 @@ size_t appchannelReceiveDataPacket(void* buffer, size_t max_length, int timeout_
   int result = xQueueReceive(rxQueue, &packet, tickToWait);
 
   if (result == pdTRUE) {
-    int lenghtToCopy = (max_length < packet.size)?max_length:packet.size;
-    memcpy(buffer, packet.data, lenghtToCopy);
-    return lenghtToCopy;
+    int lengthToCopy = (max_length < packet.size)?max_length:packet.size;
+    memcpy(buffer, packet.data, lengthToCopy);
+    return lengthToCopy;
   } else {
     return 0;
   }
