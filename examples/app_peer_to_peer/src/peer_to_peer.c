@@ -22,7 +22,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * peer_to_peer.c - App layer application of simple demonstartion peer to peer
+ * peer_to_peer.c - App layer application of simple demonstration peer to peer
  *  communication. Two crazyflies need this program in order to send and receive.
  */
 
