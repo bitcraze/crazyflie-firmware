@@ -534,14 +534,8 @@ static void updateSystemStatus(const uint32_t now_ms) {
 }
 
 void lighthouseCoreTask(void *param) {
-  bool isUartFrameValid = false;
-
   uart1Init(230400);
   systemWaitStart();
-
-  lighthouseStorageVerifySetStorageVersion();
-  lighthouseStorageInitializeGeoDataFromStorage();
-  lighthouseStorageInitializeCalibDataFromStorage();
 
   ASSERT(uart1QueueMaxLength() >= UART_FRAME_LENGTH);
 
@@ -556,7 +550,21 @@ void lighthouseCoreTask(void *param) {
 
   vTaskDelay(M2T(100));
 
-  memset(&bsIdentificationData, 0, sizeof(bsIdentificationData));
+  lighthouseCoreMainLoop(waitForUartSynchFrame, getUartFrameRaw);
+
+}
+
+void lighthouseCoreMainLoop(void (*waitForUartSynchFrame)(void), bool (*getUartFrameRaw)(lighthouseUartFrame_t*)) {
+  systemWaitStart();
+
+  lighthouseStorageVerifySetStorageVersion();
+  lighthouseStorageInitializeGeoDataFromStorage();
+  lighthouseStorageInitializeCalibDataFromStorage();
+
+  bool isUartFrameValid = false;
+
+    memset(&bsIdentificationData, 0, sizeof(bsIdentificationData));
+
 
   while(1) {
     memset(pulseWidth, 0, sizeof(pulseWidth[0]) * PULSE_PROCESSOR_N_SENSORS);
@@ -575,7 +583,7 @@ void lighthouseCoreTask(void *param) {
       // Now we are receiving items
       else if(!frame.isSyncFrame) {
         STATS_CNT_RATE_EVENT_DEBUG(&frameRate);
-	lighthouseTransmitProcessFrame(&frame);
+	      lighthouseTransmitProcessFrame(&frame);
 
         deckHealthCheck(&lighthouseCoreState, &frame, now_ms);
         lighthouseUpdateSystemType();

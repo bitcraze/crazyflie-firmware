@@ -196,7 +196,7 @@ static void enumerateDecks(void)
         deckInfos[i].driver = findDriver(&deckInfos[i]);
         printDeckInfo(&deckInfos[i]);
       } else {
-#ifdef CONFIG_DEBUG
+#if 1
         DEBUG_PRINT("Deck %i has corrupt OW memory. "
                     "Ignoring the deck in DEBUG mode.\n", i);
         deckInfos[i].driver = &dummyDriver;

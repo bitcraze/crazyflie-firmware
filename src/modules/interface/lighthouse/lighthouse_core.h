@@ -44,6 +44,7 @@ typedef struct {
 
 void lighthouseCoreInit();
 void lighthouseCoreTask(void *param);
+void lighthouseCoreMainLoop(void (*waitForUartSynchFrame)(void), bool (*getUartFrameRaw)(lighthouseUartFrame_t*));
 
 /**
  * @brief Set calibration data for one base station of the system

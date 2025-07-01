@@ -66,6 +66,8 @@ struct lh2_measurement {
 
 static bool isInit = false;
 
+static volatile uint32_t sensor1_pos = 0;
+
 static void waitForSyncFrame(void)
 {
   // A sync frame is 12 0xff in a row
@@ -82,13 +84,14 @@ static void waitForSyncFrame(void)
     }
     synchronized = (syncCounter == LIGHTHOUSE_UART_FRAME_LENGTH);
   }
-
-  DEBUG_PRINT("Lighthouse V2: Synchronized\n");
 }
 
-static bool receiveFrame(struct lh2_measurement *frame)
+static bool receiveFrame(lighthouseUartFrame_t *frame)
 {
   static uint8_t buffer[LIGHTHOUSE_UART_FRAME_LENGTH];
+
+  memset(frame, 0, sizeof(*frame));
+
   // Read the frame from the UART
   uart1GetBytesWithDefaultTimeout(LIGHTHOUSE_UART_FRAME_LENGTH, buffer);
 
@@ -100,8 +103,8 @@ static bool receiveFrame(struct lh2_measurement *frame)
         buffer[6] == 0xff && buffer[7] == 0xff &&
         buffer[8] == 0xff && buffer[9] == 0xff &&
         buffer[10] == 0xff && buffer[11] == 0xff) {
-      // Get next frame
-      uart1GetBytesWithDefaultTimeout(LIGHTHOUSE_UART_FRAME_LENGTH, buffer);
+      frame->isSyncFrame = true;
+      return true;
     } else {
       // Not a valid frame and not a sync frame, we are out of sync
       return false;
@@ -110,35 +113,30 @@ static bool receiveFrame(struct lh2_measurement *frame)
 
   // Decode the frame
   measurement_frame_t *m = (measurement_frame_t *)buffer;
-  frame->sensor = m->sensor_id;
-  frame->lfsr_location = m->lfsr_location;
-  frame->timestamp = m->timestamp;
-  frame->selected_polynomial = m->polynomial_id;
+  frame->data.sensor = m->sensor_id;
+  frame->data.timestamp = (m->timestamp*24) & 0x00FFFFFF;
+  frame->data.channelFound = true;
+  frame->data.channel = m->polynomial_id/2;
+  frame->data.slowBit = m->polynomial_id&0x01;
+
+  frame->data.width = 1000;
+
+  if (frame->data.sensor == 0) {
+    // The first sensor is the one that is used for the position
+    sensor1_pos = frame->data.slowBit;
+  }
 
   return true;
 }
 
-static volatile uint32_t sensor1_pos = 0;
 
 static void lighthousev2Task(void *param)
 {
-  static struct lh2_measurement frame;
   uart1Init(LIGHTHOUSE_UART_BAUDRATE);
 
-  waitForSyncFrame();
+  lighthouseCoreInit();
 
-  while(1) {
-    
-    if (receiveFrame(&frame)) {
-      if (frame.sensor == 0 && frame.lfsr_location < 50000) {
-        sensor1_pos = frame.lfsr_location;
-      }
-    } else {
-      // We are out of sync, wait for a sync frame
-      DEBUG_PRINT("Lighthouse V2: Out of sync\n");
-      waitForSyncFrame();
-    }
-  }
+  lighthouseCoreMainLoop(waitForSyncFrame, receiveFrame);
 }
 
 static void lighthousev2Init(DeckInfo *info)
@@ -170,7 +168,7 @@ PARAM_GROUP_START(deck)
 /**
  * @brief Nonzero if [Lighthouse V2 positioning deck](%https://store.bitcraze.io/collections/decks/products/lighthouse-positioning-deck) is attached
  */ 
-PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcLighthousev2, &isInit)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcLighthouseV2, &isInit)
 
 PARAM_GROUP_STOP(deck)
 
