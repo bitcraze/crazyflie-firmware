@@ -22,7 +22,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * peer_to_peer.c - App layer application of simple demonstartion peer to peer
+ * peer_to_peer.c - App layer application of simple demonstration peer to peer
  *  communication. Two crazyflies need this program in order to send and receive.
  */
 
@@ -44,16 +44,16 @@
 #include "debug.h"
 
 #define MESSAGE "hello world"
-#define MESSAGE_LENGHT 11
+#define MESSAGE_LENGTH 11
 
 
 void p2pcallbackHandler(P2PPacket *p)
 {
   // Parse the data from the other crazyflie and print it
   uint8_t other_id = p->data[0];
-  static char msg[MESSAGE_LENGHT + 1];
-  memcpy(&msg, &p->data[1], sizeof(char)*MESSAGE_LENGHT);
-  msg[MESSAGE_LENGHT] = 0;
+  static char msg[MESSAGE_LENGTH + 1];
+  memcpy(&msg, &p->data[1], sizeof(char)*MESSAGE_LENGTH);
+  msg[MESSAGE_LENGTH] = 0;
   uint8_t rssi = p->rssi;
 
   DEBUG_PRINT("[RSSI: -%d dBm] Message from CF nr. %d, %s\n", rssi, other_id, msg);
@@ -76,10 +76,10 @@ void appMain()
 
     //Put a string in the payload
     char *str="Hello World";
-    memcpy(&p_reply.data[1], str, sizeof(char)*MESSAGE_LENGHT);
+    memcpy(&p_reply.data[1], str, sizeof(char)*MESSAGE_LENGTH);
 
     // Set the size, which is the amount of bytes the payload with ID and the string 
-    p_reply.size=sizeof(char)*MESSAGE_LENGHT+1;
+    p_reply.size=sizeof(char)*MESSAGE_LENGTH+1;
 
     // Register the callback function so that the CF can receive packets as well.
     p2pRegisterCB(p2pcallbackHandler);
