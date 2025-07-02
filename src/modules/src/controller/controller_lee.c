@@ -82,6 +82,10 @@ static inline struct vec vclampscl(struct vec value, float min, float max) {
     clamp(value.z, min, max));
 }
 
+static inline struct vec mvee(struct mat33 R) {
+	return mkvec(R.m[2][1], R.m[0][2], R.m[1][0]);
+}
+
 void controllerLeeReset(controllerLee_t* self)
 {
   self->i_error_pos = vzero();
@@ -200,26 +204,16 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
   self->rpy_des = quat2rpy(mat2quat(self->R_des));
 
   // rotation error
-  struct mat33 eRM = msub(mmul(mtranspose(self->R_des), R), mmul(mtranspose(R), self->R_des));
-
-  struct vec eR = vscl(0.5f, mkvec(eRM.m[2][1], eRM.m[0][2], eRM.m[1][0]));
+  struct vec eR = vscl(0.5f, mvee(msub(
+    mmul(mtranspose(self->R_des), R),
+    mmul(mtranspose(R), self->R_des))));
 
   // Compute desired omega
-  struct vec xdes = mcolumn(self->R_des, 0);
-  struct vec ydes = mcolumn(self->R_des, 1);
-  struct vec zdes = mcolumn(self->R_des, 2);
-  struct vec hw = vzero();
-  // Desired Jerk and snap for now are zeros vector
-  struct vec desJerk = mkvec(setpoint->jerk.x, setpoint->jerk.y, setpoint->jerk.z);
-
-  if (self->thrustSi != 0) {
-    struct vec tmp = vsub(desJerk, vscl(vdot(zdes, desJerk), zdes));
-    hw = vscl(self->mass/self->thrustSi, tmp);
+  struct vec omega_des = vzero();
+  if (setpoint->mode.yaw == modeVelocity) {
+    omega_des.z = radians(setpoint->attitudeRate.yaw);
   }
-  struct vec z_w = mkvec(0,0,1); 
-  float desiredYawRate = radians(setpoint->attitudeRate.yaw) * vdot(zdes,z_w);
-  struct vec omega_des = mkvec(-vdot(hw,ydes), vdot(hw,xdes), desiredYawRate);
-  
+
   self->omega_r = mvmul(mmul(mtranspose(R), self->R_des), omega_des);
 
   struct vec omega_error = vsub(self->omega, self->omega_r);
@@ -228,18 +222,17 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
   self->i_error_att = vadd(self->i_error_att, vscl(dt, vadd(omega_error, vscl(self->c_att_multiplier, eR))));
 
   // compute moments
-  // M = -kR eR - kw ew + w x Jw - J(w x wr)
-  self->u = vadd4(
+  self->torqueSi = vadd4(
     vneg(veltmul(self->KR, eR)),
     vneg(veltmul(self->Komega, omega_error)),
     vneg(veltmul(self->KI, self->i_error_att)),
-    vcross(self->omega, veltmul(self->J, self->omega)));
+    vcross(self->omega_r, veltmul(self->J, self->omega_r)));
 
   control->controlMode = controlModeForceTorque;
   control->thrustSi = self->thrustSi;
-  control->torque[0] = self->u.x;
-  control->torque[1] = self->u.y;
-  control->torque[2] = self->u.z;
+  control->torque[0] = self->torqueSi.x;
+  control->torque[1] = self->torqueSi.y;
+  control->torque[2] = self->torqueSi.z;
 
   // ticks = usecTimestamp() - startTime;
 }
@@ -323,9 +316,9 @@ LOG_ADD(LOG_FLOAT,Kpos_Dz, &g_self.Kpos_D.z)
 
 
 LOG_ADD(LOG_FLOAT, thrustSi, &g_self.thrustSi)
-LOG_ADD(LOG_FLOAT, torquex, &g_self.u.x)
-LOG_ADD(LOG_FLOAT, torquey, &g_self.u.y)
-LOG_ADD(LOG_FLOAT, torquez, &g_self.u.z)
+LOG_ADD(LOG_FLOAT, torquex, &g_self.torqueSi.x)
+LOG_ADD(LOG_FLOAT, torquey, &g_self.torqueSi.y)
+LOG_ADD(LOG_FLOAT, torquez, &g_self.torqueSi.z)
 
 // current angles
 LOG_ADD(LOG_FLOAT, rpyx, &g_self.rpy.x)
