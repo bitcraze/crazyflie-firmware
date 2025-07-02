@@ -104,6 +104,14 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
 
   // uint64_t startTime = usecTimestamp();
 
+  // States
+  struct vec statePos = mkvec(state->position.x, state->position.y, state->position.z); // position in the world frame (m)
+  struct vec stateVel = mkvec(state->velocity.x, state->velocity.y, state->velocity.z); // velocity in the world frame (m/s)
+  struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
+  self->rpy = quat2rpy(q);
+  struct mat33 R = quat2rotmat(q); // rotation matrix from the world frame to the body frame
+  self->omega = mkvec(radians(sensors->gyro.x), radians(sensors->gyro.y), radians(sensors->gyro.z)); // angular velocity in the body frame (rad/s)
+
   float dt = (float)(1.0f/ATTITUDE_RATE);
   // struct vec dessnap = vzero();
   // Address inconsistency in firmware where we need to compute our own desired yaw angle
@@ -126,8 +134,6 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
     struct vec pos_d = mkvec(setpoint->position.x, setpoint->position.y, setpoint->position.z);
     struct vec vel_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);
     struct vec acc_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z + GRAVITY_MAGNITUDE);
-    struct vec statePos = mkvec(state->position.x, state->position.y, state->position.z);
-    struct vec stateVel = mkvec(state->velocity.x, state->velocity.y, state->velocity.z);
 
     // errors
     struct vec pos_e = vclampscl(vsub(pos_d, statePos), -self->Kpos_P_limit, self->Kpos_P_limit);
@@ -142,8 +148,6 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
       veltmul(self->Kpos_P, pos_e),
       veltmul(self->Kpos_I, self->i_error_pos));
 
-    struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
-    struct mat33 R = quat2rotmat(q);
     struct vec z  = vbasis(2);
     control->thrustSi = self->mass*vdot(F_d , mvmul(R, z));
     self->thrustSi = control->thrustSi;
@@ -188,19 +192,14 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
     const float max_thrust = powerDistributionGetMaxThrust(); // N
     control->thrustSi = setpoint->thrust / UINT16_MAX * max_thrust;
 
-    struct quat q = rpy2quat(mkvec(
+    struct quat q_des = rpy2quat(mkvec(
         radians(setpoint->attitude.roll),
         -radians(setpoint->attitude.pitch), // This is in the legacy coordinate system where pitch is inverted
         desiredYaw));
-    self->R_des = quat2rotmat(q);
+    self->R_des = quat2rotmat(q_des);
   }
 
   // Attitude controller
-
-  // current rotation [R]
-  struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
-  self->rpy = quat2rpy(q);
-  struct mat33 R = quat2rotmat(q);
 
   // desired rotation [Rdes]
   struct quat q_des = mat2quat(self->R_des);
@@ -210,12 +209,6 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
   struct mat33 eRM = msub(mmul(mtranspose(self->R_des), R), mmul(mtranspose(R), self->R_des));
 
   struct vec eR = vscl(0.5f, mkvec(eRM.m[2][1], eRM.m[0][2], eRM.m[1][0]));
-
-  // angular velocity
-  self->omega = mkvec(
-    radians(sensors->gyro.x),
-    radians(sensors->gyro.y),
-    radians(sensors->gyro.z));
 
   // Compute desired omega
   struct vec xdes = mcolumn(self->R_des, 0);
