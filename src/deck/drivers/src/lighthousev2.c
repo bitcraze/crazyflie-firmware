@@ -114,6 +114,10 @@ static bool receiveFrame(lighthouseUartFrame_t *frame)
   // Decode the frame
   measurement_frame_t *m = (measurement_frame_t *)buffer;
   frame->data.sensor = m->sensor_id;
+  frame->data.offset = m->lfsr_location;
+  // The offset is expressed in a 6 MHz clock, convert to the 24 MHz that is used for timestamps
+  frame->data.offset *= 4;
+
   frame->data.timestamp = (m->timestamp*24) & 0x00FFFFFF;
   frame->data.channelFound = true;
   frame->data.channel = m->polynomial_id/2;
