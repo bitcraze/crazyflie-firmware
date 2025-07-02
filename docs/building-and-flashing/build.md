@@ -91,9 +91,8 @@ $ make cf21bl_defconfig
 ```
 $ make bolt_defconfig
 ```
-#### Crazyflie Wearable
-Crazyflie wearable is a configuration intended for a Crazyflie with a Lighthouse deck that is used as a general
-purpose positioning device.
+#### Wearable
+Wearable is a configuration intended for a Crazyflie with a Lighthouse deck that is used as a general purpose positioning device.
 ```
 $ make wearable_defconfig
 ```
