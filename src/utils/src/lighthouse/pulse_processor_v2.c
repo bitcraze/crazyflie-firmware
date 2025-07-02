@@ -36,7 +36,7 @@
 #include "autoconf.h"
 
 static const uint32_t MAX_TICKS_SENSOR_TO_SENSOR = 10000;
-static const uint32_t MAX_TICKS_BETWEEN_SWEEP_STARTS_TWO_BLOCKS = 10;
+static const uint32_t MAX_TICKS_BETWEEN_SWEEP_STARTS_TWO_BLOCKS = 100;
 static const uint32_t MIN_TICKS_BETWEEN_SLOW_BITS = (887000 / 2) * 8 / 10; // 80 of one revolution
 
 static const uint8_t NO_CHANNEL = 0xff;
