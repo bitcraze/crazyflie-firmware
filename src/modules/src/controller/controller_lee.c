@@ -300,21 +300,6 @@ PARAM_GROUP_STOP(ctrlLee)
 
 LOG_GROUP_START(ctrlLee)
 
-LOG_ADD(LOG_FLOAT, KR_x, &g_self.KR.x)
-LOG_ADD(LOG_FLOAT, KR_y, &g_self.KR.y)
-LOG_ADD(LOG_FLOAT, KR_z, &g_self.KR.z)
-LOG_ADD(LOG_FLOAT, Kw_x, &g_self.Komega.x)
-LOG_ADD(LOG_FLOAT, Kw_y, &g_self.Komega.y)
-LOG_ADD(LOG_FLOAT, Kw_z, &g_self.Komega.z)
-
-LOG_ADD(LOG_FLOAT,Kpos_Px, &g_self.Kpos_P.x)
-LOG_ADD(LOG_FLOAT,Kpos_Py, &g_self.Kpos_P.y)
-LOG_ADD(LOG_FLOAT,Kpos_Pz, &g_self.Kpos_P.z)
-LOG_ADD(LOG_FLOAT,Kpos_Dx, &g_self.Kpos_D.x)
-LOG_ADD(LOG_FLOAT,Kpos_Dy, &g_self.Kpos_D.y)
-LOG_ADD(LOG_FLOAT,Kpos_Dz, &g_self.Kpos_D.z)
-
-
 LOG_ADD(LOG_FLOAT, thrustSi, &g_self.thrustSi)
 LOG_ADD(LOG_FLOAT, torquex, &g_self.torqueSi.x)
 LOG_ADD(LOG_FLOAT, torquey, &g_self.torqueSi.y)
