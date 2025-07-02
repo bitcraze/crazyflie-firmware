@@ -408,7 +408,7 @@ static void usePulseResult(pulseProcessor_t *appState, pulseProcessorResult_t* a
       }
 
       // Send measurement to the ground
-      locSrvSendLighthouseAngle(baseStation, angles);
+      locSrvSendLighthouseAngle(baseStation, angles, now_ms);
 
       const bool hasGeoData = appState->bsGeometry[baseStation].valid;
       if (hasGeoData) {
