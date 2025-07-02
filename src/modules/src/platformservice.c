@@ -41,6 +41,8 @@
 #include "app_channel.h"
 #include "static_mem.h"
 #include "supervisor.h"
+#include "ledseq.h"
+#include "worker.h"
 
 static bool isInit=false;
 STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(platformSrvTask, PLATFORM_SRV_TASK_STACKSIZE);
@@ -52,9 +54,10 @@ typedef enum {
 } Channel;
 
 typedef enum {
-  setContinuousWave  = 0x00,
-  armSystem          = 0x01,
-  recoverSystem     = 0x02, 
+  setContinuousWave    = 0x00,
+  armSystem            = 0x01,
+  recoverSystem        = 0x02,
+  userNotification     = 0x03,
 } PlatformCommand;
 
 typedef enum {
@@ -66,6 +69,7 @@ typedef enum {
 static void platformSrvTask(void*);
 static void platformCommandProcess(CRTPPacket *p);
 static void versionCommandProcess(CRTPPacket *p);
+static void runUserNotification(void* arg);
 
 void platformserviceInit(void)
 {
@@ -143,7 +147,17 @@ static void platformCommandProcess(CRTPPacket *p)
       data[1] = !supervisorIsCrashed();
       p->size = 2;
       break;
-    }    
+    }
+    case userNotification:
+    {
+      // 0 - fail
+      // 1 - success
+      const uint8_t notificationType = data[0];
+
+      workerSchedule(runUserNotification, (void*)(uint32_t)notificationType);
+      p->size = 0;
+      break;
+    }
     default:
       break;
   }
@@ -186,5 +200,15 @@ static void versionCommandProcess(CRTPPacket *p)
       break;
     default:
       break;
+  }
+}
+
+static void runUserNotification(void* arg)
+{
+  uint8_t notificationType = (uint32_t)arg;
+  if (notificationType) {
+    ledseqRun(&seq_user_notification_success);
+  } else {
+    ledseqRun(&seq_user_notification_fail);
   }
 }
