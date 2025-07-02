@@ -68,14 +68,6 @@
 
 // #define DEBUG_STATE_CHECK
 
-// the reversion of pitch and roll to zero
-#ifdef CONFIG_DECK_LOCO_2D_POSITION
-#define ROLLPITCH_ZERO_REVERSION (0.0f)
-#else
-#define ROLLPITCH_ZERO_REVERSION (0.001f)
-#endif
-
-
 /**
  * Supporting and utility functions
  */
@@ -157,6 +149,9 @@ void kalmanCoreDefaultParams(kalmanCoreParams_t* params)
   // PI --- facing negative X
   // 3 * PI / 2 --- facing negative Y
   params->initialYaw = 0.0;
+
+  // Roll/pitch/yaw zero reversion is on by default. Will be overridden by estimator_kalman.c if requested by the deck.
+  params->attitudeReversion = 0.001f;
 }
 
 void kalmanCoreInit(kalmanCoreData_t *this, const kalmanCoreParams_t *params, const uint32_t nowMs)
@@ -341,7 +336,7 @@ void kalmanCoreUpdateWithBaro(kalmanCoreData_t *this, const kalmanCoreParams_t *
   kalmanCoreScalarUpdate(this, &H, meas - this->S[KC_STATE_Z], params->measNoiseBaro);
 }
 
-static void predictDt(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying)
+static void predictDt(kalmanCoreData_t* this, const kalmanCoreParams_t *params, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying)
 {
   /* Here we discretize (euler forward) and linearise the quadrocopter dynamics in order
    * to push the covariance forward.
@@ -562,12 +557,12 @@ static void predictDt(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float d
   tmpq3 = dq[3]*this->q[0] + dq[2]*this->q[1] - dq[1]*this->q[2] + dq[0]*this->q[3];
 
   if (! quadIsFlying) {
-    float keep = 1.0f - ROLLPITCH_ZERO_REVERSION;
+    float keep = 1.0f - params->attitudeReversion;
 
-    tmpq0 = keep * tmpq0 + ROLLPITCH_ZERO_REVERSION * this->initialQuaternion[0];
-    tmpq1 = keep * tmpq1 + ROLLPITCH_ZERO_REVERSION * this->initialQuaternion[1];
-    tmpq2 = keep * tmpq2 + ROLLPITCH_ZERO_REVERSION * this->initialQuaternion[2];
-    tmpq3 = keep * tmpq3 + ROLLPITCH_ZERO_REVERSION * this->initialQuaternion[3];
+    tmpq0 = keep * tmpq0 + params->attitudeReversion * this->initialQuaternion[0];
+    tmpq1 = keep * tmpq1 + params->attitudeReversion * this->initialQuaternion[1];
+    tmpq2 = keep * tmpq2 + params->attitudeReversion * this->initialQuaternion[2];
+    tmpq3 = keep * tmpq3 + params->attitudeReversion * this->initialQuaternion[3];
   }
 
   // normalize and store the result
@@ -578,9 +573,9 @@ static void predictDt(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, float d
   this->isUpdated = true;
 }
 
-void kalmanCorePredict(kalmanCoreData_t* this, Axis3f *acc, Axis3f *gyro, const uint32_t nowMs, bool quadIsFlying) {
+void kalmanCorePredict(kalmanCoreData_t* this, const kalmanCoreParams_t *params, Axis3f *acc, Axis3f *gyro, const uint32_t nowMs, bool quadIsFlying) {
   float dt = (nowMs - this->lastPredictionMs) / 1000.0f;
-  predictDt(this, acc, gyro, dt, quadIsFlying);
+  predictDt(this, params, acc, gyro, dt, quadIsFlying);
   this->lastPredictionMs = nowMs;
 }
 
