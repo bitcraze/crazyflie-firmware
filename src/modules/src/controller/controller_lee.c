@@ -208,8 +208,15 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
     mmul(mtranspose(self->R_des), R),
     mmul(mtranspose(R), self->R_des))));
 
-  // Compute desired omega
+  // Compute desired omega (TODO, zero for now)
   struct vec omega_des = vzero();
+
+  if (setpoint->mode.roll == modeVelocity) {
+    omega_des.x = radians(setpoint->attitudeRate.roll);
+  }
+  if (setpoint->mode.pitch == modeVelocity) {
+    omega_des.y = radians(setpoint->attitudeRate.pitch);
+  }
   if (setpoint->mode.yaw == modeVelocity) {
     omega_des.z = radians(setpoint->attitudeRate.yaw);
   }
