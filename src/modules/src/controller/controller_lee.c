@@ -64,13 +64,15 @@ static controllerLee_t g_self = {
   .Kpos_P_limit = 100,
   .Kpos_D = {4.0, 4.0, 4.0}, // Kv in paper
   .Kpos_D_limit = 100,
-  .Kpos_I = {0.0, 0.0, 0.0}, // not in paper
+  .Kpos_I = {1.0, 1.0, 1.0}, // not in paper
   .Kpos_I_limit = 2,
+  .c_pos_multiplier = 3.6, // c1 in [2], used to scale the integral error
 
   // Attitude PID
   .KR = {0.007, 0.007, 0.008},
   .Komega = {0.00115, 0.00115, 0.002},
-  .KI = {0.03, 0.03, 0.03},
+  .KI = {0.0005, 0.0005, 0.0005},
+  .c_att_multiplier = 0.8, // c2 in [2], used to scale the integral error
 };
 
 static inline struct vec vclampscl(struct vec value, float min, float max) {
@@ -145,7 +147,7 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
     // errors
     struct vec pos_e = vclampscl(vsub(pos_d, statePos), -self->Kpos_P_limit, self->Kpos_P_limit);
     struct vec vel_e = vclampscl(vsub(vel_d, stateVel), -self->Kpos_D_limit, self->Kpos_D_limit);
-    self->i_error_pos = vadd(self->i_error_pos, vscl(dt, pos_e));
+    self->i_error_pos = vadd(self->i_error_pos, vscl(dt, vadd(vel_e, vscl(self->c_pos_multiplier, pos_e))));
     self->i_error_pos = vclampscl(self->i_error_pos, -self->Kpos_I_limit, self->Kpos_I_limit);
     self->p_error = pos_e;
     self->v_error = vel_e;
@@ -223,7 +225,7 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
   struct vec omega_error = vsub(self->omega, self->omega_r);
   
   // Integral part on angle
-  self->i_error_att = vadd(self->i_error_att, vscl(dt, eR));
+  self->i_error_att = vadd(self->i_error_att, vscl(dt, vadd(omega_error, vscl(self->c_att_multiplier, eR))));
 
   // compute moments
   // M = -kR eR - kw ew + w x Jw - J(w x wr)
