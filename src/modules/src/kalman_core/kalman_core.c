@@ -143,8 +143,8 @@ void kalmanCoreDefaultParams(kalmanCoreParams_t* params)
   // 3 * PI / 2 --- facing negative Y
   params->initialYaw = 0.0;
 
-  // Roll/pitch/yaw zero reversion set to zero by default. Will be overridden by estimator_kalman.c if requested by the deck.
-  params->attitudeReversion = 0.0f;
+  // Roll/pitch/yaw zero reversion is on by default. Will be overridden by estimator_kalman.c if requested by the deck.
+  params->attitudeReversion = 0.001f;
 }
 
 void kalmanCoreInit(kalmanCoreData_t *this, const kalmanCoreParams_t *params, const uint32_t nowMs)

@@ -361,17 +361,15 @@ static void updateQueuedMeasurements(const uint32_t nowMs, const bool quadIsFlyi
 // Called when this estimator is activated
 void estimatorKalmanInit(void)
 {
-  if (deckGetRequiredKalmanEstimatorAttitudeReversion())
+  #ifdef CONFIG_DECK_LOCO_2D_POSITION
+  coreParams.attitudeReversion = 0.0f;
+  #else
+  if (deckGetRequiredKalmanEstimatorAttitudeReversionOff())
   {
-    // the reversion of pitch, roll and yaw to an initial value. Used by positioning decks that can not measure absolute yaw.
-    #ifdef CONFIG_DECK_LOCO_2D_POSITION
-    // Reversion is zero by default but set here again for clarity
     coreParams.attitudeReversion = 0.0f;
-    #else
-    coreParams.attitudeReversion = 0.001f;
-    DEBUG_PRINT("Attitude reversion activated\n");
-    #endif
+    DEBUG_PRINT("Attitude reversion deactivated by deck\n");
   }
+  #endif
 
   axis3fSubSamplerInit(&accSubSampler, GRAVITY_MAGNITUDE);
   axis3fSubSamplerInit(&gyroSubSampler, DEG_TO_RAD);

@@ -202,7 +202,6 @@ static const DeckDriver flowdeck1_deck = {
   .usedGpio = DECK_USING_IO_3,
   .usedPeriph = DECK_USING_I2C | DECK_USING_SPI,
   .requiredEstimator = StateEstimatorTypeKalman,
-  .requiredKalmanEstimatorAttitudeReversion = true,
 
   .init = flowdeck1Init,
   .test = flowdeck1Test,
