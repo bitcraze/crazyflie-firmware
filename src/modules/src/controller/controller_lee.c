@@ -23,11 +23,18 @@ SOFTWARE.
 */
 
 /*
-This controller is based on the following publication:
+This controller is based on the following publications:
 
-Taeyoung Lee, Melvin Leok, and N. Harris McClamroch
-Geometric Tracking Control of a Quadrotor UAV on SE(3)
-CDC 2010
+[1] Taeyoung Lee, Melvin Leok, and N. Harris McClamroch
+Control of Complex Maneuvers for a Quadrotor UAV using Geometric Methods on SE(3)
+CDC 2010, updated on arXiv 2011
+https://arxiv.org/pdf/1003.2005
+
+[2] Farhad Goodarzi, Daewon Lee, Taeyoung Lee
+Geometric Nonlinear PID Control of a Quadrotor UAV on SE(3)
+ECC 2013
+https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=6669644
+
 
 * Difference to Mellinger:
   * Different angular velocity error
@@ -133,37 +140,36 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
       || setpoint->mode.z == modeAbs) {
     struct vec pos_d = mkvec(setpoint->position.x, setpoint->position.y, setpoint->position.z);
     struct vec vel_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);
-    struct vec acc_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z + GRAVITY_MAGNITUDE);
+    struct vec acc_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z);
 
     // errors
     struct vec pos_e = vclampscl(vsub(pos_d, statePos), -self->Kpos_P_limit, self->Kpos_P_limit);
     struct vec vel_e = vclampscl(vsub(vel_d, stateVel), -self->Kpos_D_limit, self->Kpos_D_limit);
     self->i_error_pos = vadd(self->i_error_pos, vscl(dt, pos_e));
+    self->i_error_pos = vclampscl(self->i_error_pos, -self->Kpos_I_limit, self->Kpos_I_limit);
     self->p_error = pos_e;
     self->v_error = vel_e;
 
-    struct vec F_d = vadd4(
-      acc_d,
-      veltmul(self->Kpos_D, vel_e),
+    struct vec F_d = vscl(self->mass, vadd(vadd4(
       veltmul(self->Kpos_P, pos_e),
-      veltmul(self->Kpos_I, self->i_error_pos));
+      veltmul(self->Kpos_D, vel_e),
+      veltmul(self->Kpos_I, self->i_error_pos),
+      acc_d),
+      vscl(GRAVITY_MAGNITUDE, vbasis(2))));
 
-    struct vec z  = vbasis(2);
-    control->thrustSi = self->mass*vdot(F_d , mvmul(R, z));
-    self->thrustSi = control->thrustSi;
+    self->thrustSi = vdot(F_d , mvmul(R, vbasis(2)));
+
     // Reset the accumulated error while on the ground
-    if (control->thrustSi < 0.01f) {
+    if (self->thrustSi < 0.01f) {
       controllerLeeReset(self);
     }
 
     // Compute Desired Rotation matrix
-    float normFd = control->thrustSi;
-
     struct vec xdes = vbasis(0);
     struct vec ydes = vbasis(1);
     struct vec zdes = vbasis(2);
    
-    if (normFd > 0) {
+    if (self->thrustSi > 0) {
       zdes = vnormalize(F_d);
     } 
     struct vec xcdes = mkvec(cosf(desiredYaw), sinf(desiredYaw), 0); 
@@ -190,7 +196,7 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
       }
     }
     const float max_thrust = powerDistributionGetMaxThrust(); // N
-    control->thrustSi = setpoint->thrust / UINT16_MAX * max_thrust;
+    self->thrustSi = setpoint->thrust / UINT16_MAX * max_thrust;
 
     struct quat q_des = rpy2quat(mkvec(
         radians(setpoint->attitude.roll),
@@ -218,9 +224,9 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
   // Desired Jerk and snap for now are zeros vector
   struct vec desJerk = mkvec(setpoint->jerk.x, setpoint->jerk.y, setpoint->jerk.z);
 
-  if (control->thrustSi != 0) {
+  if (self->thrustSi != 0) {
     struct vec tmp = vsub(desJerk, vscl(vdot(zdes, desJerk), zdes));
-    hw = vscl(self->mass/control->thrustSi, tmp);
+    hw = vscl(self->mass/self->thrustSi, tmp);
   }
   struct vec z_w = mkvec(0,0,1); 
   float desiredYawRate = radians(setpoint->attitudeRate.yaw) * vdot(zdes,z_w);
@@ -242,6 +248,7 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
     vcross(self->omega, veltmul(self->J, self->omega)));
 
   control->controlMode = controlModeForceTorque;
+  control->thrustSi = self->thrustSi;
   control->torque[0] = self->u.x;
   control->torque[1] = self->u.y;
   control->torque[2] = self->u.z;
