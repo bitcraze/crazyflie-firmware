@@ -77,7 +77,7 @@ TESTABLE_STATIC bool processWorkspaceBlock(const pulseProcessorFrame_t slots[], 
     }
 
     if (sensorMask != 0xf) {
-        // All sensors not present - discard
+        // Not all sensors present - discard
         return false;
     }
 
@@ -103,7 +103,7 @@ TESTABLE_STATIC bool processWorkspaceBlock(const pulseProcessorFrame_t slots[], 
         return false;
     }
 
-    // Offset - should be offset on one and only one sensor
+    // Offset - should be offset on all sensors
     int indexWithOffset = NO_SENSOR;
     for (int i = 0; i < PULSE_PROCESSOR_N_SENSORS; i++) {
         const pulseProcessorFrame_t* frame = &slots[i];
@@ -112,8 +112,7 @@ TESTABLE_STATIC bool processWorkspaceBlock(const pulseProcessorFrame_t slots[], 
             if (indexWithOffset == NO_SENSOR) {
                 indexWithOffset = i;
             } else {
-                // Duplicate offsets - discard
-                return false;
+                // Duplicate offsets - expected
             }
         }
     }
@@ -129,12 +128,7 @@ TESTABLE_STATIC bool processWorkspaceBlock(const pulseProcessorFrame_t slots[], 
         const pulseProcessorFrame_t* frame = &slots[i];
         uint8_t sensor = frame->sensor;
 
-        if (i == indexWithOffset) {
-            block->offset[sensor] = frame->offset;
-        } else {
-            uint32_t timestamp_delta = TS_DIFF(baseSensor->timestamp, frame->timestamp);
-            block->offset[sensor] = TS_DIFF(baseSensor->offset, timestamp_delta);
-        }
+        block->offset[sensor] = frame->offset;
     }
 
     block->timestamp0 = TS_DIFF(baseSensor->timestamp, baseSensor->offset);
