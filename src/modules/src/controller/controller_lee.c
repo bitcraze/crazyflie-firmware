@@ -165,23 +165,11 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
     }
 
     // Compute Desired Rotation matrix
-    struct vec xdes = vbasis(0);
-    struct vec ydes = vbasis(1);
-    struct vec zdes = vbasis(2);
-   
-    if (self->thrustSi > 0) {
-      zdes = vnormalize(F_d);
-    } 
-    struct vec xcdes = mkvec(cosf(desiredYaw), sinf(desiredYaw), 0); 
-    struct vec zcrossx = vcross(zdes, xcdes);
-    float normZX = vmag(zcrossx);
+    struct vec b1_d = mkvec(cosf(desiredYaw), sinf(desiredYaw), 0);
+    struct vec b3_d = self->thrustSi > 0 ? vnormalize(F_d) : vbasis(2);
+    struct vec b2_d = vnormalize(vcross(b3_d, b1_d));
 
-    if (normZX > 0) {
-      ydes = vnormalize(zcrossx);
-    } 
-    xdes = vcross(ydes, zdes);
-    
-    self->R_des = mcolumns(xdes, ydes, zdes);
+    self->R_des = mcolumns(vcross(b2_d, b3_d), b2_d, b3_d);
 
   } else {
     if (setpoint->mode.z == modeDisable) {
@@ -198,18 +186,16 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
     const float max_thrust = powerDistributionGetMaxThrust(); // N
     self->thrustSi = setpoint->thrust / UINT16_MAX * max_thrust;
 
-    struct quat q_des = rpy2quat(mkvec(
+    self->R_des = quat2rotmat(rpy2quat(mkvec(
         radians(setpoint->attitude.roll),
         -radians(setpoint->attitude.pitch), // This is in the legacy coordinate system where pitch is inverted
-        desiredYaw));
-    self->R_des = quat2rotmat(q_des);
+        desiredYaw)));
   }
 
   // Attitude controller
 
   // desired rotation [Rdes]
-  struct quat q_des = mat2quat(self->R_des);
-  self->rpy_des = quat2rpy(q_des);
+  self->rpy_des = quat2rpy(mat2quat(self->R_des));
 
   // rotation error
   struct mat33 eRM = msub(mmul(mtranspose(self->R_des), R), mmul(mtranspose(R), self->R_des));
