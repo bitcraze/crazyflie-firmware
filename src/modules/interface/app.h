@@ -24,7 +24,7 @@
 #pragma once
 
 /**
- * App Inintialization
+ * App Initialization
  *
  * Called during firmware initialization. A default weak function is implemented
  * that creates a task and calls appMain() when the system is started.
