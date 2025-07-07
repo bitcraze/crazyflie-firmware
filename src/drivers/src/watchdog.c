@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * @file watchdog.c - Implementaion of hardware watchdog
+ * @file watchdog.c - Implementation of hardware watchdog
  *
  */
 #define DEBUG_MODULE "SYS"
