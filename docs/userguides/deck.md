@@ -107,6 +107,7 @@ typedef struct deck_driver {
 
   /* Required system properties */
   StateEstimatorType requiredEstimator;
+  bool requiredKalmanEstimatorAttitudeReversionOff;
   bool requiredLowInterferenceRadioMode;
 
   // Deck memory access definitions
