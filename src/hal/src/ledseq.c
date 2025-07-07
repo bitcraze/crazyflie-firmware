@@ -170,6 +170,23 @@ ledseqContext_t seq_testFailed = {
   .led = SYS_LED,
 };
 
+ledseqStep_t seq_user_notification_def[] = {
+  { true, LEDSEQ_WAITMS(1000)},
+  {false, LEDSEQ_WAITMS(100)},
+  {    0, LEDSEQ_STOP},
+};
+
+ledseqContext_t seq_user_notification_success = {
+  .sequence = seq_user_notification_def,
+  .led = USER_NOTF_LED,
+};
+
+ledseqContext_t seq_user_notification_fail = {
+  .sequence = seq_user_notification_def,
+  .led = ERR_LED2,
+};
+
+
 struct ledseqCmd_s {
   enum {run, stop} command;
   ledseqContext_t *sequence;
@@ -205,10 +222,12 @@ void ledseqInit() {
   ledseqRegisterSequence(&seq_lowbat);
   ledseqRegisterSequence(&seq_charged);
   ledseqRegisterSequence(&seq_charging);
+  ledseqRegisterSequence(&seq_user_notification_fail);
   ledseqRegisterSequence(&seq_calibrated);
   ledseqRegisterSequence(&seq_alive);
   ledseqRegisterSequence(&seq_linkUp);
   ledseqRegisterSequence(&seq_linkDown);
+  ledseqRegisterSequence(&seq_user_notification_success);
 
   //Initialise the sequences state
   for(int i=0; i<LED_NUM; i++) {

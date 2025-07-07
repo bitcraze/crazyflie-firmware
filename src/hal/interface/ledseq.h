@@ -138,5 +138,7 @@ extern ledseqContext_t seq_charged;
 extern ledseqContext_t seq_charging;
 extern ledseqContext_t seq_testPassed;
 extern ledseqContext_t seq_testFailed;
+extern ledseqContext_t seq_user_notification_success;
+extern ledseqContext_t seq_user_notification_fail;
 
 #endif
