@@ -191,11 +191,11 @@ void testThatHexWithWidthIsPrinted() {
 void testThatDoubleIsPrintedWithRoundingErrors() {
   // Fixture
   double val = -1234.12;
-  char* expected = "Implementaion has rounding errors, -1234.119995";
+  char* expected = "Implementation has rounding errors, -1234.119995";
 
   // Test
   // Assert
-  verify(expected, "Implementaion has rounding errors, %f", val);
+  verify(expected, "Implementation has rounding errors, %f", val);
 }
 
 void testThatHexWithZeroPaddedWidthIsPrinted() {
