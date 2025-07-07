@@ -326,13 +326,11 @@ static void runLedseq( xTimerHandle xTimer ) {
 
   led_t led = (led_t)pvTimerGetTimerID(xTimer);
   ledseqContext_t* context = activeSeq[led];
-  if (NO_CONTEXT == context) {
-    return;
-  }
 
+  // Iterate until we find a step to use or all sequences are stopped
   bool leave = false;
   while(!leave) {
-    if (context->state == LEDSEQ_STOP) {
+    if (NO_CONTEXT == context) {
       return;
     }
 
@@ -348,7 +346,10 @@ static void runLedseq( xTimerHandle xTimer ) {
         break;
       case LEDSEQ_STOP:
         context->state = LEDSEQ_STOP;
+
+        // This sequence is stopped, try to find another sequence with lower priority that is running.
         updateActive(led);
+        context = activeSeq[led];
         break;
       default:  //The step is a LED action and a time
         ledSet(led, step->value);
