@@ -1,4 +1,5 @@
 obj-y += test/
+obj-y += talon.o
 obj-$(CONFIG_DECK_ACTIVE_MARKER)        += activeMarkerDeck.o
 obj-$(CONFIG_DECK_AI)                   += aideck.o
 obj-$(CONFIG_DECK_BIGQUAD)              += bigquad.o
