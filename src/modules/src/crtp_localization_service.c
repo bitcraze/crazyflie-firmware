@@ -144,6 +144,7 @@ static bool enableLighthouseAngleStream = false;
 static uint8_t lhMatchedStreamGroupCount = 0;
 static uint8_t lhMatchedStreamMaxTimeMs = 25;
 static uint8_t lhMatchedStreamMinBsCount = 2;
+static paramVarId_t enLhMtchStmParamId;
 
 static float extPosStdDev = 0.01;
 static float extQuatStdDev = 4.5e-3;
@@ -169,6 +170,8 @@ void locSrvInit()
   my_id = address & 0xFF;
 
   crtpRegisterPortCB(CRTP_PORT_LOCALIZATION, locSrvCrtpCB);
+
+  enLhMtchStmParamId = paramGetVarId("locSrv", "enLhMtchStm");
   isInit = true;
 }
 
@@ -460,6 +463,10 @@ static void locSrvSendLighthouseAngleMatchedBs(const int baseStation, const puls
         lhMatchedStreamGroupId++;
         if (lhMatchedStreamGroupCount > 0 && lhMatchedStreamGroupCount != 255) {
           lhMatchedStreamGroupCount--;
+          if (lhMatchedStreamGroupCount == 0) {
+            // Minimize the nr of packets sent by only sending a parameter update when reaching zero
+            paramSetInt(enLhMtchStmParamId, 0);
+          }
         }
       }
     }
