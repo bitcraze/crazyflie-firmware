@@ -67,6 +67,7 @@ typedef enum
   EXT_POSE_PACKED          = 9,
   LH_ANGLE_STREAM          = 10,
   LH_PERSIST_DATA          = 11,
+  LH_MATCHED_ANGLE_STREAM    = 12,
 } locsrv_t;
 
 // Set up the callback for the CRTP_PORT_LOCALIZATION
@@ -75,7 +76,7 @@ void locSrvInit(void);
 // Send range in float. After 5 ranges it will send the packet.
 void locSrvSendRangeFloat(uint8_t id, float range);
 #ifdef CONFIG_DECK_LIGHTHOUSE
-void locSrvSendLighthouseAngle(int baseStation, pulseProcessorResult_t* angles);
+void locSrvSendLighthouseAngle(int baseStation, pulseProcessorResult_t* angles, const uint32_t now_ms);
 #endif
 
 /**

@@ -88,6 +88,19 @@ typedef struct {
   } __attribute__((packed)) sweeps [NBR_OF_SWEEPS_IN_PACKET];
 } __attribute__((packed)) anglePacket;
 
+typedef struct {
+  uint8_t type;
+  uint8_t baseStation;
+  struct {
+  float sweep;
+    struct {
+      uint16_t angleDiff;
+    } __attribute__((packed)) angleDiffs [NBR_OF_SENSOR_DIFFS_IN_PACKET];
+  } __attribute__((packed)) sweeps [NBR_OF_SWEEPS_IN_PACKET];
+
+  uint8_t group_id_and_bs_count; // 4 bits group id, 4 bits base station count
+} __attribute__((packed)) matchedAnglePacket;
+
 // up to 4 items per CRTP packet
 typedef struct {
   uint8_t id; // last 8 bit of the Crazyflie address
@@ -115,9 +128,24 @@ static uint8_t rangeIndex;
 static bool enableRangeStreamFloat = false;
 
 #ifdef CONFIG_DECK_LIGHTHOUSE
-static CRTPPacket LhAngle;
+static CRTPPacket lhAnglePacket;
+
+// Data for matching samples in the lighthouse matched sample stream
+#define LH_MATCHED_STREAM_MAX_BS_COUNT 4
+static uint32_t lhMatchedStreamGroupEndtime;
+static uint8_t lhMatchedStreamGroupId;
+static uint8_t lhMatchedStreamBsCount;
+static CRTPPacket lhMatchedAnglePackets[LH_MATCHED_STREAM_MAX_BS_COUNT];
+#define LH_MATCHED_STREAM_MAX_PENDING_TIME_MS 500
 #endif
+
 static bool enableLighthouseAngleStream = false;
+
+static uint8_t lhMatchedStreamGroupCount = 0;
+static uint8_t lhMatchedStreamMaxTimeMs = 25;
+static uint8_t lhMatchedStreamMinBsCount = 2;
+static paramVarId_t enLhMtchStmParamId;
+
 static float extPosStdDev = 0.01;
 static float extQuatStdDev = 4.5e-3;
 static bool isInit = false;
@@ -142,6 +170,8 @@ void locSrvInit()
   my_id = address & 0xFF;
 
   crtpRegisterPortCB(CRTP_PORT_LOCALIZATION, locSrvCrtpCB);
+
+  enLhMtchStmParamId = paramGetVarId("locSrv", "enLhMtchStm");
   isInit = true;
 }
 
@@ -363,31 +393,111 @@ void locSrvSendRangeFloat(uint8_t id, float range)
 }
 
 #ifdef CONFIG_DECK_LIGHTHOUSE
-void locSrvSendLighthouseAngle(int baseStation, pulseProcessorResult_t* angles)
+static void locSrvSendLighthouseAngleSingleBs(int baseStation, pulseProcessorResult_t* angles)
 {
-  anglePacket *ap = (anglePacket *)LhAngle.data;
+  anglePacket *ap = (anglePacket *)lhAnglePacket.data;
 
-  if (enableLighthouseAngleStream) {
-    ap->baseStation = baseStation;
-    pulseProcessorBaseStationMeasurement_t* baseStationMeasurement = &angles->baseStationMeasurementsLh1[baseStation];
+  ap->baseStation = baseStation;
+  pulseProcessorBaseStationMeasurement_t* baseStationMeasurement = &angles->baseStationMeasurementsLh1[baseStation];
 
-    for(uint8_t its = 0; its < NBR_OF_SWEEPS_IN_PACKET; its++) {
-      float angle_first_sensor =  baseStationMeasurement->sensorMeasurements[0].correctedAngles[its];
-      ap->sweeps[its].sweep = angle_first_sensor;
+  for(uint8_t its = 0; its < NBR_OF_SWEEPS_IN_PACKET; its++) {
+    float angle_first_sensor =  baseStationMeasurement->sensorMeasurements[0].correctedAngles[its];
+    ap->sweeps[its].sweep = angle_first_sensor;
 
-      for(uint8_t itd = 0; itd < NBR_OF_SENSOR_DIFFS_IN_PACKET; itd++) {
-        float angle_other_sensor = baseStationMeasurement->sensorMeasurements[itd + 1].correctedAngles[its];
-        uint16_t angle_diff = single2half(angle_first_sensor - angle_other_sensor);
-        ap->sweeps[its].angleDiffs[itd].angleDiff = angle_diff;
+    for(uint8_t itd = 0; itd < NBR_OF_SENSOR_DIFFS_IN_PACKET; itd++) {
+      float angle_other_sensor = baseStationMeasurement->sensorMeasurements[itd + 1].correctedAngles[its];
+      uint16_t angle_diff = single2half(angle_first_sensor - angle_other_sensor);
+      ap->sweeps[its].angleDiffs[itd].angleDiff = angle_diff;
+    }
+  }
+
+  ap->type = LH_ANGLE_STREAM;
+  lhAnglePacket.port = CRTP_PORT_LOCALIZATION;
+  lhAnglePacket.channel = GENERIC_TYPE;
+  lhAnglePacket.size = sizeof(anglePacket);
+  // This is best effort, i.e. the blocking version is not needed
+  crtpSendPacket(&lhAnglePacket);
+}
+
+static void populateMatchedAnglePacket(const int baseStation, const pulseProcessorResult_t* angles, CRTPPacket* packet) {
+  matchedAnglePacket *packetData = (matchedAnglePacket *)packet->data;
+
+  packetData->baseStation = baseStation;
+  packetData->group_id_and_bs_count = 0; // will be set later when sending the packet
+
+  const pulseProcessorBaseStationMeasurement_t* baseStationMeasurement = &angles->baseStationMeasurementsLh1[baseStation];
+  for(uint8_t its = 0; its < NBR_OF_SWEEPS_IN_PACKET; its++) {
+    float angle_first_sensor =  baseStationMeasurement->sensorMeasurements[0].correctedAngles[its];
+    packetData->sweeps[its].sweep = angle_first_sensor;
+
+    for(uint8_t itd = 0; itd < NBR_OF_SENSOR_DIFFS_IN_PACKET; itd++) {
+      float angle_other_sensor = baseStationMeasurement->sensorMeasurements[itd + 1].correctedAngles[its];
+      uint16_t angle_diff = single2half(angle_first_sensor - angle_other_sensor);
+      packetData->sweeps[its].angleDiffs[itd].angleDiff = angle_diff;
+    }
+  }
+
+  packetData->type = LH_MATCHED_ANGLE_STREAM;
+  lhMatchedAnglePackets[lhMatchedStreamBsCount].port = CRTP_PORT_LOCALIZATION;
+  lhMatchedAnglePackets[lhMatchedStreamBsCount].channel = GENERIC_TYPE;
+  lhMatchedAnglePackets[lhMatchedStreamBsCount].size = sizeof(matchedAnglePacket);
+}
+
+static void locSrvSendLighthouseAngleMatchedBs(const int baseStation, const pulseProcessorResult_t* angles, const uint32_t now_ms)
+{
+  // Check if we past the end time of the group, send the previous batch of packets and reset
+  if (now_ms > lhMatchedStreamGroupEndtime) {
+    if (lhMatchedStreamBsCount >= lhMatchedStreamMinBsCount) {
+      // Check that the data to send is not too old.
+      // This is an edge case if there is a full group just before no more LH data is received.
+      // When the reception is restored we don't want to send the old data.
+      const uint32_t age = now_ms - lhMatchedStreamGroupEndtime;
+      if (age < LH_MATCHED_STREAM_MAX_PENDING_TIME_MS) {
+        for (int i = 0; i < lhMatchedStreamBsCount; i++) {
+          matchedAnglePacket *ap = (matchedAnglePacket *)lhMatchedAnglePackets[i].data;
+          ap->group_id_and_bs_count = (lhMatchedStreamGroupId << 4) | (lhMatchedStreamBsCount & 0x0F);
+          // This is best effort, i.e. the blocking version is not needed
+          crtpSendPacket(&lhMatchedAnglePackets[i]);
+        }
+
+        lhMatchedStreamGroupId++;
+        if (lhMatchedStreamGroupCount > 0 && lhMatchedStreamGroupCount != 255) {
+          lhMatchedStreamGroupCount--;
+          if (lhMatchedStreamGroupCount == 0) {
+            // Minimize the nr of packets sent by only sending a parameter update when reaching zero
+            paramSetInt(enLhMtchStmParamId, 0);
+          }
+        }
       }
     }
 
-    ap->type = LH_ANGLE_STREAM;
-    LhAngle.port = CRTP_PORT_LOCALIZATION;
-    LhAngle.channel = GENERIC_TYPE;
-    LhAngle.size = sizeof(anglePacket);
-    // This is best effort, i.e. the blocking version is not needed
-    crtpSendPacket(&LhAngle);
+    // Reset the group and start a new one
+    lhMatchedStreamBsCount = 0;
+    lhMatchedStreamGroupEndtime = now_ms + lhMatchedStreamMaxTimeMs;
+  }
+
+  // We don't want to add the same base station multiple times in the same group
+  for (int i = 0; i < lhMatchedStreamBsCount; i++) {
+    if (((matchedAnglePacket *)lhMatchedAnglePackets[i].data)->baseStation == baseStation) {
+      // Base station already in the group, return
+      return;
+    }
+  }
+
+  // Store the data
+  if (lhMatchedStreamBsCount < LH_MATCHED_STREAM_MAX_BS_COUNT) {
+    populateMatchedAnglePacket(baseStation, angles, &lhMatchedAnglePackets[lhMatchedStreamBsCount]);
+    lhMatchedStreamBsCount++;
+  }
+}
+
+void locSrvSendLighthouseAngle(int baseStation, pulseProcessorResult_t* angles, const uint32_t now_ms)
+{
+  if (enableLighthouseAngleStream) {
+    locSrvSendLighthouseAngleSingleBs(baseStation, angles);
+  }
+  if (lhMatchedStreamGroupCount > 0) {
+    locSrvSendLighthouseAngleMatchedBs(baseStation, angles, now_ms);
   }
 }
 #endif
@@ -468,6 +578,31 @@ PARAM_GROUP_START(locSrv)
  */
   PARAM_ADD_CORE(PARAM_UINT8, enLhAngleStream, &enableLighthouseAngleStream)
 /**
+ * @brief Enable CRTP stream of matched Lighthouse sweep angles
+ *
+ * This is used to send lighthouse angles for multiple base stations that arrive at approximately the same time,
+ * mainly intended for geometry estimation. Angles will be collected for all base stations that are seen and if they
+ * arrive within the number of milliseconds specified by maxTimeMatchedStream, and provided that the number of
+ * base stations is at least minCountMatchedStream they will be sent in the stream as a single packet.
+ * The parameter also serves as a counter for how many packets to send, it will be decremented each time a packet is
+ * sent and stop sending when it reaches zero. It can be set to 0 to disable the stream. 255 means continuous sending
+ */
+  PARAM_ADD_CORE(PARAM_UINT8, enLhMtchStm, &lhMatchedStreamGroupCount)
+/**
+ * @brief Maximum time (ms) for matched Lighthouse sweep angles
+ *
+ * Also see enLhMatchedStream
+ */
+  PARAM_ADD_CORE(PARAM_UINT8, maxTimeLhMtchStm, &lhMatchedStreamMaxTimeMs)
+/**
+ * @brief Minimum nr of base stations for a matched Lighthouse sweep angles packet to be sent
+ *
+ * Also see enLhMatchedStream
+ */
+  PARAM_ADD_CORE(PARAM_UINT8, minBsLhMtchStm, &lhMatchedStreamMinBsCount)
+
+
+  /**
  * @brief Standard deviation of external position
  */
   PARAM_ADD_CORE(PARAM_FLOAT, extPosStdDev, &extPosStdDev)
