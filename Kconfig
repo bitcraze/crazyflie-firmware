@@ -48,7 +48,7 @@ config DEBUG_PRINT_ON_UART1_BAUDRATE
       Set the baudrate of the debug output   
 
 
-config DEBUG_DECK_IGNORE_OW
+config DEBUG_DECK_IGNORE_OWS
     bool "Do not enumerate OW based expansion decks"
     default n
     help
