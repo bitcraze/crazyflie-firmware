@@ -2046,38 +2046,8 @@ SEARCH_INCLUDES        = YES
 # preprocessor.
 # This tag requires that the tag SEARCH_INCLUDES is set to YES.
 
-INCLUDE_PATH = vendor/CMSIS/CMSIS/Core/Include \
-               vendor/CMSIS/CMSIS/DSP/Include \
-               vendor/libdw1000/inc \
-               vendor/FreeRTOS/include \
-               vendor/FreeRTOS/portable/GCC/ARM_CM4F \
-               src/config \
-               src/platform/interface \
-               src/deck/interface \
-               src/deck/drivers/interface \
-               src/drivers/interface \
-               src/drivers/bosch/interface \
-               src/drivers/esp32/interface \
-               src/hal/interface \
-               src/modules/interface \
-               src/modules/interface/kalman_core \
-               src/modules/interface/lighthouse \
-               src/modules/interface/outlierfilter \
-               src/modules/interface/cpx \
-               src/modules/interface/p2pDTR \
-               src/modules/interface/controller \
-               src/modules/interface/estimator \
-               src/utils/interface \
-               src/utils/interface/kve \
-               src/utils/interface/lighthouse \
-               src/utils/interface/tdoa \
-               src/lib/FatFS \
-               src/lib/CMSIS/STM32F4xx/Include \
-               src/lib/STM32_USB_Device_Library/Core/inc \
-               src/lib/STM32_USB_OTG_Driver/inc \
-               src/lib/STM32F4xx_StdPeriph_Driver/inc \
-               src/lib/vl53l1 \
-               src/lib/vl53l1/core/inc
+INCLUDE_PATH           = build/include/generated \
+                         src/deck/drivers/interface
 
 # You can use the INCLUDE_FILE_PATTERNS tag to specify one or more wildcard
 # patterns (like *.h and *.hpp) to filter out the header-files in the
@@ -2107,13 +2077,13 @@ PREDEFINED             = "__attribute__(x)=" \
                          "LOG_GROUP_START(NAME)=class fake_log_class_##NAME {" \
                          "LOG_GROUP_STOP(NAME)=};" \
                          "PARAM_ADD(TYPE, NAME, ADDRESS)=TYPE NAME;" \
-                         "PARAM_ADD_WITH_CALLBACK(TYPE, NAME, ADDRESS)=TYPE NAME;" \
+                         "PARAM_ADD_WITH_CALLBACK(TYPE, NAME, ADDRESS, CALLBACK)=TYPE NAME;" \
                          "PARAM_ADD_CORE(TYPE, NAME, ADDRESS)=/** @@ingroup PARAM_CORE_GROUP */ TYPE NAME;" \
                          "PARAM_ADD_CORE_WITH_CALLBACK(TYPE, NAME, ADDRESS, CALLBACK)=/** @@ingroup PARAM_CORE_GROUP */ TYPE NAME;" \
                          "PARAM_GROUP_START(NAME)=class fake_param_class_##NAME {" \
-                         "PARAM_GROUP_STOP(NAME)=};"\
-                         __ALIGN_BEGIN=""\
-                         __ALIGN_END=""\
+                         "PARAM_GROUP_STOP(NAME)=};" \
+                         "__ALIGN_BEGIN=" \
+                         "__ALIGN_END="
 
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this
