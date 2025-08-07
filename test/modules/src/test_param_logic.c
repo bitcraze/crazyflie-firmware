@@ -106,7 +106,7 @@ void testSetUint16(void) {
   paramSetInt(varid, expected);
 
   // Assert
-  TEST_ASSERT_EQUAL_UINT8(expected, myUint16);
+  TEST_ASSERT_EQUAL_UINT16(expected, myUint16);
 }
 
 void testSetUint32(void) {
@@ -121,7 +121,7 @@ void testSetUint32(void) {
   paramSetInt(varid, expected);
 
   // Assert
-  TEST_ASSERT_EQUAL_UINT8(expected, myUint32);
+  TEST_ASSERT_EQUAL_UINT32(expected, myUint32);
 }
 
 void testSetInt8(void) {
@@ -136,12 +136,12 @@ void testSetInt8(void) {
   paramSetInt(varid, expected);
 
   // Assert
-  TEST_ASSERT_EQUAL_UINT8(expected, myInt8);
+  TEST_ASSERT_EQUAL_INT8(expected, myInt8);
 }
 
 void testSetInt16(void) {
   // Fixture
-  uint16_t expected =UINT16_MAX - 1;
+  uint16_t expected = UINT16_MAX - 1;
 
   crtpIsConnected_IgnoreAndReturn(0);
   crtpSendPacket_StubWithCallback(crtpReply);
@@ -151,7 +151,7 @@ void testSetInt16(void) {
   paramSetInt(varid, expected);
 
   // Assert
-  TEST_ASSERT_EQUAL_UINT8(expected, myInt16);
+  TEST_ASSERT_EQUAL_INT16(expected, myInt16);
 }
 
 void testSetInt32(void) {
@@ -166,7 +166,7 @@ void testSetInt32(void) {
   paramSetInt(varid, expected);
 
   // Assert
-  TEST_ASSERT_EQUAL_UINT8(expected, myInt32);
+  TEST_ASSERT_EQUAL_INT32(expected, myInt32);
 }
 
 
