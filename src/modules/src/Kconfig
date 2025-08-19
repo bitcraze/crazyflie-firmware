@@ -224,7 +224,7 @@ config ENABLE_THRUST_BAT_COMPENSATED
         Not applied for brushless motor setup.
 
 config THRUST_BAT_COMPENSATION_TYPE
-    int "Enable battery thrust compensation"
+    int "Battery thrust compensation type"
     range 0 2
     default 0
     help
