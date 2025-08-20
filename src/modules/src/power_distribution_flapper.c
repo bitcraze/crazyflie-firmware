@@ -87,7 +87,7 @@ static uint8_t limitServoNeutral(uint8_t value)
   return (uint8_t)value;
 }
 
-static int8_t limitRollBias(uint8_t value)
+static int8_t limitRollBias(int8_t value)
 {
   if(value > 25)
   {
