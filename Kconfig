@@ -90,6 +90,21 @@ config PLATFORM_FLAPPER
 
 endchoice
 
+config MODIFY_CF_MASS
+    bool "Modify the default mass"
+    default n
+    help
+        Currently, the mass of the platform is only used by these non-default
+        controllers: Mellinger, Brescianini and Lee. If you are not using
+        one of these controllers, modifying the mass has no impact on the flight.
+    
+config MODIFIED_CF_MASS
+    int "Enter the total mass of the platform in milligrams"
+    depends on MODIFY_CF_MASS
+    default 29000 if PLATFORM_CF2
+    default 39300 if PLATFORM_CF21BL
+    default 29000
+
 config BOLT11_BRUSHED
     bool "Bolt 1.1: Use brushed motor driver (HW mod required)"
     depends on PLATFORM_BOLT
