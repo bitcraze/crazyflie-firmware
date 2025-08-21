@@ -54,8 +54,11 @@
     #define ARM_LENGTH  0.046f
 #endif
 #ifndef CF_MASS
-    // kg
-    #define CF_MASS     0.027f
+    #if defined(CONFIG_MODIFY_CF_MASS) && defined(CONFIG_MODIFIED_CF_MASS) && (CONFIG_MODIFIED_CF_MASS >= 0)
+        #define CF_MASS (CONFIG_MODIFIED_CF_MASS / 1000000.0f)
+    #else
+        #define CF_MASS    0.029f
+    #endif
 #endif
 #ifndef VMOTOR2THRUST0
     #define VMOTOR2THRUST0  0.0f
