@@ -91,7 +91,7 @@ static DeckInfo* owBackendGetNextDeck(void) {
     }
 
     // Store backend reference
-    deckBuffer.discoveryBackend = NULL; // Will be set by enumerateDecks
+    deckBuffer.discoveryBackend = NULL; // Backend reference will be set after copying in enumeration code
 
     // Decode and validate deck info using shared function
     if (infoDecode(&deckBuffer)) {

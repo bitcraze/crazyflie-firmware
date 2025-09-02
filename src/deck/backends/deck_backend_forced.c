@@ -95,8 +95,7 @@ static DeckInfo* forcedBackendGetNextDeck(void)
 
   // Set the driver (this is all forced decks need)
   deckBuffer.driver = forcedDrivers[currentDeck];
-  deckBuffer.discoveryBackend = NULL; // Will be set by enumerateDecks
-
+  deckBuffer.discoveryBackend = NULL; // Backend reference will be set after copying in enumeration code
   currentDeck++;
   return &deckBuffer;
 }
