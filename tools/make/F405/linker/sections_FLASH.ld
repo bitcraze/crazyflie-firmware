@@ -64,6 +64,12 @@ SECTIONS
         KEEP(*(.deckDriver));
         KEEP(*(.deckDriver.*));
         _deckDriver_stop = .;
+        /* Deck Discovery Backends */
+	    . = ALIGN(4);
+        _deckBackend_start = .;
+        KEEP(*(.deckBackend));
+        KEEP(*(.deckBackend.*));
+        _deckBackend_stop = .;
         /* Event Triggers */
 	    . = ALIGN(4);
         _eventtrigger_start = .;

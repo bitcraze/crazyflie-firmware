@@ -34,6 +34,9 @@
 
 #include "estimator.h"
 
+/* Forward declaration to avoid circular dependency */
+typedef struct deckDiscoveryBackend_s DeckDiscoveryBackend_t;
+
 /* Maximum number of decks that can be enumerated */
 #define DECK_MAX_COUNT 4
 
@@ -146,6 +149,9 @@ typedef struct deckInfo_s {
 
   TlvArea tlv;
   const DeckDriver *driver;
+
+  /* Track which discovery backend found this deck */
+  const DeckDiscoveryBackend_t *discoveryBackend;
 } DeckInfo;
 
 /**

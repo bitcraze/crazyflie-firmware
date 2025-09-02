@@ -13,10 +13,13 @@ running.
 Deck drivers
 ------------
 
-Decks are enumerated automatically using a One Wire (OW) memory soldered
-on the deck PCB. The Deck driver API is using a declarative syntax to
-register deck drivers and initialize them when the proper deck is
-installed.
+Decks are enumerated automatically using a modular discovery system that supports multiple backends:
+
+- **OneWire backend**: Reads deck information from One Wire (OW) memory soldered on the deck PCB
+- **Forced backend**: Allows compile-time forcing of deck drivers via `CONFIG_DECK_FORCE`
+- **Extensible architecture**: New discovery backends can be added for different communication protocols
+
+The Deck driver API uses a declarative syntax to register deck drivers and initialize them when the proper deck is detected through any of the discovery backends.
 
 ### Minimal driver
 
@@ -71,9 +74,12 @@ obj-y += myled.o
 ### Forcing initialization of a driver
 
 The deck driver will be initialized only if a deck is connected with the
-right OW memory content. During development it is possible to force the
-initialization of a deck by setting the `CONFIG_DECK_FORCE` config option
-to `"meMyled"` in your `.config` either by hand or using `make menuconfig`.
+right OW memory content or other discovery method detects it. During development 
+it is possible to force the initialization of one or more decks by setting the 
+`CONFIG_DECK_FORCE` config option in your `.config` either by hand or using `make menuconfig`:
+
+- Single deck: `CONFIG_DECK_FORCE="meMyled"`
+- Multiple decks: `CONFIG_DECK_FORCE="meMyled:anotherDeck"`
 
 ### Driver declaration API
 
@@ -122,3 +128,65 @@ typedef struct deck_driver {
   bool (*test)(void);
 } DeckDriver;
 ```
+
+## Deck Discovery System
+
+The deck discovery system uses a modular backend architecture to support different deck detection methods. Multiple discovery backends run during startup to detect and enumerate decks.
+
+### Available Discovery Backends
+
+#### OneWire Backend
+
+The OneWire backend is the traditional deck discovery method that:
+- Initializes the OneWire bus hardware
+- Scans for decks with OneWire memory chips
+- Reads and validates deck information from the memory
+- Supports the `CONFIG_DEBUG_DECK_IGNORE_OWS` compile flag to disable OneWire deck enumeration for debugging
+
+#### Forced Backend  
+
+The forced backend handles compile-time deck forcing via `CONFIG_DECK_FORCE`:
+- Supports colon-separated deck names (e.g., `"myDeck:anotherDeck"`)
+- Bypasses hardware detection for development and testing
+- Useful when deck hardware isn't available or during driver development
+
+### Debug Configuration
+
+For developers working on the discovery system, conditional debug prints can be enabled:
+
+```c
+// In src/deck/core/deck_discovery.c
+#define DEBUG_DECK_DISCOVERY
+
+// In src/deck/backends/deck_backend_onewire.c  
+#define DEBUG_ONEWIRE_BACKEND
+
+// In src/deck/backends/deck_backend_forced.c
+#define DEBUG_FORCED_BACKEND
+
+// In src/deck/core/deck_info.c
+#define DEBUG_DECK_ENUMERATION
+```
+
+### Adding New Discovery Backends
+
+To add a new discovery backend:
+
+1. Create a new backend file in `src/deck/backends/`
+2. Implement the `DeckDiscoveryBackend_t` interface:
+   ```c
+   static bool myBackendInit(void);
+   static DeckInfo* myBackendGetNextDeck(void);
+   
+   static const DeckDiscoveryBackend_t myBackend = {
+       .name = "myBackend", 
+       .init = myBackendInit,
+       .getNextDeck = myBackendGetNextDeck,
+   };
+   
+   DECK_DISCOVERY_BACKEND(myBackend);
+   ```
+3. The backend will be automatically discovered via linker sections
+4. Add the backend to the build system in `src/deck/backends/Kbuild`
+
+The discovery system runs all backends sequentially during startup, allowing multiple discovery methods to coexist and complement each other.

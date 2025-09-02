@@ -1,0 +1,2 @@
+obj-y += deck_backend_onewire.o
+obj-y += deck_backend_forced.o
