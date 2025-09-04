@@ -131,62 +131,9 @@ typedef struct deck_driver {
 
 ## Deck Discovery System
 
-The deck discovery system uses a modular backend architecture to support different deck detection methods. Multiple discovery backends run during startup to detect and enumerate decks.
+The deck discovery system uses a modular backend architecture that supports multiple detection methods. Different discovery backends run during startup:
 
-### Available Discovery Backends
+- **OneWire backend**: The standard method that automatically detects decks with OneWire memory chips
+- **Forced backend**: Allows manually specifying deck names via `CONFIG_DECK_FORCE` for development when physical hardware isn't available
 
-#### OneWire Backend
-
-The OneWire backend is the traditional deck discovery method that:
-- Initializes the OneWire bus hardware
-- Scans for decks with OneWire memory chips
-- Reads and validates deck information from the memory
-- Supports the `CONFIG_DEBUG_DECK_IGNORE_OWS` compile flag to disable OneWire deck enumeration for debugging
-
-#### Forced Backend  
-
-The forced backend handles compile-time deck forcing via `CONFIG_DECK_FORCE`:
-- Supports colon-separated deck names (e.g., `"myDeck:anotherDeck"`)
-- Bypasses hardware detection for development and testing
-- Useful when deck hardware isn't available or during driver development
-
-### Debug Configuration
-
-For developers working on the discovery system, conditional debug prints can be enabled:
-
-```c
-// In src/deck/core/deck_discovery.c
-#define DEBUG_DECK_DISCOVERY
-
-// In src/deck/backends/deck_backend_onewire.c  
-#define DEBUG_ONEWIRE_BACKEND
-
-// In src/deck/backends/deck_backend_forced.c
-#define DEBUG_FORCED_BACKEND
-
-// In src/deck/core/deck_info.c
-#define DEBUG_DECK_ENUMERATION
-```
-
-### Adding New Discovery Backends
-
-To add a new discovery backend:
-
-1. Create a new backend file in `src/deck/backends/`
-2. Implement the `DeckDiscoveryBackend_t` interface:
-   ```c
-   static bool myBackendInit(void);
-   static DeckInfo* myBackendGetNextDeck(void);
-   
-   static const DeckDiscoveryBackend_t myBackend = {
-       .name = "myBackend", 
-       .init = myBackendInit,
-       .getNextDeck = myBackendGetNextDeck,
-   };
-   
-   DECK_DISCOVERY_BACKEND(myBackend);
-   ```
-3. The backend will be automatically discovered via linker sections
-4. Add the backend to the build system in `src/deck/backends/Kbuild`
-
-The discovery system runs all backends sequentially during startup, allowing multiple discovery methods to coexist and complement each other.
+The modular design allows multiple discovery backends to coexist and enables future expansion with additional detection methods.
