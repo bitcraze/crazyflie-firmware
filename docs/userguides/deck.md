@@ -17,7 +17,8 @@ Decks are enumerated automatically using a modular discovery system that support
 
 - **OneWire backend**: Reads deck information from One Wire (OW) memory soldered on the deck PCB
 - **Forced backend**: Allows compile-time forcing of deck drivers via `CONFIG_DECK_FORCE`
-- **Extensible architecture**: New discovery backends can be added for different communication protocols
+
+The architecture is extensible: New discovery backends can be added for different communication protocols.
 
 The Deck driver API uses a declarative syntax to register deck drivers and initialize them when the proper deck is detected through any of the discovery backends.
 
