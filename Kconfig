@@ -48,13 +48,6 @@ config DEBUG_PRINT_ON_UART1_BAUDRATE
       Set the baudrate of the debug output   
 
 
-config DEBUG_DECK_IGNORE_OWS
-    bool "Do not enumerate OW based expansion decks"
-    default n
-    help
-      Do not enumerate decks discovered by OneWire memory. This might be useful
-      if one deck memory is very wrong. One could use the Crazyflie as a
-      passive onewire memory writer.
 
 endmenu
 
@@ -218,6 +211,14 @@ config DECK_FORCE
     default "none"
     help
         A colon seperated list of custom drivers to force load or "none".
+
+config DECK_BACKEND_ONEWIRE
+    bool "Enable OneWire deck discovery backend"
+    default y
+    help
+        Enable the OneWire deck discovery backend that scans for decks with
+        OneWire memory chips. Disable this if you want to ignore all
+        OneWire-based deck discovery, which might be useful for debugging.
 
 source src/deck/drivers/src/Kconfig
 

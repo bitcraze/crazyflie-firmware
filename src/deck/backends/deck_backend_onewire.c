@@ -56,7 +56,7 @@ static bool owBackendInit(void) {
     // Always initialize OneWire (needed for memory system)
     owInit();
 
-#ifndef CONFIG_DEBUG_DECK_IGNORE_OWS
+#ifdef CONFIG_DECK_BACKEND_ONEWIRE
     if (!owScan(&totalDecks)) {
         OW_BACKEND_DEBUG("OneWire scan failed\n");
         return false;
@@ -64,7 +64,7 @@ static bool owBackendInit(void) {
 
     OW_BACKEND_DEBUG("OneWire found %d deck(s)\n", totalDecks);
 #else
-    OW_BACKEND_DEBUG("Ignoring all OW decks because of compile flag.\n");
+    OW_BACKEND_DEBUG("Ignoring all OW decks because backend is disabled.\n");
     totalDecks = 0;
 #endif
     return true;
@@ -75,8 +75,8 @@ static DeckInfo* owBackendGetNextDeck(void) {
         return NULL; // No more decks
     }
 
-#ifdef CONFIG_DEBUG_DECK_IGNORE_OWS
-    // Skip all decks when ignore flag is set
+#ifndef CONFIG_DECK_BACKEND_ONEWIRE
+    // Skip all decks when backend is disabled
     currentDeck = totalDecks; // Move to end
     return NULL;
 #endif
