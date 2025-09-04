@@ -26,18 +26,10 @@
 
 #include "deck_discovery.h"
 #include <stddef.h>
+#include <string.h>
 
 #define DEBUG_MODULE "DECK_DISCOVERY"
 #include "debug.h"
-
-// Uncomment to enable debug prints for deck discovery
-// #define DEBUG_DECK_DISCOVERY
-
-#ifdef DEBUG_DECK_DISCOVERY
-#define DECK_DISCOVERY_DEBUG(fmt, ...) DEBUG_PRINT(fmt, ## __VA_ARGS__)
-#else
-#define DECK_DISCOVERY_DEBUG(...)
-#endif
 
 // Linker symbols (need to be added to linker script)
 extern const DeckDiscoveryBackend_t * _deckBackend_start;
@@ -54,10 +46,14 @@ static void deckDiscoveryInit() {
         backendsLen = &_deckBackend_stop - &_deckBackend_start;
         init = true;
 
-        DECK_DISCOVERY_DEBUG("Found %d discovery backends\n", backendsLen);
+        char backendList[100] = "Backends found: ";
         for (int i = 0; i < backendsLen; i++) {
-            DECK_DISCOVERY_DEBUG("Backend: %s\n", backends[i]->name ? backends[i]->name : "unnamed");
+            strcat(backendList, backends[i]->name ? backends[i]->name : "unnamed");
+            if (i < backendsLen - 1) {
+                strcat(backendList, ", ");
+            }
         }
+        DEBUG_PRINT("%s\n", backendList);
     }
 }
 
