@@ -129,12 +129,3 @@ typedef struct deck_driver {
   bool (*test)(void);
 } DeckDriver;
 ```
-
-## Deck Discovery System
-
-The deck discovery system uses a modular backend architecture that supports multiple detection methods. Different discovery backends run during startup:
-
-- **OneWire backend**: The standard method that automatically detects decks with OneWire memory chips
-- **Forced backend**: Allows manually specifying deck names via `CONFIG_DECK_FORCE` for development when physical hardware isn't available
-
-The modular design allows multiple discovery backends to coexist and enables future expansion with additional detection methods.
