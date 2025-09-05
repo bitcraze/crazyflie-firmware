@@ -46,14 +46,9 @@ static void deckDiscoveryInit() {
         backendsLen = &_deckBackend_stop - &_deckBackend_start;
         init = true;
 
-        char backendList[100] = "Backends found: ";
         for (int i = 0; i < backendsLen; i++) {
-            strcat(backendList, backends[i]->name ? backends[i]->name : "unnamed");
-            if (i < backendsLen - 1) {
-                strcat(backendList, ", ");
-            }
+            DEBUG_PRINT("Backend found: %s\n", backends[i]->name ? backends[i]->name : "unnamed");
         }
-        DEBUG_PRINT("%s\n", backendList);
     }
 }
 
