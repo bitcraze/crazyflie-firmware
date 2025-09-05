@@ -13,10 +13,14 @@ running.
 Deck drivers
 ------------
 
-Decks are enumerated automatically using a One Wire (OW) memory soldered
-on the deck PCB. The Deck driver API is using a declarative syntax to
-register deck drivers and initialize them when the proper deck is
-installed.
+Decks are enumerated automatically using a modular discovery system that supports multiple backends:
+
+- **OneWire backend**: Reads deck information from One Wire (OW) memory soldered on the deck PCB
+- **Forced backend**: Allows compile-time forcing of deck drivers via `CONFIG_DECK_FORCE`
+
+The architecture is extensible: New discovery backends can be added for different communication protocols.
+
+The Deck driver API uses a declarative syntax to register deck drivers and initialize them when the proper deck is detected through any of the discovery backends.
 
 ### Minimal driver
 
@@ -71,9 +75,12 @@ obj-y += myled.o
 ### Forcing initialization of a driver
 
 The deck driver will be initialized only if a deck is connected with the
-right OW memory content. During development it is possible to force the
-initialization of a deck by setting the `CONFIG_DECK_FORCE` config option
-to `"meMyled"` in your `.config` either by hand or using `make menuconfig`.
+right OW memory content or other discovery method detects it. During development 
+it is possible to force the initialization of one or more decks by setting the 
+`CONFIG_DECK_FORCE` config option in your `.config` either by hand or using `make menuconfig`:
+
+- Single deck: `CONFIG_DECK_FORCE="meMyled"`
+- Multiple decks: `CONFIG_DECK_FORCE="meMyled:anotherDeck"`
 
 ### Driver declaration API
 

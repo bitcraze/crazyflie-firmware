@@ -65,10 +65,11 @@ obj-y += hello.o
 
 Decks can have a memory that contains its name. In our case the hello
 driver would be initialized only when a deck identified as \"myHello\"
-is installed on the Crazyflie. For development purpose it is possible to
-force enabling a deck driver with a compile flag. To do so set the
-`CONFIG_DECK_FORCE` config option to `"myHello"` in your `.config` either
-by hand or using `make menuconfig`.
+is installed on the Crazyflie. 
+
+For development purposes, you can force deck drivers to be enabled without
+physical hardware. See the [Deck API documentation](/docs/userguides/deck.md#forcing-initialization-of-a-driver)
+for details on forcing deck initialization.
 
 `CONFIG_DEBUG=y` allows to get more information from the Crazyflie console when
 it starts. Debug should not be enabled if you intend to fly the
