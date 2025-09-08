@@ -1,3 +1,4 @@
 obj-y += api/
+obj-y += backends/
 obj-y += core/
 obj-y += drivers/src/

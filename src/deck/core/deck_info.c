@@ -30,9 +30,18 @@
 
 #define DEBUG_MODULE "DECK_INFO"
 
+// Uncomment to enable verbose debug prints during deck enumeration
+// #define DEBUG_DECK_ENUMERATION
+
+#ifdef DEBUG_DECK_ENUMERATION
+#define DECK_ENUM_DEBUG(fmt, ...) DEBUG_PRINT(fmt, ## __VA_ARGS__)
+#else
+#define DECK_ENUM_DEBUG(...)
+#endif
+
 #include "deck.h"
 
-#include "ow.h"
+#include "deck_discovery.h"
 #include "crc32.h"
 #include "debug.h"
 #include "static_mem.h"
@@ -56,8 +65,6 @@ static StateEstimatorType requiredEstimator = StateEstimatorTypeAutoSelect;
 static bool registerRequiredEstimator(StateEstimatorType estimator);
 static bool requiredLowInterferenceRadioMode = false;
 static bool requiredKalmanEstimatorAttitudeReversionOff = false;
-
-static char* deck_force = CONFIG_DECK_FORCE;
 
 void deckInfoInit()
 {
@@ -87,10 +94,9 @@ DeckInfo * deckInfo(int i)
 }
 
 // Dummy driver for decks that do not have a driver implemented
-static const DeckDriver dummyDriver;
+const DeckDriver dummyDriver;
 
-#ifndef CONFIG_DEBUG_DECK_IGNORE_OWS
-static const DeckDriver * findDriver(DeckInfo *deck)
+const DeckDriver * findDriver(DeckInfo *deck)
 {
   char name[30];
   const DeckDriver *driver = &dummyDriver;
@@ -108,7 +114,6 @@ static const DeckDriver * findDriver(DeckInfo *deck)
 
   return driver;
 }
-#endif
 
 void printDeckInfo(DeckInfo *info)
 {
@@ -134,8 +139,7 @@ void printDeckInfo(DeckInfo *info)
   }
 }
 
-#ifndef CONFIG_DEBUG_DECK_IGNORE_OWS
-static bool infoDecode(DeckInfo * info)
+bool infoDecode(DeckInfo * info)
 {
   uint8_t crcHeader;
   uint8_t crcTlv;
@@ -168,86 +172,48 @@ static bool infoDecode(DeckInfo * info)
 
   return true;
 }
-#endif
 
 static void enumerateDecks(void)
 {
   uint8_t nDecks = 0;
   bool noError = true;
 
-  owInit();
+  // Get all available discovery backends
+  int numBackends = deckDiscoveryBackendCount();
+  DECK_ENUM_DEBUG("Found %d discovery backends\n", numBackends);
 
-  if (owScan(&nDecks))
-  {
-    DECK_INFO_DBG_PRINT("Found %d deck memor%s.\n", nDecks, nDecks>1?"ies":"y");
-  } else {
-    DEBUG_PRINT("Error scanning for deck memories, "
-                "no deck drivers will be initialised\n");
-    nDecks = 0;
-  }
+  for (int backendIdx = 0; backendIdx < numBackends; backendIdx++) {
+    const DeckDiscoveryBackend_t* backend = deckDiscoveryGetBackend(backendIdx);
 
-#ifndef CONFIG_DEBUG_DECK_IGNORE_OWS
-  for (int i = 0; i < nDecks; i++)
-  {
-    DECK_INFO_DBG_PRINT("Enumerating deck %i\n", i);
-    if (owRead(i, 0, sizeof(deckInfos[0].raw), (uint8_t *)&deckInfos[i]))
-    {
-      if (infoDecode(&deckInfos[i]))
-      {
-        deckInfos[i].driver = findDriver(&deckInfos[i]);
-        printDeckInfo(&deckInfos[i]);
-      } else {
-#ifdef CONFIG_DEBUG
-        DEBUG_PRINT("Deck %i has corrupt OW memory. "
-                    "Ignoring the deck in DEBUG mode.\n", i);
-        deckInfos[i].driver = &dummyDriver;
-#else
-        DEBUG_PRINT("Deck %i has corrupt OW memory. "
-                    "No driver will be initialized!\n", i);
-        noError = false;
-#endif
+    if (!backend) {
+      DECK_ENUM_DEBUG("Backend %d is NULL\n", backendIdx);
+      continue;
+    }
+
+    DECK_ENUM_DEBUG("Trying backend: %s\n", backend->name);
+
+    if (!backend->init || !backend->init()) {
+      DECK_ENUM_DEBUG("Backend %s failed to initialize\n", backend->name);
+      continue;
+    }
+
+    // Get decks from this backend
+    DeckInfo* deckInfo;
+    while ((deckInfo = backend->getNextDeck()) != NULL) {
+      if (nDecks >= DECK_MAX_COUNT) {
+        DECK_ENUM_DEBUG("Warning: Maximum deck count (%d) reached\n", DECK_MAX_COUNT);
+        break;
       }
+
+      // Copy deck info to our array and set backend reference
+      deckInfos[nDecks] = *deckInfo;
+      deckInfos[nDecks].discoveryBackend = backend;
+
+      DECK_INFO_DBG_PRINT("Added deck from backend %s\n", backend->name);
+      nDecks++;
     }
-    else
-    {
-      DEBUG_PRINT("Reading deck nr:%d [FAILED]. "
-                  "No driver will be initialized!\n", i);
-      noError = false;
-    }
-  }
-#else
-  DEBUG_PRINT("Ignoring all OW decks because of compile flag.\n");
-  nDecks = 0;
-#endif
 
-  // Add build-forced driver
-  if (strlen(deck_force) > 0 && strncmp(deck_force, "none", 4) != 0) {
-    DEBUG_PRINT("CONFIG_DECK_FORCE=%s found\n", deck_force);
-  	//split deck_force into multiple, separated by colons, if available
-    char delim[] = ":";
-
-    char temp_deck_force[strlen(deck_force) + 1];
-    strcpy(temp_deck_force, deck_force);
-    char * token = strtok(temp_deck_force, delim);
-
-    while (token) {
-      deck_force = token;
-
-      const DeckDriver *driver = deckFindDriverByName(deck_force);
-      if (!driver) {
-        DEBUG_PRINT("WARNING: compile-time forced driver %s not found\n", deck_force);
-      } else if (driver->init || driver->test) {
-        if (nDecks <= DECK_MAX_COUNT)
-        {
-          nDecks++;
-          deckInfos[nDecks - 1].driver = driver;
-          DEBUG_PRINT("compile-time forced driver %s added\n", deck_force);
-        } else {
-          DEBUG_PRINT("WARNING: No room for compile-time forced driver\n");
-        }
-      }
-      token = strtok(NULL, delim);
-    }
+    if (nDecks >= DECK_MAX_COUNT) break;
   }
 
   if (noError) {
