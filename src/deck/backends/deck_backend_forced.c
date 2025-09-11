@@ -46,7 +46,7 @@
 static char* deck_force = CONFIG_DECK_FORCE;
 static uint8_t forcedDeckCount = 0;
 static uint8_t currentDeck = 0;
-static const DeckDriver* forcedDrivers[DECK_MAX_COUNT];
+static char forcedDeckNames[DECK_MAX_COUNT][32]; // Static storage for deck names
 static DeckInfo deckBuffer; // Buffer for returning deck info
 
 static bool forcedBackendInit(void)
@@ -67,14 +67,9 @@ static bool forcedBackendInit(void)
 
   char* token = strtok(temp_deck_force, ":");
   while (token && forcedDeckCount < DECK_MAX_COUNT) {
-    const DeckDriver *driver = deckFindDriverByName(token);
-    if (!driver) {
-      DEBUG_PRINT("WARNING: compile-time forced driver %s not found\n", token);
-    } else if (driver->init || driver->test) {
-      forcedDrivers[forcedDeckCount] = driver;
-      forcedDeckCount++;
-      FORCED_BACKEND_DEBUG("compile-time forced driver %s prepared\n", token);
-    }
+    strncpy(forcedDeckNames[forcedDeckCount], token, 31);
+    forcedDeckCount++;
+    FORCED_BACKEND_DEBUG("compile-time forced deck %s prepared\n", token);
     token = strtok(NULL, ":");
   }
 
@@ -93,8 +88,9 @@ static DeckInfo* forcedBackendGetNextDeck(void)
   // Clear the deck buffer
   memset(&deckBuffer, 0, sizeof(deckBuffer));
 
-  // Set the driver (this is all forced decks need)
-  deckBuffer.driver = forcedDrivers[currentDeck];
+  // Set deck info fields (driver finding handled centrally)
+  deckBuffer.productName = forcedDeckNames[currentDeck];
+  deckBuffer.boardRevision = NULL; // Forced decks don't have physical revision info
   deckBuffer.discoveryBackend = NULL; // Backend reference will be set after copying in enumeration code
   currentDeck++;
   return &deckBuffer;
