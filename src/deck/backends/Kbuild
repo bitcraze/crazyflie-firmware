@@ -6,3 +6,5 @@ ifneq ($(CONFIG_DECK_FORCE),"")
 obj-y += deck_backend_forced.o
 endif
 endif
+
+obj-y += deck_backend_deckctrl.o
