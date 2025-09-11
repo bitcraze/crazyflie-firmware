@@ -152,6 +152,10 @@ typedef struct deckInfo_s {
 
   /* Track which discovery backend found this deck */
   const DeckDiscoveryBackend_t *discoveryBackend;
+
+  /* Generic deck information fields */
+  char * productName;
+  char * boardRevision;
 } DeckInfo;
 
 /**
@@ -229,15 +233,6 @@ typedef struct deckMemDef_s {
 int deckCount(void);
 
 DeckInfo * deckInfo(int i);
-
-/* Key/value area handling */
-bool deckTlvHasElement(TlvArea *tlv, int type);
-
-int deckTlvGetString(TlvArea *tlv, int type, char *string, int maxLength);
-
-char* deckTlvGetBuffer(TlvArea *tlv, int type, int *length);
-
-void deckTlvGetTlv(TlvArea *tlv, int type, TlvArea *output);
 
 /* Defined Types */
 #define DECK_INFO_NAME 1

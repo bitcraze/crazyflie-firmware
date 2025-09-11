@@ -47,7 +47,6 @@ typedef struct deckDiscoveryBackend_s {
  * @brief Shared functions available to all backends
  */
 const DeckDriver* findDriver(DeckInfo *deck);    ///< Find driver for deck
-bool infoDecode(DeckInfo *info);                 ///< Decode and validate deck memory
 void printDeckInfo(DeckInfo *info);              ///< Print deck debug info
 
 /**
