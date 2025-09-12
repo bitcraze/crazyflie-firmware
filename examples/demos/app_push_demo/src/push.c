@@ -274,7 +274,7 @@ void appMain(void) {
         vy_cmd = slewLimit(vy_cmd_prev, vy_target, dt, V_SLEW_MAX);
         vy_cmd_prev = vy_cmd;
       } else {
-        // 误差<=0，逐步回到透传
+        // 误差<=0，逐步回到透
         vy_cmd = slewLimit(vy_cmd_prev, spIn.velocity.y, dt, V_SLEW_MAX);
         vy_cmd_prev = vy_cmd;
       }
