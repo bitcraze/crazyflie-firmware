@@ -279,7 +279,7 @@ void appMain(void) {
         vy_cmd_prev = vy_cmd;
       }
 
-      // 前向透传，但若即将触发前向进入，也可在此预限
+      // 前向透传，但若即将触发前向进入，也可在此预
       float vx_cmd = spIn.velocity.x;
       if (f_mm < D_FRONT_ENTER_MM) {
         vx_cmd = fminf(vx_cmd, 0.0f);
