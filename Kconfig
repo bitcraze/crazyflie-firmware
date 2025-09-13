@@ -225,3 +225,4 @@ source src/deck/drivers/src/Kconfig
 endmenu
 
 source "src/modules/src/Kconfig"
+source "src/deck/backends/Kconfig"

@@ -1,0 +1,20 @@
+menu "Deck backends configuration"
+
+config DEBUG_DECKCTRL
+    bool "Enable DECKCTRL debug prints"
+    default n
+    help
+      Enable debug prints for the deck controller subsystem.
+      This will output additional information about deck detection,
+      initialization, and communication for debugging purposes.
+
+config DECKCTRL_MAX_DECKS
+    int "Maximum number of DECKCTRL decks supported"
+    range 1 12
+    default 4
+    help
+      Set the maximum number of DECKCTRL decks that can be connected simultaneously.
+      This limits the number of decks that can be enumerated and managed by the system.
+      Increasing this number will increase RAM usage.
+
+endmenu
