@@ -14,7 +14,7 @@
 #define NPIX_PER_AXIS       35.0f    // 视为x/y相同的“等效像素”
 #define THETA_PIX_RAD       0.71674f // 约 2*sin(42deg/2)，与视场相关
 #define Z_MIN_SAT           0.10f    // 预测/更新时对高度做饱和，避免奇异
-#define DZ_MAX_PER_UPDATE   0.01f   // 单次光流融合引起的 Z 改变量上限（1.5 cm）
+#define DZ_MAX_PER_UPDATE   0.008f   // 单次光流融合引起的 Z 改变量上限（1.5 cm）
 // 鲁棒融合参数
 #define HUBER_DELTA         0.8f     // Huber 钝化阈值（像素/帧）
 #define CHI2_GATE           9.0f     // 卡方门限 ~ 3σ
