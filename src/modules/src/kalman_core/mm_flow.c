@@ -14,6 +14,7 @@
 #define NPIX_PER_AXIS       35.0f    // 视为x/y相同的“等效像素”
 #define THETA_PIX_RAD       0.71674f // 约 2*sin(42deg/2)，与视场相关
 #define Z_MIN_SAT           0.10f    // 预测/更新时对高度做饱和，避免奇异
+#define DZ_MAX_PER_UPDATE   0.01f   // 单次光流融合引起的 Z 改变量上限（1.5 cm）
 // 鲁棒融合参数
 #define HUBER_DELTA         0.8f     // Huber 钝化阈值（像素/帧）
 #define CHI2_GATE           9.0f     // 卡方门限 ~ 3σ
@@ -130,7 +131,31 @@ void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this,
     if (abs_rX > HUBER_DELTA) {
       rX = HUBER_DELTA * (rX > 0.0f ? 1.0f : -1.0f);
     }
+      // --------- Z 修正限幅（保留 Z 耦合，但限制单次对 Z 的影响）---------
+    #if defined(KC_STATE_DIM)
+    // 计算 Kz = (P_rowZ · H^T) / Sx
+    float numZx = 0.0f;
+    for (int j = 0; j < KC_STATE_DIM; j++) {
+      numZx += this->P[KC_STATE_Z][j] * Hx.pData[j];
+    }
+    float Kz_x = numZx / Sx;
+    float dz_x = Kz_x * rX;  // 这次更新对 Z 的投影修正量（米）
 
+    if (fabsf(dz_x) > DZ_MAX_PER_UPDATE && Hx.pData[KC_STATE_Z] != 0.0f) {
+      // 需要按比例降低 Z 耦合项，保证 |dz_x| 不超过上限
+      const float scale = DZ_MAX_PER_UPDATE / fabsf(dz_x);
+      Hx.pData[KC_STATE_Z] *= scale;
+
+      // 可选：Sx 轻度重算，提升一致性（不重算也能工作）
+      Sx = kc_innovVar_orApprox(this, &Hx, Rsd_x * Rsd_x);
+
+      // 重新计算 Kz_x·r（不是必须，只是用于调试/记录）
+      // numZx = 0.0f;
+      // for (int j = 0; j < KC_STATE_DIM; j++) numZx += this->P[KC_STATE_Z][j] * Hx.pData[j];
+      // Kz_x = numZx / Sx;
+      // dz_x = Kz_x * rX;
+    }
+    #endif
     // 调用核心更新（不再做不对称/跳变处理）
     kalmanCoreScalarUpdate(this, &Hx, rX, Rsd_x);
   }
@@ -151,7 +176,23 @@ void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this,
     if (abs_rY > HUBER_DELTA) {
       rY = HUBER_DELTA * (rY > 0.0f ? 1.0f : -1.0f);
     }
+      // --------- Z 修正限幅（保留 Z 耦合，但限制单次对 Z 的影响）---------
+    #if defined(KC_STATE_DIM)
+    float numZy = 0.0f;
+    for (int j = 0; j < KC_STATE_DIM; j++) {
+      numZy += this->P[KC_STATE_Z][j] * Hy.pData[j];
+    }
+    float Kz_y = numZy / Sy;
+    float dz_y = Kz_y * rY;
 
+    if (fabsf(dz_y) > DZ_MAX_PER_UPDATE && Hy.pData[KC_STATE_Z] != 0.0f) {
+      const float scale = DZ_MAX_PER_UPDATE / fabsf(dz_y);
+      Hy.pData[KC_STATE_Z] *= scale;
+
+      // 可选：重算 Sy
+      Sy = kc_innovVar_orApprox(this, &Hy, Rsd_y * Rsd_y);
+    }
+    #endif
     kalmanCoreScalarUpdate(this, &Hy, rY, Rsd_y);
   }
 }
