@@ -1,168 +1,165 @@
-/**
- * ,---------,       ____  _ __
- * |  ,-^-,  |      / __ )(_) /_______________ _____  ___
- * | (  O  ) |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
- * | / ,--'  |    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
- *    +------`   /_____/_/\__/\___/_/   \__,_/ /___/\___/
- *
- * Crazyflie control firmware
- *
- * Copyright (C) 2021 Bitcraze AB
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, in version 3.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
 #include "mm_flow.h"
 #include "log.h"
 #include "bmi088.h"
 #include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
 #include "debug.h"
+#define USE_QUALITY_DOWNWEIGHT 1
+#define Z_LOW_TH             0.20f
+#define OMEGA_SUM_TH_RAD     (DEG_TO_RAD*120.0f)
 
-// #include "mm_position.h"//包含位置测量模块的头文件，可能用于访问位置相关的定义或函数。
+// ---- 可调参数（建议先用默认值飞起来，再微调）----
+#define FLOW_RESOLUTION     0.1f     // 传感器给出dpixel*需乘0.1换成实际像素数
+#define NPIX_PER_AXIS       35.0f    // 视为x/y相同的“等效像素”
+#define THETA_PIX_RAD       0.71674f // 约 2*sin(42deg/2)，与视场相关
+#define Z_MIN_SAT           0.10f    // 预测/更新时对高度做饱和，避免奇异
+// 鲁棒融合参数
+#define HUBER_DELTA         0.8f     // Huber 钝化阈值（像素/帧）
+#define CHI2_GATE           9.0f     // 卡方门限 ~ 3σ
+#define R_INFLATE_FACTOR    9.0f     // 异常时把测量噪声放大倍数
 
-#define FLOW_RESOLUTION 0.1f //光流分辨率，表示测量值需要乘以 0.1 来转换为实际的运动像素。We do get the measurements in 10x the motion pixels (experimentally measured)
-#define comparsionNX 1.0f
-#define comparsionNY 1.0f
-// TODO remove the temporary test variables (used for logging)
-// 用于存储光流传感器的预测值和测量值，主要用于日志记录和调试。
-static float predictedNX;//预测值x
-static float predictedNY;//预测值y
-static float measuredNX;//测量值x
-static float measuredNY;//测量值y
-//核心函数：用于将光流传感器的测量值整合到扩展卡尔曼滤波器中。
-void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *flow, const Axis3f *gyro)
-{ //kalmanCoreData_t* this卡尔曼滤波器的状态数据； flowMeasurement_t *flow光流传感器的测量数据； Axis3f *gyro陀螺仪的角速度数据(在IMU_types下)。
-  // Inclusion of flow measurements in the EKF done by two scalar updates
+// 如需基于光流质量或运动/高度退化进一步降权，可启用此块
+#define USE_QUALITY_DOWNWEIGHT 1
+#define QUALITY_TH           10      // 示例阈值：质量过低时降权（按你的传感器/驱动定义调整）
+#define OMEGA_SUM_TH_RAD     (DEG_TO_RAD*120.0f) // 旋转过大时降权
+#define Z_LOW_TH             0.20f
 
-  // ~~~ Camera constants ~~~
-  // The angle of aperture is guessed from the raw data register and thankfully look to be symmetric
-  float Npix = 35.0;                      // [pixels] (same in x and y)光流传感器的像素数
-  //float thetapix = DEG_TO_RAD * 4.0f;     // [rad]    (same in x and y)
-  float thetapix = 0.71674f;// 2*sin(42/2); 光流传感器的视场角（以弧度为单位）42degree is the agnle of aperture, here we computed the corresponding ground length
-  //~~~ Body rates ~~~
-  // TODO check if this is feasible or if some filtering has to be done
-  // 将陀螺仪的角速度从度转换为弧度
-  float omegax_b = gyro->x * DEG_TO_RAD;//gyro->x为结构体内的x轴角速度
-  float omegay_b = gyro->y * DEG_TO_RAD;
+// --------- 内部静态变量（仅用于日志）---------
+static float predictedNX;
+static float predictedNY;
+static float measuredNX;
+static float measuredNY;
 
-  // ~~~ Moves the body velocity into the global coordinate system ~~~
-  // [bar{x},bar{y},bar{z}]_G = R*[bar{x},bar{y},bar{z}]_B
-  //
-  // \dot{x}_G = (R^T*[dot{x}_B,dot{y}_B,dot{z}_B])\dot \hat{x}_G
-  // \dot{x}_G = (R^T*[dot{x}_B,dot{y}_B,dot{z}_B])\dot \hat{x}_G
-  //
-  // where \hat{} denotes a basis vector, \dot{} denotes a derivative and
-  // _G and _B refer to the global/body coordinate systems.
+// --------- 工具函数：计算创新方差 S = H P H^T + Rvar ----------
+// 说明：若拿不到P（不同固件版本结构可能不同），则回退为 S≈Rvar，这是保守但稳定的做法。
+static float kc_innovVar_orApprox(const kalmanCoreData_t* kc,
+                                  const arm_matrix_instance_f32* H,
+                                  float Rvar /*测量方差*/)
+{
+  float S = Rvar;
 
-  // Modification 1
-  //dx_g = R[0][0] * S[KC_STATE_PX] + R[0][1] * S[KC_STATE_PY] + R[0][2] * S[KC_STATE_PZ];
-  //dy_g = R[1][0] * S[KC_STATE_PX] + R[1][1] * S[KC_STATE_PY] + R[1][2] * S[KC_STATE_PZ];
-
-  //坐标转换：将机体坐标系下的速度转换到全局坐标系。
-  float dx_g = this->S[KC_STATE_PX];
-  float dy_g = this->S[KC_STATE_PY];
-  float z_g = 0.0;  
-  // Saturate elevation in prediction and correction to avoid singularities对高度z_g进行饱和处理，避免在高度接近0时出现奇异性。
-  if ( this->S[KC_STATE_Z] < 0.1f ) {
-      z_g = 0.1;
-  } else {
-      z_g = this->S[KC_STATE_Z];
+  // 若你的 kalmanCoreData_t 里有 P[KC_STATE_DIM][KC_STATE_DIM]，可用下列实现精确计算
+  // 没有就保留默认返回 Rvar（上面的赋值已保证）
+  #if defined(KC_STATE_DIM)
+  if (kc && H && H->pData) {
+    float v = 0.0f;
+    for (int i = 0; i < KC_STATE_DIM; i++) {
+      const float Hi = H->pData[i];       // H: 1xN
+      if (Hi != 0.0f) {
+        float sum = 0.0f;
+        for (int j = 0; j < KC_STATE_DIM; j++) {
+          sum += kc->P[i][j] * H->pData[j];  // (P * H^T)[i]
+        }
+        v += Hi * sum; // H * P * H^T
+      }
+    }
+    S = v + Rvar;
+    if (!(S > 0.0f)) S = Rvar; // 防NaN/非正
   }
+  #endif
 
-  // ~~~ X velocity prediction and update ~~~
-  // predicts the number of accumulated pixels in the x-direction预测x方向累计的像素数
-  float hx[KC_STATE_DIM] = {0};
-  arm_matrix_instance_f32 Hx = {1, KC_STATE_DIM, hx};
-  predictedNX = (flow->dt * Npix / thetapix ) * ((dx_g * this->R[2][2] / z_g) - omegay_b);//预测的 X 方向像素变化量
-  measuredNX = flow->dpixelx*FLOW_RESOLUTION;//测量的 X 方向像素变化量，积累的像素值乘以分辨率转换为实际的像素变化量，也就是像素变化速度
-  // get_accel_x=accel->x;//新增获取加速度计的值
-  
-
-  // derive measurement equation with respect to dx (and z?)测量方程的雅可比矩阵。说明这是EKF代码
-  hx[KC_STATE_Z] = (Npix * flow->dt / thetapix) * ((this->R[2][2] * dx_g) / (-z_g * z_g));//测量方程对高度的偏导数
-  hx[KC_STATE_PX] = (Npix * flow->dt / thetapix) * (this->R[2][2] / z_g);//测量方程对位置x的偏导数
-
-  //First update函数更新卡尔曼滤波器状态
-  
-  //if (fabsf(measuredNX-predictedNX)<comparsionNX)//表示二者差值大时不进行更新
- // {
-   // DEBUG_PRINT("---Successful for x---\n");
-   // DEBUG_PRINT("Kalman_updata of x_error:%f. flow_x:%0.3f, IMU_acc_x:%0.3f \n",(double)(measuredNX-predictedNX),(double)measuredNX,(double)predictedNX);
-   // kalmanCoreScalarUpdate(this, &Hx, (measuredNX-predictedNX), flow->stdDevX*FLOW_RESOLUTION);//(measuredNX-predictedNX)为测量残差，flow->stdDevX*FLOW_RESOLUTION为测量噪声标准差。
- // }
-  //else
-  //{
-  //  DEBUG_PRINT("---NO UPDATE for x---\n");
-  //  DEBUG_PRINT("Kalman_updata of x_error:%f. flow_x:%0.3f, IMU_acc_x:%0.3f \n",(double)(measuredNX-predictedNX),(double)measuredNX,(double)predictedNX);
- // }
-  //DEBUG_PRINT("Kalman_updata of x_error:%f. flow_x:%0.3f, IMU_acc_x:%0.3f \n",(double)(measuredNX-predictedNX),(double)measuredNX,(double)predictedNX);
-  kalmanCoreScalarUpdate(this, &Hx, (measuredNX-predictedNX), flow->stdDevX*FLOW_RESOLUTION);//(measuredNX-predictedNX)为测量残差，flow->stdDevX*FLOW_RESOLUTION为测量噪声标准差。
-  
-  // ~~~ Y velocity prediction and update ~~~
-  float hy[KC_STATE_DIM] = {0};//测量方程的雅可比矩阵。
-  arm_matrix_instance_f32 Hy = {1, KC_STATE_DIM, hy};//测量方程的雅可比矩阵。
-  predictedNY = (flow->dt * Npix / thetapix ) * ((dy_g * this->R[2][2] / z_g) + omegax_b);//预测的 Y 方向像素变化量
-  measuredNY = flow->dpixely*FLOW_RESOLUTION;//测量的 Y 方向像素变化量
-  // get_accel_y=accel->y;
-
-  // derive measurement equation with respect to dy (and z?)
-  hy[KC_STATE_Z] = (Npix * flow->dt / thetapix) * ((this->R[2][2] * dy_g) / (-z_g * z_g));//测量方程对高度的偏导数
-  hy[KC_STATE_PY] = (Npix * flow->dt / thetapix) * (this->R[2][2] / z_g);//测量方程对位置y的偏导数
-
-  // Second update
-  //if (fabsf(measuredNY-predictedNY)<comparsionNY)//表示二者差值大时不进行更新
-  //{
-   // DEBUG_PRINT("---Successful for y---\n");
-    //DEBUG_PRINT("Kalman_updata of y_error: %f [done]. flow_y:%0.3f, IMU_acc_y:%0.3f \n",(double)(measuredNY-predictedNY),(double)measuredNY,(double)predictedNY);
-   // kalmanCoreScalarUpdate(this, &Hy, (measuredNY-predictedNY), flow->stdDevY*FLOW_RESOLUTION);
-  //}
-  //else
-  //{
-   // DEBUG_PRINT("---NO UPDATE---\n");
-   // DEBUG_PRINT("Kalman_updata of y_error: %f [done]. flow_y:%0.3f, IMU_acc_y:%0.3f \n",(double)(measuredNY-predictedNY),(double)measuredNY,(double)predictedNY);
-  //}
-  //DEBUG_PRINT("Kalman_updata of y_error: %f [done]. flow_y:%0.3f, IMU_acc_y:%0.3f \n",(double)(measuredNY-predictedNY),(double)measuredNY,(double)predictedNY);
-  kalmanCoreScalarUpdate(this, &Hy, (measuredNY-predictedNY), flow->stdDevY*FLOW_RESOLUTION);
+  return S;
 }
 
-/**
- * Predicted and measured values of the X and Y direction of the flowdeck
- */
-LOG_GROUP_START(kalman_pred)
+// --------- 主函数：鲁棒光流融合（方案A）---------
+void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this,
+                              const flowMeasurement_t *flow,
+                              const Axis3f *gyro)
+{
+  // ~~~ 角速度（弧度/秒） ~~~
+  const float omegax_b = gyro->x * DEG_TO_RAD;
+  const float omegay_b = gyro->y * DEG_TO_RAD;
 
-/**
- * @brief Flow sensor predicted dx  [pixels/frame]
- * 
- *  note: rename to kalmanMM.flowX?
- */
+  // ~~~ 取状态里的速度（世界系），并做高度饱和 ~~~
+  const float dx_g = this->S[KC_STATE_PX];
+  const float dy_g = this->S[KC_STATE_PY];
+  const float z_g  = (this->S[KC_STATE_Z] < Z_MIN_SAT) ? Z_MIN_SAT : this->S[KC_STATE_Z];
+
+  // ~~~ 预测项（像素/帧）~~~
+  // 注意：dpixel 为“累计像素”，乘 FLOW_RESOLUTION 转为实际像素；下面 predictedN* 也在像素尺度
+  predictedNX = (flow->dt * NPIX_PER_AXIS / THETA_PIX_RAD) * ((dx_g * this->R[2][2] / z_g) - omegay_b);
+  predictedNY = (flow->dt * NPIX_PER_AXIS / THETA_PIX_RAD) * ((dy_g * this->R[2][2] / z_g) + omegax_b);
+
+  measuredNX  = flow->dpixelx * FLOW_RESOLUTION;
+  measuredNY  = flow->dpixely * FLOW_RESOLUTION;
+
+  // ~~~ X 轴：构建雅可比 Hx（1xN）~~~
+  float hx[KC_STATE_DIM] = {0};
+  arm_matrix_instance_f32 Hx = {1, KC_STATE_DIM, hx};
+  hx[KC_STATE_Z]  = (NPIX_PER_AXIS * flow->dt / THETA_PIX_RAD) * ((this->R[2][2] * dx_g) / (-z_g * z_g));
+  hx[KC_STATE_PX] = (NPIX_PER_AXIS * flow->dt / THETA_PIX_RAD) * ( this->R[2][2] /  z_g);
+
+  // ~~~ Y 轴：构建雅可比 Hy（1xN）~~~
+  float hy[KC_STATE_DIM] = {0};
+  arm_matrix_instance_f32 Hy = {1, KC_STATE_DIM, hy};
+  hy[KC_STATE_Z]  = (NPIX_PER_AXIS * flow->dt / THETA_PIX_RAD) * ((this->R[2][2] * dy_g) / (-z_g * z_g));
+  hy[KC_STATE_PY] = (NPIX_PER_AXIS * flow->dt / THETA_PIX_RAD) * ( this->R[2][2] /  z_g);
+
+  // ~~~ 基础测量标准差（像素/帧），注意 kalmanCoreScalarUpdate 期望传“标准差”，不是方差 ~~~
+  float Rsd_x = flow->stdDevX * FLOW_RESOLUTION;
+  float Rsd_y = flow->stdDevY * FLOW_RESOLUTION;
+
+#if USE_QUALITY_DOWNWEIGHT
+  // 质量字段在 flowMeasurement_t 中不存在：仅用 z 与 |ω| 做降权
+  const float omega_sum = fabsf(omegax_b) + fabsf(omegay_b);
+  const bool poorFusion = (z_g < Z_LOW_TH) || (omega_sum > OMEGA_SUM_TH_RAD);
+
+  if (poorFusion) {
+    Rsd_x *= 4.0f;   // 放大测量标准差 → 降低权重
+    Rsd_y *= 4.0f;
+  }
+#endif
+
+  // ---------------- X 轴更新：卡方门限 + Huber + 噪声膨胀 ----------------
+  {
+    float rX = measuredNX - predictedNX;   // 创新量
+    const float Rvar_x = Rsd_x * Rsd_x;    // 测量方差
+    float Sx = kc_innovVar_orApprox(this, &Hx, Rvar_x);
+
+    // 卡方门限（极端异常 → 膨胀噪声）
+    if (rX * rX > CHI2_GATE * Sx) {
+      Rsd_x *= sqrtf(R_INFLATE_FACTOR);    // 方差乘以R_INFLATE_FACTOR，对应标准差乘以 sqrt(...)
+      // 重新计算 Sx（可选；不重算也行，影响很小）
+      const float Rvar_x2 = Rsd_x * Rsd_x;
+      Sx = kc_innovVar_orApprox(this, &Hx, Rvar_x2);
+    }
+
+    // Huber 钝化：限制单次校正力度
+    const float abs_rX = fabsf(rX);
+    if (abs_rX > HUBER_DELTA) {
+      rX = HUBER_DELTA * (rX > 0.0f ? 1.0f : -1.0f);
+    }
+
+    // 调用核心更新（不再做不对称/跳变处理）
+    kalmanCoreScalarUpdate(this, &Hx, rX, Rsd_x);
+  }
+
+  // ---------------- Y 轴更新：同上 ----------------
+  {
+    float rY = measuredNY - predictedNY;
+    const float Rvar_y = Rsd_y * Rsd_y;
+    float Sy = kc_innovVar_orApprox(this, &Hy, Rvar_y);
+
+    if (rY * rY > CHI2_GATE * Sy) {
+      Rsd_y *= sqrtf(R_INFLATE_FACTOR);
+      const float Rvar_y2 = Rsd_y * Rsd_y;
+      Sy = kc_innovVar_orApprox(this, &Hy, Rvar_y2);
+    }
+
+    const float abs_rY = fabsf(rY);
+    if (abs_rY > HUBER_DELTA) {
+      rY = HUBER_DELTA * (rY > 0.0f ? 1.0f : -1.0f);
+    }
+
+    kalmanCoreScalarUpdate(this, &Hy, rY, Rsd_y);
+  }
+}
+
+// -------- 日志：保持你原来的分组 --------
+LOG_GROUP_START(kalman_pred)
   LOG_ADD(LOG_FLOAT, predNX, &predictedNX)
-/**
- * @brief Flow sensor predicted dy  [pixels/frame]
- * 
- *  note: rename to kalmanMM.flowY?
- */
   LOG_ADD(LOG_FLOAT, predNY, &predictedNY)
-/**
- * @brief Flow sensor measured dx  [pixels/frame]
- * 
- *  note: This is the same as motion.deltaX, so perhaps remove this?
- */
   LOG_ADD(LOG_FLOAT, measNX, &measuredNX)
-/**
- * @brief Flow sensor measured dy  [pixels/frame]
- * 
- *  note: This is the same as motion.deltaY, so perhaps remove this?
- */
   LOG_ADD(LOG_FLOAT, measNY, &measuredNY)
 LOG_GROUP_STOP(kalman_pred)
