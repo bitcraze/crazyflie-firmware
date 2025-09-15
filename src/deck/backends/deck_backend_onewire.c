@@ -27,6 +27,7 @@
 #include "deck_discovery.h"
 #include "deck.h"
 #include "ow.h"
+#include "crc32.h"
 
 #define DEBUG_MODULE "DECK_BACKEND_OW"
 #include "debug.h"
@@ -70,6 +71,95 @@ static bool owBackendInit(void) {
     return true;
 }
 
+bool infoDecode(DeckInfo * info)
+{
+  uint8_t crcHeader;
+  uint8_t crcTlv;
+
+  if (info->header != DECK_INFO_HEADER_ID) {
+    DEBUG_PRINT("Memory error: wrong header ID\n");
+    return false;
+  }
+
+  crcHeader = crc32CalculateBuffer(info->raw, DECK_INFO_HEADER_SIZE);
+  if(info->crc != crcHeader) {
+    DEBUG_PRINT("Memory error: incorrect header CRC\n");
+    return false;
+  }
+
+  if(info->raw[DECK_INFO_TLV_VERSION_POS] != DECK_INFO_TLV_VERSION) {
+    DEBUG_PRINT("Memory error: incorrect TLV version\n");
+    return false;
+  }
+
+  crcTlv = crc32CalculateBuffer(&info->raw[DECK_INFO_TLV_VERSION_POS], info->raw[DECK_INFO_TLV_LENGTH_POS]+2);
+  if(crcTlv != info->raw[DECK_INFO_TLV_DATA_POS + info->raw[DECK_INFO_TLV_LENGTH_POS]]) {
+    DEBUG_PRINT("Memory error: incorrect TLV CRC %x!=%x\n", (unsigned int)crcTlv,
+                info->raw[DECK_INFO_TLV_DATA_POS + info->raw[DECK_INFO_TLV_LENGTH_POS]]);
+    return false;
+  }
+
+  info->tlv.data = &info->raw[DECK_INFO_TLV_DATA_POS];
+  info->tlv.length = info->raw[DECK_INFO_TLV_LENGTH_POS];
+
+  return true;
+}
+
+/****** Key/value area handling ********/
+static int findType(TlvArea *tlv, int type) {
+  int pos = 0;
+
+  while (pos < tlv->length) {
+    if (tlv->data[pos] == type) {
+      return pos;
+    } else {
+      pos += tlv->data[pos+1]+2;
+    }
+  }
+  return -1;
+}
+
+bool deckTlvHasElement(TlvArea *tlv, int type) {
+  return findType(tlv, type) >= 0;
+}
+
+int deckTlvGetString(TlvArea *tlv, int type, char *string, int length) {
+  int pos = findType(tlv, type);
+  int strlength = 0;
+
+  if (pos >= 0) {
+    strlength = tlv->data[pos+1];
+
+    if (strlength > (length-1)) {
+      strlength = length-1;
+    }
+
+    memcpy(string, &tlv->data[pos+2], strlength);
+    string[strlength] = '\0';
+
+    return strlength;
+  } else {
+    string[0] = '\0';
+
+    return -1;
+  }
+}
+
+char* deckTlvGetBuffer(TlvArea *tlv, int type, int *length) {
+  int pos = findType(tlv, type);
+  if (pos >= 0) {
+    *length = tlv->data[pos+1];
+    return (char*) &tlv->data[pos+2];
+  }
+
+  return NULL;
+}
+
+void deckTlvGetTlv(TlvArea *tlv, int type, TlvArea *output) {
+  output->length = 0;
+  output->data = (uint8_t *)deckTlvGetBuffer(tlv, type, &output->length);
+}
+
 static DeckInfo* owBackendGetNextDeck(void) {
     if (currentDeck >= totalDecks) {
         return NULL; // No more decks
@@ -95,8 +185,22 @@ static DeckInfo* owBackendGetNextDeck(void) {
 
     // Decode and validate deck info using shared function
     if (infoDecode(&deckBuffer)) {
-        deckBuffer.driver = findDriver(&deckBuffer);
-        printDeckInfo(&deckBuffer);
+        // Extract product name and board revision from TLV and populate generic fields
+        static char productNames[DECK_MAX_COUNT][30];
+        static char boardRevisions[DECK_MAX_COUNT][10];
+
+        if (deckTlvGetString(&deckBuffer.tlv, DECK_INFO_NAME, productNames[currentDeck], 30) > 0) {
+            deckBuffer.productName = productNames[currentDeck];
+        } else {
+            deckBuffer.productName = NULL;
+        }
+
+        if (deckTlvGetString(&deckBuffer.tlv, DECK_INFO_REVISION, boardRevisions[currentDeck], 10) > 0) {
+            deckBuffer.boardRevision = boardRevisions[currentDeck];
+        } else {
+            deckBuffer.boardRevision = NULL;
+        }
+
     } else {
 #ifdef CONFIG_DEBUG
         OW_BACKEND_DEBUG("OneWire deck %d has corrupt memory. Using dummy driver in DEBUG mode.\n", currentDeck);

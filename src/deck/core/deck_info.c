@@ -98,15 +98,12 @@ const DeckDriver dummyDriver;
 
 const DeckDriver * findDriver(DeckInfo *deck)
 {
-  char name[30];
   const DeckDriver *driver = &dummyDriver;
-
-  deckTlvGetString(&deck->tlv, DECK_INFO_NAME, name, 30);
 
   if (deck->vid) {
     driver = deckFindDriverByVidPid(deck->vid, deck->pid);
-  } else if (strlen(name)>0) {
-    driver = deckFindDriverByName(name);
+  } else if (deck->productName && strlen(deck->productName) > 0) {
+    driver = deckFindDriverByName(deck->productName);
   }
 
   if (driver == NULL)
@@ -117,16 +114,10 @@ const DeckDriver * findDriver(DeckInfo *deck)
 
 void printDeckInfo(DeckInfo *info)
 {
-  char name[30] = "NoName";
-  char rev[10] = "NoRev";
-
-  if (deckTlvHasElement(&info->tlv, DECK_INFO_NAME)) {
-    deckTlvGetString(&info->tlv, DECK_INFO_NAME, name, 30);
-  }
-
-  if (deckTlvHasElement(&info->tlv, DECK_INFO_REVISION)) {
-    deckTlvGetString(&info->tlv, DECK_INFO_REVISION, rev, 10);
-  }
+#ifdef CONFIG_DEBUG
+  const char *name = info->productName ? info->productName : "NoName";
+  const char *rev = info->boardRevision ? info->boardRevision : "NoRev";
+#endif
 
   DECK_INFO_DBG_PRINT("Deck %02x:%02x %s (Rev. %s)\n", info->vid, info->pid, name, rev);
   DECK_INFO_DBG_PRINT("Used pin: %08x\n", (unsigned int)info->usedPins);
@@ -137,40 +128,6 @@ void printDeckInfo(DeckInfo *info)
     DECK_INFO_DBG_PRINT("Driver implements: [ %s%s]\n",
                         info->driver->init?"init ":"", info->driver->test?"test ":"");
   }
-}
-
-bool infoDecode(DeckInfo * info)
-{
-  uint8_t crcHeader;
-  uint8_t crcTlv;
-
-  if (info->header != DECK_INFO_HEADER_ID) {
-    DEBUG_PRINT("Memory error: wrong header ID\n");
-    return false;
-  }
-
-  crcHeader = crc32CalculateBuffer(info->raw, DECK_INFO_HEADER_SIZE);
-  if(info->crc != crcHeader) {
-    DEBUG_PRINT("Memory error: incorrect header CRC\n");
-    return false;
-  }
-
-  if(info->raw[DECK_INFO_TLV_VERSION_POS] != DECK_INFO_TLV_VERSION) {
-    DEBUG_PRINT("Memory error: incorrect TLV version\n");
-    return false;
-  }
-
-  crcTlv = crc32CalculateBuffer(&info->raw[DECK_INFO_TLV_VERSION_POS], info->raw[DECK_INFO_TLV_LENGTH_POS]+2);
-  if(crcTlv != info->raw[DECK_INFO_TLV_DATA_POS + info->raw[DECK_INFO_TLV_LENGTH_POS]]) {
-    DEBUG_PRINT("Memory error: incorrect TLV CRC %x!=%x\n", (unsigned int)crcTlv,
-                info->raw[DECK_INFO_TLV_DATA_POS + info->raw[DECK_INFO_TLV_LENGTH_POS]]);
-    return false;
-  }
-
-  info->tlv.data = &info->raw[DECK_INFO_TLV_DATA_POS];
-  info->tlv.length = info->raw[DECK_INFO_TLV_LENGTH_POS];
-
-  return true;
 }
 
 static void enumerateDecks(void)
@@ -208,6 +165,10 @@ static void enumerateDecks(void)
       // Copy deck info to our array and set backend reference
       deckInfos[nDecks] = *deckInfo;
       deckInfos[nDecks].discoveryBackend = backend;
+
+      // Find appropriate driver for this deck
+      deckInfos[nDecks].driver = findDriver(&deckInfos[nDecks]);
+      printDeckInfo(&deckInfos[nDecks]);
 
       DECK_INFO_DBG_PRINT("Added deck from backend %s\n", backend->name);
       nDecks++;
@@ -261,61 +222,6 @@ static void checkPeriphAndGpioConflicts(void)
   if (!noError) {
     count = 0;
   }
-}
-
-/****** Key/value area handling ********/
-static int findType(TlvArea *tlv, int type) {
-  int pos = 0;
-
-  while (pos < tlv->length) {
-    if (tlv->data[pos] == type) {
-      return pos;
-    } else {
-      pos += tlv->data[pos+1]+2;
-    }
-  }
-  return -1;
-}
-
-bool deckTlvHasElement(TlvArea *tlv, int type) {
-  return findType(tlv, type) >= 0;
-}
-
-int deckTlvGetString(TlvArea *tlv, int type, char *string, int length) {
-  int pos = findType(tlv, type);
-  int strlength = 0;
-
-  if (pos >= 0) {
-    strlength = tlv->data[pos+1];
-
-    if (strlength > (length-1)) {
-      strlength = length-1;
-    }
-
-    memcpy(string, &tlv->data[pos+2], strlength);
-    string[strlength] = '\0';
-
-    return strlength;
-  } else {
-    string[0] = '\0';
-
-    return -1;
-  }
-}
-
-char* deckTlvGetBuffer(TlvArea *tlv, int type, int *length) {
-  int pos = findType(tlv, type);
-  if (pos >= 0) {
-    *length = tlv->data[pos+1];
-    return (char*) &tlv->data[pos+2];
-  }
-
-  return NULL;
-}
-
-void deckTlvGetTlv(TlvArea *tlv, int type, TlvArea *output) {
-  output->length = 0;
-  output->data = (uint8_t *)deckTlvGetBuffer(tlv, type, &output->length);
 }
 
 static void scanRequiredSystemProperties(void)
