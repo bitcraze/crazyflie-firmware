@@ -91,11 +91,6 @@ $ make cf21bl_defconfig
 ```
 $ make bolt_defconfig
 ```
-#### Wearable
-Wearable is a configuration intended for a Crazyflie with a Lighthouse deck that is used as a general purpose positioning device.
-```
-$ make wearable_defconfig
-```
 
 ### Building the firmware
 Then build the firmware with:
@@ -170,7 +165,6 @@ cf2_defconfig      : Merge configuration options from `configs/cf2_defconfig` wi
 cf21bl_defconfig   : Merge configuration options from `configs/cf21bl_defconfig` with default
 tag_defconfig      : Merge configuration options from `configs/tag_defconfig` with default
 bolt_defconfig     : Merge configuration options from `configs/bolt_defconfig` with default
-wearable_defconfig : Merge configuration options from `configs/wearaböe_defconfig` with default
 allyesconfig       : Generate a `.config` with the all configuration options enabled
 allnoconfig        : Generate a `.config` with the all configuration options disabled
 randconfig         : Generate a `.config` with random valid values to all configuration options
