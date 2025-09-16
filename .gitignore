@@ -38,6 +38,11 @@ docs/api/params.md_raw
 docs/api/log_param_doc.json
 docs/api
 
+tools/system_id/cache
+tools/system_id/data
+tools/system_id/calibration*
+tools/system_id/params*
+
 build/
 # To avoid that /tools/build is ignored
 !/tools/*
