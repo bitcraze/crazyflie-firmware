@@ -86,7 +86,7 @@ if [ -z "$KCONFIG_CONFIG" ]; then
 	if [ "$OUTPUT" != . ]; then
 		KCONFIG_CONFIG=$(readlink -m -- "$OUTPUT/.config")
 	else
-		KCONFIG_CONFIG=.config
+		KCONFIG_CONFIG=build/.config
 	fi
 fi
 
