@@ -149,41 +149,38 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
   #ifdef CONFIG_ENABLE_THRUST_BAT_COMPENSATED
   ASSERT(id < NBR_OF_MOTORS);
 
-  if (motorMap[id]->drvType == BRUSHED)
+  /*
+  * A LiPo battery is supposed to be 4.2V charged, 3.7V mid-charge and 3V
+  * discharged.
+  *
+  * A suitable sanity check for disabling the voltage compensation would be
+  * under 2V. That would suggest a damaged battery. This protects against
+  * rushing the motors on bugs and invalid voltage levels.
+  */
+  if (supplyVoltage < 2.0f)
   {
-    /*
-    * A LiPo battery is supposed to be 4.2V charged, 3.7V mid-charge and 3V
-    * discharged.
-    *
-    * A suitable sanity check for disabling the voltage compensation would be
-    * under 2V. That would suggest a damaged battery. This protects against
-    * rushing the motors on bugs and invalid voltage levels.
-    */
-    if (supplyVoltage < 2.0f)
-    {
-        return 0.0f; // iThrust;
-      }
-
-    float thrust = (iThrust / 65535.0f) * THRUST_MAX; // rescaling integer thrust to N
-    if (thrust < THRUST_MIN)                          // Make sure sqrt function gets positive values
-    {
-      return 0.0f;
+      return 0.0f; // iThrust;
     }
-    else 
-    {
-      // Motor voltage to thrust is a cubic fit
-      // q, r, p to calculate the inverse of the third order polynomial
-      // For more info see https://math.vanderbilt.edu/schectex/courses/cubic/
-      // q and thus qrp need to be calculated each time while p and r are constant
-      static const float p = -VMOTOR2THRUST2 / (3 * VMOTOR2THRUST3);
-      float q = p * p * p + (VMOTOR2THRUST2 * VMOTOR2THRUST1 - 3 * VMOTOR2THRUST3 * (VMOTOR2THRUST0 - thrust)) / (6 * VMOTOR2THRUST3 * VMOTOR2THRUST3);
-      static const float r = VMOTOR2THRUST1 / (3 * VMOTOR2THRUST3);
-      float qrp = sqrtf(q * q + (r - p * p) * (r - p * p) * (r - p * p));
 
-      float motorVoltage = cbrtf(q + qrp) + cbrtf(q - qrp) + p;
-      float ratio = motorVoltage / supplyVoltage;
-      return UINT16_MAX * ratio;
-    }
+  float thrust = (iThrust / 65535.0f) * THRUST_MAX; // rescaling integer thrust to N
+  if (thrust < THRUST_MIN)                          // Make sure sqrt function gets positive values
+  {
+    return 0.0f;
+  }
+  else 
+  {
+    // Motor voltage to thrust is a cubic fit
+    // q, r, p to calculate the inverse of the third order polynomial
+    // For more info see https://math.vanderbilt.edu/schectex/courses/cubic/
+    // q and thus qrp need to be calculated each time while p and r are constant
+    static const float p = -VMOTOR2THRUST2 / (3 * VMOTOR2THRUST3);
+    float q = p * p * p + (VMOTOR2THRUST2 * VMOTOR2THRUST1 - 3 * VMOTOR2THRUST3 * (VMOTOR2THRUST0 - thrust)) / (6 * VMOTOR2THRUST3 * VMOTOR2THRUST3);
+    static const float r = VMOTOR2THRUST1 / (3 * VMOTOR2THRUST3);
+    float qrp = sqrtf(q * q + (r - p * p) * (r - p * p) * (r - p * p));
+
+    float motorVoltage = cbrtf(q + qrp) + cbrtf(q - qrp) + p;
+    float ratio = motorVoltage / supplyVoltage;
+    return UINT16_MAX * ratio;
   }
 
   #endif

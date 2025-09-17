@@ -48,8 +48,12 @@
 // Update this value with the mass of your specific setup if different.
 #define CF_MASS 0.0393f  // kg
 // Thrust coefficients
-#define THRUST_MIN      0.03f // TODO, value is for the thrust upgrade kit
-#define THRUST_MAX      0.1625f // TODO, value is for the thrust upgrade kit
+#define VMOTOR2THRUST0  -0.03293241334494161f
+#define VMOTOR2THRUST1  0.07584356745299924f
+#define VMOTOR2THRUST2  -0.01727777590915039f
+#define VMOTOR2THRUST3  0.005432709913908448f
+#define THRUST_MIN      0.03f
+#define THRUST_MAX      0.18f
 #define THRUST2TORQUE   0.004899994f
 
 // Default PID gains
