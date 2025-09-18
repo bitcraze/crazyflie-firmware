@@ -196,13 +196,13 @@ $ make cload
 
 It will try to find a Crazyflie in bootloader mode and flash the binary to it.
 
-Warning: if multiple Crazyflies within range are in bootloader mode the result is unpredictable. This method is not suitable in classroom situation where it is likely that several students are flashing at the same time. Also remember that the Crazyradio PA often reaches into the next room.
+Warning: if multiple Crazyflies within range are in bootloader mode the result is unpredictable. This method is not suitable in classroom situation where it is likely that several students are flashing at the same time. Also remember that the Crazyradio often reaches into the next room.
 
 #### Automatically enter bootloader mode
 * Make sure the Crazyflie is on
 * In your terminal, run `CLOAD_CMDS="-w [CRAZYFLIE_URI]" make cload`
-* or run `cfloader flash build/cf2.bin stm32-fw -w [CRAZYFLIE_URI]`
-with [CRAZYFLIE_URI] being the uri of the crazyflie.
+* or run `cfloader flash build/[BINARY_FILE] stm32-fw -w [CRAZYFLIE_URI]`
+with [BINARY_FILE] being the binary file (**cf2.bin** for Crazyflie 2.x, **cf21bl.bin** for Crazyflie 2.1 Brushless etc.) and [CRAZYFLIE_URI] being the uri of the Crazyflie.
 
 It will connect to the Crazyflie with the specified address, put it in bootloader mode and flash the binary. This method is suitable for classroom situations.
 
