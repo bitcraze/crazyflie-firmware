@@ -179,7 +179,7 @@ The supported way to flash when developping for the Crazyflie is to use the Craz
 
 #### Prerequisites
 * A Crazyradio with drivers installed
-* [Crazyflie Client](https://github.com/bitcraze/crazyflie-clients-python) installed in a Python virtual environment, either via pip (not using Snap on Ubuntu or .exe on Windows) or by cloning from source.
+* [Crazyflie Client](https://github.com/bitcraze/crazyflie-clients-python) installed in a Python virtual environment, either via pip or by cloning from source.
   * Note than when developping in WSL on Windows, the client needs to be installed on Windows. See the [Windows build instruction](#windows) above.
 * The firmware has been built
 * The current working directory is the root of the crazyflie-firmware project
