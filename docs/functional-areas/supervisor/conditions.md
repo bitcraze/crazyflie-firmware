@@ -4,8 +4,7 @@ page_id: supervisor_conditions
 sort_order: 1
 ---
 
-A condition express the state of some part of the system, for instance if we are flying, if the system is armed or
-tumbled. A condition is a single bit and can thus only be true or false.
+A condition expresses the state of some part of the system, for instance if we are flying or if the system is armed, tumbled or crashed. A condition is a single bit and can thus only be true or false.
 
 All conditions are collected in a bit field that expresses the full state of the system, or at least all the parts
 that are relevant to the supervisor.
