@@ -45,6 +45,7 @@ static const char* const stateNames[] = {
   "Flying",
   "Landed",
   "Reset",
+  "Warning, return inside geofence",
   "Warning, level out",
   "Exception, free fall",
   "Locked",
@@ -56,6 +57,8 @@ static const char* const conditionNames[] = {
   "armed",
   "isFlying",
   "isTumbled",
+  "geofenceWarning",
+  "geofenceStop",
   "commanderWdtWarning",
   "commanderWdtTimeout",
   "emergencyStop",
@@ -93,7 +96,7 @@ static SupervisorStateTransition_t transitionsPreFlChecksNotPassed[] = {
 
     .triggerCombiner = supervisorAlways,
 
-    .blockers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_DECK_FAULT,
+    .blockers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_GEOFENCE_WARNING | SUPERVISOR_CB_GEOFENCE_STOP | SUPERVISOR_CB_DECK_FAULT,
     .negatedBlockers = SUPERVISOR_CB_NONE,
     .blockerCombiner = supervisorAny,
   }
@@ -112,7 +115,7 @@ static SupervisorStateTransition_t transitionsPreFlChecksPassed[] = {
   {
     .newState = supervisorStatePreFlChecksNotPassed,
 
-    .triggers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_DECK_FAULT,
+    .triggers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_GEOFENCE_WARNING | SUPERVISOR_CB_GEOFENCE_STOP | SUPERVISOR_CB_DECK_FAULT,
     .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAny,
 
@@ -125,7 +128,7 @@ static SupervisorStateTransition_t transitionsPreFlChecksPassed[] = {
     .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAll,
 
-    .blockers = SUPERVISOR_CB_IS_TUMBLED,
+    .blockers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_GEOFENCE_WARNING | SUPERVISOR_CB_GEOFENCE_STOP,
     .negatedBlockers = SUPERVISOR_CB_NONE,
     .blockerCombiner = supervisorAny,
   },
@@ -175,7 +178,7 @@ static SupervisorStateTransition_t transitionsReadyToFly[] = {
   {
     .newState = supervisorStatePreFlChecksNotPassed,
 
-    .triggers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_PREFLIGHT_TIMEOUT | SUPERVISOR_CB_DECK_FAULT,
+    .triggers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_PREFLIGHT_TIMEOUT | SUPERVISOR_CB_DECK_FAULT | SUPERVISOR_CB_GEOFENCE_WARNING | SUPERVISOR_CB_GEOFENCE_STOP,
     .negatedTriggers = SUPERVISOR_CB_ARMED,
     .triggerCombiner = supervisorAny,
 
@@ -219,6 +222,15 @@ static SupervisorStateTransition_t transitionsFlying[] = {
 
     .triggers = SUPERVISOR_CB_NONE,
     .negatedTriggers = SUPERVISOR_CB_ARMED,
+    .triggerCombiner = supervisorAll,
+
+    .blockerCombiner = supervisorNever,
+  },
+  {
+    .newState = supervisorStateWarningReturnToGeofence,
+
+    .triggers = SUPERVISOR_CB_GEOFENCE_WARNING,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAll,
 
     .blockerCombiner = supervisorNever,
@@ -278,6 +290,36 @@ static SupervisorStateTransition_t transitionsReset[] = {
     .newState = supervisorStatePreFlChecksNotPassed,
 
     .triggerCombiner = supervisorAlways,
+
+    .blockerCombiner = supervisorNever,
+  },
+};
+
+static SupervisorStateTransition_t transitionsWarningGeofence[] = {
+  {
+    .newState = supervisorStateExceptFreeFall,
+
+    .triggers = SUPERVISOR_CB_GEOFENCE_STOP | SUPERVISOR_CB_EMERGENCY_STOP | SUPERVISOR_CB_DECK_FAULT,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAny,
+
+    .blockerCombiner = supervisorNever,
+  },
+  {
+    .newState = supervisorStateExceptFreeFall,
+
+    .triggers = SUPERVISOR_CB_MOTORS_NOT_RESPONDING,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAll,
+
+    .blockerCombiner = supervisorNever,
+  },
+  {
+    .newState = supervisorStateFlying,
+
+    .triggers = SUPERVISOR_CB_NONE,
+    .negatedTriggers = SUPERVISOR_CB_GEOFENCE_STOP | SUPERVISOR_CB_GEOFENCE_WARNING,
+    .triggerCombiner = supervisorAll,
 
     .blockerCombiner = supervisorNever,
   },
@@ -364,6 +406,7 @@ SupervisorStateTransitionList_t transitionLists[] = {
   {SUPERVISOR_TRANSITION_ENTRY(transitionsFlying)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsLanded)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsReset)},
+  {SUPERVISOR_TRANSITION_ENTRY(transitionsWarningGeofence)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsWarningLevelOut)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsExceptFreeFall)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsLocked)},

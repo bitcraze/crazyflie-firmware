@@ -35,6 +35,7 @@ typedef enum {
     supervisorStateFlying,
     supervisorStateLanded,
     supervisorStateReset,
+    supervisorStateWarningReturnToGeofence,
     supervisorStateWarningLevelOut,
     supervisorStateExceptFreeFall,
     supervisorStateLocked,
@@ -47,6 +48,8 @@ typedef enum {
   supervisorConditionArmed = 0,
   supervisorConditionIsFlying,
   supervisorConditionIsTumbled,
+  supervisorConditionGeofenceWarning,
+  supervisorConditionGeofenceStop,
   supervisorConditionCommanderWdtWarning,
   supervisorConditionCommanderWdtTimeout,
   supervisorConditionEmergencyStop,
@@ -67,6 +70,8 @@ typedef uint32_t supervisorConditionBits_t;
 #define SUPERVISOR_CB_ARMED (1 << supervisorConditionArmed)
 #define SUPERVISOR_CB_IS_FLYING (1 << supervisorConditionIsFlying)
 #define SUPERVISOR_CB_IS_TUMBLED (1 << supervisorConditionIsTumbled)
+#define SUPERVISOR_CB_GEOFENCE_WARNING (1 << supervisorConditionGeofenceWarning)
+#define SUPERVISOR_CB_GEOFENCE_STOP (1 << supervisorConditionGeofenceStop)
 #define SUPERVISOR_CB_COMMANDER_WDT_WARNING (1 << supervisorConditionCommanderWdtWarning)
 #define SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT (1 << supervisorConditionCommanderWdtTimeout)
 #define SUPERVISOR_CB_EMERGENCY_STOP (1 << supervisorConditionEmergencyStop)

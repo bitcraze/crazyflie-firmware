@@ -77,6 +77,14 @@ static uint16_t rpmCheckDurationMs = CONFIG_MOTORS_ARMING_RPM_DURATION_MS;
 static uint16_t motorsNotRespondingRpmThreshold = CONFIG_MOTORS_RPM_NOT_RESPONDING_THRESHOLD;
 #endif
 
+static float geofenceWarningZone = 1.0f;
+static float geofenceXmin = -10.0f;
+static float geofenceXmax = 10.0f;
+static float geofenceYmin = -10.0f;
+static float geofenceYmax = 10.0f;
+static float geofenceZmin = -0.5f;
+static float geofenceZmax = 10.0f;
+
 typedef struct {
   bool canFly;
   bool isFlying;
@@ -358,6 +366,28 @@ static bool isTumbledCheck(SupervisorMem_t* this, const sensorData_t *data, cons
   return false;
 }
 
+//
+// Checks if we are outside of allowed geofence limits
+//
+
+static bool isOutsideGeofenceCheck(const state_t *state, const float margin) {
+  const bool isOutsideX = (state->position.x < geofenceXmin - margin) || (state->position.x > geofenceXmax + margin);
+  const bool isOutsideY = (state->position.y < geofenceYmin - margin) || (state->position.y > geofenceYmax + margin);
+  const bool isOutsideZ = (state->position.z < geofenceZmin - margin) || (state->position.z > geofenceZmax + margin);
+
+  bool result = isOutsideX || isOutsideY || isOutsideZ;
+  
+  return result;
+}
+
+static bool isOutsideGeofenceWarningCheck(const state_t *state) {
+  return isOutsideGeofenceCheck(state, 0.0f);
+}
+
+static bool isOutsideGeofenceStopCheck(const state_t *state) {
+  return isOutsideGeofenceCheck(state, geofenceWarningZone);
+}
+
 static bool checkEmergencyStopWatchdog(const uint32_t tick) {
   bool isOk = true;
 
@@ -443,6 +473,7 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
   if (newState != supervisorStateArming &&
       newState != supervisorStateReadyToFly &&
       newState != supervisorStateFlying &&
+      newState != supervisorStateWarningReturnToGeofence &&
       newState != supervisorStateWarningLevelOut &&
       newState != supervisorStateLanded) {
     supervisorRequestArming(false);
@@ -457,8 +488,9 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
 }
 
 uint8_t tumbleCheckEnabled = SUPERVISOR_TUMBLE_CHECK_ENABLE;
+uint8_t geofenceCheckEnabled = SUPERVISOR_GEOFENCE_CHECK_ENABLE;
 
-static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* this, const sensorData_t *sensors, const setpoint_t* setpoint, const uint32_t currentTick) {
+static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* this, const sensorData_t *sensors, const setpoint_t* setpoint, const state_t* state, const uint32_t currentTick) {
   supervisorConditionBits_t conditions = 0;
 
   if (supervisorIsArmed()) {
@@ -475,6 +507,23 @@ static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* th
     if (tumbleCheckEnabled)
     {
       conditions |= SUPERVISOR_CB_IS_TUMBLED;
+    }
+  }
+
+  
+  const bool isOutsideGeofenceWarning = isOutsideGeofenceWarningCheck(state);
+  if (isOutsideGeofenceWarning) {
+    if (geofenceCheckEnabled)
+    {
+      conditions |= SUPERVISOR_CB_GEOFENCE_WARNING;
+    }
+  }
+
+  const bool isOutsideGeofenceStop = isOutsideGeofenceStopCheck(state);
+  if (isOutsideGeofenceStop) {
+    if (geofenceCheckEnabled)
+    {
+      conditions |= SUPERVISOR_CB_GEOFENCE_STOP;
     }
   }
 
@@ -539,7 +588,7 @@ static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* th
 
 static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t conditions) {
   this->canFly = supervisorCanFly();
-  this->isFlying = (this->state == supervisorStateFlying) || (this->state == supervisorStateWarningLevelOut);
+  this->isFlying = (this->state == supervisorStateFlying) || (this->state == supervisorStateWarningLevelOut) || (this->state == supervisorStateWarningReturnToGeofence);
   this->isTumbled = (conditions & SUPERVISOR_CB_IS_TUMBLED) != 0;
 
   this->infoBitfield = 0;
@@ -582,10 +631,9 @@ static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t
   if (conditions & SUPERVISOR_CB_DECK_FAULT) {
       this->infoBitfield |= 0x0800;  // a deck has reported a hardware fault
   }
-
 }
 
-void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, stabilizerStep_t stabilizerStep) {
+void supervisorUpdate(const sensorData_t *sensors, const setpoint_t *setpoint, const state_t *state, stabilizerStep_t stabilizerStep) {
   if (!RATE_DO_EXECUTE(RATE_SUPERVISOR, stabilizerStep)) {
     return;
   }
@@ -593,7 +641,7 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, s
   SupervisorMem_t* this = &supervisorMem;
   const uint32_t currentTick = xTaskGetTickCount();
 
-  const supervisorConditionBits_t conditions = updateAndPopulateConditions(this, sensors, setpoint, currentTick);
+  const supervisorConditionBits_t conditions = updateAndPopulateConditions(this, sensors, setpoint, state, currentTick);
   const supervisorState_t newState = supervisorStateUpdate(this->state, conditions);
   if (this->state != newState) {
     const supervisorState_t previousState = this->state;
@@ -619,9 +667,57 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint) {
     case supervisorStateLanded:
       // Fall through
     case supervisorStateFlying:
-      // Do nothing
+      if (geofenceCheckEnabled){
+        // Constrain setpoint position to be inside geofence
+        if (setpoint->mode.x == modeAbs) {
+          if (setpoint->position.x < geofenceXmin) {
+            setpoint->position.x = geofenceXmin;
+          } else if (setpoint->position.x > geofenceXmax) {
+            setpoint->position.x = geofenceXmax;
+          }
+        }
+        if (setpoint->mode.y == modeAbs) {
+          if (setpoint->position.y < geofenceYmin) {
+            setpoint->position.y = geofenceYmin;
+          } else if (setpoint->position.y > geofenceYmax) {
+            setpoint->position.y = geofenceYmax;
+          }
+        }
+        if (setpoint->mode.z == modeAbs) {
+          if (setpoint->position.z < geofenceZmin) {
+            setpoint->position.z = geofenceZmin;
+          } else if (setpoint->position.z > geofenceZmax) {
+            setpoint->position.z = geofenceZmax;
+          }
+        }
+      }
       break;
 
+    case supervisorStateWarningReturnToGeofence:
+      // Constrain setpoint position to be inside geofence
+      if (setpoint->mode.x == modeAbs) {
+        if (setpoint->position.x < geofenceXmin) {
+          setpoint->position.x = geofenceXmin;
+        } else if (setpoint->position.x > geofenceXmax) {
+          setpoint->position.x = geofenceXmax;
+        }
+      }
+      if (setpoint->mode.y == modeAbs) {
+        if (setpoint->position.y < geofenceYmin) {
+          setpoint->position.y = geofenceYmin;
+        } else if (setpoint->position.y > geofenceYmax) {
+          setpoint->position.y = geofenceYmax;
+        }
+      }
+      if (setpoint->mode.z == modeAbs) {
+        if (setpoint->position.z < geofenceZmin) {
+          setpoint->position.z = geofenceZmin;
+        } else if (setpoint->position.z > geofenceZmax) {
+          setpoint->position.z = geofenceZmax;
+        }
+      }
+      break;
+      
     case supervisorStateWarningLevelOut:
       setpoint->mode.x = modeDisable;
       setpoint->mode.y = modeDisable;
@@ -646,6 +742,7 @@ bool supervisorAreMotorsAllowedToRun() {
   return (this->state == supervisorStateArming) ||
          (this->state == supervisorStateReadyToFly) ||
          (this->state == supervisorStateFlying) ||
+         (this->state == supervisorStateWarningReturnToGeofence) ||
          (this->state == supervisorStateWarningLevelOut) ||
          (this->state == supervisorStateLanded);
 }
@@ -765,4 +862,55 @@ PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, spinupTimeout, &armingSpinupTimeoutDu
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, crashDetectGs, &crashDetectionGs)
 
+/**
+ * @brief Set to one to enable geofence check
+ */
+PARAM_ADD(PARAM_UINT8 | PARAM_PERSISTENT, geofChckEn, &geofenceCheckEnabled)
+
 PARAM_GROUP_STOP(supervisor)
+
+
+/**
+ * Geofence makes sure setpoints cannot be set outside of defined limits and that 
+ * flight is stopped if the limits are exceeded.
+ */
+PARAM_GROUP_START(geofence)
+
+/**
+ * @brief Geofence failsafe zone width (m)
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, geofWarnZone, &geofenceWarningZone)
+
+/**
+ * @brief Geofence X min (m)
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, geofXmin, &geofenceXmin)
+
+/**
+ * @brief Geofence X max (m)
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, geofXmax, &geofenceXmax)
+
+/**
+ * @brief Geofence Y min (m)
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, geofYmin, &geofenceYmin)
+
+/**
+ * @brief Geofence Y max (m)
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, geofYmax, &geofenceYmax)
+
+/**
+ * @brief Geofence Z min (m)
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, geofZmin, &geofenceZmin)
+
+/**
+ * @brief Geofence Z max (m)
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, geofZmax, &geofenceZmax)  
+
+PARAM_GROUP_STOP(geofence)
+
+

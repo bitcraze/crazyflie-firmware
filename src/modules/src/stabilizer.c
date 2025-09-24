@@ -344,7 +344,7 @@ static void stabilizerTask(void* param)
 
       // Critical for safety, be careful if you modify this code!
       // Let the supervisor update it's view of the current situation
-      supervisorUpdate(&sensorData, &setpoint, stabilizerStep);
+      supervisorUpdate(&sensorData, &setpoint, &state, stabilizerStep);
 
       // Let the collision avoidance module modify the setpoint, if needed
       collisionAvoidanceUpdateSetpoint(&setpoint, &sensorData, &state, stabilizerStep);
