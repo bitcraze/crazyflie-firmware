@@ -282,6 +282,7 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
     TIM_TimeBaseStructure.TIM_RepetitionCounter = 0;
     TIM_TimeBaseInit(motorMap[i]->tim, &TIM_TimeBaseStructure);
 
+    TIM_ARRPreloadConfig(motorMap[i]->tim, DISABLE);
   }
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
@@ -371,10 +372,12 @@ static void motorsDshotOutputSetup(int id)
 {
   TIM_OCInitTypeDef TIM_OCInitStructure;
 
-  dshotState[id] = DSHOT_STATE_IDLE;
-  
+  TIM_Cmd(motorMap[id]->tim, DISABLE);
   motorMap[id]->tim->ARR = motorMap[id]->timPeriod;
   motorMap[id]->tim->CNT = 0;
+  TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+  TIM_ITConfig(motorMap[id]->tim, TIM_IT_Update, DISABLE);
+  TIM_Cmd(motorMap[id]->tim, ENABLE);
 
   uint16_t timPolarity = motorMap[id]->timPolarity;
 
@@ -432,6 +435,12 @@ static void motorsDshotDMASetup()
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStructure);
   }
+
+  NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MOTORS_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure);
 }
 
 static void motorsDshotInputSetup(int id)
@@ -445,10 +454,10 @@ static void motorsDshotInputSetup(int id)
 
   if (timerIdle) {
     TIM_Cmd(motorMap[id]->tim, DISABLE);
-
-    motorMap[id]->tim->ARR = TIM_CLOCK_HZ / 10000; // 100us max interval
+    motorMap[id]->tim->ARR = TIM_CLOCK_HZ / 10000; // 100us max interval, TODO: compute based on DSHOT wait time + telemetry max time
     motorMap[id]->tim->CNT = 0;
-
+    TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+    TIM_ITConfig(motorMap[id]->tim, TIM_IT_Update, ENABLE);
     TIM_Cmd(motorMap[id]->tim, ENABLE);
   }
 
@@ -874,55 +883,128 @@ const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id)
 }
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
+static void motorsDshotTransferEnded(int id)
+{
+  dshotState[id] = DSHOT_STATE_IDLE;
+
+  bool allIdle = true;
+  for (int i = 0; i < NBR_OF_MOTORS; i++) {
+    allIdle &= (dshotState[i] == DSHOT_STATE_IDLE);
+  }
+
+  if (allIdle) {
+    TIM_Cmd(motorMap[1]->tim, DISABLE);
+    motorMap[1]->tim->ARR = motorMap[1]->timPeriod;
+    motorMap[1]->tim->CNT = 0;
+    TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+    TIM_ITConfig(motorMap[1]->tim, TIM_IT_Update, DISABLE);
+    TIM_Cmd(motorMap[1]->tim, ENABLE);
+
+    dshotState[1] = DSHOT_STATE_OUTPUT;
+    /* Enable TIM DMA Requests M1*/
+    TIM_DMACmd(motorMap[1]->tim, motorMap[1]->TIM_DMASource, ENABLE);
+    /* Enable DMA TIM Stream */
+    DMA_Cmd(motorMap[1]->DMA_stream, ENABLE);
+  }
+}
+
 void __attribute__((used)) DMA1_Stream1_IRQHandler(void)  // M4
 {
   TIM_DMACmd(TIM2, TIM_DMA_CC3, DISABLE);
-  DMA_ClearITPendingBit(DMA1_Stream1, DMA_IT_TCIF1);
   DMA_ITConfig(DMA1_Stream1, DMA_IT_TC, DISABLE);
+  DMA_Cmd(DMA1_Stream1, DISABLE);
+  DMA_ClearITPendingBit(DMA1_Stream1, DMA_IT_TCIF1);
 
   if (dshotBidirectional) {
     motorsDshotInputSetup(3);
+  } else {
+    motorsDshotTransferEnded(3);
   }
 }
 
 void __attribute__((used)) DMA1_Stream5_IRQHandler(void)  // M3
 {
   TIM_DMACmd(TIM2, TIM_DMA_CC1, DISABLE);
-  DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_TCIF5);
   DMA_ITConfig(DMA1_Stream5, DMA_IT_TC, DISABLE);
+  DMA_Cmd(DMA1_Stream5, DISABLE);
+  DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_TCIF5);
 
   if (dshotBidirectional) {
     motorsDshotInputSetup(2);
+  } else {
+    motorsDshotTransferEnded(2);
   }
 }
 
 void __attribute__((used)) DMA1_Stream6_IRQHandler(void) // M1
 {
   TIM_DMACmd(TIM2, TIM_DMA_CC2, DISABLE);
-  DMA_ClearITPendingBit(DMA1_Stream6, DMA_IT_TCIF6);
   DMA_ITConfig(DMA1_Stream6, DMA_IT_TC, DISABLE);
+  DMA_Cmd(DMA1_Stream6, DISABLE);
+  DMA_ClearITPendingBit(DMA1_Stream6, DMA_IT_TCIF6);
 
   if (dshotBidirectional) {
     motorsDshotInputSetup(0);
+  } else {
+    motorsDshotTransferEnded(0);
   }
-
-  // dshotState[1] = DSHOT_STATE_OUTPUT;
-  // /* Enable TIM DMA Requests M2*/
-  // TIM_DMACmd(motorMap[1]->tim, motorMap[1]->TIM_DMASource, ENABLE);
-  // /* Enable DMA TIM Stream */
-  // DMA_Cmd(motorMap[1]->DMA_stream, ENABLE);
 }
 
 void __attribute__((used)) DMA1_Stream7_IRQHandler(void)  // M2
 {
   TIM_DMACmd(TIM2, TIM_DMA_CC4, DISABLE);
-  DMA_ClearITPendingBit(DMA1_Stream7, DMA_IT_TCIF7);
   DMA_ITConfig(DMA1_Stream7, DMA_IT_TC, DISABLE);
+  DMA_Cmd(DMA1_Stream7, DISABLE);
+  DMA_ClearITPendingBit(DMA1_Stream7, DMA_IT_TCIF7);
 
   if (dshotBidirectional) {
     motorsDshotInputSetup(1);
+  } else {
+    dshotState[1] = DSHOT_STATE_IDLE;
   }
 }
+
+void __attribute__((used)) TIM2_IRQHandler(void)
+{
+  TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+
+  if (dshotBidirectional && dshotState[0] == DSHOT_STATE_INPUT) {
+    TIM_DMACmd(TIM2, TIM_DMA_CC2, DISABLE);
+    DMA_ITConfig(DMA1_Stream6, DMA_IT_TC, DISABLE);
+    DMA_Cmd(DMA1_Stream6, DISABLE);
+    DMA_ClearITPendingBit(DMA1_Stream6, DMA_IT_TCIF6);
+    
+    motorsDshotTransferEnded(0);
+  }
+
+  if (dshotBidirectional && dshotState[1] == DSHOT_STATE_INPUT) {
+    TIM_DMACmd(TIM2, TIM_DMA_CC4, DISABLE);
+    DMA_ITConfig(DMA1_Stream7, DMA_IT_TC, DISABLE);
+    DMA_Cmd(DMA1_Stream7, DISABLE);
+    DMA_ClearITPendingBit(DMA1_Stream7, DMA_IT_TCIF7);
+
+    dshotState[1] = DSHOT_STATE_IDLE;
+  }
+  
+  if (dshotBidirectional && dshotState[2] == DSHOT_STATE_INPUT) {
+    TIM_DMACmd(TIM2, TIM_DMA_CC1, DISABLE);
+    DMA_ITConfig(DMA1_Stream5, DMA_IT_TC, DISABLE);
+    DMA_Cmd(DMA1_Stream5, DISABLE);
+    DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_TCIF5);
+    
+    motorsDshotTransferEnded(2);
+  }
+
+  if (dshotBidirectional && dshotState[3] == DSHOT_STATE_INPUT) {
+    TIM_DMACmd(TIM2, TIM_DMA_CC3, DISABLE);
+    DMA_ITConfig(DMA1_Stream1, DMA_IT_TC, DISABLE);
+    DMA_Cmd(DMA1_Stream1, DISABLE);
+    DMA_ClearITPendingBit(DMA1_Stream1, DMA_IT_TCIF1);
+    
+    motorsDshotTransferEnded(3);
+  }
+}
+
 #endif
 
 static void dshotBidirectionalChanged() {
@@ -1008,4 +1090,21 @@ LOG_ADD_CORE(LOG_UINT32, m1_erpm,      &dshotTelemetry[MOTOR_M1])
 LOG_ADD_CORE(LOG_UINT32, m2_erpm,      &dshotTelemetry[MOTOR_M2])
 LOG_ADD_CORE(LOG_UINT32, m3_erpm,      &dshotTelemetry[MOTOR_M3])
 LOG_ADD_CORE(LOG_UINT32, m4_erpm,      &dshotTelemetry[MOTOR_M4])
+
+LOG_ADD_CORE(LOG_UINT8,  m1_state,     &dshotState[MOTOR_M1])
+LOG_ADD_CORE(LOG_UINT8,  m2_state,     &dshotState[MOTOR_M2])
+LOG_ADD_CORE(LOG_UINT8,  m3_state,     &dshotState[MOTOR_M3])
+LOG_ADD_CORE(LOG_UINT8,  m4_state,     &dshotState[MOTOR_M4])
+
+LOG_ADD_CORE(LOG_UINT32, m4_tcount, &dshotTelemetryCount[MOTOR_M4])
+LOG_ADD_CORE(LOG_UINT16, m4_traw,   &dshotTelemetryRaw[MOTOR_M4])
+LOG_ADD_CORE(LOG_UINT32, m4_t0,     &dshotDmaInputBuffer[MOTOR_M4][0])
+LOG_ADD_CORE(LOG_UINT32, m4_t1,     &dshotDmaInputBuffer[MOTOR_M4][1])
+LOG_ADD_CORE(LOG_UINT32, m4_t2,     &dshotDmaInputBuffer[MOTOR_M4][2])
+LOG_ADD_CORE(LOG_UINT32, m4_t3,     &dshotDmaInputBuffer[MOTOR_M4][3])
+LOG_ADD_CORE(LOG_UINT32, m4_t4,     &dshotDmaInputBuffer[MOTOR_M4][4])
+LOG_ADD_CORE(LOG_UINT32, m4_t5,     &dshotDmaInputBuffer[MOTOR_M4][5])
+LOG_ADD_CORE(LOG_UINT32, m4_t6,     &dshotDmaInputBuffer[MOTOR_M4][6])
+LOG_ADD_CORE(LOG_UINT32, m4_t7,     &dshotDmaInputBuffer[MOTOR_M4][7])
+
 LOG_GROUP_STOP(motor)
