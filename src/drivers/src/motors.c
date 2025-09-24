@@ -63,7 +63,15 @@ static volatile uint32_t dmaWait;
 
 #define DSHOT_TELEMETRY_INVALID         (0xffff)
 
-static bool dshotIsInput[NBR_OF_MOTORS] = {false, false, false, false};
+typedef enum {
+  DSHOT_STATE_IDLE = 0,
+  DSHOT_STATE_OUTPUT,
+  DSHOT_STATE_INPUT,
+} dshotState_t;
+
+static dshotState_t dshotState[NBR_OF_MOTORS] = {
+  DSHOT_STATE_IDLE, DSHOT_STATE_IDLE, DSHOT_STATE_IDLE, DSHOT_STATE_IDLE
+};
 static uint32_t dshotDmaInputBuffer[NBR_OF_MOTORS][DSHOT_TELEMETRY_MAX_GCR_EDGES];
 static uint32_t dshotTelemetryCount[NBR_OF_MOTORS] = {0, 0, 0, 0};
 static uint16_t dshotTelemetryRaw[NBR_OF_MOTORS] = {
@@ -363,6 +371,8 @@ static void motorsDshotOutputSetup(int id)
 {
   TIM_OCInitTypeDef TIM_OCInitStructure;
 
+  dshotState[id] = DSHOT_STATE_IDLE;
+  
   motorMap[id]->tim->ARR = motorMap[id]->timPeriod;
   motorMap[id]->tim->CNT = 0;
 
@@ -403,8 +413,6 @@ static void motorsDshotOutputSetup(int id)
   DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)dshotDmaBuffer[id];
   DMA_InitStructureShare.DMA_Channel = motorMap[id]->DMA_Channel;
   DMA_Init(motorMap[id]->DMA_stream, &DMA_InitStructureShare);
-
-  dshotIsInput[id] = false;
 }
 
 static void motorsDshotDMASetup()
@@ -428,10 +436,21 @@ static void motorsDshotDMASetup()
 
 static void motorsDshotInputSetup(int id)
 {
-  TIM_Cmd(motorMap[id]->tim, DISABLE);
+  dshotState[id] = DSHOT_STATE_INPUT;
 
-  motorMap[id]->tim->ARR = TIM_CLOCK_HZ / 10000; // 100us max interval
-  motorMap[id]->tim->CNT = 0;
+  bool timerIdle = true;
+  for (int i = 0; i < NBR_OF_MOTORS; i++) {
+    timerIdle &= (dshotState[i] == DSHOT_STATE_IDLE || dshotState[i] == DSHOT_STATE_INPUT);
+  }
+
+  if (timerIdle) {
+    TIM_Cmd(motorMap[id]->tim, DISABLE);
+
+    motorMap[id]->tim->ARR = TIM_CLOCK_HZ / 10000; // 100us max interval
+    motorMap[id]->tim->CNT = 0;
+
+    TIM_Cmd(motorMap[id]->tim, ENABLE);
+  }
 
   TIM_ICInitTypeDef TIM_ICInitStructure;
   
@@ -466,10 +485,6 @@ static void motorsDshotInputSetup(int id)
   TIM_DMACmd(motorMap[id]->tim, motorMap[id]->TIM_DMASource, ENABLE);
   /* Enable DMA TIM Stream */
   DMA_Cmd(motorMap[id]->DMA_stream, ENABLE);
-
-  TIM_Cmd(motorMap[id]->tim, ENABLE);
-
-  dshotIsInput[id] = true;
 }
 
 static uint16_t dshotDecodeTelemetryPacket(const uint32_t *buffer, uint32_t gcrEdges)
@@ -578,7 +593,7 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
   }
   dshotDmaBuffer[id][16] = 0; // Set to 0 gives low output afterwards
 
-  if (dshotIsInput[id]) {
+  if (dshotBidirectional) {
     DMA_Cmd(motorMap[id]->DMA_stream, DISABLE);
     TIM_DMACmd(motorMap[id]->tim, motorMap[id]->TIM_DMASource, DISABLE);
   }
@@ -589,7 +604,7 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
     dmaWait++;
   }
   
-  if (dshotIsInput[id]) {
+  if (dshotBidirectional) {
     uint32_t gcrEdges = DSHOT_TELEMETRY_MAX_GCR_EDGES - motorMap[id]->DMA_stream->NDTR;
     if (gcrEdges > DSHOT_TELEMETRY_MIN_GCR_EDGES) {
       dshotTelemetryCount[id]++;
@@ -614,6 +629,7 @@ void motorsBurstDshot()
       return;
     }
 
+    dshotState[0] = DSHOT_STATE_OUTPUT;
     motorMap[0]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
     /* Enable TIM DMA Requests M1*/
     TIM_DMACmd(motorMap[0]->tim, motorMap[0]->TIM_DMASource, ENABLE);
@@ -626,6 +642,7 @@ void motorsBurstDshot()
     DMA_ITConfig(motorMap[1]->DMA_stream, DMA_IT_TC, ENABLE);
     // TIM DMA Request and DMA stream for M2 will be started by M1 DMA IRQ handler
 
+    dshotState[2] = DSHOT_STATE_OUTPUT;
     motorMap[2]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
     /* Enable TIM DMA Requests M3*/
     TIM_DMACmd(motorMap[2]->tim, motorMap[2]->TIM_DMASource, ENABLE);
@@ -633,6 +650,7 @@ void motorsBurstDshot()
     /* Enable DMA TIM Stream */
     DMA_Cmd(motorMap[2]->DMA_stream, ENABLE);
 
+    dshotState[3] = DSHOT_STATE_OUTPUT;
     motorMap[3]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
     /* Enable TIM DMA Requests M4*/
     TIM_DMACmd(motorMap[3]->tim, motorMap[3]->TIM_DMASource, ENABLE);
@@ -872,6 +890,10 @@ void __attribute__((used)) DMA1_Stream5_IRQHandler(void)  // M3
   TIM_DMACmd(TIM2, TIM_DMA_CC1, DISABLE);
   DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_TCIF5);
   DMA_ITConfig(DMA1_Stream5, DMA_IT_TC, DISABLE);
+
+  if (dshotBidirectional) {
+    motorsDshotInputSetup(2);
+  }
 }
 
 void __attribute__((used)) DMA1_Stream6_IRQHandler(void) // M1
@@ -880,10 +902,15 @@ void __attribute__((used)) DMA1_Stream6_IRQHandler(void) // M1
   DMA_ClearITPendingBit(DMA1_Stream6, DMA_IT_TCIF6);
   DMA_ITConfig(DMA1_Stream6, DMA_IT_TC, DISABLE);
 
-  /* Enable TIM DMA Requests M2*/
-  TIM_DMACmd(motorMap[1]->tim, motorMap[1]->TIM_DMASource, ENABLE);
-  /* Enable DMA TIM Stream */
-  DMA_Cmd(motorMap[1]->DMA_stream, ENABLE);
+  if (dshotBidirectional) {
+    motorsDshotInputSetup(0);
+  }
+
+  // dshotState[1] = DSHOT_STATE_OUTPUT;
+  // /* Enable TIM DMA Requests M2*/
+  // TIM_DMACmd(motorMap[1]->tim, motorMap[1]->TIM_DMASource, ENABLE);
+  // /* Enable DMA TIM Stream */
+  // DMA_Cmd(motorMap[1]->DMA_stream, ENABLE);
 }
 
 void __attribute__((used)) DMA1_Stream7_IRQHandler(void)  // M2
@@ -891,6 +918,10 @@ void __attribute__((used)) DMA1_Stream7_IRQHandler(void)  // M2
   TIM_DMACmd(TIM2, TIM_DMA_CC4, DISABLE);
   DMA_ClearITPendingBit(DMA1_Stream7, DMA_IT_TCIF7);
   DMA_ITConfig(DMA1_Stream7, DMA_IT_TC, DISABLE);
+
+  if (dshotBidirectional) {
+    motorsDshotInputSetup(1);
+  }
 }
 #endif
 
