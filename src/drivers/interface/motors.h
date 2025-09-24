@@ -115,6 +115,11 @@
   #define DSHOT_MAX_THROTTLE           2047
   #define DSHOT_RANGE                  (DSHOT_MAX_THROTTLE - DSHOT_MIN_THROTTLE)
 
+  #define DSHOT_TELEMETRY_MIN_GCR_EDGES    7
+  #define DSHOT_TELEMETRY_MAX_GCR_EDGES   22
+
+  #define DSHOT_TELEMETRY_GCR_BIT_PERIOD  (uint32_t)(TIM_CLOCK_HZ * 2.4e-6) // 2.4us GCR bit period
+
   #define MOTORS_BL_PWM_CNT_FOR_HIGH   1
 #else
 /**
@@ -230,6 +235,7 @@ typedef struct
   uint32_t      timDbgStop;
   uint32_t      timPeriod;
   uint16_t      timPrescaler;
+  uint16_t      timChannel;
   DMA_Stream_TypeDef *DMA_stream;
   uint32_t      DMA_Channel;
   uint32_t      DMA_PerifAddr;
