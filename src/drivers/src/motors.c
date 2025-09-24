@@ -53,6 +53,8 @@ static uint16_t motorPowerSet[] = {0, 0, 0, 0}; // user-requested PWM signals (o
 static uint16_t motor_ratios[] = {0, 0, 0, 0};  // actual PWM signals
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
+static bool dshotBidirectional = false;
+static bool _dshotBidirectional = false;
 static DMA_InitTypeDef DMA_InitStructureShare;
 // Memory buffer for DSHOT bits
 static uint32_t dshotDmaBuffer[NBR_OF_MOTORS][DSHOT_DMA_BUFFER_SIZE];
@@ -262,10 +264,19 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
     TIM_TimeBaseInit(motorMap[i]->tim, &TIM_TimeBaseStructure);
 
     // PWM channels configuration (All identical!)
+    uint16_t timPolarity = motorMap[i]->timPolarity;
+
+    #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
+      if (_dshotBidirectional) {
+        // For bidirectional DSHOT we need active high PWM
+        timPolarity = (timPolarity == TIM_OCPolarity_High) ? TIM_OCPolarity_Low : TIM_OCPolarity_High;
+      }
+    #endif
+
     TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
     TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
     TIM_OCInitStructure.TIM_Pulse = 0;
-    TIM_OCInitStructure.TIM_OCPolarity = motorMap[i]->timPolarity;
+    TIM_OCInitStructure.TIM_OCPolarity = timPolarity;
     TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set;
 
     // Configure Output Compare for PWM
@@ -283,16 +294,16 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
     TIM_Cmd(motorMap[i]->tim, ENABLE);
   }
 
-  isInit = true;
-
-  // Output zero power
-  motorsStop();
-
   if (motorMap[MOTOR_M1]->hasPC15ESCReset)
   {
     // Release reset for all CF-BL ESC:s after motor signal is activated
     GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_SET);
   }
+
+  // Output zero power
+  motorsStop();
+
+  isInit = true;
 }
 
 void motorsDeInit(const MotorPerifDef** motorMapSelect)
@@ -419,6 +430,10 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
         csData >>= 4;
   }
 
+  if (dshotBidirectional) {
+    cs = ~cs;
+  }
+
   cs &= 0xf;
   dshotBits = (dshotBits << 4) | cs;
 
@@ -443,6 +458,9 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
  */
 void motorsBurstDshot()
 {
+    if (dshotBidirectional != _dshotBidirectional) {
+      return;
+    }
 
     motorMap[0]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
     motorMap[1]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
@@ -700,6 +718,7 @@ void __attribute__((used)) DMA1_Stream6_IRQHandler(void) // M1
   TIM_DMACmd(TIM2, TIM_DMA_CC2, DISABLE);
   DMA_ClearITPendingBit(DMA1_Stream6, DMA_IT_TCIF6);
   DMA_ITConfig(DMA1_Stream6, DMA_IT_TC, DISABLE);
+
   /* Enable TIM DMA Requests M2*/
   TIM_DMACmd(motorMap[1]->tim, motorMap[1]->TIM_DMASource, ENABLE);
   /* Enable DMA TIM Stream */
@@ -713,6 +732,22 @@ void __attribute__((used)) DMA1_Stream7_IRQHandler(void)  // M2
 }
 #endif
 
+static void dshotBidirectionalChanged() {
+  if (dshotBidirectional == _dshotBidirectional) {
+    // Nothing to do
+    return;
+  }
+
+  motorsDeInit(motorMap);
+
+  isInit = false;
+  
+  motorsInit(motorMap);
+
+  dshotBidirectional = _dshotBidirectional;
+}
+
+
 
 /**
  * Override power distribution to motors.
@@ -724,6 +759,13 @@ PARAM_GROUP_START(motorPowerSet)
  * 1 to hand PWM right to the motors, 2 to hand m1 to all motors, 3 to hand m1 to all motors and activate battery compensation.
  */
 PARAM_ADD_CORE(PARAM_UINT8, enable, &motorSetEnable)
+
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
+/**
+  * @brief Nonzero to enable bidirectional DSHOT (only for brushless motors)
+ */
+PARAM_ADD_CORE_WITH_CALLBACK(PARAM_UINT8, bidiDshot, &_dshotBidirectional, dshotBidirectionalChanged)
+#endif
 
 /**
  * @brief motor power for m1: `0 - UINT16_MAX`
