@@ -24,7 +24,8 @@ Mount CF upside down (to avoid downwash)
 ### Common
 
 1. Mount CF
-1. Build firmware with configuration `make sysid_defconfig` and `make -j$(nproc)`
+1. Merge `sysid.conf` with your platform default config: `./scripts/kconfig/merge_config.sh configs/sysid.conf configs/cf2_defconfig` (or `cf21bl_defconfig`, etc.)
+1. Compile (`make -j$(nproc)`)
 1. Flash firmware by bringing the Crazyflie into flash mode and running `make cload`
 1. Run `python3 calibscale.py --uri <URI>` and follow the prompts to calibrate the load cell. This will create an output file `calibration.yaml` with the calibration data. The other scripts will read this file (other name can be specified as command line argument). After changing the battery, you don't have to do a whole new calibration. Instead, you can simply set the 0 value for the new battery. It is assumed that the slope of the calibration is the same.
 
@@ -62,7 +63,7 @@ The important parameters will be stored in `params_<COMB>.yaml`. We advise to ta
 
 #### Verification
 
-To verify the parameters, we need to add the new set of values to the firmware. In `motors.c`, we can find the arrays for the battery compensation called the same as in the yaml file (p_vmotor2thrust). After adding the new values and flashing, we run the data collection `mode = static_verification`, where the motors are again given random commands, but the thrust is battery compensated. Note: You need to set the correct compensation mode in the `sysid_defconfig`!
+To verify the parameters, we need to add the new set of values to the firmware. In `motors.c`, we can find the arrays for the battery compensation called the same as in the yaml file (p_vmotor2thrust). After adding the new values and flashing, we run the data collection `mode = static_verification`, where the motors are again given random commands, but the thrust is battery compensated.
 
 In the system_id part, we should see all values beeing on the plane in the first plot or the line in the second plot. That means the battery compensation works.
 
