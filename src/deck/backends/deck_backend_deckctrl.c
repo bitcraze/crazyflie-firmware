@@ -10,6 +10,7 @@
 
 #include "deck_discovery.h"
 #include "deck.h"
+#include "deckctrl.h"
 #include "autoconf.h"
 #include "i2cdev.h"
 
@@ -17,8 +18,8 @@
 #define DEBUG_MODULE "DECKCTRL"
 #include "debug.h"
 
-// Only enable debug prints if CONFIG_DEBUG_DECKCTRL is set by kconfig
-#ifndef CONFIG_DEBUG_DECKCTRL
+// Only enable debug prints if CONFIG_DECK_BACKEND_DECKCTRL_DEBUG is set by kconfig
+#ifndef CONFIG_DECK_BACKEND_DECKCTRL_DEBUG
     #undef DEBUG_PRINT
     #define DEBUG_PRINT(...)
 #endif
@@ -31,9 +32,9 @@ static const DeckDiscoveryBackend_t deckctrlBackend;
 #define DECKCTRL_I2C_ADDRESS_DEFAULT   0x43
 
 // Address range for assigning I2C addresses to deck controllers
-// The limit of possible decks is set by CONFIG_DECKCTRL_MAX_DECKS in Kconfig
+// The limit of possible decks is set by CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS in Kconfig
 #define DECKCTRL_I2C_ADDRESS_START    0x44
-#define DECKCTRL_I2C_ADDRESS_END      (0x44 + CONFIG_DECKCTRL_MAX_DECKS - 1)
+#define DECKCTRL_I2C_ADDRESS_END      (0x44 + CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS - 1)
 
 // Deck controller memory layout offsets in read buffer
 #define DECKCTRL_MEM_MAGIC_OFFSET_0   0    // Magic number byte 0 (high byte)
@@ -47,13 +48,14 @@ static const DeckDiscoveryBackend_t deckctrlBackend;
 
 // All possible deck info and names kept as static variables
 // This version supports up to 12 decks
-static DeckInfo deck_info[CONFIG_DECKCTRL_MAX_DECKS];
-static char product_names[CONFIG_DECKCTRL_MAX_DECKS][16];
+static DeckInfo deck_info[CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS];
+static char product_names[CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS][16];
+static DeckCtrlContext deck_contexts[CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS];
 static int deck_count = 0;
 
 static bool deckctrl_init(void)
 {
-    DEBUG_PRINT("Initializing DECKCTRL backend with support for %d decks\n", CONFIG_DECKCTRL_MAX_DECKS);
+    DEBUG_PRINT("Initializing DeckCtrl backend with support for %d decks\n", CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS);
     
     // Reset all deck controllers on the bus
     uint8_t dummy_buffer[2];
@@ -154,8 +156,9 @@ static DeckInfo* deckctrl_getNextDeck(void)
     info->productName = product_names[current_deck];
     info->discoveryBackend = &deckctrlBackend;
 
-    // TODO
-    // info->deckctrl.i2cAddress = deck_address;
+    // Set up backend context with I2C address
+    deck_contexts[current_deck].i2cAddress = deck_address;
+    info->backendContext = &deck_contexts[current_deck];
 
     return info;
 }

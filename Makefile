@@ -14,13 +14,13 @@ PYTHON            ?= python3
 ifdef WSL_DISTRO_NAME
 CLOAD_SCRIPT      ?= python.exe -m cfloader
 else
-CLOAD_SCRIPT      ?= $(PYTHON) -m cfloader
+CLOAD_SCRIPT      ?= uvx --from git+https://github.com/bitcraze/crazyflie-clients-python cfloader
 endif
 
 DFU_UTIL          ?= dfu-util
 
 CLOAD_CMDS        ?=
-CLOAD_ARGS        ?=
+CLOAD_ARGS        ?= -w radio://0/70/2M/E7E7E7E7E7
 
 ARCH := stm32f4
 SRCARCH := stm32f4

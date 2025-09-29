@@ -31,6 +31,7 @@
 #include "deck.h"
 #include "deck_memory.h"
 #include "debug.h"
+#include "deckctrl_gpio.h"
 
 #ifdef CONFIG_DEBUG
   #define DECK_CORE_DBG_PRINT(fmt, ...)  DEBUG_PRINT(fmt, ## __VA_ARGS__)
@@ -45,6 +46,7 @@ void deckInit()
   deckDriverCount();
   deckInfoInit();
   deckMemoryInit();
+  deckctrl_gpio_init();
 
   int nDecks;
   int i;

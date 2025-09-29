@@ -152,10 +152,13 @@ typedef struct deckInfo_s {
 
   /* Track which discovery backend found this deck */
   const DeckDiscoveryBackend_t *discoveryBackend;
+  /* Backend-specific context pointer, this is private for each backend */
+  void* backendContext;
 
-  /* Generic deck information fields */
+  /* Generic deck information fields, NULL if not set */
   char * productName;
   char * boardRevision;
+
 } DeckInfo;
 
 /**
@@ -257,5 +260,8 @@ StateEstimatorType deckGetRequiredEstimator();
 
 bool deckGetRequiredLowInterferenceRadioMode();
 bool deckGetRequiredKalmanEstimatorAttitudeReversionOff();
+
+// Including deck-discovery.h here to avoid circular dependency
+#include "deck_discovery.h"
 
 #endif //__DECK_CODE_H__

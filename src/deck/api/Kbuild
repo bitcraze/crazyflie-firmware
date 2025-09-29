@@ -3,3 +3,4 @@ obj-y += deck_constants.o
 obj-y += deck_digital.o
 obj-y += deck_spi3.o
 obj-y += deck_spi.o
+obj-$(CONFIG_DECK_BACKEND_DECKCTRL) += deckctrl_gpio.o
