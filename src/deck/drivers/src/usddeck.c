@@ -543,10 +543,18 @@ static void usddeckEventtriggerCallback(const eventtrigger *event)
 
 static void usdGracefulShutdownCallback()
 {
-  uint32_t timeout = 15; /* ms */
   in_shutdown = true;
-  vTaskResume(xHandleWriteTask);
-  xSemaphoreTake(shutdownMutex, M2T(timeout));
+  if (enableLogging) {
+    DEBUG_PRINT("Waiting for uSD log to finish...\n");
+    enableLogging = false; /* forbid further logging */
+    xSemaphoreTake(shutdownMutex, 0); /* no timeout needed as should be free */
+
+    vTaskResume(xHandleWriteTask);
+
+    // wait for the write task to finish
+    xSemaphoreTake(shutdownMutex, portMAX_DELAY);
+    xSemaphoreGive(shutdownMutex);
+  }
 }
 
 static void usdLogTask(void* prm)
