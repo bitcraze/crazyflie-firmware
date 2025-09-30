@@ -13,6 +13,7 @@
 #include "deckctrl.h"
 #include "autoconf.h"
 #include "i2cdev.h"
+#include "deckctrl_gpio.h"
 
 
 #define DEBUG_MODULE "DECKCTRL"
@@ -55,6 +56,9 @@ static int deck_count = 0;
 
 static bool deckctrl_init(void)
 {
+    // Init GPIO driver
+    deckctrl_gpio_init();
+
     DEBUG_PRINT("Initializing DeckCtrl backend with support for %d decks\n", CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS);
     
     // Reset all deck controllers on the bus
