@@ -16,9 +16,19 @@ Deck drivers
 Decks are enumerated automatically using a modular discovery system that supports multiple backends:
 
 - **OneWire backend**: Reads deck information from One Wire (OW) memory soldered on the deck PCB
-- **Forced backend**: Allows compile-time forcing of deck drivers via `CONFIG_DECK_FORCE`
+- **DeckCtrl backend**: I2C-based intelligent discovery using deck controller microcontrollers
+- **Forced backend**: Allows compile-time forcing of deck drivers via `CONFIG_DECK_FORCE` (for development)
 
-The architecture is extensible: New discovery backends can be added for different communication protocols.
+The architecture is extensible: New discovery backends can be added for different communication protocols. Each backend is called sequentially during system initialization to discover all connected decks.
+
+### Discovery backend configuration
+
+Backends can be enabled or disabled via KConfig options:
+- `CONFIG_DECK_BACKEND_ONEWIRE` - Enable OneWire backend (typically always enabled)
+- `CONFIG_DECK_BACKEND_DECKCTRL` - Enable DeckCtrl backend
+- `CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS` - Maximum number of DeckCtrl decks to enumerate (default varies by platform)
+
+Discovery runs at startup in the order backends are registered. All enabled backends are queried to build the complete list of connected decks.
 
 The Deck driver API uses a declarative syntax to register deck drivers and initialize them when the proper deck is detected through any of the discovery backends.
 
