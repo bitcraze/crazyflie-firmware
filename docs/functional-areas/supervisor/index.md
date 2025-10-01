@@ -14,17 +14,17 @@ situations or for protection.
 
 The update sequence is separated into a few steps:
 1. Collect data from sensors and the system. We call these [conditions](conditions.md).
-2. Based on the conditions, check if the state machine should [transition](transitions.md) into a new [state](states.md)
-3. If there is a state [transition](transitions.md), possibly execute one ore more actions
-4. Set the new state
+2. Based on the conditions, check if the state machine should [transition](transitions.md) into a new [state](states.md).
+3. If there is a state [transition](transitions.md), possibly execute one ore more actions.
+4. Set the new state.
 
 ## Modifying behavior
 
-The main modification of behavior is to prevent the motors from spinning when the system is not ready to fly, for
+One modification of behavior is to prevent the motors from spinning when the system is not ready to fly, for
 instance if the system is not armed or the Crazyflie is up side down. Also the high level commander is blocked from
 running trajectories in this case.
 
-Exceptional situations when flying, for instance when tumbling is detected, are simply handled by stopping the
+Another modification handles exceptional situations when flying, for instance when tumbling is detected. This results in a crashed state and is simply handled by stopping the
 motors and free falling.
 
 The supervisor framework provides the possibility to handle situations in a more "clever" way, such as doing a controlled
