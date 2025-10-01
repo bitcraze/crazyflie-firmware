@@ -42,15 +42,6 @@ typedef enum {
 #define DECKCTRL_GPIO_VALUE_REG      0x1002
 
 /**
- * @brief Initialize the deck control GPIO subsystem
- *
- * This function initializes the mutex used to protect shared resources
- * in the deck control GPIO functions. Should be called once during
- * system initialization.
- */
-void deckctrl_gpio_init(void);
-
-/**
  * @brief Set the direction of a deck control GPIO pin
  * 
  * Configures the specified GPIO pin as either an input or output pin.

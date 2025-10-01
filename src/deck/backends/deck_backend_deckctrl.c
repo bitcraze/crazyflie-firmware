@@ -112,9 +112,6 @@ static int deck_count = 0;  ///< Number of decks discovered so far
  */
 static bool deckctrl_init(void)
 {
-    // Initialize GPIO driver for deckctrl GPIO control
-    deckctrl_gpio_init();
-
     DEBUG_PRINT("Initializing DeckCtrl backend with support for %d decks\n", CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS);
 
     // Reset all deck controllers on the bus by reading from broadcast reset address

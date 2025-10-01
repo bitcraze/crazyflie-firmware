@@ -29,13 +29,6 @@ static bool get_i2c_address(DeckInfo* info, uint8_t* address) {
     return true;
 }
 
-static xSemaphoreHandle deckctrlGpioMutex;
-static uint8_t buffer[2];
-
-void deckctrl_gpio_init(void) {
-    deckctrlGpioMutex = xSemaphoreCreateMutex();
-}
-
 bool deckctrl_gpio_set_direction(DeckInfo* info, DeckCtrlGPIOPin pin, bool output) {
     if (pin >= DECKCTRL_GPIO_PIN_MAX) {
         return false;
@@ -46,11 +39,9 @@ bool deckctrl_gpio_set_direction(DeckInfo* info, DeckCtrlGPIOPin pin, bool outpu
         return false;
     }
 
-    xSemaphoreTake(deckctrlGpioMutex, portMAX_DELAY);
-
+    char buffer[2];
     // Read current direction register (16-bit)
     if (!i2cdevReadReg16(I2C1_DEV, i2c_address, DECKCTRL_GPIO_DIRECTION_REG, 2, buffer)) {
-        xSemaphoreGive(deckctrlGpioMutex);
         return false;
     }
 
@@ -72,7 +63,6 @@ bool deckctrl_gpio_set_direction(DeckInfo* info, DeckCtrlGPIOPin pin, bool outpu
  
     bool result = i2cdevWriteReg16(I2C1_DEV, i2c_address, DECKCTRL_GPIO_DIRECTION_REG, 2, buffer);
 
-    xSemaphoreGive(deckctrlGpioMutex);
     return result;
 }
 
@@ -86,10 +76,9 @@ bool deckctrl_gpio_write(DeckInfo* info, DeckCtrlGPIOPin pin, bool value) {
         return false;
     }
 
-    xSemaphoreTake(deckctrlGpioMutex, portMAX_DELAY);
+    char buffer[2];
     // Read current value register (16-bit)
     if (!i2cdevReadReg16(I2C1_DEV, i2c_address, DECKCTRL_GPIO_VALUE_REG, 2, buffer)) {
-        xSemaphoreGive(deckctrlGpioMutex);
         return false;
     }
 
@@ -107,8 +96,6 @@ bool deckctrl_gpio_write(DeckInfo* info, DeckCtrlGPIOPin pin, bool value) {
     buffer[0] = value_reg & 0xFF;
     buffer[1] = (value_reg >> 8) & 0xFF;
 
-    xSemaphoreGive(deckctrlGpioMutex);
-
     return i2cdevWriteReg16(I2C1_DEV, i2c_address, DECKCTRL_GPIO_VALUE_REG, 2, buffer);
 }
 
@@ -122,10 +109,9 @@ bool deckctrl_gpio_read(DeckInfo* info, DeckCtrlGPIOPin pin, bool* value) {
         return false;
     }
 
-    xSemaphoreTake(deckctrlGpioMutex, portMAX_DELAY);
+    char buffer[2];
     // Read current value register (16-bit)
     if (!i2cdevReadReg16(I2C1_DEV, i2c_address, DECKCTRL_GPIO_VALUE_REG, 2, buffer)) {
-        xSemaphoreGive(deckctrlGpioMutex);
         return false;
     }
 
@@ -134,7 +120,6 @@ bool deckctrl_gpio_read(DeckInfo* info, DeckCtrlGPIOPin pin, bool* value) {
 
     // Extract the bit for this pin
     *value = (value_reg & (1 << pin)) != 0;
-    xSemaphoreGive(deckctrlGpioMutex);
 
     return true;
 }
