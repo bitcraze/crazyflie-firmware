@@ -495,12 +495,16 @@ void motorsSetRatio(uint32_t id, uint16_t ithrust)
       {
         supplyVoltage = supplyVoltage + b * (pmGetBatteryVoltage() - supplyVoltage);
       }
-      ratio = motorsCompensateBatteryVoltage(id, motorPowerSet[MOTOR_M1], supplyVoltage);
+      uint32_t ratioUncapped = motorsCompensateBatteryVoltage(id, motorPowerSet[MOTOR_M1], supplyVoltage);
 
       // since motor_ratios are 16 bit, the ratio needs to be capped as in the regular code
-      if (ratio > UINT16_MAX)
+      if (ratioUncapped > UINT16_MAX)
       {
         ratio = UINT16_MAX;
+      }
+      else
+      {
+        ratio = ratioUncapped;
       }
     }
 
