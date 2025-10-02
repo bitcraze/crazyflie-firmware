@@ -6,9 +6,9 @@ sort_order: 2
 
 ## State diagram
 
-![supervisor state diagram](/docs/images/supervisor_state_diagram.svg){:align-center}
-
 All states can be found in the `src/modules/interface/supervisor_state_machine.h` file.
+
+![supervisor state diagram](/docs/images/supervisor_state_diagram.svg){:align-center}
 
 ## State transitions
 
