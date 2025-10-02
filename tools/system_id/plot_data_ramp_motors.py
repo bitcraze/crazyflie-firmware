@@ -12,12 +12,12 @@ data = loadFile(args.file)
 fig, ax = plt.subplots(3)
 
 ### Plotting PWM to RPM
-ax[0].plot(data["pwm"], data["rpm_avg"], label="data")
+ax[0].scatter(data["pwm"], data["rpm_avg"], label="data")
 ax[0].set_xlabel("PWM")
 ax[0].set_ylabel("RPM")
 
 # Fit linear function y = ax + b; don't use PWM < 15000 for fit
-indices = np.where(data["pwm"] > 20000)[0]
+indices = np.where(data["pwm"] > 15000)[0]
 first_index = indices[0]
 last_index = indices[-1]
 z = np.polyfit(
@@ -30,7 +30,7 @@ ax[0].plot(xp, pwm2rpm(xp), "--", label="fit $ax+b$")
 ax[0].legend()
 
 ### Plotting RPM to Thrust
-ax[1].plot(data["rpm_avg"], data["thrust"], label="data")
+ax[1].scatter(data["rpm_avg"], data["thrust"], label="data")
 ax[1].set_xlabel("RPM")
 ax[1].set_ylabel("Thrust [N]")
 
@@ -44,7 +44,7 @@ ax[1].plot(xp, rpm2thrust(xp), "--", label="fit")
 ax[1].legend()
 
 ### Plotting PWM to Thrust
-ax[2].plot(data["pwm"], data["thrust"], label="data")
+ax[2].scatter(data["pwm"], data["thrust"], label="data")
 ax[2].plot(
     data["pwm"],
     rpm2thrust(pwm2rpm(data["pwm"])),

@@ -7,7 +7,7 @@ import logging
 import time
 from threading import Thread
 import numpy as np
-import yaml
+import toml
 import os.path
 from abc import ABC, abstractmethod
 
@@ -16,14 +16,16 @@ from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.log import LogConfig
 from cflib.crazyflie.localization import Localization
 
-
 # Only output errors from the logging framework
 # logging.basicConfig(level=logging.ERROR)
 
-PWM_MIN = 15000  # 20000 onboard, going lower for more datapoints
-PWM_MAX = 65535  # 65535
-# Voltage at which we abort experiments: 2.8 (O250 or P250) or 2.6 (T350)
-VBAT_MIN = 2.6
+PWM_MIN = 7000  # as in firmware
+PWM_MAX = 65535  # as in firmware
+# Voltage at which we abort the experiments. Set to the same value as the firmware.
+VBAT_MIN = 3.2
+# During the experiments, the voltage can drop so much, such that the uC cant get
+# enough power anymore. If we reach that voltge, we abort early
+VBAT_MIN_CRIT = 2.7
 
 
 class CollectData(ABC):
@@ -33,19 +35,30 @@ class CollectData(ABC):
     """
 
     def __init__(
-        self, link_uri, calib_a, calib_b, comb, mode, batComp=False, verbose=False
+        self,
+        link_uri,
+        calib_a,
+        calib_b,
+        mode: str,
+        comb: str,
+        extra: str,
+        batComp=False,
+        verbose=False,
+        loadcell=None,
     ):
         """Initialize and run the example with the specified link_uri"""
         self.measurements = []
         self.desiredThrust = 0
         self.batComp = batComp
-        self.comb = comb
         self.mode = mode
+        self.comb = comb
+        self.extra = extra
         self.verbose = verbose
         self.calib_a = calib_a
         self.calib_b = calib_b
         self.g = 9.807  # Munich, Germany
-        self.start_time = 0
+        self.start_time = -1
+        self.loadcell = loadcell
 
         self._cf = Crazyflie(rw_cache="./cache")
 
@@ -59,21 +72,7 @@ class CollectData(ABC):
         self.is_connected = False
         self.all_params_ok = False
 
-        # Open the csv file
-        i = 0
-        filename = f"data_{self.mode}_{self.comb}_0{i}.csv"
-        while os.path.isfile(filename):  # check if file already exists
-            i += 1
-            filename = f"data_{self.mode}_{self.comb}_0{i}.csv"
-            if i > 9:
-                filename = f"data_{self.mode}_{self.comb}_{i}.csv"
-            if i > 99:
-                break
-        print(f"Storing data in {filename}")
-        self._file = open(filename, "w+")
-        self._file.write(
-            "time,thrust[N],pwm,vbat[V],rpm1,rpm2,rpm3,rpm4,v[V],i[A],p[W],thrust_cmd[PWM]\n"
-        )
+        self._data_last = {}
 
         print("Connecting to %s" % link_uri)
 
@@ -98,14 +97,16 @@ class CollectData(ABC):
         self._lg_stab = LogConfig(name="data", period_in_ms=10)
         self._lg_stab.add_variable("loadcell.weight", "float")
         self._lg_stab.add_variable("motor.m1", "uint16_t")
-        self._lg_stab.add_variable("pm.vbatMV", "float")
+        self._lg_stab.add_variable("motor.m2", "uint16_t")
+        self._lg_stab.add_variable("motor.m3", "uint16_t")
+        self._lg_stab.add_variable("motor.m4", "uint16_t")
+        self._lg_stab.add_variable("pm.vbatMV", "uint16_t")
         self._lg_stab.add_variable("rpm.m1", "uint16_t")
         self._lg_stab.add_variable("rpm.m2", "uint16_t")
         self._lg_stab.add_variable("rpm.m3", "uint16_t")
         self._lg_stab.add_variable("rpm.m4", "uint16_t")
-        self._lg_stab.add_variable("asc37800.v_mV", "int16_t")
-        self._lg_stab.add_variable("asc37800.i_mA", "int16_t")
-        self._lg_stab.add_variable("asc37800.p_mW", "int16_t")
+        self._lg_stab.add_variable("asc37800.v_mV", "uint16_t")
+        self._lg_stab.add_variable("asc37800.i_mA", "uint16_t")
 
         # Adding the configuration cannot be done until a Crazyflie is
         # connected, since we need to check that the variables we
@@ -127,6 +128,19 @@ class CollectData(ABC):
 
         self._localization = Localization(self._cf)
 
+        # Open the csv file
+        comb = self.comb + "_" + self.extra if self.extra != "" else self.comb
+        i = 0
+        filename = f"data/data_{self.mode}_{comb}_0{i}.csv"
+        while os.path.isfile(filename):  # check if file already exists
+            i += 1
+            filename = f"data/data_{self.mode}_{comb}_{i:02d}.csv"
+        print(f"Storing data in {filename}")
+        self._file = open(filename, "w+")
+        self._file.write(
+            "time[s],thrust[N],pwm,vbat[V],rpm1,rpm2,rpm3,rpm4,v[V],i[A],p[W],thrust_cmd[PWM],torque_x[N],torque_y[N],torque_z[N]\n"
+        )
+
         # Variable used to keep main loop occupied until disconnect
         self.is_connected = True
 
@@ -138,10 +152,21 @@ class CollectData(ABC):
 
     def _stab_log_data(self, timestamp, data, logconf):
         """Callback froma the log API when data arrives"""
-        if self.start_time == 0:
+        timestamp /= 1000.0  # ms to s
+        if self.start_time == -1:
             self.start_time = timestamp
+        timestamp -= self.start_time  # remove initial offset
+        if self.loadcell is not None:
+            data["loadcell.weight"] = -self.loadcell.read_data()[2] * 1000 / self.g
+            data["loadcell.torque_x"] = -self.loadcell.read_data()[3]
+            data["loadcell.torque_y"] = -self.loadcell.read_data()[4]
+            data["loadcell.torque_z"] = -self.loadcell.read_data()[5]
+        else:
+            data["loadcell.torque_x"] = 0.0
+            data["loadcell.torque_y"] = 0.0
+            data["loadcell.torque_z"] = 0.0
         if self.verbose:
-            print("[%d][%s]: %s" % (timestamp - self.start_time, logconf.name, data))
+            print("[%d][%s]: %s" % (timestamp, logconf.name, data))
         self._write(timestamp, data)
 
     def _connection_failed(self, link_uri, msg):
@@ -168,11 +193,17 @@ class CollectData(ABC):
         # data['loadcell.weight_max'] = data.get('loadcell.weight_max', 0)
         # data['pm.vbatMV_max'] = data.get('pm.vbatMV_max', 0)
         data["cmd"] = data.get("cmd", self.desiredThrust)
+        # Determine PWM value: if m1 and m2 are equal, use either; if one is zero, use the sum
+        if data["motor.m1"] == 0 or data["motor.m2"] == 0:
+            pwm = data["motor.m1"] + data["motor.m2"]
+        else:
+            pwm = (data["motor.m1"] + data["motor.m2"]) / 2
+
         self._file.write(
-            "{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
+            "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
                 timestamp,
                 data["loadcell.weight"] / 1000 * self.g,
-                data["motor.m1"],
+                pwm,
                 data["pm.vbatMV"] / 1000,
                 data["rpm.m1"],
                 data["rpm.m2"],
@@ -180,8 +211,11 @@ class CollectData(ABC):
                 data["rpm.m4"],
                 data["asc37800.v_mV"] / 1000,
                 data["asc37800.i_mA"] / 1000,
-                data["asc37800.p_mW"] / 1000,
+                data["asc37800.v_mV"] / 1000 * data["asc37800.i_mA"] / 1000,
                 data["cmd"],
+                data["loadcell.torque_x"],
+                data["loadcell.torque_y"],
+                data["loadcell.torque_z"],
             )
         )
         self._file.flush()
@@ -209,6 +243,9 @@ class CollectData(ABC):
         """Closes the connection"""
         print("Disconnecting and saving...")
         self._cf.param.set_value("motorPowerSet.m1", 0)
+        self._cf.param.set_value("motorPowerSet.m2", 0)
+        self._cf.param.set_value("motorPowerSet.m3", 0)
+        self._cf.param.set_value("motorPowerSet.m4", 0)
         self._cf.commander.send_setpoint(0, 0, 0, 0)
         # Make sure that the last packet leaves before the link is closed
         # since the message queue is not flushed before closing
@@ -227,18 +264,29 @@ class CollectDataRamp(CollectData):
     link uri.
     """
 
-    def __init__(self, link_uri, calib_a, calib_b, comb):
+    def __init__(
+        self, link_uri, calib_a, calib_b, comb, extra, loadcell=None, verbose=False
+    ):
         """Initialize and run the example with the specified link_uri"""
-        super().__init__(link_uri, calib_a, calib_b, comb, "ramp_motors")
+        super().__init__(
+            link_uri,
+            calib_a,
+            calib_b,
+            "ramp_motors",
+            comb,
+            extra,
+            loadcell=loadcell,
+            verbose=verbose,
+        )
 
     def _ramp_motors(self):
         self._check_parameters()
 
         pwm_mult = 1
         pwm_step = 500
-        time_step = 0.25
+        time_step = 0.1
         pwm = 0
-        max_pwm = PWM_MAX  # max = 65535
+        max_pwm = PWM_MAX
 
         self._cf.param.set_value("motorPowerSet.m1", 0)
         if self.batComp:
@@ -270,34 +318,77 @@ class CollectDataStatic(CollectData):
     link uri and disconnects after 5s.
     """
 
-    def __init__(self, link_uri, calib_a, calib_b, comb, extra="", batComp=False):
+    def __init__(
+        self,
+        link_uri,
+        calib_a,
+        calib_b,
+        comb,
+        extra,
+        batComp=False,
+        loadcell=None,
+        torques=False,
+        verbose=False,
+    ):
         """Initialize and run the example with the specified link_uri"""
         self.measurements = []
         self.desiredThrust = 0
-        if extra != "":  # Add an underscore if extra is not empty
-            extra = f"_{extra}"
-        if batComp:  # verification mode
-            super().__init__(
-                link_uri, calib_a, calib_b, comb, f"static_verification{extra}", batComp
-            )
-        else:
-            super().__init__(
-                link_uri, calib_a, calib_b, comb, f"static{extra}", batComp
-            )
+        self.torques = False
+        if loadcell is not None:
+            self.torques = torques
+        elif torques:
+            raise ValueError("Torques can only be collected with a separate loadcell.")
+        self.torques = torques
+        mode = "static_verification" if batComp else "static"
+        super().__init__(
+            link_uri,
+            calib_a,
+            calib_b,
+            mode,
+            comb,
+            extra,
+            batComp,
+            loadcell=loadcell,
+            verbose=verbose,
+        )
 
     def _stab_log_data(self, timestamp, data, logconf):
         """Callback froma the log API when data arrives"""
+        if self.loadcell is not None:
+            loadcell_data = self.loadcell.read_data()
+            if self.torques:
+                # To account for the fact that only 2 motors are spinning and the sysid script assumes 4
+                loadcell_data *= 2
+            data["loadcell.weight"] = -loadcell_data[2] * 1000 / self.g
+            data["loadcell.torque_x"] = loadcell_data[3]
+            data["loadcell.torque_y"] = loadcell_data[4]
+            data["loadcell.torque_z"] = np.abs(loadcell_data[5])
+        else:
+            data["loadcell.torque_x"] = 0.0
+            data["loadcell.torque_y"] = 0.0
+            data["loadcell.torque_z"] = 0.0
+
         if self.verbose:
             print("[%d][%s]: %s" % (timestamp, logconf.name, data))
+
         if self.batComp:  # In verification mode, directly store data
             self.measurements.append(data)
-        elif (
+        elif (  # In collection mode, wait for command to arrive
             self.desiredThrust == data["motor.m1"]
-        ):  # In collection mode, wait for command to arrive
-            # self.measurements.append(np.array([data['loadcell.weight']/1000*self.g, data['pm.vbatMV']/1000]))
+            and not self.torques
+            or data["motor.m1"] == data["motor.m3"] == self.desiredThrust
+            and np.allclose(data["rpm.m1"], data["rpm.m3"], rtol=0.1)
+            and data["rpm.m2"] == data["rpm.m4"] == 0
+            or data["motor.m2"] == data["motor.m4"] == self.desiredThrust
+            and np.allclose(data["rpm.m2"], data["rpm.m4"], rtol=0.1)
+            and data["rpm.m1"] == data["rpm.m3"] == 0
+        ):
             self.measurements.append(data)
+        else:
+            if self.verbose:
+                print("Waiting for motor speed to converge")
 
-    def _average_dict(self, dictionary_list):
+    def _average_dict(self, dictionary_list: list[dict]) -> dict:
         """Converts a list of dictionaries into a single dictionary with the averages."""
         sums = {}
         for d in dictionary_list:
@@ -306,57 +397,118 @@ class CollectDataStatic(CollectData):
         averages = {key: value / len(dictionary_list) for key, value in sums.items()}
         return averages
 
-    def _measure(
-        self, thrust, min_samples=100
-    ):  # time per measurement = min_samples * log prediod_in_ms
+    def _measure(self, thrust, min_samples=100, a_motors=True) -> list[dict]:
+        # time per measurement = min_samples * log period
         self.desiredThrust = thrust
         self.measurements = []
-        self._cf.param.set_value("motorPowerSet.m1", str(thrust))
-        while len(self.measurements) < min_samples:
-            self._localization.send_emergency_stop_watchdog()
+
+        while len(self.measurements) == 0:
+            if self.torques:
+                if a_motors:
+                    self._cf.param.set_value("motorPowerSet.m1", thrust)
+                    self._cf.param.set_value("motorPowerSet.m2", 0)
+                    self._cf.param.set_value("motorPowerSet.m3", thrust)
+                    self._cf.param.set_value("motorPowerSet.m4", 0)
+                else:
+                    self._cf.param.set_value("motorPowerSet.m1", 0)
+                    self._cf.param.set_value("motorPowerSet.m2", thrust)
+                    self._cf.param.set_value("motorPowerSet.m3", 0)
+                    self._cf.param.set_value("motorPowerSet.m4", thrust)
+            else:
+                self._cf.param.set_value("motorPowerSet.m1", thrust)
             time.sleep(0.1)
-        # m = np.array(self.measurements)
+
+        tstart = time.time()
+        while len(self.measurements) < min_samples:
+            if time.time() - tstart > 10:
+                return []
+            time.sleep(0.01)
+
         # only return the last few samples
-        return self.measurements[-int(0.2 * min_samples) :]
+        return self.measurements[-int(0.6 * min_samples) :]
 
     def _ramp_motors(self):
         self._check_parameters()
 
         self._cf.param.set_value("motorPowerSet.m1", 0)
+        self._cf.param.set_value("motorPowerSet.m2", 0)
+        self._cf.param.set_value("motorPowerSet.m3", 0)
+        self._cf.param.set_value("motorPowerSet.m4", 0)
         if self.batComp:
+            if self.torques:
+                error = (
+                    "Trying to collect torque measurements with battery compensation "
+                    + "enabled (i.e. verification). This is not implemented yet!"
+                )
+                raise NotImplementedError(error)
             self._cf.param.set_value("motorPowerSet.enable", 3)
             print("Collecting data with battery compensation")
         else:
-            self._cf.param.set_value("motorPowerSet.enable", 2)
-            print("Collecting data without battery compensation")
+            if self.torques:
+                self._cf.param.set_value("motorPowerSet.enable", 1)
+                print("Collecting torque data without battery compensation")
+            else:
+                self._cf.param.set_value("motorPowerSet.enable", 2)
+                print("Collecting data without battery compensation")
 
-        t_max = 600  # Set to np.inf to run until battery is empty
+        t_max = 1200  # Set to np.inf to run until battery is empty
         t_start = time.time()
+        i = 0
 
-        # Here we care about the thrust generated for different battery levels
-        # We store a random PWM with its corresponding thrust
-        # and thrust @ max PWM + the battery voltage for both cases
-        while self.is_connected:  # thrust >= 0:
-            # randomply sample PWM
-            pwm = int(np.random.uniform(PWM_MIN, PWM_MAX))
+        # Here we care about the thrust generated for different battery levels and PWM values
+        while self.is_connected:
+            # Randomply sample PWM
+            # Every so often, apply lowest PWM for checking vbat without load
+            pwm = PWM_MIN if i % 10 == 0 else int(np.random.uniform(PWM_MIN, PWM_MAX))
+            i += 1
 
-            data = self._measure(pwm)
-            # average thrust and vbat
-            data = self._average_dict(data)
+            data1 = self._measure(pwm).copy()
+            data2 = []
+            if self.torques:
+                data2 = self._measure(pwm, a_motors=False).copy()
+            if len(data1) == 0 or len(data2) == 0 and self.torques:
+                print("WARNING: Data collection timed out. Collecting next data point")
+            else:
+                # average thrust and vbat
+                data = self._average_dict(data1 + data2)
+                if self.torques:
+                    # Doubling the pwm values, since they have been 0 for half of the time
+                    # TODO this is imprecise, since arrays could be of different length!
+                    data["motor.m1"] *= 2
+                    data["motor.m2"] *= 2
+                    data["rpm.m1"] *= 2
+                    data["rpm.m2"] *= 2
+                    data["rpm.m3"] *= 2
+                    data["rpm.m4"] *= 2
 
-            print(
-                f"time={time.time() - t_start:.1f}s, pwm={pwm}, vbat={data['pm.vbatMV'] / 1000:.3f}V, vmotors={data['pm.vbatMV'] / 1000 * pwm / PWM_MAX:.3f}V, thrust={data['loadcell.weight'] * self.g:.3f}mN"
-            )
+                info = f"time={time.time() - t_start:.1f}s, "
+                info += f"pwm cmd={pwm}, "
+                info += f"pwm actual={(data['motor.m1']) if not self.torques else (data['motor.m1'] + data['motor.m2']) / 2}, "
+                info += f"rotor speed={(data['rpm.m1']) if not self.torques else (data['rpm.m1'] + data['rpm.m2']) / 2}, "
+                info += f"vbat={data['pm.vbatMV'] / 1000:.3f}V, "
+                info += f"vmotors={data['pm.vbatMV'] / 1000 * pwm / PWM_MAX:.3f}V, "
+                info += f"thrust={data['loadcell.weight'] * self.g:.3f}mN"
+                print(info)
 
-            # write result
-            self._write(time.time() - t_start, data)
+                if (
+                    data["pm.vbatMV"] / 1000 < VBAT_MIN
+                    and pwm == PWM_MIN
+                    or data["pm.vbatMV"] / 1000 < VBAT_MIN_CRIT
+                ):
+                    print("Warning: Battery low, stopping...")
+                    break
+                else:
+                    self._write(time.time() - t_start, data)
 
-            # if data['pm.vbatMV_max']/1000 < VBAT_MIN:
-            if data["pm.vbatMV"] / 1000 < VBAT_MIN:
-                print("Warning: Battery low, stopping...")
-                break
+            # Recalibrate loadcell now and then
+            if self.loadcell is not None and i % 20 == 0:
+                self._measure(0, min_samples=10)
+                self._measure(0, min_samples=10, a_motors=False)
+                time.sleep(1.0)
+                self.loadcell.calibrate()
 
             if time.time() - t_start > t_max:
+                print("Time limit reached, stopping...")
                 break
 
         self._close()
@@ -368,15 +520,23 @@ class CollectDataDynamic(CollectData):
     link uri and disconnects after 5s.
     """
 
-    def __init__(self, link_uri, calib_a, calib_b, comb, extra=""):
+    def __init__(
+        self, link_uri, calib_a, calib_b, comb, extra, loadcell=None, verbose=False
+    ):
         """Initialize and run the example with the specified link_uri"""
         self.samplerate = 7  # has to be in [0,7], where 7 is the highest.
         # 0 = 10Hz (default), 1 = 20Hz, 2 = 40Hz, 3 = 80Hz, 7 = 320Hz
         # See datasheet of NAU7802
-        # However, the data of the loadcell only gets sent with ~2Hz anyway
-        if extra != "":  # Add an underscore if extra is not empty
-            extra = f"_{extra}"
-        super().__init__(link_uri, calib_a, calib_b, comb, f"dynamic{extra}")
+        super().__init__(
+            link_uri,
+            calib_a,
+            calib_b,
+            "dynamic",
+            comb,
+            extra,
+            loadcell=loadcell,
+            verbose=verbose,
+        )
 
     def _fully_connected(self, link_uri):
         """This callback is called form the Crazyflie API when a Crazyflie
@@ -407,7 +567,6 @@ class CollectDataDynamic(CollectData):
         print(f"Applied pwm={thrust}, waiting for {duration}s")
         while time.time() - start < duration:
             self._localization.send_emergency_stop_watchdog()
-            # print(time.time() - start)
             time.sleep(0.1)
 
     def _ramp_motors(self):
@@ -415,10 +574,10 @@ class CollectDataDynamic(CollectData):
 
         self._cf.param.set_value("motorPowerSet.m1", 0)
 
-        duration = 2.0
+        duration = 1.0
 
         # collecting data twice:
-        # Once with and once without batter compensation
+        # Once with and once without battery compensation
         while self.is_connected:
             if self.batComp:
                 self._cf.param.set_value("motorPowerSet.enable", 3)
@@ -430,9 +589,9 @@ class CollectDataDynamic(CollectData):
             # base speed
             self._applyThrust(PWM_MIN, duration)
 
-            # 0 -> 1
-            self._applyThrust(PWM_MAX, duration)
-            # 1 -> 0
+            # 0 -> 0.25
+            self._applyThrust((PWM_MAX + PWM_MIN) * 1 / 4, duration)
+            # 0.25 -> 0
             self._applyThrust(PWM_MIN, duration)
 
             # 0 -> 0.5
@@ -440,8 +599,28 @@ class CollectDataDynamic(CollectData):
             # 0.5 -> 0
             self._applyThrust(PWM_MIN, duration)
 
-            # 0.5 -> 1.0
+            # 0 -> 0.75
+            self._applyThrust((PWM_MAX + PWM_MIN) * 3 / 4, duration)
+            # 0.75 -> 0
+            self._applyThrust(PWM_MIN, duration)
+
+            # 0 -> 1
+            self._applyThrust(PWM_MAX, duration)
+            # 1 -> 0
+            self._applyThrust(PWM_MIN, duration)
+
+            # 0.5 -> 0.25
             self._applyThrust((PWM_MAX + PWM_MIN) / 2, duration)
+            self._applyThrust((PWM_MAX + PWM_MIN) * 1 / 4, duration)
+            # 0.25 -> 0.5
+            self._applyThrust((PWM_MAX + PWM_MIN) / 2, duration)
+
+            # 0.5 -> 0.75
+            self._applyThrust((PWM_MAX + PWM_MIN) * 3 / 4, duration)
+            # 0.75 -> 0.5
+            self._applyThrust((PWM_MAX + PWM_MIN) / 2, duration)
+
+            # 0.5 -> 1.0
             self._applyThrust(PWM_MAX, duration)
             # 1.0 -> 0.5
             self._applyThrust((PWM_MAX + PWM_MIN) / 2, duration)
@@ -460,11 +639,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--calibration",
-        default="calibration.yaml",
+        default="calibration.toml",
         help="Input file containing the calibration",
     )
     parser.add_argument(
-        "--uri", default="radio://0/42/2M/E7E7E7E7E7", help="URI of Crazyflie"
+        "--uri", default="radio://0/80/2M/E7E7E7E7E7", help="URI of Crazyflie"
     )
     parser.add_argument(
         "--mode",
@@ -479,7 +658,21 @@ if __name__ == "__main__":
     parser.add_argument(
         "--extra", default="", help="Additional information for labeling the csv file"
     )
-
+    parser.add_argument(
+        "--torques",
+        action="store_true",
+        help="If set, torque data will be collected (default: False)",
+    )
+    parser.add_argument(
+        "--use_loadcell",
+        action="store_true",
+        help="If set, a loadcell from the Loadcell class is used (default: False)",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="If set, verbose output is enabled (default: False)",
+    )
     args = parser.parse_args()
 
     # Only output errors from the logging framework
@@ -488,22 +681,66 @@ if __name__ == "__main__":
     # Initialize the low-level drivers (don't list the debug drivers)
     cflib.crtp.init_drivers(enable_debug_driver=False)
 
-    with open(args.calibration, "r") as f:
-        r = yaml.safe_load(f)
-        a = r["a"]
-        b = r["b"]
+    if args.use_loadcell:
+        a, b = 0, 0  # not needed for the precalibrated loadcells
+
+        from loadcell import Loadcell
+
+        # Replace the name with your actual interface name. You can check that with the
+        # loadcell.py scripts. Note that PySOEM needs access to your ethernet ports.
+        # For that, we need to give Python permission:
+        # sudo setcap cap_net_raw,cap_net_admin+eip $(readlink -f $(which python3))
+        loadcell = Loadcell("enp0s31f6", verbose=False)
+        loadcell.calibrate()
+    else:
+        with open(args.calibration, "r") as f:
+            r = toml.load(f)
+            a, b = r["a"], r["b"]
+        loadcell = None
 
     # collect data
     if args.mode == "ramp_motors":
-        le = CollectDataRamp(args.uri, a, b, args.comb)
+        le = CollectDataRamp(
+            args.uri,
+            a,
+            b,
+            args.comb,
+            args.extra,
+            loadcell=loadcell,
+            verbose=args.verbose,
+        )
     elif args.mode == "static":
-        le = CollectDataStatic(args.uri, a, b, args.comb, extra=args.extra)
+        le = CollectDataStatic(
+            args.uri,
+            a,
+            b,
+            args.comb,
+            args.extra,
+            loadcell=loadcell,
+            torques=args.torques,
+            verbose=args.verbose,
+        )
     elif args.mode == "static_verification":  # activate battery compensation to test it
         le = CollectDataStatic(
-            args.uri, a, b, args.comb, extra=args.extra, batComp=True
+            args.uri,
+            a,
+            b,
+            args.comb,
+            args.extra,
+            batComp=True,
+            loadcell=loadcell,
+            verbose=args.verbose,
         )
     elif args.mode == "dynamic":
-        le = CollectDataDynamic(args.uri, a, b, args.comb, extra=args.extra)
+        le = CollectDataDynamic(
+            args.uri,
+            a,
+            b,
+            args.comb,
+            args.extra,
+            loadcell=loadcell,
+            verbose=args.verbose,
+        )
     else:
         raise NotImplementedError(
             f"Data Collection Type {args.mode} is not implemented."
