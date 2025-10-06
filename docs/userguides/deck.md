@@ -26,7 +26,7 @@ The architecture is extensible: New discovery backends can be added for differen
 Backends can be enabled or disabled via KConfig options:
 - `CONFIG_DECK_BACKEND_ONEWIRE` - Enable OneWire backend (typically always enabled)
 - `CONFIG_DECK_BACKEND_DECKCTRL` - Enable DeckCtrl backend
-- `CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS` - Maximum number of DeckCtrl decks to enumerate (default varies by platform)
+- `CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS` - Maximum number of DeckCtrl decks to enumerate
 
 Discovery runs at startup in the order backends are registered. All enabled backends are queried to build the complete list of connected decks.
 

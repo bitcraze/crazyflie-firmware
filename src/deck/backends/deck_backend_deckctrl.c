@@ -123,7 +123,7 @@ static bool deckctrl_init(void)
         DEBUG_PRINT("Deck controller reset successful\n");
 
         // Since this is a hardware reset of the controller MCU, wait for it to restart
-        vTaskDelay(10);
+        vTaskDelay(M2T(10));
     } else {
         DEBUG_PRINT("Deck controller reset failed, no deck controller on the line\n");
     }

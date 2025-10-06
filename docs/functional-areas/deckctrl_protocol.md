@@ -5,8 +5,8 @@ page_id: deckctrl_protocol
 
 # DeckCtrl protocol specification
 
-The DeckCtrl backend implements an I2C-based deck and control discovery mechanism that uses microcontrollers on deck boards to enable dynamic enumeration of multiple decks.
-The microcontroller implementing the deckctrl protocol is exclusively used for that purpose, deck functionality are implemented on
+The DeckCtrl backend implements an I2C-based deck and control discovery mechanism that uses microcontrollers on deck boards (_deck controllers_) to enable dynamic enumeration of multiple decks.
+The microcontroller implementing the DeckCtrl protocol is exclusively used for that purpose, deck functionalities are implemented on
 another chip/microcontroller.
 
 ## Discovery Sequence
@@ -24,7 +24,7 @@ vTaskDelay(10);  // Wait for controllers to restart
 
 ### 2. Listening Mode (Address 0x42)
 
-After reset, unconfigured deck controllers must be told to enter listening mode. In this state, they monitor the bus for address assignment.
+After reset, the unconfigured deck controllers must be told to enter listening mode. In this state, they monitor the bus for address assignment.
 
 ```c
 i2cdevReadReg16(I2C1_DEV, 0x42, 0x0000, 2, dummy_buffer);
@@ -45,7 +45,7 @@ i2cdevReadReg16(I2C1_DEV, 0x43, 0x1900, 12, cpu_id);
 ```
 
 *Note: This is the core of the discovery protocol, it uses the native anticollision behavior of
-I2C to be able to detect decks one by one. I2C detects a collition if it tries to let the open-collector data line high
+I2C to be able to detect decks one by one. I2C detects a collision if it tries to let the open-collector data line high
 while another deck is pulling it low. The deck that wanted it high will detect the line low, assume a collision, and back-off*
 
 #### 3b. Assign Address (Address 0x43, Register 0x1800)
@@ -166,5 +166,5 @@ There are no partition type defined yet. This mechanism is designed to allow for
 |  Offset | Size |     Field | Reset value | Description                               |
 |---------|------|-----------|-------------|-------------------------------------------|
 |    0x00 |    2 | Direction |        0x00 | GPIO Direction. 0 for input, 1 for output |
-|    0x04 |    2 | Value     |           * | GPIO Value                                |
+|    0x02 |    2 | Value     |           * | GPIO Value                                |
 
