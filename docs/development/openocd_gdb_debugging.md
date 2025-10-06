@@ -3,48 +3,55 @@ title: On-chip debugging
 page_id: openocd_gdb_debugging
 ---
 
-One of the key components of getting serious about developing on
-the Crazyflie, is to dive into the C-based firmware. If you want
-to do some major changes to the intrinsics of the code, it is essential
-to have proper tools to be able to debug the code (place breakpoints,
-read real-time values etc\...). On this page, you can find examples on
-how debug the STM32 from VS Code and Eclipse. Debugging the nRF51 chip requires a [different configuration](https://www.bitcraze.io/documentation/repository/crazyflie2-nrf-firmware/master/development/starting_development/), but an otherwise identical set-up.
+Debugging the Crazyflie using the debug-adapter kit gives you direct access to the STM32 with a hardware debugger. It makes it possible to pause execution, step through code, and inspect what's happening in real time.
+
+Even if you're working mostly at a higher level, having this kind of visibility can be a huge time-saver when something unexpected happens. It's a tool frequently used when tracking down firmware issues or verifying low-level behavior.
+
+This page covers debugging the STM32 using ST-Link and J-Link debuggers with VS Code and Eclipse. It supports Crazyflie 2.x and 2.1 Brushless platforms. Debugging the nRF51 chip requires a [different configuration](https://www.bitcraze.io/documentation/repository/crazyflie2-nrf-firmware/master/development/starting_development/), but an otherwise identical set-up.
 
 > **_NOTE:_**
-> Debugging requires our [debug adapter](https://www.bitcraze.io/products/debug-adapter-kit/) and an ST Link V2 Debugger or similar.
+> Debugging requires our [debug adapter](https://www.bitcraze.io/products/debug-adapter-kit/) and an ST-Link V2 debugger, J-Link probe, or similar.
+
+## Debug Build
+
+If you're debugging and your breakpoints aren't landing where you expect, or stepping seems unpredictable, or variables aren't visible, it's probably because the firmware was built with compiler optimizations enabled. When you select a debug build, the build system disables optimization by setting the compiler flag `-O0`, which preserves line-by-line correspondence between source code and machine instructions. This makes stepping and inspecting variables much more reliable.
+
+To enable a debug build, you need to set the `CONFIG_DEBUG` option in your Kconfig configuration. You can do this, for example, by running `make menuconfig` in a terminal. Then navigate to **Build and debug options** and select **Enable debug build**. After changing Kconfig options, re-run `make` to rebuild the firmware with the new configuration.
 
 ## Debugging in VS Code
 
 ### Hardware
 ![STLinkV2 Debugging](/docs/images/stlinkv2_debugging.webp)
 
-Connect the the Crazyflie to your ST-Link V2 via the Debug Adapter and the port on the underside. You don't need to solder the second adapter to the drone if you're only planning on debugging the STM32F405 with the crazyflie-firmware.
+Connect the Crazyflie to your ST-Link V2 or J-Link via the Debug Adapter and the port on the underside. You don't need to solder the second adapter to the drone if you're only planning on debugging the STM32F405 with the crazyflie-firmware.
 
 ### Prerequisites
 
 #### Ubuntu
 
-These steps have been tested on Ubuntu 20.04. The link to gdb-multiarch is required because Ubuntu does not ship arm-none-eabi-gdb anymore, but the new gdb-multiarch that supports all architecture.
+The link to gdb-multiarch is required because Ubuntu does not ship arm-none-eabi-gdb anymore, but the new gdb-multiarch that supports all architectures.
 
     sudo apt-get install openocd
     sudo apt-get install gcc-arm-none-eabi gdb-multiarch
     sudo ln -s /usr/bin/gdb-multiarch /usr/local/bin/arm-none-eabi-gdb
 
-If you do not have vscode yet, the easiest way to install it on Ubuntu is via snap using 'Ubuntu Software' of by typing:
+If you're using a J-Link probe, you'll need to install the J-Link software from [Segger](https://www.segger.com/downloads/jlink/).
+
+If you do not have VS Code yet, the easiest way to install it on Ubuntu is via snap using 'Ubuntu Software' or by typing:
 
     sudo snap install --classic code
-    
-You will also need to add the debugger to the udev rules if not already done - for this you can check with _lsusb_ what the ID of your debugger is (for an ST-LINK/V2 it should be 0483:3748). Then you can add it to a rules file, for example for the STLINK/V2 you could append the line 
+
+You will also need to add the debugger to the udev rules if not already done - for this you can check with `lsusb` what the ID of your debugger is (for an ST-LINK/V2 it should be 0483:3748). Then you can add it to a rules file, for example for the ST-LINK/V2 you could append the line
 
     SUBSYSTEM=="usb", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="3748", MODE="0664", GROUP="plugdev"
-    
+
 to the Crazyflie rules in "/etc/udev/rules.d/99-bitcraze.rules".
 
 #### Windows (Ubuntu in WSL)
 
 ##### Install Windows Subsystem for Linux (WSL)
 
-Configure your Machine for WSL and install a Ubuntu Distrobution. Instructions can be found here: https://learn.microsoft.com/en-us/windows/wsl/install. It has been tested on Windows 10 and 11 with Ubuntu 20.04 as well as Ubuntu 22.04.
+Configure your Machine for WSL and install a Ubuntu Distribution. Instructions can be found here: https://learn.microsoft.com/en-us/windows/wsl/install.
 
 ##### Install the GCC ARM Embedded Application Binary Interface (eabi) Toolchain
 
@@ -148,53 +155,108 @@ Unfortunately it is possible that newer versions of this Extension won't work wi
 
 It should also be noted that VSCode updates Extensions automatically, sometimes even if you manually downgraded to a legacy version. If you don't want that to happen, make sure you have checked the setting `Ignore Updates` in the dropdown menu of `Update to vX.X.X`.
 
-#### Cortex Debug Configuration
+#### VS Code Debug Configuration
+
+With debug builds enabled, you'll get more predictable stepping and reliable breakpoints. The next step is setting up your debugger. Below is a launch.json configuration for VS Code that supports both ST-Link and J-Link, and works with Crazyflie 2.x and the 2.1 Brushless.
 
 Inside of the file, replace everything with the following:
 
-    {
-        // Use IntelliSense to learn about possible attributes.
-        // Hover to view descriptions of existing attributes.
-        // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-        "version": "0.2.0",
-        "configurations": [
-            {
-                "name": "STM32 Debug",
-                "cwd": "${workspaceRoot}",
-                "executable": "${workspaceRoot}/build/cf2.elf",
-                "request": "launch",
-                "type": "cortex-debug",
-                "device": "STM32F405",
-                "svdFile": "${workspaceRoot}/tools/debug/STM32F405.svd",
-                "servertype": "openocd",
-                "configFiles": ["interface/stlink-v2.cfg", "target/stm32f4x.cfg"],
-                "runToMain": true,
-                "preLaunchCommands": [
-                    "set mem inaccessible-by-default off",
-                    "enable breakpoint",
-                    "monitor reset"
-                ]
-            },
-            // {
-            //     "name": "STM32 App Debug"
-            // }
-        ]
-    }
+```json
+{
+    // VS Code debug launch configurations for Crazyflie 2.x and 2.1 Brushless using J-Link and ST-Link
+    "version": "0.2.0",
+    "configurations": [
+        {
+            // ST-LINK configuration for Crazyflie 2.x
+            "name": "STLink CF21 Debug",
+            "cwd": "${workspaceRoot}",
+            "executable": "${workspaceRoot}/build/cf2.elf",
+            "request": "launch",
+            "type": "cortex-debug",
+            "device": "STM32F405",
+            "svdFile": "${workspaceRoot}/tools/debug/STM32F405.svd",
+            "servertype": "openocd",
+            "configFiles": ["interface/stlink-v2.cfg", "target/stm32f4x.cfg"],
+            "runToEntryPoint": "main",
+            "preLaunchCommands": [
+                "set mem inaccessible-by-default off",
+                "enable breakpoint",
+                "monitor reset"
+            ]
+        },
+        {
+            // ST-LINK configuration for Crazyflie 2.1 Brushless
+            "name": "STLink CF21BL Debug",
+            "cwd": "${workspaceRoot}",
+            "executable": "${workspaceRoot}/build/cf21bl.elf",
+            "request": "launch",
+            "type": "cortex-debug",
+            "device": "STM32F405",
+            "svdFile": "${workspaceRoot}/tools/debug/STM32F405.svd",
+            "servertype": "openocd",
+            "configFiles": ["interface/stlink-v2.cfg", "target/stm32f4x.cfg"],
+            "runToEntryPoint": "main",
+            "preLaunchCommands": [
+                "set mem inaccessible-by-default off",
+                "enable breakpoint",
+                "monitor reset"
+            ]
+        },
+        {
+            // J-Link configuration for Crazyflie 2.x
+            "name": "JLink CF2 Debug",
+            "cwd": "${workspaceRoot}",
+            "executable": "${workspaceRoot}/build/cf2.elf",
+            "request": "launch",
+            "type": "cortex-debug",
+            "device": "STM32F405RG",
+            "svdFile": "${workspaceRoot}/tools/debug/STM32F405.svd",
+            "servertype": "jlink",
+            "runToEntryPoint": "main",
+            "preLaunchCommands": [
+                "set mem inaccessible-by-default off",
+                "enable breakpoint",
+                "monitor reset"
+            ]
+        },
+        {
+            // J-Link configuration for Crazyflie 2.1 Brushless
+            "name": "JLink CF21BL Debug",
+            "cwd": "${workspaceRoot}",
+            "executable": "${workspaceRoot}/build/cf21bl.elf",
+            "request": "launch",
+            "type": "cortex-debug",
+            "device": "STM32F405RG",
+            "svdFile": "${workspaceRoot}/tools/debug/STM32F405.svd",
+            "servertype": "jlink",
+            "runToEntryPoint": "main",
+            "preLaunchCommands": [
+                "set mem inaccessible-by-default off",
+                "enable breakpoint",
+                "monitor reset"
+            ]
+        },
+    ]
+}
+```
 
-- "svdFile" refers to the necessary file for peripheral registers to show up nicely in the debug pane, all named and structured; we'll add it in the next step
-- "configFiles" refers to the files you need so that OpenOCD knows what device and interface you're using; it should already come with them
-- "device" refers to the device you want to debug
-- "servertype" refers to the debugging server to use. We recommend OpenOCD, but other servers can be used, if supported by the Cortex Debug extension.
-- "runToMain" tells the GDB debug server to jump to main by default
-- "preLaunchCommands" specifies the commands for the GDB server to send before giving away control to you; the commands here mimic the options that the tutorial for Eclipse below specifies
+To use this setup with a different platform, like the Flapper, just change the `executable` field to point to the correct .elf file. By default, starting a debug session in VS Code will erase and reflash the firmware, so make sure the firmware is built beforehand. If you need to attach to a running target without flashing, you'll need to modify the launch.json to skip loading the binary.
+
+**Configuration notes:**
+- `svdFile` refers to the necessary file for peripheral registers to show up nicely in the debug pane, all named and structured
+- `configFiles` refers to the files you need so that OpenOCD knows what device and interface you're using; it should already come with them
+- `device` refers to the device you want to debug
+- `servertype` refers to the debugging server to use (openocd or jlink)
+- `runToEntryPoint` tells the GDB debug server to jump to main by default
+- `preLaunchCommands` specifies the commands for the GDB server to send before giving away control to you
 
 > **Note: Debugging an App**
-> To debug an app, make sure to change the "executable" to ""${workspaceRoot}/examples/app_hello_world/build/cf2.elf", or to which app you would like to debug. You can add your app debugger as a separate configuration.
+> To debug an app, make sure to change the "executable" to "${workspaceRoot}/examples/app_hello_world/build/cf2.elf", or to which app you would like to debug. You can add your app debugger as a separate configuration.
 
 > **Note: Debugging thread aware**
-> To debug thread aware you need to add ```"rtos": "FreeRTOS"``` to your configuration in the launch.json file - however, while this can be very handy we also occasionally experienced some issues with setting breakpoints while using this configuration.
+> To debug thread aware you need to add `"rtos": "FreeRTOS"` to your configuration in the launch.json file - however, while this can be very handy we also occasionally experienced some issues with setting breakpoints while using this configuration.
 
-### Debug!
+### Debug
 
 After setup, go to the 'Run and Debug' tab of VS Code (on the left sidebar, the icon with the little bug next to the play button), select the chip you want to debug from the drop-down menu at the top of the pane, and hit the play button!
 
