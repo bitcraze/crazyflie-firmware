@@ -29,7 +29,7 @@ static bool get_i2c_address(DeckInfo* info, uint8_t* address) {
     return true;
 }
 
-bool deckctrl_gpio_set_direction(DeckInfo* info, DeckCtrlGPIOPin pin, bool output) {
+bool deckctrl_gpio_set_direction(DeckInfo* info, DeckCtrlGPIOPin pin, uint32_t direction) {
     if (pin >= DECKCTRL_GPIO_PIN_MAX) {
         return false;
     }
@@ -49,13 +49,13 @@ bool deckctrl_gpio_set_direction(DeckInfo* info, DeckCtrlGPIOPin pin, bool outpu
     uint16_t direction_reg = buffer[0] | (buffer[1] << 8);
 
     // Set or clear the bit for this pin
-    if (output) {
+    if (direction != INPUT) {
         direction_reg |= (1 << pin);
     } else {
         direction_reg &= ~(1 << pin);
     }
 
-    DEBUG_PRINT("Setting GPIO pin %d direction to %s (reg=0x%04x)\n", pin, output ? "output" : "input", direction_reg);
+    DEBUG_PRINT("Setting GPIO pin %d direction to %s (reg=0x%04x)\n", pin, (direction!=INPUT) ? "output" : "input", direction_reg);
 
     // Convert back to bytes and write
     buffer[0] = direction_reg & 0xFF;
@@ -66,7 +66,7 @@ bool deckctrl_gpio_set_direction(DeckInfo* info, DeckCtrlGPIOPin pin, bool outpu
     return result;
 }
 
-bool deckctrl_gpio_write(DeckInfo* info, DeckCtrlGPIOPin pin, bool value) {
+bool deckctrl_gpio_write(DeckInfo* info, DeckCtrlGPIOPin pin, uint32_t value) {
     if (pin >= DECKCTRL_GPIO_PIN_MAX) {
         return false;
     }
@@ -86,7 +86,7 @@ bool deckctrl_gpio_write(DeckInfo* info, DeckCtrlGPIOPin pin, bool value) {
     uint16_t value_reg = buffer[0] | (buffer[1] << 8);
 
     // Set or clear the bit for this pin
-    if (value) {
+    if (value != LOW) {
         value_reg |= (1 << pin);
     } else {
         value_reg &= ~(1 << pin);
@@ -99,7 +99,7 @@ bool deckctrl_gpio_write(DeckInfo* info, DeckCtrlGPIOPin pin, bool value) {
     return i2cdevWriteReg16(I2C1_DEV, i2c_address, DECKCTRL_GPIO_VALUE_REG, 2, buffer);
 }
 
-bool deckctrl_gpio_read(DeckInfo* info, DeckCtrlGPIOPin pin, bool* value) {
+bool deckctrl_gpio_read(DeckInfo* info, DeckCtrlGPIOPin pin, uint32_t * value) {
     if (pin >= DECKCTRL_GPIO_PIN_MAX || value == NULL) {
         return false;
     }
@@ -119,7 +119,7 @@ bool deckctrl_gpio_read(DeckInfo* info, DeckCtrlGPIOPin pin, bool* value) {
     uint16_t value_reg = buffer[0] | (buffer[1] << 8);
 
     // Extract the bit for this pin
-    *value = (value_reg & (1 << pin)) != 0;
+    *value = ((value_reg & (1 << pin)) != 0)?HIGH:LOW;
 
     return true;
 }

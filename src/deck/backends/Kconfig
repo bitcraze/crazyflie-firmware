@@ -10,7 +10,7 @@ config DECK_BACKEND_ONEWIRE
     help
         Enable the OneWire deck discovery backend that scans for decks with
         OneWire memory chips. Disable this if you want to ignore all
-        OneWire-based deck discovery, which might be useful for debugging.
+        OneWire-based deck discovery.
 
 config DECK_BACKEND_DECKCTRL
     bool "Enable DeckCtrl deck discovery backend"
@@ -18,7 +18,7 @@ config DECK_BACKEND_DECKCTRL
     help
         Enable the DeckCtrl deck discovery backend that scans for decks
         with DeckCtrl chip. Disable this if you want to ignore all
-        DeckCtrl-based deck discovery, which might be useful for debugging.
+        DeckCtrl-based deck discovery.
 
 config DECK_BACKEND_DECKCTRL_DEBUG
     depends on DECK_BACKEND_DECKCTRL

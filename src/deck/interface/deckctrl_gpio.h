@@ -48,10 +48,12 @@ typedef enum {
  * 
  * @param info Pointer to the DeckInfo structure of the deck
  * @param pin The GPIO pin to configure
- * @param output True to set pin as output, false to set as input
+ * @param mode Pin mode. `INPUT` for input `OUTPUT` for output.
  * @return True if the direction was set successfully, false otherwise
+ * 
+ * @note Implementation details: any direction that is not `INPUT` is considered as output.
  */
-bool deckctrl_gpio_set_direction(DeckInfo* info, DeckCtrlGPIOPin pin, bool output);
+bool deckctrl_gpio_set_direction(DeckInfo* info, DeckCtrlGPIOPin pin, uint32_t direction);
 
 
 /**
@@ -62,11 +64,13 @@ bool deckctrl_gpio_set_direction(DeckInfo* info, DeckCtrlGPIOPin pin, bool outpu
  * 
  * @param info Pointer to the DeckInfo structure of the deck
  * @param pin The deck control GPIO pin to write to
- * @param value The digital value to write (true for high, false for low)
+ * @param value The digital value to write. `HIGH` or `LOW`
  * 
  * @return true if the write operation was successful, false otherwise
+ * 
+ * @note Implementation details: any value that is not `LOW` is considered as high.
  */
-bool deckctrl_gpio_write(DeckInfo* info, DeckCtrlGPIOPin pin, bool value);
+bool deckctrl_gpio_write(DeckInfo* info, DeckCtrlGPIOPin pin, uint32_t value);
 
 
 /**
@@ -74,7 +78,7 @@ bool deckctrl_gpio_write(DeckInfo* info, DeckCtrlGPIOPin pin, bool value);
  * 
  * @param info Pointer to the DeckInfo structure of the deck
  * @param pin The GPIO pin to read from
- * @param value Pointer to store the read boolean value (true for high, false for low)
+ * @param value Pointer to store the read digital value, `HIGH` or `LOW`
  * @return true if the read operation was successful, false otherwise
  */
-bool deckctrl_gpio_read(DeckInfo* info, DeckCtrlGPIOPin pin, bool* value);
+bool deckctrl_gpio_read(DeckInfo* info, DeckCtrlGPIOPin pin, uint32_t* value);

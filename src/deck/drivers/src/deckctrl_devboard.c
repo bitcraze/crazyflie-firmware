@@ -1,7 +1,7 @@
 /*
  * Deck control dev board driver
  *
- * This deck driver exercise the deck control dev board
+ * This deck driver exercises the deck control dev board
  * It is used to test the deck control dev board
  * and can be used as a reference for other deck drivers.
  * 
@@ -23,26 +23,26 @@ static void task(void* param) {
 
   // Put all GPIO pins as output and set them low
   for (int i = 0; i < N_LEDS; i++) {
-    deckctrl_gpio_set_direction(info, (DeckCtrlGPIOPin)i, true);
-    deckctrl_gpio_write(info, (DeckCtrlGPIOPin)i, false);
+    deckctrl_gpio_set_direction(info, (DeckCtrlGPIOPin)i, OUTPUT);
+    deckctrl_gpio_write(info, (DeckCtrlGPIOPin)i, LOW);
   }
 
   while (1) {
     // Blink all pins in sequence
     for (int i = 0; i < N_LEDS; i++) {
-      deckctrl_gpio_write(info, (DeckCtrlGPIOPin)i, true);
+      deckctrl_gpio_write(info, (DeckCtrlGPIOPin)i, HIGH);
       vTaskDelay(100 / portTICK_PERIOD_MS);
-      deckctrl_gpio_write(info, (DeckCtrlGPIOPin)i, false);
+      deckctrl_gpio_write(info, (DeckCtrlGPIOPin)i, LOW);
     }
 
     // All ON then all OFF
     for (int i = 0; i < N_LEDS; i++) {
-      deckctrl_gpio_write(info, (DeckCtrlGPIOPin)i, true);
+      deckctrl_gpio_write(info, (DeckCtrlGPIOPin)i, HIGH);
       vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 
     for (int i = 0; i < N_LEDS; i++) {
-      deckctrl_gpio_write(info, (DeckCtrlGPIOPin)i, false);
+      deckctrl_gpio_write(info, (DeckCtrlGPIOPin)i, LOW);
       vTaskDelay(100 / portTICK_PERIOD_MS);
     }
   }
