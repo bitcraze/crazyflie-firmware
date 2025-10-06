@@ -52,16 +52,19 @@ static StaticSemaphore_t waitUntilSendDoneBuffer;
 
 static bool isInit = false;
 
+#ifndef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
 static DMA_InitTypeDef DMA_InitStructureShare;
 static uint8_t dmaBuffer[UART2_DMA_BUFFER_SIZE];
 static bool    isUartDmaInitialized;
 static uint32_t initialDMACount;
+#endif
 
 static StreamBufferHandle_t rxStream;
 static EventGroupHandle_t isrEvents;
 
 static bool hasOverrun = false;
 
+#ifndef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
 /**
   * Configures the UART DMA. Mainly used for FreeRTOS trace
   * data transfer.
@@ -97,6 +100,7 @@ static void uart2DmaInit(void)
 
   isUartDmaInitialized = true;
 }
+#endif
 
 void uart2Init(const uint32_t baudrate)
 {
@@ -139,7 +143,10 @@ void uart2Init(const uint32_t baudrate)
   USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
   USART_Init(UART2_TYPE, &USART_InitStructure);
 
+// Only initialize DMA when NOT using DSHOT (DSHOT motors conflict with UART2 DMA)
+#ifndef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
   uart2DmaInit();
+#endif
 
   // Configure Rx buffer not empty interrupt
   NVIC_InitStructure.NVIC_IRQChannel = UART2_IRQ;
@@ -195,6 +202,10 @@ void uart2SendData(uint32_t size, uint8_t* data)
 
 void uart2SendDataDmaBlocking(uint32_t size, uint8_t* data)
 {
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
+  // DMA disabled due to conflict with brushless motors, fall back to regular send
+  uart2SendData(size, data);
+#else
   if (isUartDmaInitialized)
   {
     xSemaphoreTake(uartBusy, portMAX_DELAY);
@@ -217,6 +228,7 @@ void uart2SendDataDmaBlocking(uint32_t size, uint8_t* data)
     xSemaphoreTake(waitUntilSendDone, portMAX_DELAY);
     xSemaphoreGive(uartBusy);
   }
+#endif
 }
 
 int uart2Putchar(int ch)
