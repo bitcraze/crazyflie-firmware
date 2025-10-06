@@ -168,7 +168,7 @@ config MOTORS_REQUIRE_ARMING
 config MOTORS_DEFAULT_IDLE_THRUST
     int "Idle thrust for the armed motors"
     depends on MOTORS_REQUIRE_ARMING
-    range 0 65535
+    range 0 15000
     default 7000
     help
         Sets the baseline motor power level when they are armed. Setting this
