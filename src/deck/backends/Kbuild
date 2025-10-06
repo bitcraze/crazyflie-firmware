@@ -1,4 +1,4 @@
-obj-y += deck_backend_onewire.o
+obj-$(CONFIG_DECK_BACKEND_ONEWIRE) += deck_backend_onewire.o
 
 # Only compile forced backend when DECK_FORCE is set to something other than "none"
 ifneq ($(CONFIG_DECK_FORCE),"none")
@@ -6,3 +6,5 @@ ifneq ($(CONFIG_DECK_FORCE),"")
 obj-y += deck_backend_forced.o
 endif
 endif
+
+obj-$(CONFIG_DECK_BACKEND_DECKCTRL) += deck_backend_deckctrl.o

@@ -36,26 +36,58 @@ typedef struct deck_driver DeckDriver;
 
 /**
  * @brief Deck discovery backend interface
+ *
+ * This interface defines how deck discovery backends work. Each backend
+ * is responsible for discovering decks using a specific protocol or mechanism
+ * (e.g., OneWire memory, I2C enumeration, compile-time forcing).
+ *
+ * Backends are registered using the DECK_DISCOVERY_BACKEND() macro and are
+ * called sequentially during system initialization. Each backend's init()
+ * function is called once, followed by repeated calls to getNextDeck() until
+ * it returns NULL to indicate no more decks are available.
+ *
+ * Multiple backends can coexist, allowing discovery of different deck types
+ * (e.g., legacy OneWire decks and new DeckCtrl decks) in a single system.
  */
 typedef struct deckDiscoveryBackend_s {
-    const char* name;                    ///< Backend name for debugging
-    bool (*init)(void);                  ///< Initialize discovery hardware
-    DeckInfo* (*getNextDeck)(void);      ///< Returns next deck or NULL when done
+    const char* name;                    ///< Backend name for debugging/logging
+    bool (*init)(void);                  ///< Initialize discovery hardware (called once at startup)
+    DeckInfo* (*getNextDeck)(void);      ///< Returns next deck info or NULL when done (called repeatedly)
 } DeckDiscoveryBackend_t;
 
 /**
  * @brief Shared functions available to all backends
+ *
+ * These functions are implemented by the deck core system and can be used
+ * by any discovery backend during the enumeration process.
  */
-const DeckDriver* findDriver(DeckInfo *deck);    ///< Find driver for deck
-void printDeckInfo(DeckInfo *info);              ///< Print deck debug info
+const DeckDriver* findDriver(DeckInfo *deck);    ///< Find matching driver for a discovered deck (by VID/PID)
+void printDeckInfo(DeckInfo *info);              ///< Print deck information for debugging
 
 /**
  * @brief Dummy driver for decks without a driver
+ *
+ * This driver is used for decks that are detected but have no corresponding
+ * driver implementation, or when operating in DEBUG mode with corrupt deck data.
  */
 extern const DeckDriver dummyDriver;
 
 /**
- * @brief Registration macro for discovery backends  
+ * @brief Registration macro for discovery backends
+ *
+ * Use this macro to register a discovery backend with the system. The backend
+ * will be automatically discovered at compile time using linker sections and
+ * called during deck enumeration.
+ *
+ * Example usage:
+ * @code
+ * static const DeckDiscoveryBackend_t myBackend = {
+ *     .name = "mybackend",
+ *     .init = myBackendInit,
+ *     .getNextDeck = myBackendGetNextDeck,
+ * };
+ * DECK_DISCOVERY_BACKEND(myBackend);
+ * @endcode
  */
 #define DECK_DISCOVERY_BACKEND(NAME) \
     const DeckDiscoveryBackend_t * backend_##NAME \
@@ -63,8 +95,11 @@ extern const DeckDriver dummyDriver;
 
 /**
  * @brief Access registered backends
+ *
+ * These functions allow querying the list of compiled-in discovery backends.
+ * Used by the deck enumeration system to iterate through all available backends.
  */
-int deckDiscoveryBackendCount(void);                   ///< Get number of backends
-const DeckDiscoveryBackend_t* deckDiscoveryGetBackend(int i);  ///< Get backend by index
+int deckDiscoveryBackendCount(void);                          ///< Get total number of registered backends
+const DeckDiscoveryBackend_t* deckDiscoveryGetBackend(int i); ///< Get backend by index (0 to count-1)
 
 #endif //__DECK_DISCOVERY_H__
