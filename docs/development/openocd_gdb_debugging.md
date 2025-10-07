@@ -29,7 +29,7 @@ Connect the Crazyflie to your ST-Link V2 or J-Link via the Debug Adapter and the
 
 #### Ubuntu
 
-The link to gdb-multiarch is required because Ubuntu does not ship arm-none-eabi-gdb anymore, but the new gdb-multiarch that supports all architectures.
+Install OpenOCD, the ARM GCC toolchain, and gdb-multiarch, then create a symlink for compatibility:
 
     sudo apt-get install openocd
     sudo apt-get install gcc-arm-none-eabi gdb-multiarch
