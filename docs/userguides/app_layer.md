@@ -103,7 +103,6 @@ Then flash the resulting bin on your crazyflie according to [the flashing instru
 > ```
 > export PATH="/usr/local/opt/coreutils/libexec/gnubin:/usr/local/opt/gnu-sed/libexec gnubin:$PATH"
 > ```
-> Or by going to `/scripts/kconfig/merge_config.sh` and replacing them there. 
 
 
 ## Internal log and param system
