@@ -229,6 +229,68 @@ Inside of the file, replace everything with the following:
                 "monitor reset"
             ]
         },
+        {
+            // ST-LINK ATTACH for CF2 - for debugging already running firmware
+            "name": "STLINK CF2 Attach",
+            "cwd": "${workspaceRoot}",
+            "executable": "${workspaceRoot}/build/cf2.elf",
+            "request": "attach",
+            "type": "cortex-debug",
+            "device": "STM32F405",
+            "svdFile": "${workspaceRoot}/tools/debug/STM32F405.svd",
+            "servertype": "openocd",
+            "configFiles": ["interface/stlink-v2.cfg", "target/stm32f4x.cfg"],
+            "preLaunchCommands": [
+                "set mem inaccessible-by-default off",
+                "enable breakpoint"
+            ]
+        },
+        {
+            // ST-LINK ATTACH for CF21BL - for debugging already running firmware
+            "name": "STLINK CF21BL Attach",
+            "cwd": "${workspaceRoot}",
+            "executable": "${workspaceRoot}/build/cf21bl.elf",
+            "request": "attach",
+            "type": "cortex-debug",
+            "device": "STM32F405",
+            "svdFile": "${workspaceRoot}/tools/debug/STM32F405.svd",
+            "servertype": "openocd",
+            "configFiles": ["interface/stlink-v2.cfg", "target/stm32f4x.cfg"],
+            "preLaunchCommands": [
+                "set mem inaccessible-by-default off",
+                "enable breakpoint"
+            ]
+        },
+        {
+            // JLink ATTACH for CF2 - for debugging already running firmware
+            "name": "JLink CF2 Attach",
+            "cwd": "${workspaceRoot}",
+            "executable": "${workspaceRoot}/build/cf2.elf",
+            "request": "attach",
+            "type": "cortex-debug",
+            "device": "STM32F405RG",
+            "svdFile": "${workspaceRoot}/tools/debug/STM32F405.svd",
+            "servertype": "jlink",
+            "preLaunchCommands": [
+                "set mem inaccessible-by-default off",
+                "enable breakpoint"
+            ]
+        },
+        {
+            // JLink ATTACH for CF21BL - for debugging already running firmware
+            "name": "JLink CF21BL Attach",
+            "cwd": "${workspaceRoot}",
+            "executable": "${workspaceRoot}/build/cf21bl.elf",
+            "request": "attach",
+            "type": "cortex-debug",
+            "device": "STM32F405RG",
+            "svdFile": "${workspaceRoot}/tools/debug/STM32F405.svd",
+            "servertype": "jlink",
+            "preLaunchCommands": [
+                "set mem inaccessible-by-default off",
+                "enable breakpoint"
+            ]
+        }
     ]
 }
 ```
