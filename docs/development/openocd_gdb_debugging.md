@@ -148,14 +148,7 @@ Click on "Run", then "Add Configuration", then "Cortex Debug".
 
 This should automatically create the needed "launch.json" file.
 
-## The version of cortex-debug tested here is 1.2.2
-Unfortunately it is possible that newer versions of this Extension won't work with our current setup, so please downgrade to 1.2.2 . You can do that by going to 'uninstall' and 'install other versions...'.
-
-![Install other Versions of Extension](/docs/images/cortex_debug_other_versions.webp)
-
-It should also be noted that VSCode updates Extensions automatically, sometimes even if you manually downgraded to a legacy version. If you don't want that to happen, make sure you have checked the setting `Ignore Updates` in the dropdown menu of `Update to vX.X.X`.
-
-#### VS Code Debug Configuration
+### VS Code Debug Configuration
 
 With debug builds enabled, you'll get more predictable stepping and reliable breakpoints. The next step is setting up your debugger. Below is a launch.json configuration for VS Code that supports both ST-Link and J-Link, and works with Crazyflie 2.x and the 2.1 Brushless.
 
