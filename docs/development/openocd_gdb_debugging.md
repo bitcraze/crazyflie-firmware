@@ -7,10 +7,10 @@ Debugging the Crazyflie using the debug-adapter kit gives you direct access to t
 
 Even if you're working mostly at a higher level, having this kind of visibility can be a huge time-saver when something unexpected happens. It's a tool frequently used when tracking down firmware issues or verifying low-level behavior.
 
-This page covers debugging the STM32 using ST-Link and J-Link debuggers with VS Code and Eclipse. It supports Crazyflie 2.x and 2.1 Brushless platforms. Debugging the nRF51 chip requires a [different configuration](https://www.bitcraze.io/documentation/repository/crazyflie2-nrf-firmware/master/development/starting_development/), but an otherwise identical set-up.
+This page covers debugging the STM32 using ST-LINK and J-Link debuggers with VS Code and Eclipse. It supports Crazyflie 2.x and 2.1 Brushless platforms. Debugging the nRF51 chip requires a [different configuration](https://www.bitcraze.io/documentation/repository/crazyflie2-nrf-firmware/master/development/starting_development/), but an otherwise identical set-up.
 
 > **_NOTE:_**
-> Debugging requires our [debug adapter](https://www.bitcraze.io/products/debug-adapter-kit/) and an ST-Link V2 debugger, J-Link probe, or similar.
+> Debugging requires our [debug adapter](https://www.bitcraze.io/products/debug-adapter-kit/) and an ST-LINK V2 debugger, J-Link probe, or similar.
 
 ## Debug Build
 
@@ -23,7 +23,7 @@ Enable a debug build by setting the `CONFIG_DEBUG` option in your Kconfig config
 ### Hardware
 ![STLinkV2 Debugging](/docs/images/stlinkv2_debugging.webp)
 
-Connect the Crazyflie to your ST-Link V2 or J-Link via the Debug Adapter and the port on the underside. You don't need to solder the second adapter to the drone if you're only planning on debugging the STM32F405 with the crazyflie-firmware.
+Connect the Crazyflie to your ST-LINK V2 or J-Link via the Debug Adapter and the port on the underside. You don't need to solder the second adapter to the drone if you're only planning on debugging the STM32F405 with the crazyflie-firmware.
 
 ### Prerequisites
 
@@ -107,9 +107,9 @@ You should now see WSL Ubuntu installing the VS Code Server program. Shortly aft
 > **_NOTE:_**
 > Note: In addition to the Arm-Cortex Debugging Extension (Version 1.2.2!), which is installed later in this instruction, you should also install Microsofts C/C++ Extension Pack and its recommended Extensions. 
 
-##### Attach the ST-Link V2 USB device directly to WSL
+##### Attach the ST-LINK V2 USB device directly to WSL
 
-Unlike make cload, which uses Windows programs to connect with USB devices like the Crazyradio PA, OpenOCD needs to communicate directly with your ST-Link V2 in WSL. Simply connecting it to your Windows machine isn’t enough; you also need to attach it to WSL. To do this, you'll need to install `USBIPD` on Windows. Follow the instructions on[ how to install USBIPD](https://github.com/dorssel/usbipd-win?tab=readme-ov-file#how-to-install) and [how to attach a device to WSL](https://github.com/dorssel/usbipd-win?tab=readme-ov-file#connecting-devices).
+Unlike make cload, which uses Windows programs to connect with USB devices like the Crazyradio PA, OpenOCD needs to communicate directly with your ST-LINK V2 in WSL. Simply connecting it to your Windows machine isn’t enough; you also need to attach it to WSL. To do this, you'll need to install `USBIPD` on Windows. Follow the instructions on[ how to install USBIPD](https://github.com/dorssel/usbipd-win?tab=readme-ov-file#how-to-install) and [how to attach a device to WSL](https://github.com/dorssel/usbipd-win?tab=readme-ov-file#connecting-devices).
 
 Now make sure that it is connected to WSL by listing all usb devices with ```lsusb```
 Currently only the Superuser has read/write access to that usb device, change that by
@@ -156,12 +156,12 @@ Inside of the file, replace everything with the following:
 
 ```json
 {
-    // VS Code debug launch configurations for Crazyflie 2.x and 2.1 Brushless using J-Link and ST-Link
+    // VS Code debug launch configurations for Crazyflie 2.x and 2.1 Brushless using J-Link and ST-LINK
     "version": "0.2.0",
     "configurations": [
         {
             // ST-LINK configuration for Crazyflie 2.x
-            "name": "STLink CF21 Debug",
+            "name": "STLINK CF21 Debug",
             "cwd": "${workspaceRoot}",
             "executable": "${workspaceRoot}/build/cf2.elf",
             "request": "launch",
@@ -179,7 +179,7 @@ Inside of the file, replace everything with the following:
         },
         {
             // ST-LINK configuration for Crazyflie 2.1 Brushless
-            "name": "STLink CF21BL Debug",
+            "name": "STLINK CF21BL Debug",
             "cwd": "${workspaceRoot}",
             "executable": "${workspaceRoot}/build/cf21bl.elf",
             "request": "launch",
