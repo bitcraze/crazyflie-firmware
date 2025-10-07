@@ -14,9 +14,9 @@ This page covers debugging the STM32 using ST-Link and J-Link debuggers with VS 
 
 ## Debug Build
 
-If you're debugging and your breakpoints aren't landing where you expect, or stepping seems unpredictable, or variables aren't visible, it's probably because the firmware was built with compiler optimizations enabled. When you select a debug build, the build system disables optimization by setting the compiler flag `-O0`, which preserves line-by-line correspondence between source code and machine instructions. This makes stepping and inspecting variables much more reliable.
+Before debugging, you should build the firmware with optimizations disabled. By default, firmware is built with compiler optimizations that improve performance but make debugging difficult - breakpoints won't land where expected, stepping becomes unpredictable, and variables may not be visible.
 
-To enable a debug build, you need to set the `CONFIG_DEBUG` option in your Kconfig configuration. You can do this, for example, by running `make menuconfig` in a terminal. Then navigate to **Build and debug options** and select **Enable debug build**. After changing Kconfig options, re-run `make` to rebuild the firmware with the new configuration.
+Enable a debug build by setting the `CONFIG_DEBUG` option in your Kconfig configuration. You can do this, for example, by running `make menuconfig` in a terminal. Then navigate to **Build and debug options**, and select **Enable debug build**. After changing Kconfig options, rebuild and flash the firmware with the new configuration.
 
 ## Debugging in VS Code
 
