@@ -165,6 +165,15 @@ config MOTORS_REQUIRE_ARMING
         When enabled, system must be armed to be able to take off. Arming can
         be done in several ways, e.g. though cfclient or external transmitter.
 
+config MOTORS_DEFAULT_IDLE_THRUST
+    int "Idle thrust for the armed motors"
+    depends on MOTORS_REQUIRE_ARMING
+    range 0 15000
+    default 7000
+    help
+        Sets the baseline motor power level when they are armed. Setting this
+        value above 7000 may cause the platform to move unintentionally, while
+        setting it too low might not provide enough power to spin the motors.
 
 config MOTORS_DEFAULT_PROP_TEST_PWM_RATIO
     int "Override default PWM ratio to use during motor tests"
