@@ -3,7 +3,7 @@ title: DeckCtrl protocol specification
 page_id: deckctrl_protocol
 ---
 
-# DeckCtrl protocol specification
+## DeckCtrl protocol specification
 
 The DeckCtrl backend implements an I2C-based deck and control discovery mechanism that uses microcontrollers on deck boards (_deck controllers_) to enable dynamic enumeration of multiple decks.
 The microcontroller implementing the DeckCtrl protocol is exclusively used for that purpose, deck functionalities are implemented on
