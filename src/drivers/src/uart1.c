@@ -66,6 +66,11 @@ static bool    isUartDmaInitialized;
 static uint32_t initialDMACount;
 #endif
 
+#ifdef ENABLE_UART1_RX_DMA
+static uint8_t dmaRXBuffer[64];
+static DMA_InitTypeDef DMA_InitStructureRX;
+#endif
+
 /**
   * Configures the UART DMA. Mainly used for FreeRTOS trace
   * data transfer.
@@ -106,6 +111,31 @@ static void uart1DmaInit(void)
   NVIC_Init(&NVIC_InitStructure);
 
   isUartDmaInitialized = true;
+#endif
+
+#ifdef ENABLE_UART1_RX_DMA
+  // NVIC_InitTypeDef NVIC_InitStructure;
+
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
+
+  // USART RX DMA Channel Config
+  DMA_InitStructureRX.DMA_PeripheralBaseAddr = (uint32_t)&UART1_TYPE->DR;
+  DMA_InitStructureRX.DMA_Memory0BaseAddr = (uint32_t)dmaRXBuffer;
+  DMA_InitStructureRX.DMA_DIR = DMA_DIR_PeripheralToMemory;
+  DMA_InitStructureRX.DMA_BufferSize = sizeof(dmaRXBuffer);
+  DMA_InitStructureRX.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructureRX.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_InitStructureRX.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+  DMA_InitStructureRX.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+  DMA_InitStructureRX.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+  DMA_InitStructureRX.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  DMA_InitStructureRX.DMA_Mode = DMA_Mode_Circular;
+  DMA_InitStructureRX.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructureRX.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  DMA_InitStructureRX.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull;
+  DMA_InitStructureRX.DMA_Channel = UART1_DMA_RX_CH;
+
+  DMA_Init(UART1_DMA_RX_STREAM, &DMA_InitStructureRX);
 #endif
 }
 
@@ -281,6 +311,55 @@ bool uart1DidOverrun()
 
   return result;
 }
+
+#ifdef ENABLE_UART1_RX_DMA
+void uart1EnableRxDma(void)
+{
+  // Flush queue to remove any stale data from interrupt mode
+  xQueueReset(uart1queue);
+
+  // Disable RXNE interrupt
+  USART_ITConfig(UART1_TYPE, USART_IT_RXNE, DISABLE);
+
+  // Start RX DMA
+  USART_DMACmd(UART1_TYPE, USART_DMAReq_Rx, ENABLE);
+  DMA_Cmd(UART1_DMA_RX_STREAM, ENABLE);
+}
+
+void uart1DisableRxDma(void)
+{
+  // Stop RX DMA
+  DMA_Cmd(UART1_DMA_RX_STREAM, DISABLE);
+  USART_DMACmd(UART1_TYPE, USART_DMAReq_Rx, DISABLE);
+
+  // Flush queue to remove any stale data
+  xQueueReset(uart1queue);
+
+  // Re-enable RXNE interrupt for queue-based reading
+  USART_ITConfig(UART1_TYPE, USART_IT_RXNE, ENABLE);
+}
+
+uint16_t uart1DmaGetWriteIndex(void)
+{
+  // DMA counts down, so we need to calculate how many bytes have been written
+  return sizeof(dmaRXBuffer) - DMA_GetCurrDataCounter(UART1_DMA_RX_STREAM);
+}
+
+uint8_t uart1DmaReadByte(uint16_t index)
+{
+  return dmaRXBuffer[index % sizeof(dmaRXBuffer)];
+}
+#else
+void uart1EnableRxDma(void)
+{
+  // No-op when DMA is not enabled
+}
+
+void uart1DisableRxDma(void)
+{
+  // No-op when DMA is not enabled
+}
+#endif
 
 #ifdef ENABLE_UART1_DMA
 void __attribute__((used)) DMA1_Stream3_IRQHandler(void)

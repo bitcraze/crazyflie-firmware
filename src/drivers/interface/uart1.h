@@ -28,6 +28,12 @@
 
 #include <stdbool.h>
 #include "eprintf.h"
+#include "autoconf.h"
+
+/** RX DMA for lighthouse - uses different DMA stream than TX, safe on non-Bolt */
+#ifndef CONFIG_PLATFORM_BOLT
+    #define ENABLE_UART1_RX_DMA
+#endif
 
 #define UART1_BAUDRATE           9600
 #define UART1_DATA_TIMEOUT_MS    1000
@@ -43,6 +49,9 @@
 #define UART1_DMA_STREAM       DMA1_Stream3
 #define UART1_DMA_CH           DMA_Channel_4
 #define UART1_DMA_FLAG_TCIF    DMA_FLAG_TCIF3
+
+#define UART1_DMA_RX_STREAM    DMA1_Stream1
+#define UART1_DMA_RX_CH        DMA_Channel_4
 
 #define UART1_GPIO_PERIF       RCC_AHB1Periph_GPIOC
 #define UART1_GPIO_PORT        GPIOC
@@ -156,5 +165,36 @@ bool uart1DidOverrun();
  * @note If UART Crtp link is activated this function does nothing
  */
 #define uart1Printf(FMT, ...) eprintf(uart1Putchar, FMT, ## __VA_ARGS__)
+
+/**
+ * Get the current DMA write position in the RX circular buffer
+ * @return Index where DMA will write next byte
+ */
+uint16_t uart1DmaGetWriteIndex(void);
+
+/**
+ * Read a byte from the DMA RX circular buffer
+ * @param[in] index Position in buffer to read (will wrap automatically)
+ * @return The byte at that position
+ */
+uint8_t uart1DmaReadByte(uint16_t index);
+
+/**
+ * Enable RX DMA mode (switches from interrupt-based to DMA-based reception)
+ * Call this after initial synchronization is complete
+ */
+void uart1EnableRxDma(void);
+
+/**
+ * Disable RX DMA mode (switches from DMA-based back to interrupt-based reception)
+ * Call this before re-synchronization to allow queue-based byte-by-byte reading
+ */
+void uart1DisableRxDma(void);
+
+/**
+ * Get the count of RX interrupts (for measuring DMA vs IRQ performance)
+ * @return Number of UART RX interrupts since boot
+ */
+uint32_t uart1GetRxInterruptCount(void);
 
 #endif /* UART1_H_ */

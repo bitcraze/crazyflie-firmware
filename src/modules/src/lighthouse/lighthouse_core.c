@@ -230,10 +230,43 @@ void lighthouseCoreSetSystemType(const lighthouseBaseStationType_t type)
 }
 
 #define OPTIMIZE_UART1_ACCESS 1
+
+#ifdef ENABLE_UART1_RX_DMA
+static uint16_t dmaReadIndex = 0;
+
+static void resetDmaRead() {
+  // Sync read position with current write position to avoid reading stale data
+  dmaReadIndex = uart1DmaGetWriteIndex();
+}
+#endif
+
 TESTABLE_STATIC bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
   static char data[UART_FRAME_LENGTH];
   int syncCounter = 0;
 
+#ifdef ENABLE_UART1_RX_DMA
+
+  // Wait for 12 bytes to be available in DMA circular buffer
+  uint16_t available;
+  do {
+    uint16_t writeIndex = uart1DmaGetWriteIndex();
+    available = (writeIndex - dmaReadIndex + 64) % 64;
+    if (available < UART_FRAME_LENGTH) {
+      vTaskDelay(1);
+      lighthouseTransmitProcessTimeout();
+    }
+  } while (available < UART_FRAME_LENGTH);
+
+  // Read 12 bytes from DMA circular buffer
+  for(int i = 0; i < UART_FRAME_LENGTH; i++) {
+    data[i] = uart1DmaReadByte(dmaReadIndex);
+    dmaReadIndex = (dmaReadIndex + 1) % 64;
+
+    if ((unsigned char)data[i] == 0xff) {
+      syncCounter += 1;
+    }
+  }
+#else
   #ifdef OPTIMIZE_UART1_ACCESS
     // Wait until there is enough data available in the queue before reading
     // to optimize the CPU usage. Locking on the queue (as is done in uart1GetDataWithTimeout()) seems to take a lot
@@ -257,6 +290,7 @@ TESTABLE_STATIC bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
       syncCounter += 1;
     }
   }
+#endif
 
   memset(frame, 0, sizeof(*frame));
 
@@ -560,8 +594,18 @@ void lighthouseCoreTask(void *param) {
 
   while(1) {
     memset(pulseWidth, 0, sizeof(pulseWidth[0]) * PULSE_PROCESSOR_N_SENSORS);
+
+    // Ensure we're in interrupt mode for byte-by-byte synchronization
+    uart1DisableRxDma();
+
     waitForUartSynchFrame();
     uartSynchronized = true;
+
+    // Switch to DMA mode after synchronization for better performance
+#ifdef ENABLE_UART1_RX_DMA
+    uart1EnableRxDma();
+    resetDmaRead();
+#endif
 
     bool previousWasSyncFrame = false;
 
