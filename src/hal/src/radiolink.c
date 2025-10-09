@@ -159,7 +159,12 @@ void radiolinkSyslinkDispatch(SyslinkPacket *slp)
     lastPacketTick = xTaskGetTickCount();
   }
 
-  if (slp->type == SYSLINK_RADIO_RAW)
+  if (slp->type == SYSLINK_RADIO_READY)
+  {
+    // ACK from nRF51 confirming radio is now enabled
+    // No action needed, just silently acknowledge
+  }
+  else if (slp->type == SYSLINK_RADIO_RAW)
   {
     slp->length--; // Decrease to get CRTP size.
     // Assert that we are not dropping any packets
