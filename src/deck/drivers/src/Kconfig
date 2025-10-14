@@ -513,8 +513,6 @@ config DECK_DECKCTRL_DEVBOARD
 
 config DECK_HPRGBW
     bool "Support for High Powered RGBW LED deck"
-    default n
+    default y
     help
         Enables the support for High Powered RGBW LED deck.
-        
-      
