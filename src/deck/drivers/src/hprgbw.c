@@ -48,23 +48,15 @@
 static bool isInit = false;
 static uint8_t brightnessCorr = true;
 
-#define HPRGBW_DECK_I2C_ADDRESS 0x10
-
-// Protocol commands
-#define CMD_GET_VERSION 0x00
-#define CMD_SET_COLOR   0x01
-
-// Expected protocol version
-#define HP_LED_PROTOCOL_VERSION_REQUIRED 1
-
-
 static uint32_t currentRgbw8888 = 0;
 static uint32_t rgbw8888 = 0;
 
+// Thermal status from deck
+static uint8_t deckTemperature = 0;
+static uint8_t throttlePercentage = 0;
 
 static void task(void* param);
 static paramVarId_t rgbwParamId;
-
 
 // Generic LED controller callback
 static void hprgbwSetColor(const uint8_t *rgb888) {
@@ -157,11 +149,11 @@ static rgbw_t apply_brightness_correction(const rgbw_t *input_rgbw){
 
 static bool checkProtocolVersion(void) {
   // Fixed packet size: CMD + 4 dummy bytes
-  uint8_t cmd[5] = {CMD_GET_VERSION, 0, 0, 0, 0};
-  uint8_t response[2];
+  uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_VERSION, 0, 0, 0, 0};
+  uint8_t response[RXBUFFERSIZE];
 
   // Send version request (5 bytes to match fixed packet size)
-  if (i2cdevWrite(I2C1_DEV, HPRGBW_DECK_I2C_ADDRESS, 5, cmd) == false) {
+  if (i2cdevWrite(I2C1_DEV, HPRGBW_DECK_I2C_ADDRESS, TXBUFFERSIZE, cmd) == false) {
     DEBUG_PRINT("Failed to request version\n");
     return false;
   }
@@ -169,7 +161,7 @@ static bool checkProtocolVersion(void) {
   vTaskDelay(M2T(10)); // Give the LED deck time to prepare response
 
   // Read version response
-  if (i2cdevRead(I2C1_DEV, HPRGBW_DECK_I2C_ADDRESS, 2, response) == false) {
+  if (i2cdevRead(I2C1_DEV, HPRGBW_DECK_I2C_ADDRESS, RXBUFFERSIZE, response) == false) {
     DEBUG_PRINT("Failed to read version\n");
     return false;
   }
@@ -224,8 +216,29 @@ static bool hprgbwDeckTest() {
 static void task(void *param) {
   systemWaitStart();
 
+  TickType_t lastStatusPoll = xTaskGetTickCount();
+  const TickType_t statusPollInterval = M2T(100); // Poll every 100ms
+
   while (1)
   {
+    // Poll thermal status periodically
+    if (xTaskGetTickCount() - lastStatusPoll >= statusPollInterval) {
+      uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_THERMAL_STATUS, 0, 0, 0, 0};
+      uint8_t response[RXBUFFERSIZE];
+
+      if (i2cdevWrite(I2C1_DEV, HPRGBW_DECK_I2C_ADDRESS, TXBUFFERSIZE, cmd)) {
+        vTaskDelay(M2T(10));
+        if (i2cdevRead(I2C1_DEV, HPRGBW_DECK_I2C_ADDRESS, RXBUFFERSIZE, response)) {
+            if (response[0] == CMD_GET_THERMAL_STATUS) {
+              deckTemperature = response[1];
+              throttlePercentage = response[2];
+            }
+        }
+      }
+
+      lastStatusPoll = xTaskGetTickCount();
+    }
+
     if (currentRgbw8888 != rgbw8888) {
       currentRgbw8888 = rgbw8888;
 
@@ -253,7 +266,7 @@ static void task(void *param) {
         output.b,
         output.w
       };
-      i2cdevWrite(I2C1_DEV, HPRGBW_DECK_I2C_ADDRESS, sizeof(rgbw_data), rgbw_data);
+      i2cdevWrite(I2C1_DEV, HPRGBW_DECK_I2C_ADDRESS, TXBUFFERSIZE, rgbw_data);
     }
 
     vTaskDelay(M2T(10));
@@ -275,3 +288,8 @@ PARAM_GROUP_START(hprgbw)
 PARAM_ADD(PARAM_UINT32, rgbw8888, &rgbw8888)
 PARAM_ADD(PARAM_UINT8, brightnessCorr, &brightnessCorr)
 PARAM_GROUP_STOP(hprgbw)
+
+LOG_GROUP_START(hprgbw)
+LOG_ADD(LOG_UINT8, deckTemp, &deckTemperature)
+LOG_ADD(LOG_UINT8, throttlePct, &throttlePercentage)
+LOG_GROUP_STOP(hprgbw)
