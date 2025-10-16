@@ -47,6 +47,7 @@ def system_id_static(filenames, validations=[]):
         X, data["thrust"] / 4
     )  # positive=True, Ridge, LinearRegression
     reg = ransac.estimator_
+    error = reg.predict(X) - (data["thrust"] / 4)
     vmotor2thrust = [reg.intercept_, reg.coef_[0], reg.coef_[1], reg.coef_[2]]
     parameters["vmotor2thrust"] = vmotor2thrust
     # INFO: We want to achieve the max thrust for all SoC of the battery. Thus,
@@ -56,7 +57,7 @@ def system_id_static(filenames, validations=[]):
     # CONFIG_MOTORS_DEFAULT_IDLE_THRUST
     if "L250" in comb or "P250" in comb:
         THRUST_MAX = 0.45 / 4
-    elif "T350" in comb:
+    elif "T350" in comb or "T500" in comb:
         THRUST_MAX = 0.65 / 4
     elif "B" in comb:
         THRUST_MAX = 0.8 / 4
@@ -65,8 +66,8 @@ def system_id_static(filenames, validations=[]):
         print(f"WARNING: Comb {comb} not found, setting THRUST_MAX={THRUST_MAX}")
     THRUST_MIN = PWM_MIN / PWM_MAX * THRUST_MAX
 
-    VMOTOR_MIN = inversepoly(THRUST_MIN, vmotor2thrust, 3)
-    VMOTOR_MAX = inversepoly(THRUST_MAX, vmotor2thrust, 3)
+    VMOTOR_MIN = inversepoly(THRUST_MIN, vmotor2thrust, 3)[0]
+    VMOTOR_MAX = inversepoly(THRUST_MAX, vmotor2thrust, 3)[0]
 
     parameters["THRUST_MIN"] = THRUST_MIN
     parameters["THRUST_MAX"] = THRUST_MAX
@@ -99,8 +100,8 @@ def system_id_static(filenames, validations=[]):
         f"Thrust = {reg.intercept_:.6f} + {reg.coef_[0]:.6f}*V + {reg.coef_[1]:.6f}*V^2 + {reg.coef_[2]:.6f}*V^3"
     )
     print(f"Thrust_MIN = {THRUST_MIN:.4f}N, Thrust_MAX={THRUST_MAX:.4f}N")
-    # INFO: VoltageBatteryLow is 3.2 and critically low is 3.0
     print(f"VMotor_MIN = {VMOTOR_MIN:.4f}V, VMotor_MAX={VMOTOR_MAX:.4f}V")
+    print(f"Prediction RMSE = {np.sqrt(np.mean(error**2)) * 1000:.6f}mN")
 
     if len(validations) > 0:
         X_val = np.vstack(
@@ -179,14 +180,16 @@ def system_id_static(filenames, validations=[]):
         axs[1].scatter(
             data_val["rpm_avg"], data_val["thrust"] / 4, label="validation data"
         )
-    X = np.vstack((data["rpm_avg"], data["rpm_avg"] ** 2, data["rpm_avg"] ** 3)).T
+    X = np.vstack((data["rpm_avg"], data["rpm_avg"] ** 2)).T
     reg = LinearRegression(fit_intercept=False, positive=False).fit(
         X, data["thrust"] / 4
     )
-    rpm2thrust = [reg.intercept_, reg.coef_[0], reg.coef_[1], reg.coef_[2]]
+    error = reg.predict(X) - (data["thrust"] / 4)
+    print(f"Prediction RMSE = {np.sqrt(np.mean(error**2)) * 1000:.6f}mN")
+    rpm2thrust = [reg.intercept_, reg.coef_[0], reg.coef_[1]]  # , reg.coef_[2]
     parameters["rpm2thrust"] = rpm2thrust
     rpms = np.linspace(0, 1.05 * np.max(data["rpm_avg"]), 1000)
-    axs[1].plot(rpms, poly(rpms, rpm2thrust, 3), label="fit", color="tab:red")
+    axs[1].plot(rpms, poly(rpms, rpm2thrust, 2), label="fit", color="tab:red")
     axs[1].set_xlabel("Motor RPM")
     axs[1].set_ylabel("Thrust per motor [N]")
     axs[1].legend()
@@ -197,7 +200,7 @@ def system_id_static(filenames, validations=[]):
     plt.show()
 
     print(
-        f"Thrust = {reg.intercept_} + {reg.coef_[0]}*RPM + {reg.coef_[1]}*RPM^2 + {reg.coef_[2]}*RPM^3"
+        f"Thrust = {reg.intercept_} + {reg.coef_[0]}*RPM + {reg.coef_[1]}*RPM^2"  #  + {reg.coef_[2]}*RPM^3
     )
 
     print("\n#########################################################")
@@ -221,14 +224,16 @@ def system_id_static(filenames, validations=[]):
         axs[1].scatter(
             data_val["rpm_avg"], data_val["torque_z"] / 4, label="validation data"
         )
-    X = np.vstack((data["rpm_avg"], data["rpm_avg"] ** 2, data["rpm_avg"] ** 3)).T
+    X = np.vstack((data["rpm_avg"], data["rpm_avg"] ** 2)).T  # , data["rpm_avg"] ** 3
     reg = LinearRegression(fit_intercept=False, positive=True).fit(
         X, data["torque_z"] / 4
     )
-    rpm2torque = [reg.intercept_, reg.coef_[0], reg.coef_[1], reg.coef_[2]]
+    error = reg.predict(X) - (data["torque_z"] / 4)
+    print(f"Prediction RMSE = {np.sqrt(np.mean(error**2)) * 1000:.6f}mN")
+    rpm2torque = [reg.intercept_, reg.coef_[0], reg.coef_[1]]  # , reg.coef_[2]
     parameters["rpm2torque"] = rpm2torque
     rpms = np.linspace(0, 1.05 * np.max(data["rpm_avg"]), 1000)
-    axs[1].plot(rpms, poly(rpms, rpm2torque, 3), label="fit", color="tab:red")
+    axs[1].plot(rpms, poly(rpms, rpm2torque, 2), label="fit", color="tab:red")
     axs[1].set_xlabel("Motor RPM")
     axs[1].set_ylabel("Torque per motor [Nm]")
     axs[1].legend()
@@ -239,7 +244,7 @@ def system_id_static(filenames, validations=[]):
     plt.show()
 
     print(
-        f"Torque = {reg.intercept_} + {reg.coef_[0]}*RPM + {reg.coef_[1]}*RPM^2 + {reg.coef_[2]}*RPM^3"
+        f"Torque = {reg.intercept_} + {reg.coef_[0]}*RPM + {reg.coef_[1]}*RPM^2"  #  + {reg.coef_[2]}*RPM^3
     )
 
     print("\n#########################################################")
@@ -251,18 +256,6 @@ def system_id_static(filenames, validations=[]):
     if len(validations) > 0:
         plt.scatter(data_val["thrust"], data_val["torque_z"], label="validation data")
 
-    rpms = np.linspace(np.min(data["rpm_avg"]), np.max(data["rpm_avg"]), 1000)
-    plt.plot(
-        poly(rpms, rpm2thrust, 2) * 4,
-        poly(rpms, rpm2torque, 2) * 4,
-        label="rpm2torque/rpm2thrust",
-    )
-    vmotors = np.linspace(np.min(data["vmotors"]), np.max(data["vmotors"]), 1000)
-    plt.plot(
-        poly(vmotors, vmotor2thrust, 3) * 4,
-        poly(vmotors, vmotor2torque, 3) * 4,
-        label="vmotors2torque/vmotors2thrust",
-    )
 
     # fit
     X = np.vstack((data["thrust"]))
@@ -272,7 +265,7 @@ def system_id_static(filenames, validations=[]):
     parameters["thrust2torque"] = thrust2torque
     print(f"Torque = {thrust2torque:.6f}*Thrust")
 
-    X = np.linspace(0.0, 1.05 * np.max(data["thrust"]) / 4, 1000)
+    X = np.linspace(0.0, 1.05 * np.max(data["thrust"]), 1000)
     X_fit = np.vstack((X))
     Y_fit = reg.predict(X_fit)
     plt.plot(X, Y_fit, label="fit", color="tab:red")
@@ -383,7 +376,7 @@ def system_id_dynamic(filenames, validations=[]):
     data = cutData(data, tStart=17.5, tEnd=33)  # cut off the non compensated part
 
     thrustCMD = data["cmd"] / PWM_MAX * parameters["THRUST_MAX"] * 4
-    rpmCMD = inversepoly(thrustCMD / 4, parameters["rpm2thrust"], 3)
+    rpmCMD = inversepoly(thrustCMD / 4, parameters["rpm2thrust"], 2)
     VmotorCMD = np.zeros_like(data["cmd"])
     for i in range(len(data["cmd"])):
         if thrustCMD[i] < parameters["THRUST_MIN"]:
@@ -473,7 +466,7 @@ def system_id_dynamic(filenames, validations=[]):
     )
     plt.plot(
         data["time"],
-        poly(np.array(rpmPred), parameters["rpm2thrust"], 3) * 4,
+        poly(np.array(rpmPred), parameters["rpm2thrust"], 2) * 4,
         "--",
         label="Thrust Prediction from RPM dynamics",
     )
@@ -560,31 +553,15 @@ if __name__ == "__main__":
         if extra != "":
             comb = f"{comb}_{extra}"
         files = [
-            f"data/data_{mode}_{comb}_00.csv",  # 500 with torque, verif & dynamic with
-            f"data/data_{mode}_{comb}_01.csv",  # 500 with torque, verif & dynamic without
-            f"data/data_{mode}_{comb}_02.csv",  # 500 with torque, verif & dynamic without
-            f"data/data_{mode}_{comb}_03.csv",  # 500 with torque
-            # f"data/data_{mode}_{comb}_04.csv",  # 500 with torque
-            # f"data/data_{mode}_{comb}_05.csv",  # 500 with torque
-            # f"data/data_{mode}_{comb}_06.csv",
-            # f"data/data_{mode}_{comb}_07.csv",
-            # f"data/data_{mode}_{comb}_12.csv",  # 34 drone with guards
-            # f"data/data_{mode}_{comb}_13.csv",  # E7 drone without guards
+            f"data/data_{mode}_{comb}_00.csv",
+            f"data/data_{mode}_{comb}_01.csv",
+            f"data/data_{mode}_{comb}_02.csv",
         ]
         combVal = "B350"
         if extra != "":
             combVal += f"_{extra}"
         filesVal = [
-            # f"data/data_{mode}_{combVal}_00.csv",  # 350 with deck
-            # f"data/data_{mode}_{combVal}_01.csv",  # 350 with deck
-            # f"data/data_{mode}_{combVal}_02.csv",  # 350 with deck
-            # f"data/data_{mode}_{combVal}_03.csv",  # 350 with deck
-            # f"data/data_{mode}_{combVal}_04.csv",  # 350 without deck
-            # f"data/data_{mode}_{combVal}_05.csv",  # 350 without deck
-            # f"data/data_{mode}_{combVal}_06.csv",  # 350 without deck
-            # f"data/data_{mode}_{combVal}_07.csv",  # 350 without deck
-            # f"data/data_{mode}_{combVal}_12.csv",  # 34 drone with guards
-            # f"data/data_{mode}_{combVal}_13.csv",  # E7 drone without guards
+            f"data/data_{mode}_{combVal}_00.csv",
         ]
 
     if args.mode == "ramp_motors":

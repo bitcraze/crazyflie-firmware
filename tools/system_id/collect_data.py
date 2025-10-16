@@ -157,10 +157,14 @@ class CollectData(ABC):
             self.start_time = timestamp
         timestamp -= self.start_time  # remove initial offset
         if self.loadcell is not None:
-            data["loadcell.weight"] = -self.loadcell.read_data()[2] * 1000 / self.g
-            data["loadcell.torque_x"] = -self.loadcell.read_data()[3]
-            data["loadcell.torque_y"] = -self.loadcell.read_data()[4]
-            data["loadcell.torque_z"] = -self.loadcell.read_data()[5]
+            try:
+                reading = self.loadcell.read_data()
+            except Exception as e:
+                print(f"Error when reading the loadcell: {e}")
+            data["loadcell.weight"] = -reading[2] * 1000 / self.g
+            data["loadcell.torque_x"] = -reading[3]
+            data["loadcell.torque_y"] = -reading[4]
+            data["loadcell.torque_z"] = -reading[5]
         else:
             data["loadcell.torque_x"] = 0.0
             data["loadcell.torque_y"] = 0.0
@@ -414,9 +418,10 @@ class CollectDataStatic(CollectData):
                     self._cf.param.set_value("motorPowerSet.m2", thrust)
                     self._cf.param.set_value("motorPowerSet.m3", 0)
                     self._cf.param.set_value("motorPowerSet.m4", thrust)
+                time.sleep(0.5)
             else:
                 self._cf.param.set_value("motorPowerSet.m1", thrust)
-            time.sleep(0.1)
+                time.sleep(0.1)
 
         tstart = time.time()
         while len(self.measurements) < min_samples:
