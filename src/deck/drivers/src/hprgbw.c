@@ -216,29 +216,47 @@ static bool hprgbwDeckTest() {
 static void task(void *param) {
   systemWaitStart();
 
+  TickType_t lastWakeTime = xTaskGetTickCount();
+  const TickType_t loopInterval = M2T(10); // 10ms loop interval
+
   TickType_t lastStatusPoll = xTaskGetTickCount();
   const TickType_t statusPollInterval = M2T(100); // Poll every 100ms
 
+  uint8_t response[RXBUFFERSIZE];
+
   while (1)
   {
-    // Poll thermal status periodically
+    // Read any available response from the deck
+    if (i2cdevRead(I2C1_DEV, HPRGBW_DECK_I2C_ADDRESS, RXBUFFERSIZE, response)) {
+      // Process response based on command type
+      switch (response[0]) {
+        case CMD_GET_THERMAL_STATUS:
+          deckTemperature = response[1];
+          throttlePercentage = response[2];
+          break;
+
+        case CMD_GET_VERSION:
+          // Version responses are handled during init
+          break;
+
+        case CMD_SET_COLOR:
+          // No response expected for color commands
+          break;
+
+        default:
+          // Unknown or empty response
+          break;
+      }
+    }
+
+    // Send thermal status request periodically
     if (xTaskGetTickCount() - lastStatusPoll >= statusPollInterval) {
       uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_THERMAL_STATUS, 0, 0, 0, 0};
-      uint8_t response[RXBUFFERSIZE];
-
-      if (i2cdevWrite(I2C1_DEV, HPRGBW_DECK_I2C_ADDRESS, TXBUFFERSIZE, cmd)) {
-        vTaskDelay(M2T(10));
-        if (i2cdevRead(I2C1_DEV, HPRGBW_DECK_I2C_ADDRESS, RXBUFFERSIZE, response)) {
-            if (response[0] == CMD_GET_THERMAL_STATUS) {
-              deckTemperature = response[1];
-              throttlePercentage = response[2];
-            }
-        }
-      }
-
+      i2cdevWrite(I2C1_DEV, HPRGBW_DECK_I2C_ADDRESS, TXBUFFERSIZE, cmd);
       lastStatusPoll = xTaskGetTickCount();
     }
 
+    // Send color updates when changed
     if (currentRgbw8888 != rgbw8888) {
       currentRgbw8888 = rgbw8888;
 
@@ -269,7 +287,8 @@ static void task(void *param) {
       i2cdevWrite(I2C1_DEV, HPRGBW_DECK_I2C_ADDRESS, TXBUFFERSIZE, rgbw_data);
     }
 
-    vTaskDelay(M2T(10));
+    // Maintain precise 10ms loop timing
+    vTaskDelayUntil(&lastWakeTime, loopInterval);
   }
 }
 
