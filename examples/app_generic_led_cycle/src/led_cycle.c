@@ -48,6 +48,7 @@ void appMain()
   uint8_t r = 0, g = 0, b = 0;
   int step = 0;
 
+  TickType_t lastWakeTime = xTaskGetTickCount();
   while(1) {
     // Cycle through 4 phases, each with 256 steps
     int phase = step / 256;
@@ -77,6 +78,6 @@ void appMain()
 
     step = (step + 1) % (256 * 4);  // Loop through all 4 phases
 
-    vTaskDelay(M2T(3));
+    vTaskDelayUntil(lastWakeTime, M2T(3));
   }
 }
