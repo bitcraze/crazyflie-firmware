@@ -33,5 +33,3 @@ static const ledLuminance_t LED_LUMINANCE = {
     .b_lumens = 50,
     .w_lumens = 250
 };
-
-static rgbw_t applyBrightnessCorrection(const rgbw_t *input_rgbw);
