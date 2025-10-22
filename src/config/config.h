@@ -101,7 +101,7 @@
 #define UART2_TASK_PRI            3
 #define CRTP_SRV_TASK_PRI         0
 #define PLATFORM_SRV_TASK_PRI     0
-#define HPRGBW_TASK_PRI           1
+#define COLORLED_TASK_PRIO       1
 
 // Not compiled
 #if 0
@@ -161,7 +161,7 @@
 #define CPX_TASK_NAME             "CPX"
 #define APP_TASK_NAME             "APP"
 #define FLAPPERDECK_TASK_NAME     "FLAPPERDECK"
-#define HPRGBW_TASK_NAME          "HPRGBW"
+#define COLORLED_TASK_NAME       "COLORLED-DECK"
 
 
 //Task stack sizes
@@ -209,7 +209,7 @@
 #define KALMAN_TASK_STACKSIZE           (3 * configMINIMAL_STACK_SIZE)
 #define FLAPPERDECK_TASK_STACKSIZE      (2 * configMINIMAL_STACK_SIZE)
 #define ERROR_UKF_TASK_STACKSIZE        (4 * configMINIMAL_STACK_SIZE)
-#define HPRGBW_TASK_STACKSIZE           configMINIMAL_STACK_SIZE
+#define COLORLED_TASK_STACKSIZE        configMINIMAL_STACK_SIZE
 
 //The radio channel. From 0 to 125
 #define RADIO_CHANNEL 80

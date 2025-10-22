@@ -511,7 +511,7 @@ config DECK_DECKCTRL_DEVBOARD
         Enables the support for the deckctrl devboard deck.
         This deck is used for the deckctrl development.
 
-config DECK_HPRGBW
+config DECK_COLORLED
     bool "Support for High Powered RGBW LED deck"
     default y
     help

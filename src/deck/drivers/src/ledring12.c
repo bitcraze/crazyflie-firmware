@@ -175,7 +175,7 @@ static void ledring12SetColor(const uint8_t *rgb888) {
   paramSetInt(effectParamId, 14);
 }
 
-static const LedDeckHandlerDef_t ledring12LedHandler = {
+static const ledDeckHandlerDef_t ledring12LedHandler = {
   .setColor = ledring12SetColor,
 };
 

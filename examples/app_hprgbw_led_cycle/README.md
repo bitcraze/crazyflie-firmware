@@ -1,1 +1,0 @@
-example demonstrating LED control

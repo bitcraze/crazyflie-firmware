@@ -43,15 +43,22 @@ void appMain()
 {
   DEBUG_PRINT("Starting RGBW color cycling app...\n");
 
-  paramVarId_t idRgbw = paramGetVarId("hprgbw", "rgbw8888");
+  paramVarId_t idRgbw = paramGetVarId("colorled", "rgbw8888");
+  paramVarId_t idBrightnessCorr = paramGetVarId("colorled", "brightnessCorr");
+
+  // Enable brightness correction for perceptually uniform colors
+  // Set to 1 (enabled) for balanced luminance across R/G/B/W channels
+  // Set to 0 (disabled) for maximum brightness per channel
+  paramSetInt(idBrightnessCorr, 1);
 
   // Subscribe to thermal throttle logs
-  logVarId_t idDeckTemp = logGetVarId("hprgbw", "deckTemp");
-  logVarId_t idThrottlePct = logGetVarId("hprgbw", "throttlePct");
+  logVarId_t idDeckTemp = logGetVarId("colorled", "deckTemp");
+  logVarId_t idThrottlePct = logGetVarId("colorled", "throttlePct");
 
   uint8_t r = 0, g = 0, b = 0, w = 0;
   int step = 0;
 
+  TickType_t lastWakeTime = xTaskGetTickCount();
   uint32_t lastThermalCheck = xTaskGetTickCount();
   const uint32_t thermalCheckInterval = M2T(100); // Check every 100ms
 
@@ -103,6 +110,6 @@ void appMain()
 
     step = (step + 1) % (256 * 4);  // Loop through all 4 phases
 
-    vTaskDelay(M2T(3));
+    vTaskDelayUntil(&lastWakeTime, M2T(3));
   }
 }

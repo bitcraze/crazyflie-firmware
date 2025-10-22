@@ -22,7 +22,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * hprgbw.c - Deck driver for the High Power RGBW deck
+ * color_led_deck.c - Deck driver for the Color LED deck
  */
 
 #include "stm32fxxx.h"
@@ -37,9 +37,9 @@
 #include "i2cdev.h"
 #include "deckctrl_gpio.h"
 #include "math.h"
-#include "hprgbw.h"
+#include "color_led_deck.h"
 
-#define DEBUG_MODULE "HP_RGBW"
+#define DEBUG_MODULE "COLORLED"
 #include "debug.h"
 #include "config.h"
 #include "led_deck_controller.h"
@@ -59,7 +59,7 @@ static void task(void* param);
 static paramVarId_t rgbwParamId;
 
 // Generic LED controller callback
-static void hprgbwSetColor(const uint8_t *rgb888) {
+static void colorLedDeckSetColor(const uint8_t *rgb888) {
   // White extraction: W = min(R, G, B), then subtract from RGB
   uint8_t w = rgb888[0];
   if (rgb888[1] < w) w = rgb888[1];
@@ -79,8 +79,8 @@ static void hprgbwSetColor(const uint8_t *rgb888) {
   paramSetInt(rgbwParamId, newRgbw);
 }
 
-static const LedDeckHandlerDef_t hprgbwLedHandler = {
-  .setColor = hprgbwSetColor,
+static const ledDeckHandlerDef_t colorLedDeckLedHandler = {
+  .setColor = colorLedDeckSetColor,
 };
 
 
@@ -106,11 +106,11 @@ static const uint8_t gamma8[256] = {
     226, 228, 230, 232, 234, 236, 238, 239, 241, 243, 245, 247, 249, 251, 253, 255
 };
 
-static inline uint8_t apply_gamme_correction(const uint8_t value) {
+static inline uint8_t applyGammaCorrection(const uint8_t value) {
     return gamma8[value];
 }
 
-static rgbw_t normalize_luminance(const rgbw_t *input_rgb) {
+static rgbw_t normalizeLuminance(const rgbw_t *input_rgb) {
     // Normalize brightness across all channels based on LED datasheet luminance values
     // This ensures equal perceived brightness when channels are set to the same value
     //
@@ -133,16 +133,16 @@ static rgbw_t normalize_luminance(const rgbw_t *input_rgb) {
     return result;
 }
 
-static rgbw_t apply_brightness_correction(const rgbw_t *input_rgbw){
+static rgbw_t applyBrightnessCorrection(const rgbw_t *input_rgbw){
     // Apply intensity scaling based on LED datasheet
-    rgbw_t led_rgbw = normalize_luminance(input_rgbw);
+    rgbw_t led_rgbw = normalizeLuminance(input_rgbw);
 
     // Apply gamma correction for perceptual linearity
     // This makes brightness changes feel uniform across the entire range
-    led_rgbw.r = apply_gamme_correction(led_rgbw.r);
-    led_rgbw.g = apply_gamme_correction(led_rgbw.g);
-    led_rgbw.b = apply_gamme_correction(led_rgbw.b);
-    led_rgbw.w = apply_gamme_correction(led_rgbw.w);
+    led_rgbw.r = applyGammaCorrection(led_rgbw.r);
+    led_rgbw.g = applyGammaCorrection(led_rgbw.g);
+    led_rgbw.b = applyGammaCorrection(led_rgbw.b);
+    led_rgbw.w = applyGammaCorrection(led_rgbw.w);
 
     return led_rgbw;
 }
@@ -153,7 +153,7 @@ static bool checkProtocolVersion(void) {
   uint8_t response[RXBUFFERSIZE];
 
   // Send version request (5 bytes to match fixed packet size)
-  if (i2cdevWrite(I2C1_DEV, HPRGBW_DECK_I2C_ADDRESS, TXBUFFERSIZE, cmd) == false) {
+  if (i2cdevWrite(I2C1_DEV, COLORLED_DECK_I2C_ADDRESS, TXBUFFERSIZE, cmd) == false) {
     DEBUG_PRINT("Failed to request version\n");
     return false;
   }
@@ -161,7 +161,7 @@ static bool checkProtocolVersion(void) {
   vTaskDelay(M2T(10)); // Give the LED deck time to prepare response
 
   // Read version response
-  if (i2cdevRead(I2C1_DEV, HPRGBW_DECK_I2C_ADDRESS, RXBUFFERSIZE, response) == false) {
+  if (i2cdevRead(I2C1_DEV, COLORLED_DECK_I2C_ADDRESS, RXBUFFERSIZE, response) == false) {
     DEBUG_PRINT("Failed to read version\n");
     return false;
   }
@@ -172,9 +172,9 @@ static bool checkProtocolVersion(void) {
   }
 
   uint8_t version = response[1];
-  DEBUG_PRINT("HP LED Protocol version: %d (required: %d)\n", version, HP_LED_PROTOCOL_VERSION_REQUIRED);
+  DEBUG_PRINT("Color LED Deck Protocol version: %d (required: %d)\n", version, COLORLED_PROTOCOL_VERSION_REQUIRED);
 
-  if (version != HP_LED_PROTOCOL_VERSION_REQUIRED) {
+  if (version != COLORLED_PROTOCOL_VERSION_REQUIRED) {
     DEBUG_PRINT("Protocol version mismatch!\n");
     return false;
   }
@@ -182,7 +182,7 @@ static bool checkProtocolVersion(void) {
   return true;
 }
 
-static void hprgbwDeckInit(DeckInfo *info) {
+static void colorLedDeckInit(DeckInfo *info) {
   if (isInit) {
     return;
   }
@@ -190,23 +190,23 @@ static void hprgbwDeckInit(DeckInfo *info) {
   deckctrl_gpio_set_direction(info, DECKCTRL_GPIO_PIN_0, true);
   deckctrl_gpio_write(info, DECKCTRL_GPIO_PIN_0, true);
 
-  xTaskCreate(task, HPRGBW_TASK_NAME,
-              HPRGBW_TASK_STACKSIZE, NULL, HPRGBW_TASK_PRI, NULL);
+  xTaskCreate(task, COLORLED_TASK_NAME,
+              COLORLED_TASK_STACKSIZE, NULL, COLORLED_TASK_PRIO, NULL);
 
   // Register with generic LED controller
-  rgbwParamId = paramGetVarId("hprgbw", "rgbw8888");
-  ledDeckRegisterHandler(&hprgbwLedHandler);
+  rgbwParamId = paramGetVarId("colorled", "rgbw8888");
+  ledDeckRegisterHandler(&colorLedDeckLedHandler);
 
   isInit = true;
 }
 
-static bool hprgbwDeckTest() {
+static bool colorLedDeckTest() {
   if (!isInit) {
     return false;
   }
 
   if (!checkProtocolVersion()) {
-    DEBUG_PRINT("HP RGBW deck protocol version check failed\n");
+    DEBUG_PRINT("Color LED deck protocol version check failed\n");
     return false;
   }
 
@@ -227,7 +227,7 @@ static void task(void *param) {
   while (1)
   {
     // Read any available response from the deck
-    if (i2cdevRead(I2C1_DEV, HPRGBW_DECK_I2C_ADDRESS, RXBUFFERSIZE, response)) {
+    if (i2cdevRead(I2C1_DEV, COLORLED_DECK_I2C_ADDRESS, RXBUFFERSIZE, response)) {
       // Process response based on command type
       switch (response[0]) {
         case CMD_GET_THERMAL_STATUS:
@@ -252,7 +252,7 @@ static void task(void *param) {
     // Send thermal status request periodically
     if (xTaskGetTickCount() - lastStatusPoll >= statusPollInterval) {
       uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_THERMAL_STATUS, 0, 0, 0, 0};
-      i2cdevWrite(I2C1_DEV, HPRGBW_DECK_I2C_ADDRESS, TXBUFFERSIZE, cmd);
+      i2cdevWrite(I2C1_DEV, COLORLED_DECK_I2C_ADDRESS, TXBUFFERSIZE, cmd);
       lastStatusPoll = xTaskGetTickCount();
     }
 
@@ -271,7 +271,7 @@ static void task(void *param) {
       static rgbw_t output;
       if (brightnessCorr) {
         // Apply correction
-        output = apply_brightness_correction(&input);
+        output = applyBrightnessCorrection(&input);
       } else {
         output = input;
       }
@@ -284,7 +284,7 @@ static void task(void *param) {
         output.b,
         output.w
       };
-      i2cdevWrite(I2C1_DEV, HPRGBW_DECK_I2C_ADDRESS, TXBUFFERSIZE, rgbw_data);
+      i2cdevWrite(I2C1_DEV, COLORLED_DECK_I2C_ADDRESS, TXBUFFERSIZE, rgbw_data);
     }
 
     // Maintain precise 10ms loop timing
@@ -292,23 +292,32 @@ static void task(void *param) {
   }
 }
 
-static const DeckDriver hprgbw_deck = {
+static const DeckDriver color_led_deck = {
   .vid = 0xBC,
   .pid = 0x13,
-  .name = "bcHPRGBW",
+  .name = "bcColorLED",
 
-  .init = hprgbwDeckInit,
-  .test = hprgbwDeckTest,
+  .init = colorLedDeckInit,
+  .test = colorLedDeckTest,
 };
 
-DECK_DRIVER(hprgbw_deck);
+DECK_DRIVER(color_led_deck);
 
-PARAM_GROUP_START(hprgbw)
+PARAM_GROUP_START(colorled)
 PARAM_ADD(PARAM_UINT32, rgbw8888, &rgbw8888)
 PARAM_ADD(PARAM_UINT8, brightnessCorr, &brightnessCorr)
-PARAM_GROUP_STOP(hprgbw)
+PARAM_GROUP_STOP(colorled)
 
-LOG_GROUP_START(hprgbw)
+LOG_GROUP_START(colorled)
 LOG_ADD(LOG_UINT8, deckTemp, &deckTemperature)
 LOG_ADD(LOG_UINT8, throttlePct, &throttlePercentage)
-LOG_GROUP_STOP(hprgbw)
+LOG_GROUP_STOP(colorled)
+
+PARAM_GROUP_START(deck)
+
+/**
+ * @brief Nonzero if [Buzzer deck](%https://store.bitcraze.io/collections/decks/products/buzzer-deck) is attached
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcColorLED, &isInit)
+
+PARAM_GROUP_STOP(deck)

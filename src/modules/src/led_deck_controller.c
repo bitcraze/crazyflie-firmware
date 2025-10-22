@@ -31,13 +31,13 @@
 #define MAX_LED_DECK_HANDLERS 4
 
 // Storage for registered handlers
-static const LedDeckHandlerDef_t* handlers[MAX_LED_DECK_HANDLERS];
+static const ledDeckHandlerDef_t* handlers[MAX_LED_DECK_HANDLERS];
 static uint8_t numHandlers = 0;
 
 // Parameter storage
 static uint32_t rgb888 = 0;
 
-void ledDeckRegisterHandler(const LedDeckHandlerDef_t* handler) {
+void ledDeckRegisterHandler(const ledDeckHandlerDef_t* handler) {
   ASSERT(handler != NULL);
   ASSERT(numHandlers < MAX_LED_DECK_HANDLERS);
 

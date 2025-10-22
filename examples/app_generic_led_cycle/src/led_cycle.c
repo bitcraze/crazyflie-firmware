@@ -76,8 +76,8 @@ void appMain()
     uint32_t rgb_value = ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
     paramSetInt(idRgb, rgb_value);
 
-    step = (step + 1) % (256 * 4);  // Loop through all 4 phases
+    step = (step + 1) % (256 * 3);  // Loop through all 3 phases
 
-    vTaskDelayUntil(lastWakeTime, M2T(3));
+    vTaskDelayUntil(&lastWakeTime, M2T(3));
   }
 }
