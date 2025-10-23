@@ -50,7 +50,8 @@
 // Minimum and maximal thrust per motor
 // Note: The maximum thrust is a trade-off between consistency of thrust over all battery levels
 // and maximum performance with a full battery. Increase this value at your own risk. More info
-// in #1526 or this blog post: TODO
+// in #1526 or this blog post: 
+// https://www.bitcraze.io/2025/10/keeping-thrust-consistent-as-the-battery-drains/
 #define THRUST_MIN      0.02136263065537499f  // N
 #define THRUST_MAX      0.2f  // N
 // Thrust curve coefficients (per motor)
