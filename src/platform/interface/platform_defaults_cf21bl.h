@@ -44,9 +44,13 @@
 
 // Drone physical constants
 #define ARM_LENGTH 0.050f  // m
-// Default: Crazyflie 2.1 Brushless with propeller guards, 350mAh battery, and Lighthouse deck.
-// Update this value with the mass of your specific setup if different.
-#define CF_MASS 0.0393f  // kg
+// The Crazyflie 2.1 Brushless with propeller guards, 350mAh battery, and Lighthouse deck weights 39.3g.
+// Update this value with the mass of your specific setup either here or in menuconfig.
+#if defined(CONFIG_MODIFIED_CF_MASS) && (CONFIG_MODIFIED_CF_MASS >= 0)
+    #define CF_MASS (CONFIG_MODIFIED_CF_MASS / 1000000.0f)
+#else
+    #define CF_MASS 0.0393f  // kg
+#endif
 // Thrust coefficients
 #define THRUST_MIN      0.03f // TODO, value is for the thrust upgrade kit
 #define THRUST_MAX      0.1625f // TODO, value is for the thrust upgrade kit
