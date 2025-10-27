@@ -83,6 +83,28 @@ tb make_app examples/app_hello_world/ -j8
 Then flash the resulting bin on your crazyflie according to [the flashing instructions](/docs/building-and-flashing/build.md). Make sure to point to the right build binary.
 
 
+> **Note:** If you are using **macOS** you may encounter errors when trying to build your app, such as: 
+> ```
+> readlink: illegal option -- m
+> sed: invalid command code .
+> cp: illegal option -- T
+> ```
+> This happens because the app-layer build expects the GNU versions of `readlink`, `sed` and `cp`. To fix the errors, install and use the GNU utilities:
+> ```
+> brew install coreutils gnu-sed
+> ```
+> Then replace `readlink`, `sed` and `cp` with `greadlink`, `gsed` and `gcp`, either with temporary aliases:
+> ```
+> alias readlink=greadlink
+> alias sed=gsed
+> alias cp=gcp
+> ```
+> Or by permanently adding them to your path:
+> ```
+> export PATH="/usr/local/opt/coreutils/libexec/gnubin:/usr/local/opt/gnu-sed/libexec gnubin:$PATH"
+> ```
+
+
 ## Internal log and param system
 
 For the app-layer, it would be good to have access to log and/or parameter values and to set parameter values. This way, your app will be able to read out sensor data or to switch controller/estimator on air. To check out these functions, look at `src/modules/interface/log.h` or `.../param.h` for the internal access functions. There is also an example to be found in `/examples/app_internal_param_log/`.

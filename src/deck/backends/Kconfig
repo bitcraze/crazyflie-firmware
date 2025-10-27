@@ -1,0 +1,40 @@
+config DECK_FORCE
+    string "Force load specified custom deck driver"
+    default "none"
+    help
+        A colon seperated list of custom drivers to force load or "none".
+
+config DECK_BACKEND_ONEWIRE
+    bool "Enable OneWire deck discovery backend"
+    default y
+    help
+        Enable the OneWire deck discovery backend that scans for decks with
+        OneWire memory chips. Disable this if you want to ignore all
+        OneWire-based deck discovery.
+
+config DECK_BACKEND_DECKCTRL
+    bool "Enable DeckCtrl deck discovery backend"
+    default y
+    help
+        Enable the DeckCtrl deck discovery backend that scans for decks
+        with DeckCtrl chip. Disable this if you want to ignore all
+        DeckCtrl-based deck discovery.
+
+config DECK_BACKEND_DECKCTRL_DEBUG
+    depends on DECK_BACKEND_DECKCTRL
+    bool "Enable DeckCtrl debug prints"
+    default n
+    help
+      Enable debug prints for the deck controller subsystem.
+      This will output additional information about deck detection,
+      initialization, and communication for debugging purposes.
+
+config DECK_BACKEND_DECKCTRL_MAX_DECKS
+    depends on DECK_BACKEND_DECKCTRL
+    int "Maximum number of DeckCtrl decks supported"
+    range 1 12
+    default 4
+    help
+      Set the maximum number of DeckCtrl decks that can be connected simultaneously.
+      This limits the number of decks that can be enumerated and managed by the system.
+      Increasing this number will increase RAM usage.

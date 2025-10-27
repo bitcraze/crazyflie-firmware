@@ -206,21 +206,13 @@ endmenu
 
 menu "Expansion deck configuration"
 
-config DECK_FORCE
-    string "Force load specified custom deck driver"
-    default "none"
-    help
-        A colon seperated list of custom drivers to force load or "none".
+menu "Deck discovery backends"
+    source "src/deck/backends/Kconfig"
+endmenu
 
-config DECK_BACKEND_ONEWIRE
-    bool "Enable OneWire deck discovery backend"
-    default y
-    help
-        Enable the OneWire deck discovery backend that scans for decks with
-        OneWire memory chips. Disable this if you want to ignore all
-        OneWire-based deck discovery, which might be useful for debugging.
-
-source src/deck/drivers/src/Kconfig
+menu "Deck drivers"
+    source "src/deck/drivers/src/Kconfig"
+endmenu
 
 endmenu
 

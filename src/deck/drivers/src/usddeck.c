@@ -458,7 +458,7 @@ static void usdInit(DeckInfo *info)
 
     logFileMutex = xSemaphoreCreateMutex();
     logBufferMutex = xSemaphoreCreateMutex();
-    shutdownMutex = xSemaphoreCreateMutex();
+    shutdownMutex = xSemaphoreCreateBinary();
 
     /* try to mount drives before creating the tasks */
     if (f_mount(&FatFs, "", 1) == FR_OK) {
@@ -543,8 +543,9 @@ static void usddeckEventtriggerCallback(const eventtrigger *event)
 
 static void usdGracefulShutdownCallback()
 {
-  uint32_t timeout = 15; /* ms */
+  uint32_t timeout = 100; /* ms */
   in_shutdown = true;
+  enableLogging = false;
   vTaskResume(xHandleWriteTask);
   xSemaphoreTake(shutdownMutex, M2T(timeout));
 }
