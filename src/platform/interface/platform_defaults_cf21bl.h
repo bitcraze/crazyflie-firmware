@@ -47,13 +47,13 @@
 // Default: Crazyflie 2.1 Brushless with propeller guards, 350mAh battery, and Lighthouse deck.
 // Update this value with the mass of your specific setup if different.
 #define CF_MASS 0.0393f  // kg
-// Minimum and maximal thrust per motor
+// Minimum and maximum thrust per motor
 // Note: The maximum thrust is a trade-off between consistency of thrust over all battery levels
 // and maximum performance with a full battery. Increase this value at your own risk. More info
 // in #1526 or this blog post: 
 // https://www.bitcraze.io/2025/10/keeping-thrust-consistent-as-the-battery-drains/
-#define THRUST_MIN      0.02136263065537499f  // N
-#define THRUST_MAX      0.2f  // N
+#define THRUST_MIN      0.02136263065537499f  // N (per motor)
+#define THRUST_MAX      0.2f  // N (per motor)
 // Thrust curve coefficients (per motor)
 #define VMOTOR2THRUST0  -0.014058926705279723f
 #define VMOTOR2THRUST1  0.04265273261724981f
