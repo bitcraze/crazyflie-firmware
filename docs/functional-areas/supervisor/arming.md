@@ -29,7 +29,7 @@ Auto arming is configured at compile time through the `CONFIG_MOTORS_REQUIRE_ARM
 
 ## Idle thrust
 
-The motors are used to indicate to the pilot that the system is armed and ready to fly. Motors runs at idle thrust when
+The motors are used to indicate to the pilot that the system is armed and ready to fly. Motors run at idle thrust when
 the supervisor is in a state where flight is enabled.
 
 Note that the default
