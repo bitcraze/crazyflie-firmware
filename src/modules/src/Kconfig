@@ -236,6 +236,15 @@ config THRUST_BAT_COMPENSATION_TYPE
         0 is the CF2.1 stock, 1 is the CF2.1+, and 2 is the thrust upgrade kit configuration.
         Not applied for brushless motor setup.
 
+config THRUST_BAT_COMPENSATION_MAX_THRUST
+    int "Maximum thrust per motor in (mN)."
+    depends on PLATFORM_CF21BL && ENABLE_THRUST_BAT_COMPENSATED
+    range 150 250
+    default 200
+    help
+        The maximum thrust is a trade-off between consistency of thrust over all battery levels and maximum performance
+        with a full battery. Increase this value at your own risk. Note that the entered value is in milliNewtons.
+
 config LOG_MOTOR_CAP_WARNING
     bool "Log a warning if the motor thrust is capped"
     default n
