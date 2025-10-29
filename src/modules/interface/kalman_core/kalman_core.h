@@ -135,7 +135,19 @@ typedef struct {
   float attitudeReversion;
 } kalmanCoreParams_t;
 
-/*  - Load default parameters */
+/**
+ * @brief Initialize Kalman core parameters with default values
+ *
+ * This function exists primarily for Python bindings to initialize their own
+ * kalmanCoreParams_t structs. In the firmware, default parameters are initialized
+ * via a static initializer in estimator_kalman.c to avoid overwriting persistent
+ * parameters loaded from storage.
+ *
+ * Default values are defined in kalman_core_params_defaults.h to maintain a
+ * single source of truth.
+ *
+ * @param params Pointer to the parameter struct to initialize
+ */
 void kalmanCoreDefaultParams(kalmanCoreParams_t *params);
 
 /*  - Initialize Kalman State */
