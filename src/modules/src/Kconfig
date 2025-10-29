@@ -216,17 +216,19 @@ config POWER_DISTRIBUTION_FLAPPER_REVB
 
 config ENABLE_THRUST_BAT_COMPENSATED
     bool "Enable battery thrust compensation"
+    depends on PLATFORM_CF2 || PLATFORM_CF21BL
     default y
     help
         Compensate thrust depending on battery voltage so it will produce about the same
         amount of thrust independent of the battery voltage.
-        The compensation is based on thrust measurements, which are only valid for the specific type, see below.
-        Not applied for brushless motor setup.
+        The compensation is based on thrust measurements, which are only valid for the specific type.
+        If you are using a Crazyflie 2.X platform, please select the compensation type that corresponds to your platform.
 
 config THRUST_BAT_COMPENSATION_TYPE
     int "Battery thrust compensation type"
+    depends on PLATFORM_CF2 && ENABLE_THRUST_BAT_COMPENSATED
     range 0 2
-    default 0
+    default 1
     help
         Compensate thrust depending on battery voltage so it will produce about the same
         amount of thrust independent of the battery voltage.
