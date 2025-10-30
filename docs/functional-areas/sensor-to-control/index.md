@@ -82,8 +82,8 @@ After the state controller has sent out its commands, this is not the end of the
 The controllers send out their commands relating to their yaw, roll and pitch angles.
 How the motors should respond in order to adhere these attitude based commands depends on a few factors:
   * Motors:
-    * Brushed: The Crazyflie has brushed motors, of which there is battery compensation function enabled. Check out `motors.c` to learn more. Also checkout the [PWM to Thrust investigations](/docs/functional-areas/pwm-to-thrust.md) of those same motors.
-    * Brushless: The Bolt enables the control of brushless motors. Checkout the[ product page of the Bolt](https://www.bitcraze.io/products/crazyflie-bolt/) for more information.
+    * Brushed: The Crazyflie 2.X platforms with brushed motors support battery compensation, which adjusts the motor outputs to maintain consistent thrust across the entire battery range. For implementation details, check out `motors.c`, as well as the [PWM to Thrust investigations](/docs/functional-areas/pwm-to-thrust.md) and the [Battery Compensation documentation](/docs/functional-areas/battery_compensation.md) of those same motors.
+    * Brushless: The Crazyflie 2.1 Brushless and the Crazyflie Bolt support brushless motor control. Battery compensation is also available for the Crazyflie 2.1 Brushless, but it not on the Crazyflie Bolt, since the settings depend on the user’s motor configuration. For more information, check out the [product page of the Bolt](https://www.bitcraze.io/products/crazyflie-bolt-1-1/).
 
 ## Configuring Controllers and Estimators
 Go to this [configuration page](configure_estimator_controller.md), if you would like to configure different controllers and estimators.
