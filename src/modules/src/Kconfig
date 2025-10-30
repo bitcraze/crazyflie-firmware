@@ -233,17 +233,24 @@ config ENABLE_THRUST_BAT_COMPENSATED
         The compensation is based on thrust measurements, which are only valid for the specific type.
         If you are using a Crazyflie 2.X platform, please select the compensation type that corresponds to your platform.
 
-config THRUST_BAT_COMPENSATION_TYPE
-    int "Battery thrust compensation type"
+choice
+    prompt "Crazyflie 2.X platform configuration"
     depends on PLATFORM_CF2 && ENABLE_THRUST_BAT_COMPENSATED
-    range 0 2
-    default 1
+    default CRAZYFLIE_21_PLUS
     help
-        Compensate thrust depending on battery voltage so it will produce about the same
-        amount of thrust independent of the battery voltage.
-        The compensation is based on thrust measurements for different setups.
-        0 is the CF2.1 stock, 1 is the CF2.1+, and 2 is the thrust upgrade kit configuration.
-        Not applied for brushless motor setup.
+        Select your Crazyflie 2.X platform setup.
+        Thrust compensation will be applied based on the selected setup.
+
+config CRAZYFLIE_LEGACY_PROPELLERS
+    bool "Legacy Propellers"
+
+config CRAZYFLIE_21_PLUS
+    bool "2.1+ Propellers"
+
+config CRAZYFLIE_THRUST_UPGRADE_KIT
+    bool "Thrust Upgrade Kit"
+
+endchoice
 
 config THRUST_BAT_COMPENSATION_MAX_THRUST
     int "Maximum thrust per motor in (mN)."
