@@ -116,6 +116,13 @@ static void powerDistributionForceTorque(const control_t *control, motors_thrust
   }
 }
 
+/**
+ * @brief Allows for direct control of motor power with clipping
+ *
+ * This function applies clipping to the motor values, which is different to
+ * the "capping" behaviour found in powerDistributionForceTorque() - which
+ * instead prioritizes stability rather than thrust.
+ */
 static void powerDistributionForce(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped) {
   for (int i = 0; i < STABILIZER_NR_OF_MOTORS; i++) {
     float f = control->normalizedForces[i];
