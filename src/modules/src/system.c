@@ -327,7 +327,9 @@ void systemTask(void *arg)
 
   // Notify the nRF51 that we are ready to receive radio packets
   // This is done after systemStart() to ensure all services
-  // are ready to process packets, not just queue them
+  // are ready to process packets, not just queue them.
+  // Note: If this is never reached (e.g., self-test failure),
+  // the nRF51 will timeout and enable radio anyway for debugging.
   systemSendRadioReady();
 
   workerLoop();
