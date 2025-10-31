@@ -113,6 +113,5 @@ Another quite interesting curve is the rpm to thrust. The polyfit function gives
 
 ## Battery compensation
 
-To get an even flight independent of the battery charge we compensate for the drop in voltage using the above mentioned table.
+To get an even flight independent of the battery charge we compensate for the drop in voltage using data similar to the above. Read more about the battery compensation [here](/docs/functional-areas/battery_compensation.md).
 
-**NOTE: These values are measured on the stock propellers and motors that come with the Crazyflie 2.1. If you are using the Crazyflie 2.1+ or have upgraded your Crazyflie using the thurst upgrade kit, you can disable this algorithm using ```ENABLE_THRUST_BAT_COMPENSATED``` in the kconfig file.**

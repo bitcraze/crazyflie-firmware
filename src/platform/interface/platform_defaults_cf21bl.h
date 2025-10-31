@@ -51,10 +51,27 @@
 #else
     #define CF_MASS 0.0393f  // kg
 #endif
-// Thrust coefficients
-#define THRUST_MIN      0.03f // TODO, value is for the thrust upgrade kit
-#define THRUST_MAX      0.1625f // TODO, value is for the thrust upgrade kit
-#define THRUST2TORQUE   0.004899994f
+
+#ifdef CONFIG_ENABLE_THRUST_BAT_COMPENSATED
+    // Minimum and maximum thrust per motor
+    // Note: The maximum thrust is a trade-off between consistency of thrust over all battery levels
+    // and maximum performance with a full battery. Increase this value at your own risk. More info
+    // in this PR: https://github.com/bitcraze/crazyflie-firmware/pull/1526
+    // or this blog post: https://www.bitcraze.io/2025/10/keeping-thrust-consistent-as-the-battery-drains/
+    #define THRUST_MIN      0.02136263065537499f  // N (per motor)
+    #ifdef CONFIG_THRUST_BAT_COMPENSATION_MAX_THRUST
+        #define THRUST_MAX (CONFIG_THRUST_BAT_COMPENSATION_MAX_THRUST / 1000.0f)  // N (per motor)
+    #else
+        #define THRUST_MAX      0.2f  // N (per motor)
+    #endif
+    // Thrust curve coefficients (per motor)
+    #define VMOTOR2THRUST0  -0.014058926705279723f
+    #define VMOTOR2THRUST1  0.04265273261724981f
+    #define VMOTOR2THRUST2  0.0018327760144017432f
+    #define VMOTOR2THRUST3  0.0020576974784587178f
+    #define THRUST2TORQUE   0.00569278844371417f
+#endif
+
 
 // Default PID gains
 #define PID_ROLL_RATE_KP 200.0
