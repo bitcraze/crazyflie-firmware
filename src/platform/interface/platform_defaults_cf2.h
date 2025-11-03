@@ -65,10 +65,10 @@
         #define THRUST_MAX      0.1125f
         #define THRUST2TORQUE   0.005964552f // TODO, value is for the legacy propellers and old battery compensation
     #elif defined(CONFIG_CRAZYFLIE_THRUST_UPGRADE_KIT)  // Thrust upgrade kit
-        #define VMOTOR2THRUST0  -0.03978221591250353f
-        #define VMOTOR2THRUST1  0.10979738851226176f
-        #define VMOTOR2THRUST2  -0.05545304285403245f
-        #define VMOTOR2THRUST3  0.016215002062640885f
+        #define VMOTOR2THRUST0  0.006728127583707208f
+        #define VMOTOR2THRUST1  0.01011557616217668f
+        #define VMOTOR2THRUST2  0.010263198062061085f
+        #define VMOTOR2THRUST3  0.0028358638322392503f
         #define THRUST_MIN      0.03f
         #define THRUST_MAX      0.1625f
         #define THRUST2TORQUE   0.005964552f // TODO, value is for the legacy propellers and old battery compensation
