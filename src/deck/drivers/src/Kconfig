@@ -512,7 +512,7 @@ config DECK_DECKCTRL_DEVBOARD
         This deck is used for the deckctrl development.
 
 config DECK_COLORLED
-    bool "Support for High Powered RGBW LED deck"
+    bool "Support for Color LED deck"
     default y
     help
-        Enables the support for High Powered RGBW LED deck.
+        Enables the support for Color LED deck.
