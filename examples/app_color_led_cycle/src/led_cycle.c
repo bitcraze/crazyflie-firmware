@@ -41,9 +41,9 @@
 
 void appMain()
 {
-  DEBUG_PRINT("Starting RGBW color cycling app...\n");
+  DEBUG_PRINT("Starting WRGB color cycling app...\n");
 
-  paramVarId_t idRgbw = paramGetVarId("colorled", "rgbw8888");
+  paramVarId_t idWrgb = paramGetVarId("colorled", "wrgb8888");
   paramVarId_t idBrightnessCorr = paramGetVarId("colorled", "brightnessCorr");
 
   // Enable brightness correction for perceptually uniform colors
@@ -94,9 +94,9 @@ void appMain()
         break;
     }
 
-    // Pack into uint32: 0xWWRRGGBB (compatible with RGB888 standard)
-    uint32_t rgbw_value = ((uint32_t)w << 24) | ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
-    paramSetInt(idRgbw, rgbw_value);
+    // Pack into uint32: 0xWWRRGGBB
+    uint32_t wrgb_value = ((uint32_t)w << 24) | ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+    paramSetInt(idWrgb, wrgb_value);
 
     // Check for thermal throttling periodically (every 100ms)
     if (xTaskGetTickCount() - lastThermalCheck >= thermalCheckInterval) {

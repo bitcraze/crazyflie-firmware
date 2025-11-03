@@ -48,15 +48,15 @@
 static bool isInit = false;
 static uint8_t brightnessCorr = true;
 
-static uint32_t currentRgbw8888 = 0;
-static uint32_t rgbw8888 = 0;
+static uint32_t currentWrgb8888 = 0;
+static uint32_t wrgb8888 = 0;
 
 // Thermal status from deck
 static uint8_t deckTemperature = 0;
 static uint8_t throttlePercentage = 0;
 
 static void task(void* param);
-static paramVarId_t rgbwParamId;
+static paramVarId_t wrgbParamId;
 
 // Generic LED controller callback
 static void colorLedDeckSetColor(const uint8_t *rgb888) {
@@ -70,13 +70,13 @@ static void colorLedDeckSetColor(const uint8_t *rgb888) {
   uint8_t g = rgb888[1] - w;
   uint8_t b = rgb888[2] - w;
 
-  // Build RGBW value: 0xWWRRGGBB
-  uint32_t newRgbw = ((uint32_t)w << 24) |
+  // Build WRGB value: 0xWWRRGGBB
+  uint32_t newWrgb = ((uint32_t)w << 24) |
                      ((uint32_t)r << 16) |
                      ((uint32_t)g << 8) |
                      b;
 
-  paramSetInt(rgbwParamId, newRgbw);
+  paramSetInt(wrgbParamId, newWrgb);
 }
 
 static const ledDeckHandlerDef_t colorLedDeckLedHandler = {
@@ -110,7 +110,7 @@ static inline uint8_t applyGammaCorrection(const uint8_t value) {
     return gamma8[value];
 }
 
-static rgbw_t normalizeLuminance(const rgbw_t *input_rgb) {
+static wrgb_t normalizeLuminance(const wrgb_t *input_rgb) {
     // Normalize brightness across all channels based on LED datasheet luminance values
     // This ensures equal perceived brightness when channels are set to the same value
     //
@@ -123,28 +123,28 @@ static rgbw_t normalizeLuminance(const rgbw_t *input_rgb) {
                                             LED_LUMINANCE.b_lumens),
                                         LED_LUMINANCE.w_lumens);
 
-    rgbw_t result = {
+    wrgb_t result = {
+        .w = input_rgb->w * target_lumens / LED_LUMINANCE.w_lumens,
         .r = input_rgb->r * target_lumens / LED_LUMINANCE.r_lumens,
         .g = input_rgb->g * target_lumens / LED_LUMINANCE.g_lumens,
-        .b = input_rgb->b * target_lumens / LED_LUMINANCE.b_lumens,
-        .w = input_rgb->w * target_lumens / LED_LUMINANCE.w_lumens
+        .b = input_rgb->b * target_lumens / LED_LUMINANCE.b_lumens
     };
 
     return result;
 }
 
-static rgbw_t applyBrightnessCorrection(const rgbw_t *input_rgbw){
+static wrgb_t applyBrightnessCorrection(const wrgb_t *input_wrgb){
     // Apply intensity scaling based on LED datasheet
-    rgbw_t led_rgbw = normalizeLuminance(input_rgbw);
+    wrgb_t led_wrgb = normalizeLuminance(input_wrgb);
 
     // Apply gamma correction for perceptual linearity
     // This makes brightness changes feel uniform across the entire range
-    led_rgbw.r = applyGammaCorrection(led_rgbw.r);
-    led_rgbw.g = applyGammaCorrection(led_rgbw.g);
-    led_rgbw.b = applyGammaCorrection(led_rgbw.b);
-    led_rgbw.w = applyGammaCorrection(led_rgbw.w);
+    led_wrgb.w = applyGammaCorrection(led_wrgb.w);
+    led_wrgb.r = applyGammaCorrection(led_wrgb.r);
+    led_wrgb.g = applyGammaCorrection(led_wrgb.g);
+    led_wrgb.b = applyGammaCorrection(led_wrgb.b);
 
-    return led_rgbw;
+    return led_wrgb;
 }
 
 static bool checkProtocolVersion(void) {
@@ -194,7 +194,7 @@ static void colorLedDeckInit(DeckInfo *info) {
               COLORLED_TASK_STACKSIZE, NULL, COLORLED_TASK_PRIO, NULL);
 
   // Register with generic LED controller
-  rgbwParamId = paramGetVarId("colorled", "rgbw8888");
+  wrgbParamId = paramGetVarId("colorled", "wrgb8888");
   ledDeckRegisterHandler(&colorLedDeckLedHandler);
 
   isInit = true;
@@ -257,18 +257,18 @@ static void task(void *param) {
     }
 
     // Send color updates when changed
-    if (currentRgbw8888 != rgbw8888) {
-      currentRgbw8888 = rgbw8888;
+    if (currentWrgb8888 != wrgb8888) {
+      currentWrgb8888 = wrgb8888;
 
-      // Unpack to struct
-      rgbw_t input = {
-          .r = (currentRgbw8888 >> 16) & 0xFF,
-          .g = (currentRgbw8888 >> 8) & 0xFF,
-          .b = currentRgbw8888 & 0xFF,
-          .w = (currentRgbw8888 >> 24) & 0xFF
+      // Unpack to struct (format: 0xWWRRGGBB)
+      wrgb_t input = {
+          .w = (currentWrgb8888 >> 24) & 0xFF,
+          .r = (currentWrgb8888 >> 16) & 0xFF,
+          .g = (currentWrgb8888 >> 8) & 0xFF,
+          .b = currentWrgb8888 & 0xFF
       };
 
-      static rgbw_t output;
+      static wrgb_t output;
       if (brightnessCorr) {
         // Apply correction
         output = applyBrightnessCorrection(&input);
@@ -276,15 +276,15 @@ static void task(void *param) {
         output = input;
       }
 
-      // Format: 0xWWRRGGBB -> Hardware expects [R, G, B, W]
-      uint8_t rgbw_data[5] = {
+      // Format: 0xWWRRGGBB -> Hardware expects [W, R, G, B]
+      uint8_t wrgb_data[5] = {
         CMD_SET_COLOR,
+        output.w,
         output.r,
         output.g,
-        output.b,
-        output.w
+        output.b
       };
-      i2cdevWrite(I2C1_DEV, COLORLED_DECK_I2C_ADDRESS, TXBUFFERSIZE, rgbw_data);
+      i2cdevWrite(I2C1_DEV, COLORLED_DECK_I2C_ADDRESS, TXBUFFERSIZE, wrgb_data);
     }
 
     // Maintain precise 10ms loop timing
@@ -304,7 +304,7 @@ static const DeckDriver color_led_deck = {
 DECK_DRIVER(color_led_deck);
 
 PARAM_GROUP_START(colorled)
-PARAM_ADD(PARAM_UINT32, rgbw8888, &rgbw8888)
+PARAM_ADD(PARAM_UINT32, wrgb8888, &wrgb8888)
 PARAM_ADD(PARAM_UINT8, brightnessCorr, &brightnessCorr)
 PARAM_GROUP_STOP(colorled)
 

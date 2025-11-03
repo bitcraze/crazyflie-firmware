@@ -1,6 +1,6 @@
 # LED Color Cycle Example
 
-This example demonstrates how to control the Color LED deck on the Crazyflie by cycling through a smooth color transition pattern. It uses deck-specific features like RGBW control, brightness correction, and thermal monitoring.
+This example demonstrates how to control the Color LED deck on the Crazyflie by cycling through a smooth color transition pattern. It uses deck-specific features like WRGB control, brightness correction, and thermal monitoring.
 
 For a hardware-agnostic interface that works across different LED deck types, see [app_generic_led_cycle](../app_generic_led_cycle/).
 
@@ -17,8 +17,8 @@ Each color transition takes approximately 768ms (256 steps × 3ms per step), res
 
 ## Technical details
 
-- Uses the `colorled.rgbw8888` parameter to control the Color LED deck
-- Enables `colorled.brightnessCorr` for perceptually uniform colors by balancing luminance across R/G/B/W channels (disable for maximum brightness per channel)
+- Uses the `colorled.wrgb8888` parameter to control the Color LED deck
+- Enables `colorled.brightnessCorr` for perceptually uniform colors by balancing luminance across W/R/G/B channels (disable for maximum brightness per channel)
 - Updates colors every 3ms using `vTaskDelayUntil(&lastWakeTime, M2T(3))` for consistent timing
 - Color values are packed into a 32-bit format: `0xWWRRGGBB`
 - Monitors thermal throttling via the `colorled.deckTemp` and `colorled.throttlePct` log variables

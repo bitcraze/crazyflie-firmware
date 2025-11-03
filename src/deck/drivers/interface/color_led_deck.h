@@ -16,8 +16,8 @@
 #define RXBUFFERSIZE  3
 
 typedef struct {
-    uint8_t r, g, b, w;
-} rgbw_t;
+    uint8_t w, r, g, b;
+} wrgb_t;
 
 typedef struct {
     uint8_t r_lumens;

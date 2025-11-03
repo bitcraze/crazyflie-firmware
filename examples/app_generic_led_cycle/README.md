@@ -23,7 +23,7 @@ The **generic LED API** (`led_deck_ctrl.rgb888` parameter):
 - Basic RGB888 color control: `0x00RRGGBB`
 - No access to deck-specific features
 
-**Deck-specific APIs** (e.g., `colorled.rgbw8888` for the Color LED deck):
+**Deck-specific APIs** (e.g., `colorled.wrgb8888` for the Color LED deck):
 
 - Access to all hardware-specific features (e.g., thermal feedback for the Color LED deck)
 - Individual deck control when multiple decks are attached
