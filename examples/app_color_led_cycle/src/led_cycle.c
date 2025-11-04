@@ -43,8 +43,31 @@ void appMain()
 {
   DEBUG_PRINT("Starting WRGB color cycling app...\n");
 
-  paramVarId_t idWrgb = paramGetVarId("colorled", "wrgb8888");
-  paramVarId_t idBrightnessCorr = paramGetVarId("colorled", "brightnessCorr");
+  // Detect which Color LED deck is attached (bottom or top)
+  paramVarId_t idBottomDetect = paramGetVarId("deck", "bcClrLEDBot");
+  paramVarId_t idTopDetect = paramGetVarId("deck", "bcClrLEDTop");
+
+  vTaskDelay(M2T(1000)); // Wait for decks to initialize
+
+  uint8_t bottomAttached = paramGetUint(idBottomDetect);
+  uint8_t topAttached = paramGetUint(idTopDetect);
+
+  const char* deckParamGroup = NULL;
+
+  // Use the first detected deck
+  if (bottomAttached) {
+    deckParamGroup = "clrledBot";
+    DEBUG_PRINT("Color LED Bottom deck detected\n");
+  } else if (topAttached) {
+    deckParamGroup = "clrledTop";
+    DEBUG_PRINT("Color LED Top deck detected\n");
+  } else {
+    DEBUG_PRINT("ERROR: No Color LED deck detected!\n");
+    return;
+  }
+
+  paramVarId_t idWrgb = paramGetVarId(deckParamGroup, "wrgb8888");
+  paramVarId_t idBrightnessCorr = paramGetVarId(deckParamGroup, "brightnessCorr");
 
   // Enable brightness correction for perceptually uniform colors
   // Set to 1 (enabled) for balanced luminance across R/G/B/W channels
@@ -52,8 +75,8 @@ void appMain()
   paramSetInt(idBrightnessCorr, 1);
 
   // Subscribe to thermal throttle logs
-  logVarId_t idDeckTemp = logGetVarId("colorled", "deckTemp");
-  logVarId_t idThrottlePct = logGetVarId("colorled", "throttlePct");
+  logVarId_t idDeckTemp = logGetVarId(deckParamGroup, "deckTemp");
+  logVarId_t idThrottlePct = logGetVarId(deckParamGroup, "throttlePct");
 
   uint8_t r = 0, g = 0, b = 0, w = 0;
   int step = 0;

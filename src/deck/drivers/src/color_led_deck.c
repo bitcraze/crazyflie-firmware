@@ -45,20 +45,28 @@
 #include "led_deck_controller.h"
 
 
-static bool isInit = false;
-static uint8_t brightnessCorr = true;
+// Context structure to hold per-instance state
+typedef struct {
+  bool isInit;
+  uint8_t brightnessCorr;
+  uint32_t currentWrgb8888;
+  uint32_t wrgb8888;
+  uint8_t deckTemperature;
+  uint8_t throttlePercentage;
+  paramVarId_t wrgbParamId;
+  uint8_t i2cAddress;  // Future-proof for dynamic addressing
+  DeckInfo *deckInfo;   // Store deck info for GPIO/I2C access
+} colorLedContext_t;
 
-static uint32_t currentWrgb8888 = 0;
-static uint32_t wrgb8888 = 0;
-
-// Thermal status from deck
-static uint8_t deckTemperature = 0;
-static uint8_t throttlePercentage = 0;
+// Two instances: bottom (index 0) and top (index 1)
+static colorLedContext_t contexts[2] = {
+  { .isInit = false, .brightnessCorr = true, .i2cAddress = COLORLED_DECK_I2C_ADDRESS }, // bottom
+  { .isInit = false, .brightnessCorr = true, .i2cAddress = COLORLED_DECK_I2C_ADDRESS }  // top
+};
 
 static void task(void* param);
-static paramVarId_t wrgbParamId;
 
-// Generic LED controller callback
+// Generic LED controller callback - forwards to all initialized instances
 static void colorLedDeckSetColor(const uint8_t *rgb888) {
   // White extraction: W = min(R, G, B), then subtract from RGB
   uint8_t w = rgb888[0];
@@ -76,7 +84,12 @@ static void colorLedDeckSetColor(const uint8_t *rgb888) {
                      ((uint32_t)g << 8) |
                      b;
 
-  paramSetInt(wrgbParamId, newWrgb);
+  // Forward to all initialized instances
+  for (int i = 0; i < 2; i++) {
+    if (contexts[i].isInit) {
+      paramSetInt(contexts[i].wrgbParamId, newWrgb);
+    }
+  }
 }
 
 static const ledDeckHandlerDef_t colorLedDeckLedHandler = {
@@ -147,13 +160,13 @@ static wrgb_t applyBrightnessCorrection(const wrgb_t *input_wrgb){
     return led_wrgb;
 }
 
-static bool checkProtocolVersion(void) {
+static bool checkProtocolVersion(uint8_t i2cAddress) {
   // Fixed packet size: CMD + 4 dummy bytes
   uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_VERSION, 0, 0, 0, 0};
   uint8_t response[RXBUFFERSIZE];
 
   // Send version request (5 bytes to match fixed packet size)
-  if (i2cdevWrite(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, TXBUFFERSIZE, cmd) == false) {
+  if (i2cdevWrite(I2C1_DEV, i2cAddress, TXBUFFERSIZE, cmd) == false) {
     DEBUG_PRINT("Failed to request version\n");
     return false;
   }
@@ -161,7 +174,7 @@ static bool checkProtocolVersion(void) {
   vTaskDelay(M2T(10)); // Give the LED deck time to prepare response
 
   // Read version response
-  if (i2cdevRead(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, RXBUFFERSIZE, response) == false) {
+  if (i2cdevRead(I2C1_DEV, i2cAddress, RXBUFFERSIZE, response) == false) {
     DEBUG_PRINT("Failed to read version\n");
     return false;
   }
@@ -182,30 +195,40 @@ static bool checkProtocolVersion(void) {
   return true;
 }
 
-static void colorLedDeckInit(DeckInfo *info) {
-  if (isInit) {
+// Common init function used by both bottom and top variants
+static void colorLedDeckInitCommon(DeckInfo *info, colorLedContext_t *ctx, const char *taskName, const char *paramGroupName) {
+  if (ctx->isInit) {
     return;
   }
+
+  ctx->deckInfo = info;
 
   deckctrl_gpio_set_direction(info, DECKCTRL_GPIO_PIN_0, true);
   deckctrl_gpio_write(info, DECKCTRL_GPIO_PIN_0, true);
 
-  xTaskCreate(task, COLORLED_TASK_NAME,
-              COLORLED_TASK_STACKSIZE, NULL, COLORLED_TASK_PRIO, NULL);
+  xTaskCreate(task, taskName,
+              COLORLED_TASK_STACKSIZE, ctx, COLORLED_TASK_PRIO, NULL);
 
   // Register with generic LED controller
-  wrgbParamId = paramGetVarId("colorled", "wrgb8888");
-  ledDeckRegisterHandler(&colorLedDeckLedHandler);
+  ctx->wrgbParamId = paramGetVarId(paramGroupName, "wrgb8888");
 
-  isInit = true;
+  // Register LED handler only once (it forwards to all instances)
+  static bool handlerRegistered = false;
+  if (!handlerRegistered) {
+    ledDeckRegisterHandler(&colorLedDeckLedHandler);
+    handlerRegistered = true;
+  }
+
+  ctx->isInit = true;
 }
 
-static bool colorLedDeckTest() {
-  if (!isInit) {
+// Common test function used by both bottom and top variants
+static bool colorLedDeckTestCommon(colorLedContext_t *ctx) {
+  if (!ctx->isInit) {
     return false;
   }
 
-  if (!checkProtocolVersion()) {
+  if (!checkProtocolVersion(ctx->i2cAddress)) {
     DEBUG_PRINT("Color LED deck protocol version check failed\n");
     return false;
   }
@@ -213,7 +236,26 @@ static bool colorLedDeckTest() {
   return true;
 }
 
+// Bottom deck wrapper functions
+static void colorLedBottomDeckInit(DeckInfo *info) {
+  colorLedDeckInitCommon(info, &contexts[0], "COLOR_LED_BOTTOM", "clrledBot");
+}
+
+static bool colorLedBottomDeckTest() {
+  return colorLedDeckTestCommon(&contexts[0]);
+}
+
+// Top deck wrapper functions
+static void colorLedTopDeckInit(DeckInfo *info) {
+  colorLedDeckInitCommon(info, &contexts[1], "COLOR_LED_TOP", "clrledTop");
+}
+
+static bool colorLedTopDeckTest() {
+  return colorLedDeckTestCommon(&contexts[1]);
+}
+
 static void task(void *param) {
+  colorLedContext_t *ctx = (colorLedContext_t *)param;
   systemWaitStart();
 
   TickType_t lastWakeTime = xTaskGetTickCount();
@@ -227,12 +269,12 @@ static void task(void *param) {
   while (1)
   {
     // Read any available response from the deck
-    if (i2cdevRead(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, RXBUFFERSIZE, response)) {
+    if (i2cdevRead(I2C1_DEV, ctx->i2cAddress, RXBUFFERSIZE, response)) {
       // Process response based on command type
       switch (response[0]) {
         case CMD_GET_THERMAL_STATUS:
-          deckTemperature = response[1];
-          throttlePercentage = response[2];
+          ctx->deckTemperature = response[1];
+          ctx->throttlePercentage = response[2];
           break;
 
         case CMD_GET_VERSION:
@@ -252,24 +294,24 @@ static void task(void *param) {
     // Send thermal status request periodically
     if (xTaskGetTickCount() - lastStatusPoll >= statusPollInterval) {
       uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_THERMAL_STATUS, 0, 0, 0, 0};
-      i2cdevWrite(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, TXBUFFERSIZE, cmd);
+      i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd);
       lastStatusPoll = xTaskGetTickCount();
     }
 
     // Send color updates when changed
-    if (currentWrgb8888 != wrgb8888) {
-      currentWrgb8888 = wrgb8888;
+    if (ctx->currentWrgb8888 != ctx->wrgb8888) {
+      ctx->currentWrgb8888 = ctx->wrgb8888;
 
       // Unpack to struct (format: 0xWWRRGGBB)
       wrgb_t input = {
-          .w = (currentWrgb8888 >> 24) & 0xFF,
-          .r = (currentWrgb8888 >> 16) & 0xFF,
-          .g = (currentWrgb8888 >> 8) & 0xFF,
-          .b = currentWrgb8888 & 0xFF
+          .w = (ctx->currentWrgb8888 >> 24) & 0xFF,
+          .r = (ctx->currentWrgb8888 >> 16) & 0xFF,
+          .g = (ctx->currentWrgb8888 >> 8) & 0xFF,
+          .b = ctx->currentWrgb8888 & 0xFF
       };
 
       static wrgb_t output;
-      if (brightnessCorr) {
+      if (ctx->brightnessCorr) {
         // Apply correction
         output = applyBrightnessCorrection(&input);
       } else {
@@ -284,7 +326,7 @@ static void task(void *param) {
         output.g,
         output.b
       };
-      i2cdevWrite(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, TXBUFFERSIZE, wrgb_data);
+      i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, wrgb_data);
     }
 
     // Maintain precise 10ms loop timing
@@ -292,32 +334,63 @@ static void task(void *param) {
   }
 }
 
-static const DeckDriver color_led_deck = {
+// Bottom deck driver (original PID)
+static const DeckDriver color_led_bottom_deck = {
   .vid = 0xBC,
   .pid = 0x13,
-  .name = "bcColorLED",
+  .name = "bcColorLEDBottom",
 
-  .init = colorLedDeckInit,
-  .test = colorLedDeckTest,
+  .init = colorLedBottomDeckInit,
+  .test = colorLedBottomDeckTest,
 };
 
-DECK_DRIVER(color_led_deck);
+// Top deck driver (new PID)
+static const DeckDriver color_led_top_deck = {
+  .vid = 0xBC,
+  .pid = 0x14,
+  .name = "bcColorLEDTop",
 
-PARAM_GROUP_START(colorled)
-PARAM_ADD(PARAM_UINT32, wrgb8888, &wrgb8888)
-PARAM_ADD(PARAM_UINT8, brightnessCorr, &brightnessCorr)
-PARAM_GROUP_STOP(colorled)
+  .init = colorLedTopDeckInit,
+  .test = colorLedTopDeckTest,
+};
 
-LOG_GROUP_START(colorled)
-LOG_ADD(LOG_UINT8, deckTemp, &deckTemperature)
-LOG_ADD(LOG_UINT8, throttlePct, &throttlePercentage)
-LOG_GROUP_STOP(colorled)
+DECK_DRIVER(color_led_bottom_deck);
+DECK_DRIVER(color_led_top_deck);
+
+// Bottom deck parameters
+PARAM_GROUP_START(clrledBot)
+PARAM_ADD(PARAM_UINT32, wrgb8888, &contexts[0].wrgb8888)
+PARAM_ADD(PARAM_UINT8, brightnessCorr, &contexts[0].brightnessCorr)
+PARAM_GROUP_STOP(clrledBot)
+
+// Top deck parameters
+PARAM_GROUP_START(clrledTop)
+PARAM_ADD(PARAM_UINT32, wrgb8888, &contexts[1].wrgb8888)
+PARAM_ADD(PARAM_UINT8, brightnessCorr, &contexts[1].brightnessCorr)
+PARAM_GROUP_STOP(clrledTop)
+
+// Bottom deck logs
+LOG_GROUP_START(clrledBot)
+LOG_ADD(LOG_UINT8, deckTemp, &contexts[0].deckTemperature)
+LOG_ADD(LOG_UINT8, throttlePct, &contexts[0].throttlePercentage)
+LOG_GROUP_STOP(clrledBot)
+
+// Top deck logs
+LOG_GROUP_START(clrledTop)
+LOG_ADD(LOG_UINT8, deckTemp, &contexts[1].deckTemperature)
+LOG_ADD(LOG_UINT8, throttlePct, &contexts[1].throttlePercentage)
+LOG_GROUP_STOP(clrledTop)
 
 PARAM_GROUP_START(deck)
 
 /**
- * @brief Nonzero if [Color LED deck](%https://store.bitcraze.io/collections/decks/products/color-led-deck) is attached
+ * @brief Nonzero if bottom [Color LED deck](%https://store.bitcraze.io/collections/decks/products/color-led-deck) is attached
  */
-PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcColorLED, &isInit)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcClrLEDBot, &contexts[0].isInit)
+
+/**
+ * @brief Nonzero if top [Color LED deck](%https://store.bitcraze.io/collections/decks/products/color-led-deck) is attached
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcClrLEDTop, &contexts[1].isInit)
 
 PARAM_GROUP_STOP(deck)
