@@ -512,6 +512,7 @@ config DECK_DECKCTRL_DEVBOARD
         This deck is used for the deckctrl development.
 
 config DECK_COLORLED
+    depends on DECK_BACKEND_DECKCTRL
     bool "Support for Color LED deck"
     default y
     help
