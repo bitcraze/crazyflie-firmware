@@ -316,7 +316,7 @@ LOG_GROUP_STOP(colorled)
 PARAM_GROUP_START(deck)
 
 /**
- * @brief Nonzero if [Color LED deck](https://store.bitcraze.io/collections/decks/products/color-led-deck) is attached
+ * @brief Nonzero if [Color LED deck](%https://store.bitcraze.io/collections/decks/products/color-led-deck) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcColorLED, &isInit)
 
