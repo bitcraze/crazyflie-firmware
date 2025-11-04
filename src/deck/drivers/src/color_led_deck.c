@@ -203,8 +203,16 @@ static void colorLedDeckInitCommon(DeckInfo *info, colorLedContext_t *ctx, const
 
   ctx->deckInfo = info;
 
-  deckctrl_gpio_set_direction(info, DECKCTRL_GPIO_PIN_0, true);
-  deckctrl_gpio_write(info, DECKCTRL_GPIO_PIN_0, true);
+  // Set GPIO direction and write high - check for success
+  if (!deckctrl_gpio_set_direction(info, DECKCTRL_GPIO_PIN_0, OUTPUT)) {
+    DEBUG_PRINT("Failed to set GPIO direction\n");
+    return;
+  }
+
+  if (!deckctrl_gpio_write(info, DECKCTRL_GPIO_PIN_0, HIGH)) {
+    DEBUG_PRINT("Failed to write GPIO\n");
+    return;
+  }
 
   xTaskCreate(task, taskName,
               COLORLED_TASK_STACKSIZE, ctx, COLORLED_TASK_PRIO, NULL);
