@@ -246,7 +246,7 @@ static bool colorLedDeckTest(colorLedContext_t *ctx) {
 
 // Bottom deck wrapper functions
 static void colorLedBottomDeckInit(DeckInfo *info) {
-  colorLedDeckInit(info, &contexts[0], "COLOR_LED_BOTTOM", "clrledBot");
+  colorLedDeckInit(info, &contexts[0], "COLOR_LED_BOTTOM", "colorLedBot");
 }
 
 static bool colorLedBottomDeckTest() {
@@ -255,7 +255,7 @@ static bool colorLedBottomDeckTest() {
 
 // Top deck wrapper functions
 static void colorLedTopDeckInit(DeckInfo *info) {
-  colorLedDeckInit(info, &contexts[1], "COLOR_LED_TOP", "clrledTop");
+  colorLedDeckInit(info, &contexts[1], "COLOR_LED_TOP", "colorLedTop");
 }
 
 static bool colorLedTopDeckTest() {
@@ -366,39 +366,39 @@ DECK_DRIVER(color_led_bottom_deck);
 DECK_DRIVER(color_led_top_deck);
 
 // Bottom deck parameters
-PARAM_GROUP_START(clrledBot)
+PARAM_GROUP_START(colorLedBot)
 PARAM_ADD(PARAM_UINT32, wrgb8888, &contexts[0].wrgb8888)
-PARAM_ADD(PARAM_UINT8, brightnessCorr, &contexts[0].brightnessCorr)
-PARAM_GROUP_STOP(clrledBot)
+PARAM_ADD(PARAM_UINT8, brightCorr, &contexts[0].brightnessCorr)
+PARAM_GROUP_STOP(colorLedBot)
 
 // Top deck parameters
-PARAM_GROUP_START(clrledTop)
+PARAM_GROUP_START(colorLedTop)
 PARAM_ADD(PARAM_UINT32, wrgb8888, &contexts[1].wrgb8888)
-PARAM_ADD(PARAM_UINT8, brightnessCorr, &contexts[1].brightnessCorr)
-PARAM_GROUP_STOP(clrledTop)
+PARAM_ADD(PARAM_UINT8, brightCorr, &contexts[1].brightnessCorr)
+PARAM_GROUP_STOP(colorLedTop)
 
 // Bottom deck logs
-LOG_GROUP_START(clrledBot)
-LOG_ADD(LOG_UINT8, deckTemp, &contexts[0].deckTemperature)
-LOG_ADD(LOG_UINT8, throttlePct, &contexts[0].throttlePercentage)
-LOG_GROUP_STOP(clrledBot)
+LOG_GROUP_START(colorLedBot)
+LOG_ADD(LOG_UINT8, temp, &contexts[0].deckTemperature)
+LOG_ADD(LOG_UINT8, throttle, &contexts[0].throttlePercentage)
+LOG_GROUP_STOP(colorLedBot)
 
 // Top deck logs
-LOG_GROUP_START(clrledTop)
-LOG_ADD(LOG_UINT8, deckTemp, &contexts[1].deckTemperature)
-LOG_ADD(LOG_UINT8, throttlePct, &contexts[1].throttlePercentage)
-LOG_GROUP_STOP(clrledTop)
+LOG_GROUP_START(colorLedTop)
+LOG_ADD(LOG_UINT8, temp, &contexts[1].deckTemperature)
+LOG_ADD(LOG_UINT8, throttle, &contexts[1].throttlePercentage)
+LOG_GROUP_STOP(colorLedTop)
 
 PARAM_GROUP_START(deck)
 
 /**
  * @brief Nonzero if bottom [Color LED deck](%https://store.bitcraze.io/collections/decks/products/color-led-deck) is attached
  */
-PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcClrLEDBot, &contexts[0].isInit)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcColorLedBot, &contexts[0].isInit)
 
 /**
  * @brief Nonzero if top [Color LED deck](%https://store.bitcraze.io/collections/decks/products/color-led-deck) is attached
  */
-PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcClrLEDTop, &contexts[1].isInit)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcColorLedTop, &contexts[1].isInit)
 
 PARAM_GROUP_STOP(deck)

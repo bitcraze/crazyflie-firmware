@@ -44,8 +44,8 @@ void appMain()
   DEBUG_PRINT("Starting WRGB color cycling app...\n");
 
   // Detect which Color LED deck is attached (bottom or top)
-  paramVarId_t idBottomDetect = paramGetVarId("deck", "bcClrLEDBot");
-  paramVarId_t idTopDetect = paramGetVarId("deck", "bcClrLEDTop");
+  paramVarId_t idBottomDetect = paramGetVarId("deck", "bcColorLedBot");
+  paramVarId_t idTopDetect = paramGetVarId("deck", "bcColorLedTop");
 
   uint8_t bottomAttached = paramGetUint(idBottomDetect);
   uint8_t topAttached = paramGetUint(idTopDetect);
@@ -54,10 +54,10 @@ void appMain()
 
   // Use the first detected deck
   if (bottomAttached) {
-    deckParamGroup = "clrledBot";
+    deckParamGroup = "colorLedBot";
     DEBUG_PRINT("Color LED Bottom deck detected\n");
   } else if (topAttached) {
-    deckParamGroup = "clrledTop";
+    deckParamGroup = "colorLedTop";
     DEBUG_PRINT("Color LED Top deck detected\n");
   } else {
     DEBUG_PRINT("ERROR: No Color LED deck detected!\n");
@@ -65,16 +65,16 @@ void appMain()
   }
 
   paramVarId_t idWrgb = paramGetVarId(deckParamGroup, "wrgb8888");
-  paramVarId_t idBrightnessCorr = paramGetVarId(deckParamGroup, "brightnessCorr");
+  paramVarId_t idBrightCorr = paramGetVarId(deckParamGroup, "brightCorr");
 
   // Enable brightness correction for perceptually uniform colors
   // Set to 1 (enabled) for balanced luminance across R/G/B/W channels
   // Set to 0 (disabled) for maximum brightness per channel
-  paramSetInt(idBrightnessCorr, 1);
+  paramSetInt(idBrightCorr, 1);
 
   // Subscribe to thermal throttle logs
-  logVarId_t idDeckTemp = logGetVarId(deckParamGroup, "deckTemp");
-  logVarId_t idThrottlePct = logGetVarId(deckParamGroup, "throttlePct");
+  logVarId_t idTemp = logGetVarId(deckParamGroup, "temp");
+  logVarId_t idThrottle = logGetVarId(deckParamGroup, "throttle");
 
   uint8_t r = 0, g = 0, b = 0, w = 0;
   int step = 0;
@@ -121,10 +121,10 @@ void appMain()
 
     // Check for thermal throttling periodically (every 100ms)
     if (xTaskGetTickCount() - lastThermalCheck >= thermalCheckInterval) {
-      uint8_t throttlePct = logGetUint(idThrottlePct);
-      if (throttlePct) {
-        uint8_t deckTemp = logGetUint(idDeckTemp);
-        DEBUG_PRINT("WARNING: Thermal throttling active! Temp: %d°C, Throttle: %d%%\n", deckTemp, throttlePct);
+      uint8_t throttle = logGetUint(idThrottle);
+      if (throttle) {
+        uint8_t temp = logGetUint(idTemp);
+        DEBUG_PRINT("WARNING: Thermal throttling active! Temp: %d°C, Throttle: %d%%\n", temp, throttle);
       }
       lastThermalCheck = xTaskGetTickCount();
     }
