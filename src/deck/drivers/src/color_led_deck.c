@@ -318,7 +318,7 @@ static void task(void *param) {
           .b = ctx->currentWrgb8888 & 0xFF
       };
 
-     wrgb_t output;
+      wrgb_t output;
       if (ctx->brightnessCorr) {
         // Apply correction
         output = applyBrightnessCorrection(&input);
