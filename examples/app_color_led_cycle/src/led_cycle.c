@@ -47,8 +47,6 @@ void appMain()
   paramVarId_t idBottomDetect = paramGetVarId("deck", "bcClrLEDBot");
   paramVarId_t idTopDetect = paramGetVarId("deck", "bcClrLEDTop");
 
-  vTaskDelay(M2T(1000)); // Wait for decks to initialize
-
   uint8_t bottomAttached = paramGetUint(idBottomDetect);
   uint8_t topAttached = paramGetUint(idTopDetect);
 
