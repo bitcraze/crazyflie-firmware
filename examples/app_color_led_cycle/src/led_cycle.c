@@ -73,8 +73,8 @@ void appMain()
   paramSetInt(idBrightCorr, 1);
 
   // Subscribe to thermal throttle logs
-  logVarId_t idTemp = logGetVarId(deckParamGroup, "temp");
-  logVarId_t idThrottle = logGetVarId(deckParamGroup, "throttle");
+  logVarId_t idDeckTemp = logGetVarId(deckParamGroup, "deckTemp");
+  logVarId_t idThrottlePct = logGetVarId(deckParamGroup, "throttlePct");
 
   uint8_t r = 0, g = 0, b = 0, w = 0;
   int step = 0;
@@ -121,10 +121,10 @@ void appMain()
 
     // Check for thermal throttling periodically (every 100ms)
     if (xTaskGetTickCount() - lastThermalCheck >= thermalCheckInterval) {
-      uint8_t throttle = logGetUint(idThrottle);
-      if (throttle) {
-        uint8_t temp = logGetUint(idTemp);
-        DEBUG_PRINT("WARNING: Thermal throttling active! Temp: %d°C, Throttle: %d%%\n", temp, throttle);
+      uint8_t throttlePct = logGetUint(idThrottlePct);
+      if (throttlePct) {
+        uint8_t deckTemp = logGetUint(idDeckTemp);
+        DEBUG_PRINT("WARNING: Thermal throttling active! Temp: %d°C, Throttle: %d%%\n", deckTemp, throttlePct);
       }
       lastThermalCheck = xTaskGetTickCount();
     }

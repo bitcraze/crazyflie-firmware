@@ -379,14 +379,14 @@ PARAM_GROUP_STOP(colorLedTop)
 
 // Bottom deck logs
 LOG_GROUP_START(colorLedBot)
-LOG_ADD(LOG_UINT8, temp, &contexts[0].deckTemperature)
-LOG_ADD(LOG_UINT8, throttle, &contexts[0].throttlePercentage)
+LOG_ADD(LOG_UINT8, deckTemp, &contexts[0].deckTemperature)
+LOG_ADD(LOG_UINT8, throttlePct, &contexts[0].throttlePercentage)
 LOG_GROUP_STOP(colorLedBot)
 
 // Top deck logs
 LOG_GROUP_START(colorLedTop)
-LOG_ADD(LOG_UINT8, temp, &contexts[1].deckTemperature)
-LOG_ADD(LOG_UINT8, throttle, &contexts[1].throttlePercentage)
+LOG_ADD(LOG_UINT8, deckTemp, &contexts[1].deckTemperature)
+LOG_ADD(LOG_UINT8, throttlePct, &contexts[1].throttlePercentage)
 LOG_GROUP_STOP(colorLedTop)
 
 PARAM_GROUP_START(deck)
