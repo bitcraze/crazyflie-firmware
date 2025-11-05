@@ -54,8 +54,8 @@ typedef struct {
   uint8_t deckTemperature;
   uint8_t throttlePercentage;
   paramVarId_t wrgbParamId;
-  uint8_t i2cAddress;  // Future-proof for dynamic addressing
-  DeckInfo *deckInfo;   // Store deck info for GPIO/I2C access
+  uint8_t i2cAddress;
+  DeckInfo *deckInfo;
 } colorLedContext_t;
 
 // Two instances: bottom (index 0) and top (index 1)
@@ -196,7 +196,7 @@ static bool checkProtocolVersion(uint8_t i2cAddress) {
 }
 
 // Common init function used by both bottom and top variants
-static void colorLedDeckInitCommon(DeckInfo *info, colorLedContext_t *ctx, const char *taskName, const char *paramGroupName) {
+static void colorLedDeckInit(DeckInfo *info, colorLedContext_t *ctx, const char *taskName, const char *paramGroupName) {
   if (ctx->isInit) {
     return;
   }
@@ -231,7 +231,7 @@ static void colorLedDeckInitCommon(DeckInfo *info, colorLedContext_t *ctx, const
 }
 
 // Common test function used by both bottom and top variants
-static bool colorLedDeckTestCommon(colorLedContext_t *ctx) {
+static bool colorLedDeckTest(colorLedContext_t *ctx) {
   if (!ctx->isInit) {
     return false;
   }
@@ -246,20 +246,20 @@ static bool colorLedDeckTestCommon(colorLedContext_t *ctx) {
 
 // Bottom deck wrapper functions
 static void colorLedBottomDeckInit(DeckInfo *info) {
-  colorLedDeckInitCommon(info, &contexts[0], "COLOR_LED_BOTTOM", "clrledBot");
+  colorLedDeckInit(info, &contexts[0], "COLOR_LED_BOTTOM", "clrledBot");
 }
 
 static bool colorLedBottomDeckTest() {
-  return colorLedDeckTestCommon(&contexts[0]);
+  return colorLedDeckTest(&contexts[0]);
 }
 
 // Top deck wrapper functions
 static void colorLedTopDeckInit(DeckInfo *info) {
-  colorLedDeckInitCommon(info, &contexts[1], "COLOR_LED_TOP", "clrledTop");
+  colorLedDeckInit(info, &contexts[1], "COLOR_LED_TOP", "clrledTop");
 }
 
 static bool colorLedTopDeckTest() {
-  return colorLedDeckTestCommon(&contexts[1]);
+  return colorLedDeckTest(&contexts[1]);
 }
 
 static void task(void *param) {
