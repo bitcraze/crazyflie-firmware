@@ -65,7 +65,7 @@ bool eepromInit(I2C_Dev *i2cPort)
   memoryRegisterHandler(&memDef);
 
   I2Cx = i2cPort;
-  devAddr = EEPROM_I2C_ADDR;
+  devAddr = EEPROM_I2C_ADDRESS;
 
   isInit = true;
 

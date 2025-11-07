@@ -166,7 +166,7 @@ static bool checkProtocolVersion(void) {
   uint8_t response[RXBUFFERSIZE];
 
   // Send version request (5 bytes to match fixed packet size)
-  if (i2cdevWrite(I2C1_DEV, COLORLED_DECK_I2C_ADDRESS, TXBUFFERSIZE, cmd) == false) {
+  if (i2cdevWrite(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, TXBUFFERSIZE, cmd) == false) {
     DEBUG_PRINT("Failed to request version\n");
     return false;
   }
@@ -174,7 +174,7 @@ static bool checkProtocolVersion(void) {
   vTaskDelay(M2T(10)); // Give the LED deck time to prepare response
 
   // Read version response
-  if (i2cdevRead(I2C1_DEV, COLORLED_DECK_I2C_ADDRESS, RXBUFFERSIZE, response) == false) {
+  if (i2cdevRead(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, RXBUFFERSIZE, response) == false) {
     DEBUG_PRINT("Failed to read version\n");
     return false;
   }
@@ -242,15 +242,14 @@ static void task(void *param) {
 
   while (1)
   {
-    if (isInFirmware) {
-      // Read any available response from the deck
-      if (i2cdevRead(I2C1_DEV, COLORLED_DECK_I2C_ADDRESS, RXBUFFERSIZE, response)) {
-        // Process response based on command type
-        switch (response[0]) {
-          case CMD_GET_THERMAL_STATUS:
-            deckTemperature = response[1];
-            throttlePercentage = response[2];
-            break;
+    // Read any available response from the deck
+    if (i2cdevRead(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, RXBUFFERSIZE, response)) {
+      // Process response based on command type
+      switch (response[0]) {
+        case CMD_GET_THERMAL_STATUS:
+          deckTemperature = response[1];
+          throttlePercentage = response[2];
+          break;
 
           case CMD_GET_VERSION:
             // Version responses are handled during init
@@ -260,49 +259,48 @@ static void task(void *param) {
             // No response expected for color commands
             break;
 
-          default:
-            // Unknown or empty response
-            break;
-        }
+        default:
+          // Unknown or empty response
+          break;
+      }
+    }
+
+    // Send thermal status request periodically
+    if (xTaskGetTickCount() - lastStatusPoll >= statusPollInterval) {
+      uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_THERMAL_STATUS, 0, 0, 0, 0};
+      i2cdevWrite(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, TXBUFFERSIZE, cmd);
+      lastStatusPoll = xTaskGetTickCount();
+    }
+
+    // Send color updates when changed
+    if (currentWrgb8888 != wrgb8888) {
+      currentWrgb8888 = wrgb8888;
+
+      // Unpack to struct (format: 0xWWRRGGBB)
+      wrgb_t input = {
+          .w = (currentWrgb8888 >> 24) & 0xFF,
+          .r = (currentWrgb8888 >> 16) & 0xFF,
+          .g = (currentWrgb8888 >> 8) & 0xFF,
+          .b = currentWrgb8888 & 0xFF
+      };
+
+      static wrgb_t output;
+      if (brightnessCorr) {
+        // Apply correction
+        output = applyBrightnessCorrection(&input);
+      } else {
+        output = input;
       }
 
-      // Send thermal status request periodically
-      if (xTaskGetTickCount() - lastStatusPoll >= statusPollInterval) {
-        uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_THERMAL_STATUS, 0, 0, 0, 0};
-        i2cdevWrite(I2C1_DEV, COLORLED_DECK_I2C_ADDRESS, TXBUFFERSIZE, cmd);
-        lastStatusPoll = xTaskGetTickCount();
-      }
-
-      // Send color updates when changed
-      if (currentWrgb8888 != wrgb8888) {
-        currentWrgb8888 = wrgb8888;
-
-        // Unpack to struct (format: 0xWWRRGGBB)
-        wrgb_t input = {
-            .w = (currentWrgb8888 >> 24) & 0xFF,
-            .r = (currentWrgb8888 >> 16) & 0xFF,
-            .g = (currentWrgb8888 >> 8) & 0xFF,
-            .b = currentWrgb8888 & 0xFF
-        };
-
-        static wrgb_t output;
-        if (brightnessCorr) {
-          // Apply correction
-          output = applyBrightnessCorrection(&input);
-        } else {
-          output = input;
-        }
-
-        // Format: 0xWWRRGGBB -> Hardware expects [W, R, G, B]
-        uint8_t wrgb_data[5] = {
-          CMD_SET_COLOR,
-          output.w,
-          output.r,
-          output.g,
-          output.b
-        };
-        i2cdevWrite(I2C1_DEV, COLORLED_DECK_I2C_ADDRESS, TXBUFFERSIZE, wrgb_data);
-      }
+      // Format: 0xWWRRGGBB -> Hardware expects [W, R, G, B]
+      uint8_t wrgb_data[5] = {
+        CMD_SET_COLOR,
+        output.w,
+        output.r,
+        output.g,
+        output.b
+      };
+      i2cdevWrite(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, TXBUFFERSIZE, wrgb_data);
     }
 
     // Maintain precise 10ms loop timing
@@ -311,11 +309,11 @@ static void task(void *param) {
 }
 
 static bool colorFlasherWriteFlash(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer, const DeckMemDef_t* memDef) {
-  return dfu_i2c_write(DFU_STM32C0_I2C_ADDR, memAddr, buffer, writeLen);
+  return dfu_i2c_write(DFU_STM32C0_I2C_ADDRESS, memAddr, buffer, writeLen);
 }
 
 static bool colorFlasherReadFlash(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
-  return dfu_i2c_read(DFU_STM32C0_I2C_ADDR, memAddr, buffer, readLen);
+  return dfu_i2c_read(DFU_STM32C0_I2C_ADDRESS, memAddr, buffer, readLen);
 }
 
 static uint8_t colorFlasherPropertiesQuery() {
