@@ -203,14 +203,13 @@ static void colorLedDeckInit(DeckInfo *info, colorLedContext_t *ctx, const char 
 
   ctx->deckInfo = info;
 
-  // Set GPIO direction and write high - check for success
   if (!deckctrl_gpio_set_direction(info, DECKCTRL_GPIO_PIN_0, OUTPUT)) {
-    DEBUG_PRINT("Failed to set GPIO direction\n");
+    DEBUG_PRINT("Failed to configure GPIO 0 as output for deck power enable\n");
     return;
   }
 
   if (!deckctrl_gpio_write(info, DECKCTRL_GPIO_PIN_0, HIGH)) {
-    DEBUG_PRINT("Failed to write GPIO\n");
+    DEBUG_PRINT("Failed to set GPIO 0 HIGH for deck power enable\n");
     return;
   }
 
@@ -255,6 +254,16 @@ static bool colorLedBottomDeckTest() {
 
 // Top deck wrapper functions
 static void colorLedTopDeckInit(DeckInfo *info) {
+  // GPIO 11 controls the I2C address to differentiate top deck from bottom deck
+  if (!deckctrl_gpio_set_direction(info, DECKCTRL_GPIO_PIN_11, OUTPUT)) {
+    DEBUG_PRINT("Failed to configure GPIO 11 as output for I2C address selection\n");
+    return;
+  }
+
+  if (!deckctrl_gpio_write(info, DECKCTRL_GPIO_PIN_11, HIGH)) {
+    DEBUG_PRINT("Failed to set GPIO 11 HIGH for I2C address selection\n");
+    return;
+  }
   colorLedDeckInit(info, &contexts[1], "COLOR_LED_TOP", "colorLedTop");
 }
 
