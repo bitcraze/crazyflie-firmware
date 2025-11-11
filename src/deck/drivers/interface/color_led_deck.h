@@ -9,12 +9,14 @@
 #define CMD_GET_VERSION         0x00
 #define CMD_SET_COLOR           0x01
 #define CMD_GET_THERMAL_STATUS  0x02
+#define CMD_GET_LED_POSITION    0x03
+#define CMD_GET_LED_CURRENT     0x04
 
 // Expected protocol version
-#define COLORLED_PROTOCOL_VERSION_REQUIRED 1
+#define COLORLED_PROTOCOL_VERSION_REQUIRED 2
 
 #define TXBUFFERSIZE  5
-#define RXBUFFERSIZE  3
+#define RXBUFFERSIZE  9
 
 typedef struct {
     uint8_t w, r, g, b;

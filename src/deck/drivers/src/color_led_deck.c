@@ -53,6 +53,8 @@ typedef struct {
   uint32_t wrgb8888;
   uint8_t deckTemperature;
   uint8_t throttlePercentage;
+  uint8_t ledPosition;
+  uint16_t ledCurrent[4];  // LED current in milliamps for 4 channels (R, G, B, W)
   paramVarId_t wrgbParamId;
   uint8_t i2cAddress;
   DeckInfo *deckInfo;
@@ -65,6 +67,9 @@ static colorLedContext_t contexts[2] = {
 };
 
 static void task(void* param);
+static bool pollThermalStatus(colorLedContext_t *ctx);
+static bool pollLedCurrent(colorLedContext_t *ctx);
+static bool pollLedPosition(colorLedContext_t *ctx);
 
 // Generic LED controller callback - forwards to all initialized instances
 static void colorLedDeckSetColor(const uint8_t *rgb888) {
@@ -240,6 +245,11 @@ static bool colorLedDeckTest(colorLedContext_t *ctx) {
     return false;
   }
 
+  // Read LED position once during initialization (fixed by hardware)
+  if (!pollLedPosition(ctx)) {
+    DEBUG_PRINT("Failed to poll LED position\n");
+  }
+
   return true;
 }
 
@@ -271,6 +281,62 @@ static bool colorLedTopDeckTest() {
   return colorLedDeckTest(&contexts[1]);
 }
 
+static bool pollThermalStatus(colorLedContext_t *ctx) {
+  uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_THERMAL_STATUS, 0, 0, 0, 0};
+  uint8_t response[RXBUFFERSIZE];
+
+  if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
+    vTaskDelay(M2T(10));
+    if (i2cdevRead(I2C1_DEV, ctx->i2cAddress, RXBUFFERSIZE, response)) {
+      if (response[0] == CMD_GET_THERMAL_STATUS) {
+        ctx->deckTemperature = response[1];
+        ctx->throttlePercentage = response[2];
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+static bool pollLedCurrent(colorLedContext_t *ctx) {
+  uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_LED_CURRENT, 0, 0, 0, 0};
+  uint8_t response[RXBUFFERSIZE];
+
+  if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
+    vTaskDelay(M2T(10));
+    if (i2cdevRead(I2C1_DEV, ctx->i2cAddress, RXBUFFERSIZE, response)) {
+      if (response[0] == CMD_GET_LED_CURRENT) {
+        // Each current value is 2 bytes: high byte, low byte (milliamps)
+        ctx->ledCurrent[0] = (response[1] << 8) | response[2];  // Red
+        ctx->ledCurrent[1] = (response[3] << 8) | response[4];  // Green
+        ctx->ledCurrent[2] = (response[5] << 8) | response[6];  // Blue
+        ctx->ledCurrent[3] = (response[7] << 8) | response[8];  // White
+        DEBUG_PRINT("LED Current - R:%dmA G:%dmA B:%dmA W:%dmA\n",
+                  ctx->ledCurrent[0], ctx->ledCurrent[1],
+                  ctx->ledCurrent[2], ctx->ledCurrent[3]);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+static bool pollLedPosition(colorLedContext_t *ctx) {
+  uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_LED_POSITION, 0, 0, 0, 0};
+  uint8_t response[RXBUFFERSIZE];
+
+  if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
+    vTaskDelay(M2T(10));
+    if (i2cdevRead(I2C1_DEV, ctx->i2cAddress, RXBUFFERSIZE, response)) {
+      if (response[0] == CMD_GET_LED_POSITION) {
+        ctx->ledPosition = response[1];
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 static void task(void *param) {
   colorLedContext_t *ctx = (colorLedContext_t *)param;
   systemWaitStart();
@@ -278,41 +344,28 @@ static void task(void *param) {
   TickType_t lastWakeTime = xTaskGetTickCount();
   const TickType_t loopInterval = M2T(10); // 10ms loop interval
 
-  TickType_t lastStatusPoll = xTaskGetTickCount();
-  const TickType_t statusPollInterval = M2T(100); // Poll every 100ms
+  TickType_t lastThermalPoll = xTaskGetTickCount();
+  const TickType_t thermalPollInterval = M2T(100); // Poll thermal status every 100ms
 
-  uint8_t response[RXBUFFERSIZE];
+  TickType_t lastCurrentPoll = xTaskGetTickCount();
+  const TickType_t currentPollInterval = M2T(1000); // Poll LED current every 1000ms
 
   while (1)
   {
-    // Read any available response from the deck
-    if (i2cdevRead(I2C1_DEV, ctx->i2cAddress, RXBUFFERSIZE, response)) {
-      // Process response based on command type
-      switch (response[0]) {
-        case CMD_GET_THERMAL_STATUS:
-          ctx->deckTemperature = response[1];
-          ctx->throttlePercentage = response[2];
-          break;
-
-        case CMD_GET_VERSION:
-          // Version responses are handled during init
-          break;
-
-        case CMD_SET_COLOR:
-          // No response expected for color commands
-          break;
-
-        default:
-          // Unknown or empty response
-          break;
+    // Poll thermal status periodically
+    if (xTaskGetTickCount() - lastThermalPoll >= thermalPollInterval) {
+      if (!pollThermalStatus(ctx)) {
+        DEBUG_PRINT("Failed to poll thermal status\n");
       }
+      lastThermalPoll = xTaskGetTickCount();
     }
 
-    // Send thermal status request periodically
-    if (xTaskGetTickCount() - lastStatusPoll >= statusPollInterval) {
-      uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_THERMAL_STATUS, 0, 0, 0, 0};
-      i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd);
-      lastStatusPoll = xTaskGetTickCount();
+    // Poll LED current periodically
+    if (xTaskGetTickCount() - lastCurrentPoll >= currentPollInterval) {
+      if (!pollLedCurrent(ctx)) {
+        DEBUG_PRINT("Failed to poll LED current\n");
+      }
+      lastCurrentPoll = xTaskGetTickCount();
     }
 
     // Send color updates when changed
@@ -376,26 +429,112 @@ DECK_DRIVER(color_led_top_deck);
 
 // Bottom deck parameters
 PARAM_GROUP_START(colorLedBot)
+
+/**
+ * @brief Color value in WRGB format (0xWWRRGGBB) for bottom deck. Example: 0x000000FF = 255 = max blue
+ */
 PARAM_ADD(PARAM_UINT32, wrgb8888, &contexts[0].wrgb8888)
+
+/**
+ * @brief Enable brightness correction (gamma and luminance normalization) for bottom deck. 0=off, 1=on
+ */
 PARAM_ADD(PARAM_UINT8, brightCorr, &contexts[0].brightnessCorr)
+
 PARAM_GROUP_STOP(colorLedBot)
 
 // Top deck parameters
 PARAM_GROUP_START(colorLedTop)
+
+/**
+ * @brief Color value in WRGB format (0xWWRRGGBB) for top deck. Example: 0x000000FF = 255 = max blue
+ */
 PARAM_ADD(PARAM_UINT32, wrgb8888, &contexts[1].wrgb8888)
+
+/**
+ * @brief Enable brightness correction (gamma and luminance normalization) for top deck. 0=off, 1=on
+ */
 PARAM_ADD(PARAM_UINT8, brightCorr, &contexts[1].brightnessCorr)
+
 PARAM_GROUP_STOP(colorLedTop)
 
 // Bottom deck logs
 LOG_GROUP_START(colorLedBot)
+
+/**
+ * @brief Deck temperature in degrees Celsius for bottom deck
+ */
 LOG_ADD(LOG_UINT8, deckTemp, &contexts[0].deckTemperature)
+
+/**
+ * @brief Thermal throttle percentage (0-100) for bottom deck
+ */
 LOG_ADD(LOG_UINT8, throttlePct, &contexts[0].throttlePercentage)
+
+/**
+ * @brief LED position detection value for bottom deck (0=none, 1=bottom, 2=top)
+ */
+LOG_ADD(LOG_UINT8, ledPos, &contexts[0].ledPosition)
+
+/**
+ * @brief Red LED current in milliamps for bottom deck
+ */
+LOG_ADD(LOG_UINT16, ledCurR, &contexts[0].ledCurrent[0])
+
+/**
+ * @brief Green LED current in milliamps for bottom deck
+ */
+LOG_ADD(LOG_UINT16, ledCurG, &contexts[0].ledCurrent[1])
+
+/**
+ * @brief Blue LED current in milliamps for bottom deck
+ */
+LOG_ADD(LOG_UINT16, ledCurB, &contexts[0].ledCurrent[2])
+
+/**
+ * @brief White LED current in milliamps for bottom deck
+ */
+LOG_ADD(LOG_UINT16, ledCurW, &contexts[0].ledCurrent[3])
+
 LOG_GROUP_STOP(colorLedBot)
 
 // Top deck logs
 LOG_GROUP_START(colorLedTop)
+
+/**
+ * @brief Deck temperature in degrees Celsius for top deck
+ */
 LOG_ADD(LOG_UINT8, deckTemp, &contexts[1].deckTemperature)
+
+/**
+ * @brief Thermal throttle percentage (0-100) for top deck
+ */
 LOG_ADD(LOG_UINT8, throttlePct, &contexts[1].throttlePercentage)
+
+/**
+ * @brief LED position detection value for top deck (0=none, 1=bottom, 2=top)
+ */
+LOG_ADD(LOG_UINT8, ledPos, &contexts[1].ledPosition)
+
+/**
+ * @brief Red LED current in milliamps for top deck
+ */
+LOG_ADD(LOG_UINT16, ledCurR, &contexts[1].ledCurrent[0])
+
+/**
+ * @brief Green LED current in milliamps for top deck
+ */
+LOG_ADD(LOG_UINT16, ledCurG, &contexts[1].ledCurrent[1])
+
+/**
+ * @brief Blue LED current in milliamps for top deck
+ */
+LOG_ADD(LOG_UINT16, ledCurB, &contexts[1].ledCurrent[2])
+
+/**
+ * @brief White LED current in milliamps for top deck
+ */
+LOG_ADD(LOG_UINT16, ledCurW, &contexts[1].ledCurrent[3])
+
 LOG_GROUP_STOP(colorLedTop)
 
 PARAM_GROUP_START(deck)
