@@ -27,9 +27,18 @@ typedef struct {
     uint8_t w_lumens;
 } ledLuminance_t;
 
-// LED luminance values from datasheet
+// LED luminance values from datasheet, adjusted for actual circuit current
+// Datasheet values assume equal current, but actual current depends on both
+// sense resistor AND LED forward voltage (V_F):
+//
+// Circuit: I = (Vsupply - V_F) / (R_mosfet + R_sense)
+// - Red:   I = (3.1V - 2.1V) / (0.070Ω + 3.4Ω) = 288 mA → 1.54× datasheet current
+// - G/B/W: I = (3.1V - 2.9V) / (0.070Ω + 1.0Ω) = 187 mA → 1.0× datasheet current
+//
+// Red's lower V_F gives more voltage headroom, overcoming higher sense resistance
+// LED brightness scales approximately linearly with current
 static const ledLuminance_t LED_LUMINANCE = {
-    .r_lumens = 90,
+    .r_lumens = 139,  // 90 lumens @ datasheet current × 1.54 current ratio = 139 lumens actual
     .g_lumens = 210,
     .b_lumens = 50,
     .w_lumens = 250
