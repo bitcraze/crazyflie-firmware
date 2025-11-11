@@ -311,9 +311,6 @@ static bool pollLedCurrent(colorLedContext_t *ctx) {
         ctx->ledCurrent[1] = (response[3] << 8) | response[4];  // Green
         ctx->ledCurrent[2] = (response[5] << 8) | response[6];  // Blue
         ctx->ledCurrent[3] = (response[7] << 8) | response[8];  // White
-        DEBUG_PRINT("LED Current - R:%dmA G:%dmA B:%dmA W:%dmA\n",
-                  ctx->ledCurrent[0], ctx->ledCurrent[1],
-                  ctx->ledCurrent[2], ctx->ledCurrent[3]);
         return true;
       }
     }
