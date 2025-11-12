@@ -189,6 +189,7 @@ typedef bool (deckMemoryRead)(const uint32_t vAddr, const uint8_t len, uint8_t* 
 #define DECK_MEMORY_MASK_STARTED 1
 #define DECK_MEMORY_MASK_UPGRADE_REQUIRED 2
 #define DECK_MEMORY_MASK_BOOT_LOADER_ACTIVE 4
+#define DECK_MEMORY_MASK_SUPPORTS_HOT_RESTART 8
 
 /**
  * @brief Definition of function to query a deck for properties related to memory

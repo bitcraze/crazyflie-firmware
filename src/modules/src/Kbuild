@@ -48,6 +48,7 @@ obj-y += system.o
 obj-$(CONFIG_DECK_LOCO) += tdoaEngineInstance.o
 obj-y += vcp_esc_passthrough.o
 obj-y += worker.o
+obj-y += i2c_dfu.o
 
 # Sub folders
 obj-$(CONFIG_ESTIMATOR_KALMAN_ENABLE) += kalman_core/
