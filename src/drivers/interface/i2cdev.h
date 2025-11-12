@@ -52,7 +52,8 @@ typedef I2cDrv    I2C_Dev;
 #define LIGHTHOUSE_DECK_I2C_ADDR       0x2F
 #define EEPROM_I2C_ADDR                0x50
 #define PRESSURE_DECK_I2C_ADDRESS      0x5D
-#define RANGER_DECKS_ADDRESS_START     0x60
+#define DFU_STM32C0_I2C_ADDR           0x64
+#define RANGER_DECKS_ADDRESS_START     0x65
 #define RANGER_DECKS_ADDRESS_END       0x6F
 #define ACS_DECK_I2C_ADDR              0x7F
 
