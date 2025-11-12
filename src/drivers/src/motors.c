@@ -61,7 +61,8 @@ static uint32_t dshotDmaBuffer[NBR_OF_MOTORS][DSHOT_DMA_BUFFER_SIZE];
 static void motorsDshotDMASetup();
 static volatile uint32_t dmaWait;
 
-#define DSHOT_TELEMETRY_INVALID         (0xffff)
+#define DSHOT_TELEMETRY_INVALID         (UINT16_MAX)
+#define DSHOT_ERPM_INVALID              (UINT32_MAX)
 
 typedef enum {
   DSHOT_STATE_IDLE = 0,
@@ -73,12 +74,11 @@ static dshotState_t dshotState[NBR_OF_MOTORS] = {
   DSHOT_STATE_IDLE, DSHOT_STATE_IDLE, DSHOT_STATE_IDLE, DSHOT_STATE_IDLE
 };
 static uint32_t dshotDmaInputBuffer[NBR_OF_MOTORS][DSHOT_TELEMETRY_MAX_GCR_EDGES];
-static uint32_t dshotTelemetryCount[NBR_OF_MOTORS] = {0, 0, 0, 0};
-static uint16_t dshotTelemetryRaw[NBR_OF_MOTORS] = {
+static uint16_t dshotTelemetryPackets[NBR_OF_MOTORS] = {
   DSHOT_TELEMETRY_INVALID, DSHOT_TELEMETRY_INVALID, DSHOT_TELEMETRY_INVALID, DSHOT_TELEMETRY_INVALID
 };
-static uint32_t dshotTelemetry[NBR_OF_MOTORS] = {
-  0, 0, 0, 0
+static uint32_t motorERPMs[NBR_OF_MOTORS] = {
+  DSHOT_ERPM_INVALID, DSHOT_ERPM_INVALID, DSHOT_ERPM_INVALID, DSHOT_ERPM_INVALID
 };
 #endif
 
@@ -543,20 +543,22 @@ static uint16_t dshotDecodeTelemetryPacket(const uint32_t *buffer, uint32_t gcrE
   return decodedValue >> 4;
 }
 
-static uint32_t dshotDecodeTelemetryeRPM(uint16_t value)
+static uint32_t dshotDecodeTelemetryERPM(uint16_t value)
 {
     // eRPM range
-    if (value == 0x0fff) {
+    if (value > 0x0fff) {
+      return DSHOT_ERPM_INVALID;
+    } else if (value == 0x0fff) {
         return 0;
     }
 
     // Convert value to 16 bit from the GCR telemetry format (eeem mmmm mmmm)
-    value = (value & 0x01ff) << ((value & 0xfe00) >> 9);
+    value = (value & 0x01ff) << ((value & 0x0e00) >> 9);
     if (!value) {
-        return DSHOT_TELEMETRY_INVALID;
+        return DSHOT_ERPM_INVALID;
     }
 
-    // Convert period to erpm * 100
+    // Convert period to erpm / 100
     return (1000000 * 60 / 100 + value / 2) / value;
 }
 
@@ -616,9 +618,8 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
   if (dshotBidirectional) {
     uint32_t gcrEdges = DSHOT_TELEMETRY_MAX_GCR_EDGES - motorMap[id]->DMA_stream->NDTR;
     if (gcrEdges > DSHOT_TELEMETRY_MIN_GCR_EDGES) {
-      dshotTelemetryCount[id]++;
-      dshotTelemetryRaw[id] = dshotDecodeTelemetryPacket(dshotDmaInputBuffer[id], gcrEdges);
-      dshotTelemetry[id] = dshotDecodeTelemetryeRPM(dshotTelemetryRaw[id]);
+      dshotTelemetryPackets[id] = dshotDecodeTelemetryPacket(dshotDmaInputBuffer[id], gcrEdges);
+      motorERPMs[id] = dshotDecodeTelemetryERPM(dshotTelemetryPackets[id]);
     }
 
     DMA_ClearITPendingBit(motorMap[id]->DMA_stream, motorMap[id]->DMA_ITFlag_TC);
@@ -1086,25 +1087,21 @@ LOG_ADD_CORE(LOG_UINT16, m3, &motor_ratios[MOTOR_M3])
  */
 LOG_ADD_CORE(LOG_UINT16, m4, &motor_ratios[MOTOR_M4])
 
-LOG_ADD_CORE(LOG_UINT32, m1_erpm,      &dshotTelemetry[MOTOR_M1])
-LOG_ADD_CORE(LOG_UINT32, m2_erpm,      &dshotTelemetry[MOTOR_M2])
-LOG_ADD_CORE(LOG_UINT32, m3_erpm,      &dshotTelemetry[MOTOR_M3])
-LOG_ADD_CORE(LOG_UINT32, m4_erpm,      &dshotTelemetry[MOTOR_M4])
-
-LOG_ADD_CORE(LOG_UINT8,  m1_state,     &dshotState[MOTOR_M1])
-LOG_ADD_CORE(LOG_UINT8,  m2_state,     &dshotState[MOTOR_M2])
-LOG_ADD_CORE(LOG_UINT8,  m3_state,     &dshotState[MOTOR_M3])
-LOG_ADD_CORE(LOG_UINT8,  m4_state,     &dshotState[MOTOR_M4])
-
-LOG_ADD_CORE(LOG_UINT32, m4_tcount, &dshotTelemetryCount[MOTOR_M4])
-LOG_ADD_CORE(LOG_UINT16, m4_traw,   &dshotTelemetryRaw[MOTOR_M4])
-LOG_ADD_CORE(LOG_UINT32, m4_t0,     &dshotDmaInputBuffer[MOTOR_M4][0])
-LOG_ADD_CORE(LOG_UINT32, m4_t1,     &dshotDmaInputBuffer[MOTOR_M4][1])
-LOG_ADD_CORE(LOG_UINT32, m4_t2,     &dshotDmaInputBuffer[MOTOR_M4][2])
-LOG_ADD_CORE(LOG_UINT32, m4_t3,     &dshotDmaInputBuffer[MOTOR_M4][3])
-LOG_ADD_CORE(LOG_UINT32, m4_t4,     &dshotDmaInputBuffer[MOTOR_M4][4])
-LOG_ADD_CORE(LOG_UINT32, m4_t5,     &dshotDmaInputBuffer[MOTOR_M4][5])
-LOG_ADD_CORE(LOG_UINT32, m4_t6,     &dshotDmaInputBuffer[MOTOR_M4][6])
-LOG_ADD_CORE(LOG_UINT32, m4_t7,     &dshotDmaInputBuffer[MOTOR_M4][7])
+/**
+ * @brief Motor eRPM telemetry for M1
+ */
+LOG_ADD_CORE(LOG_UINT32, m1_erpm,      &motorERPMs[MOTOR_M1])
+/**
+ * @brief Motor eRPM telemetry for M2
+ */
+LOG_ADD_CORE(LOG_UINT32, m2_erpm,      &motorERPMs[MOTOR_M2])
+/**
+ * @brief Motor eRPM telemetry for M3
+ */
+LOG_ADD_CORE(LOG_UINT32, m3_erpm,      &motorERPMs[MOTOR_M3])
+/**
+ * @brief Motor eRPM telemetry for M4
+ */
+LOG_ADD_CORE(LOG_UINT32, m4_erpm,      &motorERPMs[MOTOR_M4])
 
 LOG_GROUP_STOP(motor)
