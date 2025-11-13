@@ -331,13 +331,13 @@ static uint8_t colorFlasherPropertiesQuery() {
 static void resetColorDeckToBootloader() {
   isInFirmware = false;
 
-  deckctrl_gpio_write(deck_info, GPIO_PWR_EN, false);
-  deckctrl_gpio_set_direction(deck_info, GPIO_DFU_EN, true);
-  deckctrl_gpio_write(deck_info, GPIO_DFU_EN, true);
+  deckctrl_gpio_write(deck_info, GPIO_PWR_EN, LOW);
+  deckctrl_gpio_set_direction(deck_info, GPIO_DFU_EN, OUTPUT);
+  deckctrl_gpio_write(deck_info, GPIO_DFU_EN, HIGH);
   vTaskDelay(M2T(10));
-  deckctrl_gpio_write(deck_info, GPIO_PWR_EN, true);
+  deckctrl_gpio_write(deck_info, GPIO_PWR_EN, HIGH);
   vTaskDelay(M2T(10));
-  deckctrl_gpio_set_direction(deck_info, GPIO_DFU_EN, false);
+  deckctrl_gpio_set_direction(deck_info, GPIO_DFU_EN, INPUT);
 
   isInBootloader = true;
 }
@@ -345,9 +345,9 @@ static void resetColorDeckToBootloader() {
 static void resetColorDeckToFw() {
   isInBootloader = false;
 
-  deckctrl_gpio_write(deck_info, GPIO_PWR_EN, false);
+  deckctrl_gpio_write(deck_info, GPIO_PWR_EN, LOW);
   vTaskDelay(M2T(10));
-  deckctrl_gpio_write(deck_info, GPIO_PWR_EN, true);
+  deckctrl_gpio_write(deck_info, GPIO_PWR_EN, HIGH);
 
   isInFirmware = true;
 }
