@@ -62,8 +62,8 @@ typedef struct {
 
 // Two instances: bottom (index 0) and top (index 1)
 static colorLedContext_t contexts[2] = {
-  { .isInit = false, .brightnessCorr = true, .i2cAddress = COLORLED_DECK_I2C_ADDRESS_BOTTOM }, // bottom
-  { .isInit = false, .brightnessCorr = true, .i2cAddress = COLORLED_DECK_I2C_ADDRESS_TOP }  // top
+  { .isInit = false, .brightnessCorr = true, .i2cAddress = COLORLED_BOT_DECK_I2C_ADDRESS }, // bottom
+  { .isInit = false, .brightnessCorr = true, .i2cAddress = COLORLED_TOP_DECK_I2C_ADDRESS }  // top
 };
 
 static void task(void* param);

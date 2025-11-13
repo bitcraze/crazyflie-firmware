@@ -2,9 +2,6 @@
 
 #include <stdint.h>
 
-#define COLORLED_DECK_I2C_ADDRESS_BOTTOM 0x10
-#define COLORLED_DECK_I2C_ADDRESS_TOP 0x11
-
 // Protocol commands
 #define CMD_GET_VERSION         0x00
 #define CMD_SET_COLOR           0x01
