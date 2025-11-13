@@ -334,6 +334,7 @@ static void resetColorDeckToBootloader() {
   isInFirmware = false;
 
   deckctrl_gpio_write(deck_info, GPIO_PWR_EN, false);
+  deckctrl_gpio_set_direction(deck_info, GPIO_DFU_EN, true);
   deckctrl_gpio_write(deck_info, GPIO_DFU_EN, true);
   vTaskDelay(M2T(10));
   deckctrl_gpio_write(deck_info, GPIO_PWR_EN, true);
