@@ -96,7 +96,7 @@ bool lhblInit()
   if (isInit)
     return true;
 
-  devAddr = LIGHTHOUSE_DECK_I2C_ADDR;
+  devAddr = LIGHTHOUSE_DECK_I2C_ADDRESS;
 
   isInit = true;
 
