@@ -45,7 +45,6 @@
 #include "statsCnt.h"
 
 // Hardware defines (also update deck driver below!)
-#define DECK_I2C_ADDRESS 0x2A
 #define DATA_READY_PIN DECK_GPIO_IO1
 
 static bool isInit;
@@ -224,9 +223,9 @@ void nau7802_init(nau7802_t* ctx)
 // bool nau7802_reset(nau7802_t *ctx)
 // {
 //   bool result = true;
-//   result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_RR, 1);
+//   result &= i2cdevWriteBit(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_RR, 1);
 //   sleepus(1);
-//   result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_RR, 0);
+//   result &= i2cdevWriteBit(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_RR, 0);
 //   return result;
 // }
 
@@ -236,16 +235,16 @@ bool nau7802_powerUp(nau7802_t *ctx)
   bool result = true;
 
   ctx->pu_ctrl = 0x06; //(PU analog and PU digital)
-  result &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, ctx->pu_ctrl);
+  result &= i2cdevWriteByte(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_PU_CTRL, ctx->pu_ctrl);
   DEBUG_PRINT("pu %d\n", result);
 
-//  result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_PUD, 1);
-//  result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_PUA, 1);
+//  result &= i2cdevWriteBit(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_PUD, 1);
+//  result &= i2cdevWriteBit(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_PUA, 1);
 
   //Wait for Power Up bit to be set - takes approximately 200us
   for (int i = 0; i < 200; ++i) {
     uint8_t bit;
-    result &= i2cdevReadBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_PUR, &bit);
+    result &= i2cdevReadBit(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_PUR, &bit);
     if (result && bit) {
       return true;
     }
@@ -261,11 +260,11 @@ bool nau7802_setLDO(nau7802_t *ctx, NAU7802_LDO_Values ldoValue)
   //Set the value of the LDO
   ctx->ctrl1 &= 0b11000111;    //Clear LDO bits
   ctx->ctrl1 |= ldoValue << 3; //Mask in new LDO bits
-  result &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL1, ctx->ctrl1);
+  result &= i2cdevWriteByte(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_CTRL1, ctx->ctrl1);
   //Enable the internal LDO
   DEBUG_PRINT("l1 %d\n", ctx->pu_ctrl);
   ctx->pu_ctrl |= (1 << NAU7802_PU_CTRL_AVDDS);
-  result &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, ctx->pu_ctrl);
+  result &= i2cdevWriteByte(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_PU_CTRL, ctx->pu_ctrl);
   DEBUG_PRINT("l2 %d\n", ctx->pu_ctrl);
   return result;
 }
@@ -276,7 +275,7 @@ bool nau7802_setGain(nau7802_t *ctx, NAU7802_Gain_Values gainValue)
   bool result = true;
   ctx->ctrl1 &= 0b11111000; //Clear gain bits
   ctx->ctrl1 |= gainValue;  //Mask in new bits
-  result &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL1, ctx->ctrl1);
+  result &= i2cdevWriteByte(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_CTRL1, ctx->ctrl1);
   return result;
 }
 
@@ -286,7 +285,7 @@ bool nau7802_setSampleRate(nau7802_t* ctx, NAU7802_SPS_Values rate)
   bool result = true;
   ctx->ctrl2 &= 0b10001111; // Clear CRS bits
   ctx->ctrl2 |= rate << 4;  //Mask in new CRS bits
-  result &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL2, ctx->ctrl2);
+  result &= i2cdevWriteByte(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_CTRL2, ctx->ctrl2);
   return result;
 }
 
@@ -296,7 +295,7 @@ bool nau7802_setChannel(nau7802_t *ctx, NAU7802_Channels channel)
   bool result = true;
   ctx->ctrl2 &= 0b01111111; // Clear CHS bits
   ctx->ctrl2 |= channel << 7;  //Mask in new CHS bits
-  result &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL2, ctx->ctrl2);
+  result &= i2cdevWriteByte(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_CTRL2, ctx->ctrl2);
   return result;
 }
 
@@ -305,11 +304,11 @@ NAU7802_Cal_Status nau7802_calAFEStatus(nau7802_t *ctx)
 {
   bool result = true;
   uint8_t bit;
-  result &= i2cdevReadBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL2, NAU7802_CTRL2_CALS, &bit);
+  result &= i2cdevReadBit(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_CTRL2, NAU7802_CTRL2_CALS, &bit);
   if (result && bit) {
     return NAU7802_CAL_IN_PROGRESS;
   }
-  result &= i2cdevReadBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL2, NAU7802_CTRL2_CAL_ERROR, &bit);
+  result &= i2cdevReadBit(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_CTRL2, NAU7802_CTRL2_CAL_ERROR, &bit);
   if (result && bit) {
     return NAU7802_CAL_FAILURE;
   }
@@ -328,7 +327,7 @@ bool nau7802_calibrateAFE(nau7802_t *ctx)
 {
   bool result = true;
   //Begin asynchronous calibration of the analog front end.
-  result &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL2, NAU7802_CTRL2_CALS, 1);
+  result &= i2cdevWriteBit(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_CTRL2, NAU7802_CTRL2_CALS, 1);
 
   for (int i = 0; i < 1000; ++i) {
     if (nau7802_calAFEStatus(ctx) == NAU7802_CAL_SUCCESS) {
@@ -344,7 +343,7 @@ bool nau7802_hasMeasurement(nau7802_t *ctx)
 {
   bool result = true;
   uint8_t bit;
-  result &= i2cdevReadBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_CR, &bit);
+  result &= i2cdevReadBit(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_PU_CTRL, NAU7802_PU_CTRL_CR, &bit);
   return result && bit;
 }
 
@@ -355,7 +354,7 @@ bool nau7802_getMeasurement(nau7802_t *ctx, int32_t *measurement)
   bool result = true;
 
   uint8_t data[3];
-  result &= i2cdevReadReg8(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_ADCO_B2, 3, (uint8_t*)&data);
+  result &= i2cdevReadReg8(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_ADCO_B2, 3, (uint8_t*)&data);
   // DEBUG_PRINT("M: %d %d, %d, %d\n", result, data[0], data[1], data[2]);
 
   int32_t valueRaw = ((int32_t)data[0] << 16) |
@@ -373,7 +372,7 @@ bool nau7802_getMeasurement(nau7802_t *ctx, int32_t *measurement)
 bool nau7802_revision(nau7802_t *ctx, uint8_t *revision)
 {
   bool result = true;
-  result &= i2cdevReadByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_DEVICE_REV, revision);
+  result &= i2cdevReadByte(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_DEVICE_REV, revision);
   *revision = *revision & 0x0F;
   return result;
 }
@@ -440,21 +439,21 @@ static void loadcellInit(DeckInfo *info)
     isInit &= nau7802_setSampleRate(&nau7802, NAU7802_SPS_10);
     DEBUG_PRINT("Sample rate [%d]\n", isInit);
     // Turn off CLK_CHP. From 9.1 power on sequencing.
-    isInit &= i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_ADC, 0x30);
+    isInit &= i2cdevWriteByte(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_ADC, 0x30);
     DEBUG_PRINT("CLK_CHP [%d]\n", isInit);
     // Enable 330pF decoupling cap on chan 2. From 9.14 application circuit note.
-    isInit &= i2cdevWriteBit(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PGA_PWR, NAU7802_PGA_PWR_PGA_CAP_EN, 1);
+    isInit &= i2cdevWriteBit(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_PGA_PWR, NAU7802_PGA_PWR_PGA_CAP_EN, 1);
     DEBUG_PRINT("CAP [%d]\n", isInit);
     // calibrate
     isInit &= nau7802_calibrateAFE(&nau7802);
     DEBUG_PRINT("Cal [%d]\n", isInit);
 
     uint8_t v;
-    isInit &= i2cdevReadByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, &v);
+    isInit &= i2cdevReadByte(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_PU_CTRL, &v);
     DEBUG_PRINT("puctrl: %d\n", v);
-    isInit &= i2cdevReadByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL1, &v);
+    isInit &= i2cdevReadByte(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_CTRL1, &v);
     DEBUG_PRINT("ctrl1: %d\n", v);
-    isInit &= i2cdevReadByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_CTRL2, &v);
+    isInit &= i2cdevReadByte(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_CTRL2, &v);
     DEBUG_PRINT("ctrl2: %d\n", v);
   }
 
@@ -484,10 +483,10 @@ static void loadcellTask(void* prm)
         // nau7802_setChannel(&nau7802, currentChannel);
 
         // nau7802.pu_ctrl |= (1 << NAU7802_PU_CTRL_CS);
-        // i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, nau7802.pu_ctrl);
+        // i2cdevWriteByte(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_PU_CTRL, nau7802.pu_ctrl);
 
         // nau7802.ctrl2 &= 0b11101111; // Clear CS bit
-        // i2cdevWriteByte(I2C1_DEV, DECK_I2C_ADDRESS, NAU7802_PU_CTRL, nau7802.pu_ctrl);
+        // i2cdevWriteByte(I2C1_DEV, NAU7802_I2C_ADDRESS, NAU7802_PU_CTRL, nau7802.pu_ctrl);
 
         STATS_CNT_RATE_EVENT(&rate);
       }

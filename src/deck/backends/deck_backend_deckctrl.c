@@ -67,14 +67,14 @@ static const DeckDiscoveryBackend_t deckctrlBackend;
  * The protocol uses special addresses for broadcast operations and a range
  * of addresses for individually assigned deck controllers.
  */
-#define DECKCTRL_I2C_ADDRESS_RESET     0x41  ///< Broadcast: Reset all deck controllers
-#define DECKCTRL_I2C_ADDRESS_LISTEN    0x42  ///< Broadcast: Put unconfigured decks in listening mode
-#define DECKCTRL_I2C_ADDRESS_DEFAULT   0x43  ///< Default: Read CPU ID and assign address
+#define DECKCTRL_I2C_ADDRESS_RESET    DECKCTRL_RESET_I2C_ADDRESS    ///< Broadcast: Reset all deck controllers
+#define DECKCTRL_I2C_ADDRESS_LISTEN   DECKCTRL_LISTEN_I2C_ADDRESS   ///< Broadcast: Put unconfigured decks in listening mode
+#define DECKCTRL_I2C_ADDRESS_DEFAULT  DECKCTRL_DEFAULT_I2C_ADDRESS  ///< Default: Read CPU ID and assign address
 
 // Address range for assigning I2C addresses to deck controllers
 // The limit of possible decks is set by CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS in Kconfig
-#define DECKCTRL_I2C_ADDRESS_START    0x44  ///< First assigned address
-#define DECKCTRL_I2C_ADDRESS_END      (0x44 + CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS - 1)  ///< Last assigned address
+#define DECKCTRL_I2C_ADDRESS_START    DECKCTRL_START_I2C_ADDRESS  ///< First assigned address
+#define DECKCTRL_I2C_ADDRESS_END      (DECKCTRL_START_I2C_ADDRESS + CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS - 1)  ///< Last assigned address
 
 /**
  * DeckCtrl memory layout at register 0x0000
