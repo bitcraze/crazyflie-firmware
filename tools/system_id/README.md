@@ -3,7 +3,7 @@
 This folder contains scripts to measure propellers and motors using the systemId deck. Some more information can be found in those two blog articles:
 
 - [Building a Crazyflie thrust stand (2021)](https://www.bitcraze.io/2021/08/building-a-crazyflie-thrust-stand/)
-- [Keeping Thrust Consistent as the Battery Drains (2025) TODO](https://www.bitcraze.io/?p=14335&preview=true)
+- [Keeping Thrust Consistent as the Battery Drains (2025)](https://www.bitcraze.io/2025/10/keeping-thrust-consistent-as-the-battery-drains/)
 
 ## Setup
 

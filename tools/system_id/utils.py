@@ -44,6 +44,7 @@ def loadFiles(filenames: list) -> dict:
 
 def cutData(data: dict, tStart: float | None = None, tEnd: float | None = None):
     if tEnd is not None:
+        tEnd = data["time"][-1] + tEnd if tEnd < 0 else tEnd
         end_idx = np.searchsorted(data["time"], tEnd, side="left") - 1
     else:
         end_idx = -1
