@@ -1006,8 +1006,6 @@ void __attribute__((used)) TIM2_IRQHandler(void)
   }
 }
 
-#endif
-
 static void dshotBidirectionalChanged() {
   if (dshotBidirectional == _dshotBidirectional) {
     // Nothing to do
@@ -1023,7 +1021,7 @@ static void dshotBidirectionalChanged() {
   dshotBidirectional = _dshotBidirectional;
 }
 
-
+#endif
 
 /**
  * Override power distribution to motors.
@@ -1087,6 +1085,7 @@ LOG_ADD_CORE(LOG_UINT16, m3, &motor_ratios[MOTOR_M3])
  */
 LOG_ADD_CORE(LOG_UINT16, m4, &motor_ratios[MOTOR_M4])
 
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
 /**
  * @brief Motor eRPM telemetry for M1
  */
@@ -1103,5 +1102,6 @@ LOG_ADD_CORE(LOG_UINT32, m3_erpm,      &motorERPMs[MOTOR_M3])
  * @brief Motor eRPM telemetry for M4
  */
 LOG_ADD_CORE(LOG_UINT32, m4_erpm,      &motorERPMs[MOTOR_M4])
+#endif
 
 LOG_GROUP_STOP(motor)
