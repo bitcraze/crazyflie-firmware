@@ -38,6 +38,7 @@
 #include "deckctrl_gpio.h"
 #include "math.h"
 #include "color_led_deck.h"
+#include "i2c_dfu.h"
 
 #define DEBUG_MODULE "COLORLED"
 #include "debug.h"
@@ -57,6 +58,18 @@ static uint8_t throttlePercentage = 0;
 
 static void task(void* param);
 static paramVarId_t wrgbParamId;
+
+static DeckInfo* deck_info;
+
+static bool isInBootloader = false;
+static bool isInFirmware = true;
+
+// Enable deck power by pulling high
+#define GPIO_PWR_EN DECKCTRL_GPIO_PIN_0
+// Enable DFU by pulling high (note that this must be input for SWD to work)
+#define GPIO_DFU_EN DECKCTRL_GPIO_PIN_7
+// Set Color LED MCU I2C address LSB by pulling high/low
+#define GPIO_I2C_ADDR_LSB DECKCTRL_GPIO_PIN_11
 
 // Generic LED controller callback
 static void colorLedDeckSetColor(const uint8_t *rgb888) {
@@ -187,8 +200,8 @@ static void colorLedDeckInit(DeckInfo *info) {
     return;
   }
 
-  deckctrl_gpio_set_direction(info, DECKCTRL_GPIO_PIN_0, true);
-  deckctrl_gpio_write(info, DECKCTRL_GPIO_PIN_0, true);
+  deckctrl_gpio_set_direction(info, GPIO_PWR_EN, true);
+  deckctrl_gpio_write(info, GPIO_PWR_EN, true);
 
   xTaskCreate(task, COLORLED_TASK_NAME,
               COLORLED_TASK_STACKSIZE, NULL, COLORLED_TASK_PRIO, NULL);
@@ -197,6 +210,9 @@ static void colorLedDeckInit(DeckInfo *info) {
   wrgbParamId = paramGetVarId("colorled", "wrgb8888");
   ledDeckRegisterHandler(&colorLedDeckLedHandler);
 
+  deck_info = info;
+  isInFirmware = true;
+  isInBootloader = false;
   isInit = true;
 }
 
@@ -226,65 +242,67 @@ static void task(void *param) {
 
   while (1)
   {
-    // Read any available response from the deck
-    if (i2cdevRead(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, RXBUFFERSIZE, response)) {
-      // Process response based on command type
-      switch (response[0]) {
-        case CMD_GET_THERMAL_STATUS:
-          deckTemperature = response[1];
-          throttlePercentage = response[2];
-          break;
+    if (isInFirmware) {
+      // Read any available response from the deck
+      if (i2cdevRead(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, RXBUFFERSIZE, response)) {
+        // Process response based on command type
+        switch (response[0]) {
+          case CMD_GET_THERMAL_STATUS:
+            deckTemperature = response[1];
+            throttlePercentage = response[2];
+            break;
 
-        case CMD_GET_VERSION:
-          // Version responses are handled during init
-          break;
+          case CMD_GET_VERSION:
+            // Version responses are handled during init
+            break;
 
-        case CMD_SET_COLOR:
-          // No response expected for color commands
-          break;
+          case CMD_SET_COLOR:
+            // No response expected for color commands
+            break;
 
-        default:
-          // Unknown or empty response
-          break;
-      }
-    }
-
-    // Send thermal status request periodically
-    if (xTaskGetTickCount() - lastStatusPoll >= statusPollInterval) {
-      uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_THERMAL_STATUS, 0, 0, 0, 0};
-      i2cdevWrite(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, TXBUFFERSIZE, cmd);
-      lastStatusPoll = xTaskGetTickCount();
-    }
-
-    // Send color updates when changed
-    if (currentWrgb8888 != wrgb8888) {
-      currentWrgb8888 = wrgb8888;
-
-      // Unpack to struct (format: 0xWWRRGGBB)
-      wrgb_t input = {
-          .w = (currentWrgb8888 >> 24) & 0xFF,
-          .r = (currentWrgb8888 >> 16) & 0xFF,
-          .g = (currentWrgb8888 >> 8) & 0xFF,
-          .b = currentWrgb8888 & 0xFF
-      };
-
-      static wrgb_t output;
-      if (brightnessCorr) {
-        // Apply correction
-        output = applyBrightnessCorrection(&input);
-      } else {
-        output = input;
+          default:
+            // Unknown or empty response
+            break;
+        }
       }
 
-      // Format: 0xWWRRGGBB -> Hardware expects [W, R, G, B]
-      uint8_t wrgb_data[5] = {
-        CMD_SET_COLOR,
-        output.w,
-        output.r,
-        output.g,
-        output.b
-      };
-      i2cdevWrite(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, TXBUFFERSIZE, wrgb_data);
+      // Send thermal status request periodically
+      if (xTaskGetTickCount() - lastStatusPoll >= statusPollInterval) {
+        uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_THERMAL_STATUS, 0, 0, 0, 0};
+        i2cdevWrite(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, TXBUFFERSIZE, cmd);
+        lastStatusPoll = xTaskGetTickCount();
+      }
+
+      // Send color updates when changed
+      if (currentWrgb8888 != wrgb8888) {
+        currentWrgb8888 = wrgb8888;
+
+        // Unpack to struct (format: 0xWWRRGGBB)
+        wrgb_t input = {
+            .w = (currentWrgb8888 >> 24) & 0xFF,
+            .r = (currentWrgb8888 >> 16) & 0xFF,
+            .g = (currentWrgb8888 >> 8) & 0xFF,
+            .b = currentWrgb8888 & 0xFF
+        };
+
+        static wrgb_t output;
+        if (brightnessCorr) {
+          // Apply correction
+          output = applyBrightnessCorrection(&input);
+        } else {
+          output = input;
+        }
+
+        // Format: 0xWWRRGGBB -> Hardware expects [W, R, G, B]
+        uint8_t wrgb_data[5] = {
+          CMD_SET_COLOR,
+          output.w,
+          output.r,
+          output.g,
+          output.b
+        };
+        i2cdevWrite(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, TXBUFFERSIZE, wrgb_data);
+      }
     }
 
     // Maintain precise 10ms loop timing
@@ -292,10 +310,68 @@ static void task(void *param) {
   }
 }
 
+static bool colorFlasherWriteFlash(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer, const DeckMemDef_t* memDef) {
+  return dfu_i2c_write(DFU_STM32C0_I2C_ADDRESS, memAddr, buffer, writeLen);
+}
+
+static bool colorFlasherReadFlash(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+  return dfu_i2c_read(DFU_STM32C0_I2C_ADDRESS, memAddr, buffer, readLen);
+}
+
+static uint8_t colorFlasherPropertiesQuery() {
+  uint8_t result = 0;
+
+  result |= DECK_MEMORY_MASK_STARTED | DECK_MEMORY_MASK_SUPPORTS_HOT_RESTART;
+
+  if (isInBootloader) {
+    result |= DECK_MEMORY_MASK_BOOT_LOADER_ACTIVE;
+  }
+
+  return result;
+}
+
+static void resetColorDeckToBootloader() {
+  isInFirmware = false;
+
+  deckctrl_gpio_write(deck_info, GPIO_PWR_EN, LOW);
+  deckctrl_gpio_set_direction(deck_info, GPIO_DFU_EN, OUTPUT);
+  deckctrl_gpio_write(deck_info, GPIO_DFU_EN, HIGH);
+  vTaskDelay(M2T(10));
+  deckctrl_gpio_write(deck_info, GPIO_PWR_EN, HIGH);
+  vTaskDelay(M2T(10));
+  deckctrl_gpio_set_direction(deck_info, GPIO_DFU_EN, INPUT);
+
+  isInBootloader = true;
+}
+
+static void resetColorDeckToFw() {
+  isInBootloader = false;
+
+  deckctrl_gpio_write(deck_info, GPIO_PWR_EN, LOW);
+  vTaskDelay(M2T(10));
+  deckctrl_gpio_write(deck_info, GPIO_PWR_EN, HIGH);
+
+  isInFirmware = true;
+}
+
+// Memory definition for the MCU controlling the LED
+static const DeckMemDef_t colorMemoryDef = {
+    .write = colorFlasherWriteFlash,
+    .read = colorFlasherReadFlash,
+    .properties = colorFlasherPropertiesQuery,
+    .supportsUpgrade = true,
+    .id = "color",
+
+    .commandResetToBootloader = resetColorDeckToBootloader,
+    .commandResetToFw = resetColorDeckToFw,
+};
+
 static const DeckDriver color_led_deck = {
   .vid = 0xBC,
   .pid = 0x13,
   .name = "bcColorLED",
+
+  .memoryDef = &colorMemoryDef,
 
   .init = colorLedDeckInit,
   .test = colorLedDeckTest,

@@ -62,10 +62,11 @@ typedef I2cDrv    I2C_Dev;
 
 #define EEPROM_I2C_ADDRESS             0x50
 #define LPS25H_I2C_ADDRESS             0x5D
-#define RANGER_DECKS_ADDRESS_START     0x60
-#define RANGER_DECKS_ADDRESS_END       0x6F
+#define DFU_STM32C0_I2C_ADDRESS        0x64
 #define MPU6500_I2C_ADDRESS            0x69
 #define BMI088_GYRO_I2C_ADDRESS        0x69
+#define RANGER_DECKS_ADDRESS_START     0x6A
+#define RANGER_DECKS_ADDRESS_END       0x6F
 #define BMP3_I2C_ADDRESS               0x77
 #define ACS37800_I2C_ADDRESS           0x7F
 
