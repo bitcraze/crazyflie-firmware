@@ -166,7 +166,7 @@ static bool checkProtocolVersion(void) {
   uint8_t response[RXBUFFERSIZE];
 
   // Send version request (5 bytes to match fixed packet size)
-  if (i2cdevWrite(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, TXBUFFERSIZE, cmd) == false) {
+  if (i2cdevWrite(I2C1_DEV, COLORLED_DECK_I2C_ADDRESS, TXBUFFERSIZE, cmd) == false) {
     DEBUG_PRINT("Failed to request version\n");
     return false;
   }
@@ -174,7 +174,7 @@ static bool checkProtocolVersion(void) {
   vTaskDelay(M2T(10)); // Give the LED deck time to prepare response
 
   // Read version response
-  if (i2cdevRead(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, RXBUFFERSIZE, response) == false) {
+  if (i2cdevRead(I2C1_DEV, COLORLED_DECK_I2C_ADDRESS, RXBUFFERSIZE, response) == false) {
     DEBUG_PRINT("Failed to read version\n");
     return false;
   }
@@ -244,7 +244,7 @@ static void task(void *param) {
   {
     if (isInFirmware) {
       // Read any available response from the deck
-      if (i2cdevRead(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, RXBUFFERSIZE, response)) {
+      if (i2cdevRead(I2C1_DEV, COLORLED_DECK_I2C_ADDRESS, RXBUFFERSIZE, response)) {
         // Process response based on command type
         switch (response[0]) {
           case CMD_GET_THERMAL_STATUS:
@@ -269,7 +269,7 @@ static void task(void *param) {
       // Send thermal status request periodically
       if (xTaskGetTickCount() - lastStatusPoll >= statusPollInterval) {
         uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_THERMAL_STATUS, 0, 0, 0, 0};
-        i2cdevWrite(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, TXBUFFERSIZE, cmd);
+        i2cdevWrite(I2C1_DEV, COLORLED_DECK_I2C_ADDRESS, TXBUFFERSIZE, cmd);
         lastStatusPoll = xTaskGetTickCount();
       }
 
@@ -301,7 +301,7 @@ static void task(void *param) {
           output.g,
           output.b
         };
-        i2cdevWrite(I2C1_DEV, COLORLED_BOT_DECK_I2C_ADDRESS, TXBUFFERSIZE, wrgb_data);
+        i2cdevWrite(I2C1_DEV, COLORLED_DECK_I2C_ADDRESS, TXBUFFERSIZE, wrgb_data);
       }
     }
 
