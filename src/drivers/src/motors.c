@@ -52,6 +52,8 @@ static uint8_t motorSetEnable = 0;
 static uint16_t motorPowerSet[] = {0, 0, 0, 0}; // user-requested PWM signals (overrides)
 static uint16_t motor_ratios[] = {0, 0, 0, 0};  // actual PWM signals
 
+static uint8_t motorNbrOfPoles = 12; //TODO: Put in configuration, kconfig or platform defaults.
+
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
 static bool dshotBidirectional = false;
 static bool _dshotBidirectional = false;
@@ -77,7 +79,7 @@ static uint32_t dshotDmaInputBuffer[NBR_OF_MOTORS][DSHOT_TELEMETRY_MAX_GCR_EDGES
 static uint16_t dshotTelemetryPackets[NBR_OF_MOTORS] = {
   DSHOT_TELEMETRY_INVALID, DSHOT_TELEMETRY_INVALID, DSHOT_TELEMETRY_INVALID, DSHOT_TELEMETRY_INVALID
 };
-static uint32_t motorERPMs[NBR_OF_MOTORS] = {
+static uint32_t motorRPMs[NBR_OF_MOTORS] = {
   DSHOT_ERPM_INVALID, DSHOT_ERPM_INVALID, DSHOT_ERPM_INVALID, DSHOT_ERPM_INVALID
 };
 #endif
@@ -212,7 +214,7 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
 
 /* Public functions */
 
-//Initialization. Will set all motors ratio to 0%
+//Initialization. Will set all motors ratio to 0%.
 void motorsInit(const MotorPerifDef** motorMapSelect)
 {
   int i;
@@ -303,6 +305,7 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
 
   // Output zero power
   motorsStop();
+  
 
   isInit = true;
 }
@@ -543,23 +546,27 @@ static uint16_t dshotDecodeTelemetryPacket(const uint32_t *buffer, uint32_t gcrE
   return decodedValue >> 4;
 }
 
-static uint32_t dshotDecodeTelemetryERPM(uint16_t value)
+static uint32_t dshotDecodeTelemetryERPM(uint16_t valueGCR)
 {
-    // eRPM range
-    if (value > 0x0fff) {
+  uint16_t period;
+  uint16_t rpm;
+    
+  // eRPM range
+  if (valueGCR == 0x0fff) {
+    return DSHOT_ERPM_INVALID;
+  } else if (valueGCR == 0x0fff) {
+      return 0;
+  }
+
+  // Convert value to 16 bit period from the GCR telemetry format (eeem mmmm mmmm)
+  period = (valueGCR & 0x01ff) << ((valueGCR & 0xfe00) >> 9);
+  if (!period) {
       return DSHOT_ERPM_INVALID;
-    } else if (value == 0x0fff) {
-        return 0;
-    }
+  }
 
-    // Convert value to 16 bit from the GCR telemetry format (eeem mmmm mmmm)
-    value = (value & 0x01ff) << ((value & 0x0e00) >> 9);
-    if (!value) {
-        return DSHOT_ERPM_INVALID;
-    }
-
-    // Convert period to erpm / 100
-    return (1000000 * 60 / 100 + value / 2) / value;
+  // Convert period to rpm
+  rpm = (uint16_t)((1000000UL * 60 * 2 / period) / (motorNbrOfPoles ));
+  return rpm;
 }
 
 static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
@@ -586,8 +593,8 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
 
   for (int i = 0; i < 3; i++)
   {
-        cs ^=  csData; // xor data by nibbles
-        csData >>= 4;
+    cs ^=  csData; // xor data by nibbles
+    csData >>= 4;
   }
 
   if (dshotBidirectional) {
@@ -619,7 +626,7 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
     uint32_t gcrEdges = DSHOT_TELEMETRY_MAX_GCR_EDGES - motorMap[id]->DMA_stream->NDTR;
     if (gcrEdges > DSHOT_TELEMETRY_MIN_GCR_EDGES) {
       dshotTelemetryPackets[id] = dshotDecodeTelemetryPacket(dshotDmaInputBuffer[id], gcrEdges);
-      motorERPMs[id] = dshotDecodeTelemetryERPM(dshotTelemetryPackets[id]);
+      motorRPMs[id] = dshotDecodeTelemetryERPM(dshotTelemetryPackets[id]);
     }
 
     DMA_ClearITPendingBit(motorMap[id]->DMA_stream, motorMap[id]->DMA_ITFlag_TC);
@@ -667,6 +674,11 @@ void motorsBurstDshot()
     DMA_ITConfig(motorMap[3]->DMA_stream, DMA_IT_TC, ENABLE);
     /* Enable DMA TIM Stream */
     DMA_Cmd(motorMap[3]->DMA_stream, ENABLE);
+}
+
+void motorsDshotBidirectionalEnable(bool enable)
+{
+  _dshotBidirectional = enable;
 }
 #endif
 
@@ -1038,7 +1050,7 @@ PARAM_ADD_CORE(PARAM_UINT8, enable, &motorSetEnable)
 /**
   * @brief Nonzero to enable bidirectional DSHOT (only for brushless motors)
  */
-PARAM_ADD_CORE_WITH_CALLBACK(PARAM_UINT8, bidiDshot, &_dshotBidirectional, dshotBidirectionalChanged)
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, bidiDshot, &_dshotBidirectional, dshotBidirectionalChanged)
 #endif
 
 /**
@@ -1063,6 +1075,23 @@ PARAM_ADD_CORE(PARAM_UINT16, m4, &motorPowerSet[3])
 
 PARAM_GROUP_STOP(motorPowerSet)
 
+/**
+ * Motor settings
+ */
+PARAM_GROUP_START(motor)
+
+/**
+ * @brief If brushless motor is used, the number of motor poles to convert from eRPM to RPM.
+ */
+PARAM_ADD(PARAM_UINT8, poles, &motorNbrOfPoles)
+
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
+/**
+  * @brief Nonzero to enable bidirectional DSHOT (only for brushless motors)
+ */
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, bidiDshot, &_dshotBidirectional, dshotBidirectionalChanged)
+#endif
+PARAM_GROUP_STOP(motor)
 
 /**
  * Motor output related log variables.
@@ -1087,21 +1116,21 @@ LOG_ADD_CORE(LOG_UINT16, m4, &motor_ratios[MOTOR_M4])
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
 /**
- * @brief Motor eRPM telemetry for M1
+ * @brief Motor RPM telemetry for M1
  */
-LOG_ADD_CORE(LOG_UINT32, m1_erpm,      &motorERPMs[MOTOR_M1])
+LOG_ADD(LOG_UINT16, m1_rpm, &motorRPMs[MOTOR_M1])
 /**
- * @brief Motor eRPM telemetry for M2
+ * @brief Motor RPM telemetry for M2
  */
-LOG_ADD_CORE(LOG_UINT32, m2_erpm,      &motorERPMs[MOTOR_M2])
+LOG_ADD(LOG_UINT16, m2_rpm, &motorRPMs[MOTOR_M2])
 /**
- * @brief Motor eRPM telemetry for M3
+ * @brief Motor RPM telemetry for M3
  */
-LOG_ADD_CORE(LOG_UINT32, m3_erpm,      &motorERPMs[MOTOR_M3])
+LOG_ADD(LOG_UINT16, m3_rpm, &motorRPMs[MOTOR_M3])
 /**
- * @brief Motor eRPM telemetry for M4
+ * @brief Motor RPM telemetry for M4
  */
-LOG_ADD_CORE(LOG_UINT32, m4_erpm,      &motorERPMs[MOTOR_M4])
+LOG_ADD(LOG_UINT16, m4_rpm, &motorRPMs[MOTOR_M4])
 #endif
 
 LOG_GROUP_STOP(motor)
