@@ -228,8 +228,11 @@ static void colorLedDeckInit(DeckInfo *info, colorLedContext_t *ctx, const char 
     return;
   }
 
-  xTaskCreate(task, taskName,
-              COLORLED_TASK_STACKSIZE, ctx, COLORLED_TASK_PRIO, NULL);
+  if (xTaskCreate(task, taskName,
+                  COLORLED_TASK_STACKSIZE, ctx, COLORLED_TASK_PRIO, NULL) != pdPASS) {
+    DEBUG_PRINT("Failed to create task %s\n", taskName);
+    return;
+  }
 
   // Register with generic LED controller
   ctx->wrgbParamId = paramGetVarId(paramGroupName, "wrgb8888");
@@ -404,7 +407,9 @@ static void task(void *param) {
           output.g,
           output.b
         };
-        i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, wrgb_data);
+        if (!i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, wrgb_data)) {
+          DEBUG_PRINT("Failed to write color command to deck at I2C address 0x%02X\n", ctx->i2cAddress);
+        }
       }
     }
 
@@ -437,13 +442,28 @@ static uint8_t colorFlasherBottomPropertiesQuery() {
 static void resetColorBottomDeckToBootloader() {
   contexts[0].isInFirmware = false;
 
-  deckctrl_gpio_write(contexts[0].deckInfo, GPIO_PWR_EN, LOW);
-  deckctrl_gpio_set_direction(contexts[0].deckInfo, GPIO_DFU_EN, OUTPUT);
-  deckctrl_gpio_write(contexts[0].deckInfo, GPIO_DFU_EN, HIGH);
+  if (!deckctrl_gpio_write(contexts[0].deckInfo, GPIO_PWR_EN, LOW)) {
+    DEBUG_PRINT("Bottom deck: Failed to set GPIO_PWR_EN LOW\n");
+    return;
+  }
+  if (!deckctrl_gpio_set_direction(contexts[0].deckInfo, GPIO_DFU_EN, OUTPUT)) {
+    DEBUG_PRINT("Bottom deck: Failed to configure GPIO_DFU_EN as output\n");
+    return;
+  }
+  if (!deckctrl_gpio_write(contexts[0].deckInfo, GPIO_DFU_EN, HIGH)) {
+    DEBUG_PRINT("Bottom deck: Failed to set GPIO_DFU_EN HIGH\n");
+    return;
+  }
   vTaskDelay(M2T(10));
-  deckctrl_gpio_write(contexts[0].deckInfo, GPIO_PWR_EN, HIGH);
+  if (!deckctrl_gpio_write(contexts[0].deckInfo, GPIO_PWR_EN, HIGH)) {
+    DEBUG_PRINT("Bottom deck: Failed to set GPIO_PWR_EN HIGH\n");
+    return;
+  }
   vTaskDelay(M2T(10));
-  deckctrl_gpio_set_direction(contexts[0].deckInfo, GPIO_DFU_EN, INPUT);
+  if (!deckctrl_gpio_set_direction(contexts[0].deckInfo, GPIO_DFU_EN, INPUT)) {
+    DEBUG_PRINT("Bottom deck: Failed to configure GPIO_DFU_EN as input\n");
+    return;
+  }
 
   contexts[0].isInBootloader = true;
 }
@@ -451,9 +471,15 @@ static void resetColorBottomDeckToBootloader() {
 static void resetColorBottomDeckToFw() {
   contexts[0].isInBootloader = false;
 
-  deckctrl_gpio_write(contexts[0].deckInfo, GPIO_PWR_EN, LOW);
+  if (!deckctrl_gpio_write(contexts[0].deckInfo, GPIO_PWR_EN, LOW)) {
+    DEBUG_PRINT("Bottom deck: Failed to set GPIO_PWR_EN LOW\n");
+    return;
+  }
   vTaskDelay(M2T(10));
-  deckctrl_gpio_write(contexts[0].deckInfo, GPIO_PWR_EN, HIGH);
+  if (!deckctrl_gpio_write(contexts[0].deckInfo, GPIO_PWR_EN, HIGH)) {
+    DEBUG_PRINT("Bottom deck: Failed to set GPIO_PWR_EN HIGH\n");
+    return;
+  }
 
   contexts[0].isInFirmware = true;
 }
@@ -483,14 +509,32 @@ static void resetColorTopDeckToBootloader() {
   contexts[1].isInFirmware = false;
 
   // Set GPIO_I2C_ADDR_LSB to input (high-Z) to avoid interfering during bootloader mode
-  deckctrl_gpio_write(contexts[1].deckInfo, GPIO_I2C_ADDR_LSB, LOW);
-  deckctrl_gpio_write(contexts[1].deckInfo, GPIO_PWR_EN, LOW);
-  deckctrl_gpio_set_direction(contexts[1].deckInfo, GPIO_DFU_EN, OUTPUT);
-  deckctrl_gpio_write(contexts[1].deckInfo, GPIO_DFU_EN, HIGH);
+  if (!deckctrl_gpio_write(contexts[1].deckInfo, GPIO_I2C_ADDR_LSB, LOW)) {
+    DEBUG_PRINT("Top deck: Failed to set GPIO_I2C_ADDR_LSB LOW\n");
+    return;
+  }
+  if (!deckctrl_gpio_write(contexts[1].deckInfo, GPIO_PWR_EN, LOW)) {
+    DEBUG_PRINT("Top deck: Failed to set GPIO_PWR_EN LOW\n");
+    return;
+  }
+  if (!deckctrl_gpio_set_direction(contexts[1].deckInfo, GPIO_DFU_EN, OUTPUT)) {
+    DEBUG_PRINT("Top deck: Failed to configure GPIO_DFU_EN as output\n");
+    return;
+  }
+  if (!deckctrl_gpio_write(contexts[1].deckInfo, GPIO_DFU_EN, HIGH)) {
+    DEBUG_PRINT("Top deck: Failed to set GPIO_DFU_EN HIGH\n");
+    return;
+  }
   vTaskDelay(M2T(10));
-  deckctrl_gpio_write(contexts[1].deckInfo, GPIO_PWR_EN, HIGH);
+  if (!deckctrl_gpio_write(contexts[1].deckInfo, GPIO_PWR_EN, HIGH)) {
+    DEBUG_PRINT("Top deck: Failed to set GPIO_PWR_EN HIGH\n");
+    return;
+  }
   vTaskDelay(M2T(10));
-  deckctrl_gpio_set_direction(contexts[1].deckInfo, GPIO_DFU_EN, INPUT);
+  if (!deckctrl_gpio_set_direction(contexts[1].deckInfo, GPIO_DFU_EN, INPUT)) {
+    DEBUG_PRINT("Top deck: Failed to configure GPIO_DFU_EN as input\n");
+    return;
+  }
 
   contexts[1].isInBootloader = true;
 }
@@ -498,11 +542,20 @@ static void resetColorTopDeckToBootloader() {
 static void resetColorTopDeckToFw() {
   contexts[1].isInBootloader = false;
 
-  deckctrl_gpio_write(contexts[1].deckInfo, GPIO_PWR_EN, LOW);
+  if (!deckctrl_gpio_write(contexts[1].deckInfo, GPIO_PWR_EN, LOW)) {
+    DEBUG_PRINT("Top deck: Failed to set GPIO_PWR_EN LOW\n");
+    return;
+  }
   vTaskDelay(M2T(10));
   // Restore GPIO_I2C_ADDR_LSB to HIGH for top deck firmware I2C address
-  deckctrl_gpio_write(contexts[1].deckInfo, GPIO_I2C_ADDR_LSB, HIGH);
-  deckctrl_gpio_write(contexts[1].deckInfo, GPIO_PWR_EN, HIGH);
+  if (!deckctrl_gpio_write(contexts[1].deckInfo, GPIO_I2C_ADDR_LSB, HIGH)) {
+    DEBUG_PRINT("Top deck: Failed to set GPIO_I2C_ADDR_LSB HIGH\n");
+    return;
+  }
+  if (!deckctrl_gpio_write(contexts[1].deckInfo, GPIO_PWR_EN, HIGH)) {
+    DEBUG_PRINT("Top deck: Failed to set GPIO_PWR_EN HIGH\n");
+    return;
+  }
 
   contexts[1].isInFirmware = true;
 }
