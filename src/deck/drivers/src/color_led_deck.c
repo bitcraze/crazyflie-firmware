@@ -228,6 +228,8 @@ static void colorLedDeckInit(DeckInfo *info, colorLedContext_t *ctx, const char 
     return;
   }
 
+  vTaskDelay(M2T(50)); // Wait for deck to boot
+
   if (xTaskCreate(task, taskName,
                   COLORLED_TASK_STACKSIZE, ctx, COLORLED_TASK_PRIO, NULL) != pdPASS) {
     DEBUG_PRINT("Failed to create task %s\n", taskName);
@@ -508,7 +510,6 @@ static uint8_t colorFlasherTopPropertiesQuery() {
 static void resetColorTopDeckToBootloader() {
   contexts[1].isInFirmware = false;
 
-  // Set GPIO_I2C_ADDR_LSB to input (high-Z) to avoid interfering during bootloader mode
   if (!deckctrl_gpio_write(contexts[1].deckInfo, GPIO_I2C_ADDR_LSB, LOW)) {
     DEBUG_PRINT("Top deck: Failed to set GPIO_I2C_ADDR_LSB LOW\n");
     return;
