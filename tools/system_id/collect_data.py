@@ -596,9 +596,6 @@ class CollectDataDynamic(CollectData):
             self._cf.param.set_value("motorPowerSet.enable", 2)
             print("Collecting data without battery compensation")
 
-        # base speed
-        self._applyThrust(PWM_MIN, 2.0)
-
         self._ramp_motors_chirp()
         self._ramp_motors_step()
 
@@ -648,6 +645,9 @@ class CollectDataDynamic(CollectData):
         self._applyThrust(PWM_MIN, 2 * duration)
 
     def _ramp_motors_chirp(self):
+        # base speed
+        self._applyThrust(PWM_MAX / 4, 2.0)
+
         chirp_duration = 30  # s
         chirp_send_frequency = 100  # Hz
         chirp_f0 = 0.1  # Hz
@@ -657,21 +657,25 @@ class CollectDataDynamic(CollectData):
 
         t = np.linspace(0, chirp_duration, chirp_duration * chirp_send_frequency)
         c = chirp(t, chirp_f0, chirp_duration, chirp_f1, method="lin", phi=180)
+        # [PWM_MIN, PWM_MIN+PWM_MAX/4]
         for sine in c:
             sine = (sine + 1) / 2  # Scaling to [0,1]
             pwm = sine * PWM_MAX / 4 + PWM_MIN  # Scaling to useful PWM values
             self._applyThrust(pwm, 1 / chirp_send_frequency)
 
+        # [PWM_MIN, PWM_MIN+PWM_MAX/2]
         for sine in c:
             sine = (sine + 1) / 2  # Scaling to [0,1]
             pwm = sine * PWM_MAX / 2 + PWM_MIN  # Scaling to useful PWM values
             self._applyThrust(pwm, 1 / chirp_send_frequency)
 
+        # [PWM_MAX/4, PWM_MAX*3/4]
         for sine in c:
             sine = (sine + 1) / 2  # Scaling to [0,1]
-            pwm = sine * (PWM_MAX - PWM_MIN) + PWM_MIN  # Scaling to useful PWM values
+            pwm = sine * PWM_MAX / 2 + PWM_MAX / 4  # Scaling to useful PWM values
             self._applyThrust(pwm, 1 / chirp_send_frequency)
 
+        # [PWM_MAX/2, PWM_MAX]
         for sine in c:
             sine = (sine + 1) / 2  # Scaling to [0,1]
             pwm = sine * PWM_MAX / 2 + PWM_MAX / 2  # Scaling to useful PWM values
