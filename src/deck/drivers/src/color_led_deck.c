@@ -190,7 +190,7 @@ static bool checkProtocolVersion(uint8_t i2cAddress) {
     return false;
   }
 
-  vTaskDelay(M2T(10)); // Give the LED deck time to prepare response
+  vTaskDelay(M2T(1)); // Give the LED deck time to prepare response
 
   // Read version response
   if (i2cdevRead(I2C1_DEV, i2cAddress, RXBUFFERSIZE, response) == false) {
@@ -305,7 +305,7 @@ static bool pollThermalStatus(colorLedContext_t *ctx) {
   uint8_t response[RXBUFFERSIZE];
 
   if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
-    vTaskDelay(M2T(10));
+    vTaskDelay(M2T(1));
     if (i2cdevRead(I2C1_DEV, ctx->i2cAddress, RXBUFFERSIZE, response)) {
       if (response[0] == CMD_GET_THERMAL_STATUS) {
         ctx->deckTemperature = response[1];
@@ -322,7 +322,7 @@ static bool pollLedCurrent(colorLedContext_t *ctx) {
   uint8_t response[RXBUFFERSIZE];
 
   if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
-    vTaskDelay(M2T(10));
+    vTaskDelay(M2T(1));
     if (i2cdevRead(I2C1_DEV, ctx->i2cAddress, RXBUFFERSIZE, response)) {
       if (response[0] == CMD_GET_LED_CURRENT) {
         // Each current value is 2 bytes: high byte, low byte (milliamps)
@@ -342,7 +342,7 @@ static bool pollLedPosition(colorLedContext_t *ctx) {
   uint8_t response[RXBUFFERSIZE];
 
   if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
-    vTaskDelay(M2T(10));
+    vTaskDelay(M2T(1));
     if (i2cdevRead(I2C1_DEV, ctx->i2cAddress, RXBUFFERSIZE, response)) {
       if (response[0] == CMD_GET_LED_POSITION) {
         ctx->ledPosition = response[1];
