@@ -2,9 +2,8 @@ import argparse
 
 from toml import load, dump
 import numpy as np
-from sklearn.linear_model import LinearRegression, RANSACRegressor
+from sklearn.linear_model import LinearRegression, RANSACRegressor, Ridge
 from scipy.optimize import least_squares
-from scipy.signal import savgol_filter
 import matplotlib.pyplot as plt
 from utils import (
     loadFiles,
@@ -58,12 +57,16 @@ def system_id_static(filenames, validations=[]):
         )
 
     # Fitting
-    X = np.vstack((data["vmotors"], data["vmotors"] ** 2, data["vmotors"] ** 3)).T
-    ransac = RANSACRegressor(LinearRegression()).fit(
-        X, data["thrust"] / 4
+    # Remove datapoints outside the min and max thrust region
+    mask = np.ones_like(data["thrust"], dtype=bool)
+    # mask = mask & (data["thrust"] > THRUST_MIN * 4 * 0.6)
+    # mask = mask & (data["thrust"] < THRUST_MAX * 4 * 1.5)
+    X = data["vmotors"][mask]
+    X = np.vstack((X, X**2, X**3)).T
+    reg = Ridge(positive=True).fit(
+        X, data["thrust"][mask] / 4
     )  # positive=True, Ridge, LinearRegression
-    reg = ransac.estimator_
-    error = reg.predict(X) - (data["thrust"] / 4)
+    error = reg.predict(X) - (data["thrust"][mask] / 4)
     vmotor2thrust = [reg.intercept_, reg.coef_[0], reg.coef_[1], reg.coef_[2]]
     parameters["vmotor2thrust"] = vmotor2thrust
 
@@ -134,8 +137,14 @@ def system_id_static(filenames, validations=[]):
         )
 
     # Fitting
-    X = np.vstack((data["vmotors"], data["vmotors"] ** 2, data["vmotors"] ** 3)).T
-    reg = LinearRegression().fit(X, data["torque_z"] / 4)
+    mask = data["torque_z"] / 4 < 0.001
+    X = data["vmotors"][mask]
+    X = np.vstack((X, X**2, X**3)).T
+    Y = data["torque_z"][mask] / 4
+    reg = RANSACRegressor(
+        LinearRegression(), residual_threshold=0.00001, stop_probability=0.999
+    ).fit(X, Y)
+    reg = reg.estimator_
     vmotor2torque = [reg.intercept_, reg.coef_[0], reg.coef_[1], reg.coef_[2]]
     parameters["vmotor2torque"] = vmotor2torque
 
@@ -225,11 +234,15 @@ def system_id_static(filenames, validations=[]):
         axs[1].scatter(
             data_val["rpm_avg"], data_val["torque_z"] / 4, label="validation data"
         )
-    X = np.vstack((data["rpm_avg"], data["rpm_avg"] ** 2)).T  # , data["rpm_avg"] ** 3
-    reg = LinearRegression(fit_intercept=False, positive=True).fit(
-        X, data["torque_z"] / 4
-    )
-    error = reg.predict(X) - (data["torque_z"] / 4)
+    mask = data["torque_z"] / 4 < 0.001
+    X = data["rpm_avg"][mask]
+    X = np.vstack((X, X**2)).T
+    Y = data["torque_z"][mask] / 4
+    reg = RANSACRegressor(
+        LinearRegression(fit_intercept=False, positive=True), residual_threshold=0.0001
+    ).fit(X, Y)
+    reg = reg.estimator_
+    error = reg.predict(X) - Y
     print(f"Prediction RMSE = {np.sqrt(np.mean(error**2)) * 1000:.6f}mN")
     rpm2torque = [reg.intercept_, reg.coef_[0], reg.coef_[1]]  # , reg.coef_[2]
     parameters["rpm2torque"] = rpm2torque
@@ -257,11 +270,14 @@ def system_id_static(filenames, validations=[]):
     if len(validations) > 0:
         plt.scatter(data_val["thrust"], data_val["torque_z"], label="validation data")
 
-
     # fit
-    X = np.vstack((data["thrust"]))
-    Y = data["torque_z"]
-    reg = LinearRegression(fit_intercept=False).fit(X, Y)
+    mask = data["torque_z"] < 0.003
+    X = np.vstack((data["thrust"][mask]))
+    Y = data["torque_z"][mask]
+    reg = RANSACRegressor(
+        LinearRegression(fit_intercept=False), residual_threshold=0.001
+    ).fit(X, Y)
+    reg = reg.estimator_
     thrust2torque = reg.coef_[0]
     parameters["thrust2torque"] = thrust2torque
     print(f"Torque = {thrust2torque:.6f}*Thrust")
@@ -354,6 +370,10 @@ def system_id_verification(filenames, validations=[]):
     Y = X / PWM_MAX * parameters["THRUST_MAX"]
     plt.plot(X, Y, label="ideal compensation", color="tab:red")
     plt.scatter(data["cmd"], data["thrust"] / 4, label="compensated")
+    # thrust_from_curve = poly(
+    #     data["vbat"] * data["pwm"] / PWM_MAX, parameters["vmotor2thrust"], 3
+    # )
+    # plt.scatter(data["cmd"], thrust_from_curve, label="onboard applied thrust")
     if len(validations) > 0:
         Y_OLD = X / PWM_MAX * (0.06 * 9.81 / 4)
         plt.plot(X, Y_OLD, "--", label="ideal compensation old")
@@ -366,8 +386,9 @@ def system_id_verification(filenames, validations=[]):
     plt.tight_layout()
     plt.show()
 
-    points_plane = data["cmd"] / PWM_MAX * parameters["THRUST_MAX"]
-    errors = points_plane - data["thrust"] / 4
+    mask = data["cmd"] >= PWM_MIN
+    points_plane = data["cmd"][mask] / PWM_MAX * parameters["THRUST_MAX"]
+    errors = points_plane - data["thrust"][mask] / 4
     print(f"max error = {np.max(np.abs(errors)) * 1000:.4f}mN")
     print(f"mean error = {np.mean(np.abs(errors)) * 1000:.4f}mN")
 
