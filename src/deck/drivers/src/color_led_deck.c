@@ -63,7 +63,11 @@ typedef struct {
   bool isInFirmware;
 } colorLedContext_t;
 
-// Two instances: bottom (index 0) and top (index 1)
+// Instance indices for accessing contexts array
+#define BOTTOM_IDX 0
+#define TOP_IDX 1
+
+// Two instances: bottom and top
 static colorLedContext_t contexts[2] = {
   { .isInit = false, .brightnessCorr = true, .i2cAddress = COLORLED_BOT_DECK_I2C_ADDRESS, .isInFirmware = true, .isInBootloader = false }, // bottom
   { .isInit = false, .brightnessCorr = true, .i2cAddress = COLORLED_TOP_DECK_I2C_ADDRESS, .isInFirmware = true, .isInBootloader = false }  // top
@@ -270,11 +274,11 @@ static bool colorLedDeckTest(colorLedContext_t *ctx) {
 
 // Bottom deck wrapper functions
 static void colorLedBottomDeckInit(DeckInfo *info) {
-  colorLedDeckInit(info, &contexts[0], "COLOR_LED_BOTTOM", "colorLedBot");
+  colorLedDeckInit(info, &contexts[BOTTOM_IDX], "COLOR_LED_BOTTOM", "colorLedBot");
 }
 
 static bool colorLedBottomDeckTest() {
-  return colorLedDeckTest(&contexts[0]);
+  return colorLedDeckTest(&contexts[BOTTOM_IDX]);
 }
 
 // Top deck wrapper functions
@@ -289,11 +293,11 @@ static void colorLedTopDeckInit(DeckInfo *info) {
     DEBUG_PRINT("Failed to set GPIO 11 HIGH for I2C address selection\n");
     return;
   }
-  colorLedDeckInit(info, &contexts[1], "COLOR_LED_TOP", "colorLedTop");
+  colorLedDeckInit(info, &contexts[TOP_IDX], "COLOR_LED_TOP", "colorLedTop");
 }
 
 static bool colorLedTopDeckTest() {
-  return colorLedDeckTest(&contexts[1]);
+  return colorLedDeckTest(&contexts[TOP_IDX]);
 }
 
 static bool pollThermalStatus(colorLedContext_t *ctx) {
@@ -434,7 +438,7 @@ static uint8_t colorFlasherBottomPropertiesQuery() {
 
   result |= DECK_MEMORY_MASK_STARTED | DECK_MEMORY_MASK_SUPPORTS_HOT_RESTART;
 
-  if (contexts[0].isInBootloader) {
+  if (contexts[BOTTOM_IDX].isInBootloader) {
     result |= DECK_MEMORY_MASK_BOOT_LOADER_ACTIVE;
   }
 
@@ -442,48 +446,48 @@ static uint8_t colorFlasherBottomPropertiesQuery() {
 }
 
 static void resetColorBottomDeckToBootloader() {
-  contexts[0].isInFirmware = false;
+  contexts[BOTTOM_IDX].isInFirmware = false;
 
-  if (!deckctrl_gpio_write(contexts[0].deckInfo, GPIO_PWR_EN, LOW)) {
+  if (!deckctrl_gpio_write(contexts[BOTTOM_IDX].deckInfo, GPIO_PWR_EN, LOW)) {
     DEBUG_PRINT("Bottom deck: Failed to set GPIO_PWR_EN LOW\n");
     return;
   }
-  if (!deckctrl_gpio_set_direction(contexts[0].deckInfo, GPIO_DFU_EN, OUTPUT)) {
+  if (!deckctrl_gpio_set_direction(contexts[BOTTOM_IDX].deckInfo, GPIO_DFU_EN, OUTPUT)) {
     DEBUG_PRINT("Bottom deck: Failed to configure GPIO_DFU_EN as output\n");
     return;
   }
-  if (!deckctrl_gpio_write(contexts[0].deckInfo, GPIO_DFU_EN, HIGH)) {
+  if (!deckctrl_gpio_write(contexts[BOTTOM_IDX].deckInfo, GPIO_DFU_EN, HIGH)) {
     DEBUG_PRINT("Bottom deck: Failed to set GPIO_DFU_EN HIGH\n");
     return;
   }
   vTaskDelay(M2T(10));
-  if (!deckctrl_gpio_write(contexts[0].deckInfo, GPIO_PWR_EN, HIGH)) {
+  if (!deckctrl_gpio_write(contexts[BOTTOM_IDX].deckInfo, GPIO_PWR_EN, HIGH)) {
     DEBUG_PRINT("Bottom deck: Failed to set GPIO_PWR_EN HIGH\n");
     return;
   }
   vTaskDelay(M2T(10));
-  if (!deckctrl_gpio_set_direction(contexts[0].deckInfo, GPIO_DFU_EN, INPUT)) {
+  if (!deckctrl_gpio_set_direction(contexts[BOTTOM_IDX].deckInfo, GPIO_DFU_EN, INPUT)) {
     DEBUG_PRINT("Bottom deck: Failed to configure GPIO_DFU_EN as input\n");
     return;
   }
 
-  contexts[0].isInBootloader = true;
+  contexts[BOTTOM_IDX].isInBootloader = true;
 }
 
 static void resetColorBottomDeckToFw() {
-  contexts[0].isInBootloader = false;
+  contexts[BOTTOM_IDX].isInBootloader = false;
 
-  if (!deckctrl_gpio_write(contexts[0].deckInfo, GPIO_PWR_EN, LOW)) {
+  if (!deckctrl_gpio_write(contexts[BOTTOM_IDX].deckInfo, GPIO_PWR_EN, LOW)) {
     DEBUG_PRINT("Bottom deck: Failed to set GPIO_PWR_EN LOW\n");
     return;
   }
   vTaskDelay(M2T(10));
-  if (!deckctrl_gpio_write(contexts[0].deckInfo, GPIO_PWR_EN, HIGH)) {
+  if (!deckctrl_gpio_write(contexts[BOTTOM_IDX].deckInfo, GPIO_PWR_EN, HIGH)) {
     DEBUG_PRINT("Bottom deck: Failed to set GPIO_PWR_EN HIGH\n");
     return;
   }
 
-  contexts[0].isInFirmware = true;
+  contexts[BOTTOM_IDX].isInFirmware = true;
 }
 
 // Top deck bootloader functions
@@ -500,7 +504,7 @@ static uint8_t colorFlasherTopPropertiesQuery() {
 
   result |= DECK_MEMORY_MASK_STARTED | DECK_MEMORY_MASK_SUPPORTS_HOT_RESTART;
 
-  if (contexts[1].isInBootloader) {
+  if (contexts[TOP_IDX].isInBootloader) {
     result |= DECK_MEMORY_MASK_BOOT_LOADER_ACTIVE;
   }
 
@@ -508,57 +512,57 @@ static uint8_t colorFlasherTopPropertiesQuery() {
 }
 
 static void resetColorTopDeckToBootloader() {
-  contexts[1].isInFirmware = false;
+  contexts[TOP_IDX].isInFirmware = false;
 
-  if (!deckctrl_gpio_write(contexts[1].deckInfo, GPIO_I2C_ADDR_LSB, LOW)) {
+  if (!deckctrl_gpio_write(contexts[TOP_IDX].deckInfo, GPIO_I2C_ADDR_LSB, LOW)) {
     DEBUG_PRINT("Top deck: Failed to set GPIO_I2C_ADDR_LSB LOW\n");
     return;
   }
-  if (!deckctrl_gpio_write(contexts[1].deckInfo, GPIO_PWR_EN, LOW)) {
+  if (!deckctrl_gpio_write(contexts[TOP_IDX].deckInfo, GPIO_PWR_EN, LOW)) {
     DEBUG_PRINT("Top deck: Failed to set GPIO_PWR_EN LOW\n");
     return;
   }
-  if (!deckctrl_gpio_set_direction(contexts[1].deckInfo, GPIO_DFU_EN, OUTPUT)) {
+  if (!deckctrl_gpio_set_direction(contexts[TOP_IDX].deckInfo, GPIO_DFU_EN, OUTPUT)) {
     DEBUG_PRINT("Top deck: Failed to configure GPIO_DFU_EN as output\n");
     return;
   }
-  if (!deckctrl_gpio_write(contexts[1].deckInfo, GPIO_DFU_EN, HIGH)) {
+  if (!deckctrl_gpio_write(contexts[TOP_IDX].deckInfo, GPIO_DFU_EN, HIGH)) {
     DEBUG_PRINT("Top deck: Failed to set GPIO_DFU_EN HIGH\n");
     return;
   }
   vTaskDelay(M2T(10));
-  if (!deckctrl_gpio_write(contexts[1].deckInfo, GPIO_PWR_EN, HIGH)) {
+  if (!deckctrl_gpio_write(contexts[TOP_IDX].deckInfo, GPIO_PWR_EN, HIGH)) {
     DEBUG_PRINT("Top deck: Failed to set GPIO_PWR_EN HIGH\n");
     return;
   }
   vTaskDelay(M2T(10));
-  if (!deckctrl_gpio_set_direction(contexts[1].deckInfo, GPIO_DFU_EN, INPUT)) {
+  if (!deckctrl_gpio_set_direction(contexts[TOP_IDX].deckInfo, GPIO_DFU_EN, INPUT)) {
     DEBUG_PRINT("Top deck: Failed to configure GPIO_DFU_EN as input\n");
     return;
   }
 
-  contexts[1].isInBootloader = true;
+  contexts[TOP_IDX].isInBootloader = true;
 }
 
 static void resetColorTopDeckToFw() {
-  contexts[1].isInBootloader = false;
+  contexts[TOP_IDX].isInBootloader = false;
 
-  if (!deckctrl_gpio_write(contexts[1].deckInfo, GPIO_PWR_EN, LOW)) {
+  if (!deckctrl_gpio_write(contexts[TOP_IDX].deckInfo, GPIO_PWR_EN, LOW)) {
     DEBUG_PRINT("Top deck: Failed to set GPIO_PWR_EN LOW\n");
     return;
   }
   vTaskDelay(M2T(10));
   // Restore GPIO_I2C_ADDR_LSB to HIGH for top deck firmware I2C address
-  if (!deckctrl_gpio_write(contexts[1].deckInfo, GPIO_I2C_ADDR_LSB, HIGH)) {
+  if (!deckctrl_gpio_write(contexts[TOP_IDX].deckInfo, GPIO_I2C_ADDR_LSB, HIGH)) {
     DEBUG_PRINT("Top deck: Failed to set GPIO_I2C_ADDR_LSB HIGH\n");
     return;
   }
-  if (!deckctrl_gpio_write(contexts[1].deckInfo, GPIO_PWR_EN, HIGH)) {
+  if (!deckctrl_gpio_write(contexts[TOP_IDX].deckInfo, GPIO_PWR_EN, HIGH)) {
     DEBUG_PRINT("Top deck: Failed to set GPIO_PWR_EN HIGH\n");
     return;
   }
 
-  contexts[1].isInFirmware = true;
+  contexts[TOP_IDX].isInFirmware = true;
 }
 
 // Memory definitions for the MCU controlling the LED
@@ -617,12 +621,12 @@ PARAM_GROUP_START(colorLedBot)
 /**
  * @brief Color value in WRGB format (0xWWRRGGBB) for bottom deck. Example: 0x000000FF = 255 = max blue
  */
-PARAM_ADD(PARAM_UINT32, wrgb8888, &contexts[0].wrgb8888)
+PARAM_ADD(PARAM_UINT32, wrgb8888, &contexts[BOTTOM_IDX].wrgb8888)
 
 /**
  * @brief Enable brightness correction (gamma and luminance normalization) for bottom deck. 0=off, 1=on
  */
-PARAM_ADD(PARAM_UINT8, brightCorr, &contexts[0].brightnessCorr)
+PARAM_ADD(PARAM_UINT8, brightCorr, &contexts[BOTTOM_IDX].brightnessCorr)
 
 PARAM_GROUP_STOP(colorLedBot)
 
@@ -632,12 +636,12 @@ PARAM_GROUP_START(colorLedTop)
 /**
  * @brief Color value in WRGB format (0xWWRRGGBB) for top deck. Example: 0x000000FF = 255 = max blue
  */
-PARAM_ADD(PARAM_UINT32, wrgb8888, &contexts[1].wrgb8888)
+PARAM_ADD(PARAM_UINT32, wrgb8888, &contexts[TOP_IDX].wrgb8888)
 
 /**
  * @brief Enable brightness correction (gamma and luminance normalization) for top deck. 0=off, 1=on
  */
-PARAM_ADD(PARAM_UINT8, brightCorr, &contexts[1].brightnessCorr)
+PARAM_ADD(PARAM_UINT8, brightCorr, &contexts[TOP_IDX].brightnessCorr)
 
 PARAM_GROUP_STOP(colorLedTop)
 
@@ -647,37 +651,37 @@ LOG_GROUP_START(colorLedBot)
 /**
  * @brief Deck temperature in degrees Celsius for bottom deck
  */
-LOG_ADD(LOG_UINT8, deckTemp, &contexts[0].deckTemperature)
+LOG_ADD(LOG_UINT8, deckTemp, &contexts[BOTTOM_IDX].deckTemperature)
 
 /**
  * @brief Thermal throttle percentage (0-100) for bottom deck
  */
-LOG_ADD(LOG_UINT8, throttlePct, &contexts[0].throttlePercentage)
+LOG_ADD(LOG_UINT8, throttlePct, &contexts[BOTTOM_IDX].throttlePercentage)
 
 /**
  * @brief LED position detection value for bottom deck (0=none, 1=bottom, 2=top)
  */
-LOG_ADD(LOG_UINT8, ledPos, &contexts[0].ledPosition)
+LOG_ADD(LOG_UINT8, ledPos, &contexts[BOTTOM_IDX].ledPosition)
 
 /**
  * @brief Red LED current in milliamps for bottom deck
  */
-LOG_ADD(LOG_UINT16, ledCurR, &contexts[0].ledCurrent[0])
+LOG_ADD(LOG_UINT16, ledCurR, &contexts[BOTTOM_IDX].ledCurrent[0])
 
 /**
  * @brief Green LED current in milliamps for bottom deck
  */
-LOG_ADD(LOG_UINT16, ledCurG, &contexts[0].ledCurrent[1])
+LOG_ADD(LOG_UINT16, ledCurG, &contexts[BOTTOM_IDX].ledCurrent[1])
 
 /**
  * @brief Blue LED current in milliamps for bottom deck
  */
-LOG_ADD(LOG_UINT16, ledCurB, &contexts[0].ledCurrent[2])
+LOG_ADD(LOG_UINT16, ledCurB, &contexts[BOTTOM_IDX].ledCurrent[2])
 
 /**
  * @brief White LED current in milliamps for bottom deck
  */
-LOG_ADD(LOG_UINT16, ledCurW, &contexts[0].ledCurrent[3])
+LOG_ADD(LOG_UINT16, ledCurW, &contexts[BOTTOM_IDX].ledCurrent[3])
 
 LOG_GROUP_STOP(colorLedBot)
 
@@ -687,37 +691,37 @@ LOG_GROUP_START(colorLedTop)
 /**
  * @brief Deck temperature in degrees Celsius for top deck
  */
-LOG_ADD(LOG_UINT8, deckTemp, &contexts[1].deckTemperature)
+LOG_ADD(LOG_UINT8, deckTemp, &contexts[TOP_IDX].deckTemperature)
 
 /**
  * @brief Thermal throttle percentage (0-100) for top deck
  */
-LOG_ADD(LOG_UINT8, throttlePct, &contexts[1].throttlePercentage)
+LOG_ADD(LOG_UINT8, throttlePct, &contexts[TOP_IDX].throttlePercentage)
 
 /**
  * @brief LED position detection value for top deck (0=none, 1=bottom, 2=top)
  */
-LOG_ADD(LOG_UINT8, ledPos, &contexts[1].ledPosition)
+LOG_ADD(LOG_UINT8, ledPos, &contexts[TOP_IDX].ledPosition)
 
 /**
  * @brief Red LED current in milliamps for top deck
  */
-LOG_ADD(LOG_UINT16, ledCurR, &contexts[1].ledCurrent[0])
+LOG_ADD(LOG_UINT16, ledCurR, &contexts[TOP_IDX].ledCurrent[0])
 
 /**
  * @brief Green LED current in milliamps for top deck
  */
-LOG_ADD(LOG_UINT16, ledCurG, &contexts[1].ledCurrent[1])
+LOG_ADD(LOG_UINT16, ledCurG, &contexts[TOP_IDX].ledCurrent[1])
 
 /**
  * @brief Blue LED current in milliamps for top deck
  */
-LOG_ADD(LOG_UINT16, ledCurB, &contexts[1].ledCurrent[2])
+LOG_ADD(LOG_UINT16, ledCurB, &contexts[TOP_IDX].ledCurrent[2])
 
 /**
  * @brief White LED current in milliamps for top deck
  */
-LOG_ADD(LOG_UINT16, ledCurW, &contexts[1].ledCurrent[3])
+LOG_ADD(LOG_UINT16, ledCurW, &contexts[TOP_IDX].ledCurrent[3])
 
 LOG_GROUP_STOP(colorLedTop)
 
@@ -726,11 +730,11 @@ PARAM_GROUP_START(deck)
 /**
  * @brief Nonzero if bottom [Color LED deck](%https://store.bitcraze.io/collections/decks/products/color-led-deck) is attached
  */
-PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcColorLedBot, &contexts[0].isInit)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcColorLedBot, &contexts[BOTTOM_IDX].isInit)
 
 /**
  * @brief Nonzero if top [Color LED deck](%https://store.bitcraze.io/collections/decks/products/color-led-deck) is attached
  */
-PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcColorLedTop, &contexts[1].isInit)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcColorLedTop, &contexts[TOP_IDX].isInit)
 
 PARAM_GROUP_STOP(deck)
