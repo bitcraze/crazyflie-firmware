@@ -28,6 +28,22 @@ def system_id_static(filenames, validations=[]):
     print("#########################################################")
     print("#### V_motors [V] to Thrust [N] curve")
     print("#########################################################")
+    # INFO: We want to achieve the max thrust for all SoC of the battery. Thus,
+    # we limit the maximum thrust to a relatively convervative value. For a
+    # discussion on that see #1526
+    # The min thrust is determined by the min pwm hard coded on the drone by
+    # CONFIG_MOTORS_DEFAULT_IDLE_THRUST
+    if "L250" in comb or "P250" in comb:
+        THRUST_MAX = 0.48 / 4
+    elif "T350" in comb or "T500" in comb:
+        THRUST_MAX = 0.72 / 4
+    elif "B" in comb:
+        THRUST_MAX = 0.8 / 4
+    else:
+        THRUST_MAX = 0.48 / 4
+        print(f"WARNING: Comb {comb} not found, setting THRUST_MAX={THRUST_MAX}")
+    THRUST_MIN = PWM_MIN / PWM_MAX * THRUST_MAX
+
     plt.figure(figsize=FIGSIZE)
 
     data["vmotors"] = data["vbat"] * data["pwm"] / PWM_MAX
@@ -50,21 +66,6 @@ def system_id_static(filenames, validations=[]):
     error = reg.predict(X) - (data["thrust"] / 4)
     vmotor2thrust = [reg.intercept_, reg.coef_[0], reg.coef_[1], reg.coef_[2]]
     parameters["vmotor2thrust"] = vmotor2thrust
-    # INFO: We want to achieve the max thrust for all SoC of the battery. Thus,
-    # we limit the maximum thrust to a relatively convervative value. For a
-    # discussion on that see #1526
-    # The min thrust is determined by the min pwm hard coded on the drone by
-    # CONFIG_MOTORS_DEFAULT_IDLE_THRUST
-    if "L250" in comb or "P250" in comb:
-        THRUST_MAX = 0.45 / 4
-    elif "T350" in comb or "T500" in comb:
-        THRUST_MAX = 0.65 / 4
-    elif "B" in comb:
-        THRUST_MAX = 0.8 / 4
-    else:
-        THRUST_MAX = 0.45 / 4
-        print(f"WARNING: Comb {comb} not found, setting THRUST_MAX={THRUST_MAX}")
-    THRUST_MIN = PWM_MIN / PWM_MAX * THRUST_MAX
 
     VMOTOR_MIN = inversepoly(THRUST_MIN, vmotor2thrust, 3)[0]
     VMOTOR_MAX = inversepoly(THRUST_MAX, vmotor2thrust, 3)[0]
