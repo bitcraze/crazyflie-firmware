@@ -237,7 +237,9 @@ size_t kveStorageFindNextItem(kveMemory_t *kve, size_t address)
         if (header.full_length == KVE_END_TAG) {
             return KVE_STORAGE_INVALID_ADDRESS;
         }
-
+        if (header.full_length == 0) {
+            return KVE_STORAGE_INVALID_ADDRESS;
+        }
         if (header.key_length != 0) {
             return currentAddress;
         }
