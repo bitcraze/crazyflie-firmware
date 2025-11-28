@@ -48,8 +48,7 @@
 	#define VL53L1_get_register_name(a,b)
 #endif
 
-// Set the start address 1 step after the VL53L0 dynamic addresses
-static int nextI2CAddress = RANGER_DECKS_ADDRESS_START +1;
+static int nextI2CAddress = RANGER_DECKS_ADDRESS_START;
 
 
 bool vl53l1xInit(VL53L1_Dev_t *pdev, I2C_Dev *I2Cx)
