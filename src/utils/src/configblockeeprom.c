@@ -170,6 +170,11 @@ int configblockInit(void)
       }
     }
   }
+  else
+  {
+    cb_ok = false;
+    return -1;
+  }
 
   if (cb_ok == false)
   {

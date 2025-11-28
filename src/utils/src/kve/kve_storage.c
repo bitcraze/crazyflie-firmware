@@ -140,7 +140,9 @@ size_t kveStorageFindItemByPrefix(kveMemory_t *kve, size_t address,
     uint8_t searchedKeyLength = strlen(prefix);
 
     while (currentAddress < (kve->memorySize - 3)) {
-        kve->read(currentAddress, searchBuffer, 3);
+        if (kve->read(currentAddress, searchBuffer, 3) == 0) {
+          return KVE_STORAGE_INVALID_ADDRESS;
+        }
         length = searchBuffer[0] + (searchBuffer[1]<<8);
         keyLength = searchBuffer[2];
 
@@ -150,13 +152,15 @@ size_t kveStorageFindItemByPrefix(kveMemory_t *kve, size_t address,
         }
 
         if (keyLength >= searchedKeyLength) {
-            kve->read(currentAddress + 3, &searchBuffer, keyLength);
-            if (!memcmp(prefix, searchBuffer, searchedKeyLength)) {
-                memcpy(keyBuffer, searchBuffer, keyLength);
-                keyBuffer[keyLength] = 0;
-                *itemAddress = currentAddress;
-                return length;
-            }
+          if (kve->read(currentAddress + 3, &searchBuffer, keyLength) == 0) {
+            return KVE_STORAGE_INVALID_ADDRESS;
+          }
+          if (!memcmp(prefix, searchBuffer, searchedKeyLength)) {
+              memcpy(keyBuffer, searchBuffer, keyLength);
+              keyBuffer[keyLength] = 0;
+              *itemAddress = currentAddress;
+              return length;
+          }
         }
 
         currentAddress += length;
@@ -171,7 +175,9 @@ size_t kveStorageFindEnd(kveMemory_t *kve, size_t address) {
     kveItemHeader_t header;
 
     while (currentAddress < (kve->memorySize - 2)) {
-        kve->read(currentAddress, &header, sizeof(header));
+        if (kve->read(currentAddress, &header, sizeof(header)) == 0) {
+          return KVE_STORAGE_INVALID_ADDRESS;
+        }
         if (header.full_length == KVE_END_TAG) {
             return currentAddress;
         }
@@ -192,7 +198,9 @@ size_t kveStorageFindHole(kveMemory_t *kve, size_t address) {
     kveItemHeader_t header;
 
     while (currentAddress < (kve->memorySize - 2)) {
-        kve->read(currentAddress, &header, sizeof(header));
+        if (kve->read(currentAddress, &header, sizeof(header)) == 0) {
+          return KVE_STORAGE_INVALID_ADDRESS;
+        }
         if (header.key_length == 0) {
             return currentAddress;
         }
@@ -210,15 +218,21 @@ size_t kveStorageFindNextItem(kveMemory_t *kve, size_t address)
     kveItemHeader_t header;
 
     // Jump over the current item
-    kve->read(currentAddress, &header, sizeof(header));
+    if (kve->read(currentAddress, &header, sizeof(header)) == 0) {
+      return KVE_STORAGE_INVALID_ADDRESS;
+    }
     if (header.full_length == KVE_END_TAG) {
+        return KVE_STORAGE_INVALID_ADDRESS;
+    }
+    if (header.full_length == 0) {
         return KVE_STORAGE_INVALID_ADDRESS;
     }
     currentAddress += header.full_length;
 
     while (currentAddress < (kve->memorySize - 3)) {
-        kve->read(currentAddress, &header, sizeof(header));
-
+        if (kve->read(currentAddress, &header, sizeof(header)) == 0) {
+          return KVE_STORAGE_INVALID_ADDRESS;
+        }
 
         if (header.full_length == KVE_END_TAG) {
             return KVE_STORAGE_INVALID_ADDRESS;
