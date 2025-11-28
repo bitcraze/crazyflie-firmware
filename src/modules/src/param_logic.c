@@ -226,7 +226,7 @@ void paramLogicInit(void)
   int i;
   const char* group = NULL;
   int groupLength = 0;
-  uint8_t buf[30];
+  uint8_t buf[40];
 
 #ifndef UNIT_TEST_MODE
   params = &_param_start;
@@ -240,8 +240,17 @@ void paramLogicInit(void)
   for (int i=0; i<paramsLen; i++)
   {
     int len = 5;
+    int nameOffset = 5;
     memcpy(&buf[0], &paramsCrc, 4);
     buf[4] = params[i].type;
+
+    // Include extended_type in CRC if parameter has extended properties
+    if (params[i].type & PARAM_EXTENDED) {
+      buf[5] = params[i].extended_type;
+      len++;
+      nameOffset = 6;
+    }
+
     if (params[i].type & PARAM_GROUP) {
       if (params[i].type & PARAM_START) {
         group = params[i].name;
@@ -256,9 +265,21 @@ void paramLogicInit(void)
     }
 
     if (params[i].name) {
-      memcpy(&buf[5], params[i].name, strlen(params[i].name));
+      memcpy(&buf[nameOffset], params[i].name, strlen(params[i].name));
       len += strlen(params[i].name);
     }
+
+    // Include default value in CRC for persistent parameters
+    if ((params[i].type & PARAM_EXTENDED) &&
+        (params[i].extended_type & PARAM_EXTENDED_TYPE_PERSISTENT) &&
+        !(params[i].type & PARAM_GROUP)) {
+      PARAM_DEBUG("CRC: Including default value for persistent param: %s.%s\n", group, params[i].name);
+      int paramLen = paramGetLen(i);
+      void* defaultValue = paramGetDefault(i);
+      memcpy(&buf[len], defaultValue, paramLen);
+      len += paramLen;
+    }
+
     paramsCrc = crc32CalculateBuffer(buf, len);
   }
 

@@ -77,6 +77,9 @@ typedef float * (*paramGetterFloat)(void);
 // Extended type bits
 #define PARAM_PERSISTENT (1 << 8)
 
+// Extended type byte values (for checking extended_type field directly)
+#define PARAM_EXTENDED_TYPE_PERSISTENT 0x01
+
 #define PARAM_PERSISTENT_STORED      1
 #define PARAM_PERSISTENT_NOT_STORED  0
 
