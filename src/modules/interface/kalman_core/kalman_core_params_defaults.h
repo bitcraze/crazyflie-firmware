@@ -46,6 +46,12 @@
   .procNoiseAcc_z = 1.0f
 #endif
 
+#ifdef CONFIG_STIMATOR_KALMAN_INITIAL_YAW_STD
+#define KALMAN_INITIAL_YAW_STD (CONFIG_STIMATOR_KALMAN_INITIAL_YAW_STD / 1000.0f)
+#else
+#define KALMAN_INITIAL_YAW_STD 0.01f
+#endif
+
 /**
  * @brief Macro containing default values for kalmanCoreParams_t
  *
@@ -58,7 +64,7 @@
   .stdDevInitialPosition_z = 1, \
   .stdDevInitialVelocity = 0.01, \
   .stdDevInitialAttitude_rollpitch = 0.01, \
-  .stdDevInitialAttitude_yaw = 0.01, \
+  .stdDevInitialAttitude_yaw = KALMAN_INITIAL_YAW_STD, \
   \
   KALMAN_CORE_PROC_NOISE_DEFAULTS, \
   .procNoiseVel = 0, \
