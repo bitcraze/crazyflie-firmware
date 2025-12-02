@@ -91,7 +91,7 @@ static uint8_t getStatus(void) {
         status = status | STATUS_IN_DFU_MODE;
     } else {
       DEBUG_PRINT("DeckCtrl not in DFU mode\n");
-        status = status & ~STATUS_IN_DFU_MODE;
+        status = status & (uint8_t)~STATUS_IN_DFU_MODE;
     }
 
     if (nbrOfDeckCtrl() <= 1) {
@@ -99,7 +99,7 @@ static uint8_t getStatus(void) {
         status = status | STATUS_CAN_ENABLE_DFU;
     } else {
         DEBUG_PRINT("Multiple DeckCtrl present, cannot enable DFU\n");
-        status = status & ~STATUS_CAN_ENABLE_DFU;
+        status = status & (uint8_t)~STATUS_CAN_ENABLE_DFU;
     }
 
     return status;
@@ -110,7 +110,7 @@ static void enableDFUViaNRF(void) {
 }
 
 bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
-    DEBUG_PRINT("Read %d@0x%08X\n", readLen, memAddr);
+    DEBUG_PRINT("Read %d@0x%08lX\n", readLen, memAddr);
 
     // CTRL area
     if (memAddr < DECK_CTRL_MEM_OFFSET) {
@@ -131,11 +131,11 @@ bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffe
         uint32_t dfuMemAddr = memAddr - DECK_CTRL_MEM_OFFSET;
         bool result = dfu_i2c_read(DFU_STM32C0_I2C_ADDRESS, dfuMemAddr, buffer, readLen);
         if (!result) {
-            DEBUG_PRINT("Failed to read from DFU memory at 0x%08X\n", dfuMemAddr);
+            DEBUG_PRINT("Failed to read from DFU memory at 0x%08lX\n", dfuMemAddr);
             return false;
         }
     } else {
-        DEBUG_PRINT("Read address 0x%08X out of range\n", memAddr);
+        DEBUG_PRINT("Read address 0x%08lX out of range\n", memAddr);
         return false;
     }
     
@@ -143,7 +143,7 @@ bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffe
 }
 
 bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
-    DEBUG_PRINT("Write %d@0x%08X\n", writeLen, memAddr);
+    DEBUG_PRINT("Write %d@0x%08lX\n", writeLen, memAddr);
 
     if (memAddr < DECK_CTRL_MEM_OFFSET) {
         for (unsigned int i = 0; i < writeLen; i++) {
@@ -163,14 +163,14 @@ bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_
                memAddr < (DECK_CTRL_MEM_OFFSET + DECK_CTRL_MEM_SIZE)) {
 
         uint32_t dfuMemAddr = memAddr - DECK_CTRL_MEM_OFFSET;
-        DEBUG_PRINT("Writing to DFU memory at 0x%08X\n", dfuMemAddr);
+        DEBUG_PRINT("Writing to DFU memory at 0x%08lX\n", dfuMemAddr);
         bool result = dfu_i2c_write(DFU_STM32C0_I2C_ADDRESS, dfuMemAddr, buffer, writeLen);
         if (!result) {
-            DEBUG_PRINT("Failed to write to DFU memory at 0x%08X\n", dfuMemAddr);
+            DEBUG_PRINT("Failed to write to DFU memory at 0x%08lX\n", dfuMemAddr);
             return false;
         }
     } else {
-        DEBUG_PRINT("Write address 0x%08X out of range\n", memAddr);
+        DEBUG_PRINT("Write address 0x%08lX out of range\n", memAddr);
         return false;
     }
 
