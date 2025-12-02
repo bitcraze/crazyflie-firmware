@@ -4,4 +4,4 @@ obj-y += deck_info.o
 obj-y += deck_memory.o
 obj-y += deck.o
 obj-y += deck_test.o
-obj-y += deck_ctrl_dfu_memory.o
+obj-y += deckctrl_dfu_memory.o

@@ -30,7 +30,7 @@
 
 #include "deck.h"
 #include "deck_memory.h"
-#include "deck_ctrl_dfu_memory.h"
+#include "deckctrl_dfu_memory.h"
 #include "debug.h"
 
 #ifdef CONFIG_DEBUG
