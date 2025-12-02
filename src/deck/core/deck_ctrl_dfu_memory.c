@@ -35,6 +35,7 @@
 #include "i2c_dfu.h"
 #include "deck_core.h"
 #include "syslink.h"
+#include "worker.h"
 
 #define DEBUG_MODULE "DECK_CTRL_DFU"
 #include "debug.h"
@@ -61,15 +62,16 @@ static const MemoryHandlerDef_t memoryDef = {
 
 static const uint8_t VERSION = 1;
 
-#define VERSION_MEMORY_BYTE 0x00
-#define DECKCTRL_MEMORY_BYTE 0x01
-#define STATUS_MEMORY_BYTE 0x02
-#define CMD_MEMORY_BYTE 0x03
+#define VERSION_MEMORY_BYTE   0x00
+#define DECKCTRL_MEMORY_BYTE  0x01
+#define STATUS_MEMORY_BYTE    0x02
+#define CMD_MEMORY_BYTE       0x03
 
-#define STATUS_IN_DFU_MODE (1 << 0)
+#define STATUS_IN_DFU_MODE    (1 << 0)
 #define STATUS_CAN_ENABLE_DFU (1 << 1)
 
-#define CMD_ENTER_DFU_MODE 0x01
+#define CMD_ENTER_DFU_MODE      (1 << 0)
+#define CMD_ENTER_FIRMWARE_MODE (1 << 1)
 
 static uint8_t nbrOfDeckCtrl(void) {
     uint8_t deckCtrlCount = 0;
@@ -86,21 +88,18 @@ static uint8_t nbrOfDeckCtrl(void) {
 static uint8_t getStatus(void) {
     uint8_t status = 0;
 
-    uint8_t dummy;
-    if (dfu_i2c_read(DFU_STM32C0_I2C_ADDRESS, 0, &dummy, 1)) {
-        DEBUG_PRINT("DeckCtrl in DFU mode\n");
-        status = status | STATUS_IN_DFU_MODE;
-    } else {
-      DEBUG_PRINT("DeckCtrl not in DFU mode\n");
-        status = status & (uint8_t)~STATUS_IN_DFU_MODE;
-    }
-
     if (nbrOfDeckCtrl() <= 1) {
-        DEBUG_PRINT("One or less DeckCtrl present, can enable DFU\n");
         status = status | STATUS_CAN_ENABLE_DFU;
     } else {
-        DEBUG_PRINT("Multiple DeckCtrl present, cannot enable DFU\n");
         status = status & (uint8_t)~STATUS_CAN_ENABLE_DFU;
+    }
+
+    uint8_t dummy;
+    if (dfu_i2c_read(DFU_STM32C0_I2C_ADDRESS, 0, &dummy, 1)) {
+        status = status | STATUS_IN_DFU_MODE;
+        status = status & (uint8_t)~STATUS_CAN_ENABLE_DFU;
+    } else {
+        status = status & (uint8_t)~STATUS_IN_DFU_MODE;
     }
 
     return status;
@@ -109,7 +108,9 @@ static uint8_t getStatus(void) {
 // Calling this function will cut the power to VCC including this MCU and the
 // DeckCtrl, causing a reset. The DeckCtrl will then enter DFU mode on next
 // power-up.
-static void enableDFUViaNRF(bool enable) {
+static void enableDFUViaNRF(void * arg) {
+    bool enable = (bool) arg;
+    vTaskDelay(pdMS_TO_TICKS(10)); // Give some time for the ongoing write to complete
     SyslinkPacket slp;
     slp.type = SYSLINK_PM_DECKCTRL_DFU;
     slp.length = 1;
@@ -118,9 +119,7 @@ static void enableDFUViaNRF(bool enable) {
 }
 
 bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
-    DEBUG_PRINT("Read %d@0x%08lX\n", readLen, memAddr);
 
-    // CTRL area
     if (memAddr < DECK_CTRL_MEM_OFFSET) {
         for (unsigned int i = 0; i < readLen; i++) {
             if (memAddr + i == VERSION_MEMORY_BYTE) {
@@ -130,7 +129,7 @@ bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffe
             } else if (memAddr + i == STATUS_MEMORY_BYTE) {
                 buffer[i] = getStatus();
             } else {
-                buffer[i] = 0xBC;
+                buffer[i] = 0x00;
             }
         }
     } else if (memAddr >= DECK_CTRL_MEM_OFFSET &&
@@ -139,11 +138,9 @@ bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffe
         uint32_t dfuMemAddr = memAddr - DECK_CTRL_MEM_OFFSET;
         bool result = dfu_i2c_read(DFU_STM32C0_I2C_ADDRESS, dfuMemAddr, buffer, readLen);
         if (!result) {
-            DEBUG_PRINT("Failed to read from DFU memory at 0x%08lX\n", dfuMemAddr);
             return false;
         }
     } else {
-        DEBUG_PRINT("Read address 0x%08lX out of range\n", memAddr);
         return false;
     }
     
@@ -151,17 +148,23 @@ bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffe
 }
 
 bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
-    DEBUG_PRINT("Write %d@0x%08lX\n", writeLen, memAddr);
 
     if (memAddr < DECK_CTRL_MEM_OFFSET) {
         for (unsigned int i = 0; i < writeLen; i++) {
             if (memAddr + i == CMD_MEMORY_BYTE) {
-                if (buffer[i] == CMD_ENTER_DFU_MODE) {
+                if (
+                    (buffer[i] & CMD_ENTER_FIRMWARE_MODE) != 0 &&
+                    (buffer[i] & CMD_ENTER_DFU_MODE) != 0)
+                {
+                    return false;
+                } else if ((buffer[i] & CMD_ENTER_FIRMWARE_MODE) != 0) {
+                    bool shouldEnable = false;
+                    workerSchedule(enableDFUViaNRF, (void *)shouldEnable);
+                } else if ((buffer[i] & CMD_ENTER_DFU_MODE) != 0) {
                     if (nbrOfDeckCtrl() <= 1) {
-                        DEBUG_PRINT("Enabling DFU mode via NRF...\n");
-                        enableDFUViaNRF();
+                        bool shouldEnable = true;
+                        workerSchedule(enableDFUViaNRF, (void *)shouldEnable);
                     } else {
-                        DEBUG_PRINT("Cannot enable DFU mode, multiple DeckCtrl present\n");
                         return false;
                     }
                 }
@@ -171,14 +174,11 @@ bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_
                memAddr < (DECK_CTRL_MEM_OFFSET + DECK_CTRL_MEM_SIZE)) {
 
         uint32_t dfuMemAddr = memAddr - DECK_CTRL_MEM_OFFSET;
-        DEBUG_PRINT("Writing to DFU memory at 0x%08lX\n", dfuMemAddr);
         bool result = dfu_i2c_write(DFU_STM32C0_I2C_ADDRESS, dfuMemAddr, buffer, writeLen);
         if (!result) {
-            DEBUG_PRINT("Failed to write to DFU memory at 0x%08lX\n", dfuMemAddr);
             return false;
         }
     } else {
-        DEBUG_PRINT("Write address 0x%08lX out of range\n", memAddr);
         return false;
     }
 
