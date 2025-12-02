@@ -34,6 +34,7 @@
 #include "i2cdev.h"
 #include "i2c_dfu.h"
 #include "deck_core.h"
+#include "syslink.h"
 
 #define DEBUG_MODULE "DECK_CTRL_DFU"
 #include "debug.h"
@@ -105,8 +106,15 @@ static uint8_t getStatus(void) {
     return status;
 }
 
-static void enableDFUViaNRF(void) {
-  DEBUG_PRINT("Should be enabling DFU right about now...\n");
+// Calling this function will cut the power to VCC including this MCU and the
+// DeckCtrl, causing a reset. The DeckCtrl will then enter DFU mode on next
+// power-up.
+static void enableDFUViaNRF(bool enable) {
+    SyslinkPacket slp;
+    slp.type = SYSLINK_PM_DECKCTRL_DFU;
+    slp.length = 1;
+    slp.data[0] = enable?0x01:0x00; // 1 to enter DFU, 0 to enter firmware mode
+    syslinkSendPacket(&slp);
 }
 
 bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
