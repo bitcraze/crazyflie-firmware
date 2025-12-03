@@ -35,7 +35,7 @@
 /**
  * @brief Initialize the DeckCtrl DFU memory interface
  * 
- * This initializes the DeCkCtrl DFU memory interface and registers a
+ * This initializes the DeckCtrl DFU memory interface and registers a
  * memory with the memory subsystem.
  * 
  */
