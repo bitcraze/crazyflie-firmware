@@ -47,6 +47,7 @@
 
 static uint8_t pattern = 0;
 static logVarId_t idX, idY, idZ;
+static logVarId_t idVx, idVy, idVz;
 
 static uint32_t prevWrgbBot = 0xFFFFFFFF;
 static uint32_t prevWrgbTop = 0xFFFFFFFF;
@@ -88,6 +89,14 @@ static TickType_t nextFlickerBot = 0;
 static uint8_t deckTopOn  = 1;
 static uint8_t deckBotOn  = 1;
 //------------------------------------------------
+
+//----------------Pattern6: Velocity Indicator--------------
+#define MAX_VEL 1.0f   // m/s, adjust as needed
+
+#define COLOR_VEL_MIN WRGB(0,  0,   0, 255)   // Blue
+#define COLOR_VEL_MID WRGB(0,  0, 255,   0)   // Green
+#define COLOR_VEL_MAX WRGB(0,255,   0,   0)   // Red
+//-----------------------------------------------------------
 
 
 // Helper function to update WRGB parameters safely
@@ -147,6 +156,10 @@ void appMain()
     idX = logGetVarId("stateEstimate", "x");
     idY = logGetVarId("stateEstimate", "y");
     idZ = logGetVarId("stateEstimate", "z");
+
+    idVx = logGetVarId("stateEstimate", "vx");
+    idVy = logGetVarId("stateEstimate", "vy");
+    idVz = logGetVarId("stateEstimate", "vz");
 
     while (1)
     {
@@ -350,6 +363,46 @@ void appMain()
 
         if (topAttached)    updateDeckParamIfChanged(idWrgbTop, wrgb_top, &prevWrgbTop);
         if (bottomAttached) updateDeckParamIfChanged(idWrgbBot, wrgb_bot, &prevWrgbBot);
+    }
+    else if (pattern == 6)
+    {
+        //---------------------------------------------------------
+        // VELOCITY COLOR INDICATOR
+        //---------------------------------------------------------
+
+        float vx = logGetFloat(idVx);
+        float vy = logGetFloat(idVy);
+        float vz = logGetFloat(idVz);
+
+        float vel = sqrtf(vx*vx + vy*vy + vz*vz);
+
+        // Clamp 0 → MAX_VEL
+        if (vel < 0) vel = 0;
+        if (vel > MAX_VEL) vel = MAX_VEL;
+
+        float t = vel / MAX_VEL;   // 0→1 normalized speed
+
+        // Smooth gradient Blue → Green → Red
+        uint8_t r, g, b;
+
+        if (t < 0.5f) {
+            // Blue → Green (0–50%)
+            float k = t / 0.5f;
+            r = 0;
+            g = (uint8_t)(255.0f * k);
+            b = (uint8_t)(255.0f * (1.0f - k));
+        } else {
+            // Green → Red (50–100%)
+            float k = (t - 0.5f) / 0.5f;
+            r = (uint8_t)(255.0f * k);
+            g = (uint8_t)(255.0f * (1.0f - k));
+            b = 0;
+        }
+
+        uint32_t wrgb_value = WRGB(0, r, g, b);
+
+        if (topAttached)    updateDeckParamIfChanged(idWrgbTop, wrgb_value, &prevWrgbTop);
+        if (bottomAttached) updateDeckParamIfChanged(idWrgbBot, wrgb_value, &prevWrgbBot);
     }
     else
     {
