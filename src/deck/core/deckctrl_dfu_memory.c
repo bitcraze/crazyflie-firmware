@@ -33,7 +33,6 @@
 #include "mem.h"
 #include "i2cdev.h"
 #include "i2c_dfu.h"
-#include "deck_core.h"
 #include "syslink.h"
 #include "worker.h"
 
@@ -59,6 +58,8 @@ static const MemoryHandlerDef_t memoryDef = {
   .read = handleMemRead,
   .write = handleMemWrite,
 };
+
+static bool shouldEnableDFU = false;
 
 static const uint8_t VERSION = 1;
 
@@ -109,7 +110,7 @@ static uint8_t getStatus(void) {
 // DeckCtrl, causing a reset. The DeckCtrl will then enter DFU mode on next
 // power-up.
 static void enableDFUViaNRF(void * arg) {
-    bool enable = (bool) arg;
+    bool enable = *((bool *) arg);
     vTaskDelay(pdMS_TO_TICKS(10)); // Give some time for the ongoing write to complete
     SyslinkPacket slp;
     slp.type = SYSLINK_PM_DECKCTRL_DFU;
@@ -158,12 +159,12 @@ bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_
                 {
                     return false;
                 } else if ((buffer[i] & CMD_ENTER_FIRMWARE_MODE) != 0) {
-                    bool shouldEnable = false;
-                    workerSchedule(enableDFUViaNRF, (void *)shouldEnable);
+                    shouldEnableDFU = false;
+                    workerSchedule(enableDFUViaNRF, (void *) &shouldEnableDFU);
                 } else if ((buffer[i] & CMD_ENTER_DFU_MODE) != 0) {
                     if (nbrOfDeckCtrl() <= 1) {
-                        bool shouldEnable = true;
-                        workerSchedule(enableDFUViaNRF, (void *)shouldEnable);
+                        shouldEnableDFU = true;
+                        workerSchedule(enableDFUViaNRF, (void *) &shouldEnableDFU);
                     } else {
                         return false;
                     }
