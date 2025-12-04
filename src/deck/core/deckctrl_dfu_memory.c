@@ -45,15 +45,15 @@ static const uint32_t DECK_CTRL_MEM_SIZE = 0x8000;
 static const uint32_t DECK_CTRL_MEM_OFFSET = 0x10000;
 static const uint32_t DECK_MEM_MAX_SIZE = DECK_CTRL_MEM_OFFSET + DECK_CTRL_MEM_SIZE;
 
-static uint32_t handleMemGetSize(void) {
+static uint32_t handleMemGetSize(const uint8_t internal_id) {
   return DECK_MEM_MAX_SIZE;
 }
 
-bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
-bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
+bool handleMemRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
+bool handleMemWrite(const uint8_t internal_id, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
 
 static const MemoryHandlerDef_t memoryDef = {
-  .type = MEM_TYPE_DECK_CTRL_DFU,
+  .type = MEM_TYPE_DECKCTRL_DFU,
   .getSize = handleMemGetSize,
   .read = handleMemRead,
   .write = handleMemWrite,
@@ -119,7 +119,7 @@ static void enableDFUViaNRF(void * arg) {
     syslinkSendPacket(&slp);
 }
 
-bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+bool handleMemRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
 
     if (memAddr < DECK_CTRL_MEM_OFFSET) {
         for (unsigned int i = 0; i < readLen; i++) {
@@ -148,7 +148,7 @@ bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffe
     return true;
 }
 
-bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
+bool handleMemWrite(const uint8_t internal_id, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
 
     if (memAddr < DECK_CTRL_MEM_OFFSET) {
         for (unsigned int i = 0; i < writeLen; i++) {
