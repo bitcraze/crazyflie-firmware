@@ -247,8 +247,8 @@ static void usdTimer(xTimerHandle timer);
 static SemaphoreHandle_t shutdownMutex;
 
 // Handling from the memory module
-static uint32_t handleMemGetSize(void) { return usddeckFileSize(); }
-static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
+static uint32_t handleMemGetSize(const uint8_t internal_id) { return usddeckFileSize(); }
+static bool handleMemRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
 static const MemoryHandlerDef_t memDef = {
   .type = MEM_TYPE_USD,
   .getSize = handleMemGetSize,
@@ -794,7 +794,7 @@ bool usddeckRead(uint32_t offset, uint8_t* buffer, uint16_t length)
   return result;
 }
 
-static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+static bool handleMemRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
   bool result = false;
 
   if (memAddr + readLen <= usddeckFileSize()) {

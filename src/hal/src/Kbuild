@@ -2,7 +2,6 @@ obj-y += amg8833.o
 obj-y += buzzer.o
 obj-y += freeRTOSdebug.o
 obj-y += ledseq.o
-obj-y += ow_common.o
 obj-y += ow_syslink.o
 obj-y += pca9555.o
 obj-y += pca95x4.o

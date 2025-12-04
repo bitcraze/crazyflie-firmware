@@ -35,12 +35,6 @@
 
 void owInit()
 {
-  owCommonInit();
-}
-
-bool owTest()
-{
-  return owCommonTest();
 }
 
 void owSyslinkReceive(SyslinkPacket *slp)

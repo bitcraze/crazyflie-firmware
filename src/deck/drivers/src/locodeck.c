@@ -152,8 +152,8 @@ static STATS_CNT_RATE_DEFINE(spiReadCount, 1000);
 #define MEM_LOCO2_ANCHOR_PAGE_SIZE 0x0100
 #define MEM_LOCO2_PAGE_LEN         (3 * sizeof(float) + 1)
 
-static uint32_t handleMemGetSize(void) { return MEM_LOCO_ANCHOR_BASE + MEM_LOCO_ANCHOR_PAGE_SIZE * 256; }
-static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* dest);
+static uint32_t handleMemGetSize(const uint8_t internal_id) { return MEM_LOCO_ANCHOR_BASE + MEM_LOCO_ANCHOR_PAGE_SIZE * 256; }
+static bool handleMemRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* dest);
 static const MemoryHandlerDef_t memDef = {
   .type = MEM_TYPE_LOCO2,
   .getSize = handleMemGetSize,
@@ -180,7 +180,7 @@ static void rxFailedCallback(dwDevice_t * dev) {
   timeout = algorithm->onEvent(dev, eventReceiveFailed);
 }
 
-static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* dest) {
+static bool handleMemRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* dest) {
   bool result = false;
 
   static uint8_t unsortedAnchorList[MEM_ANCHOR_ID_LIST_LENGTH];

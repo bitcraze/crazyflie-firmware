@@ -42,9 +42,9 @@
 static bool eepromTestWriteRead(void);
 #endif
 
-static uint32_t handleMemGetSize(void) { return EEPROM_SIZE; }
-static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
-static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
+static uint32_t handleMemGetSize(const uint8_t internal_id) { return EEPROM_SIZE; }
+static bool handleMemRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
+static bool handleMemWrite(const uint8_t internal_id, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
 static const MemoryHandlerDef_t memDef = {
   .type = MEM_TYPE_EEPROM,
   .getSize = handleMemGetSize,
@@ -211,7 +211,7 @@ bool eepromWritePage(uint8_t* buffer, uint16_t writeAddr)
   return false;
 }
 
-static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+static bool handleMemRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
   bool result = false;
 
   if (memAddr + readLen <= EEPROM_SIZE) {
@@ -223,7 +223,7 @@ static bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t
   return result;
 }
 
-static bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
+static bool handleMemWrite(const uint8_t internal_id, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
   bool result = false;
 
   if (memAddr + writeLen <= EEPROM_SIZE) {
