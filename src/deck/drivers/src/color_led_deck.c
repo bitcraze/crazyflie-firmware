@@ -84,6 +84,7 @@ static void task(void* param);
 static bool pollThermalStatus(colorLedContext_t *ctx);
 static bool pollLedCurrent(colorLedContext_t *ctx);
 static bool pollLedPosition(colorLedContext_t *ctx);
+static bool testI2cAddrPin(colorLedContext_t *ctx);
 
 // Generic LED controller callback - forwards to all initialized instances
 static void colorLedDeckSetColor(const uint8_t *rgb888) {
@@ -269,6 +270,11 @@ static bool colorLedDeckTest(colorLedContext_t *ctx) {
     DEBUG_PRINT("Failed to poll LED position\n");
   }
 
+  // Test I2C_ADDRESS pin
+  if (!testI2cAddrPin(ctx)) {
+    DEBUG_PRINT("Failed to poll I2C address pin\n");
+  }
+
   return true;
 }
 
@@ -351,6 +357,79 @@ static bool pollLedPosition(colorLedContext_t *ctx) {
     }
   }
   return false;
+}
+
+static bool testI2cAddrPin(colorLedContext_t *ctx) {
+  uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_I2C_ADDR_PIN, 0, 0, 0, 0};
+  uint8_t response[RXBUFFERSIZE];
+
+  // Configure pin as output
+  if (!deckctrl_gpio_set_direction(ctx->deckInfo, GPIO_I2C_ADDR_LSB, OUTPUT)) {
+    DEBUG_PRINT("Failed to configure GPIO 11 as output for I2C address selection\n");
+    return false;
+  }
+
+  // Test with pin LOW
+  if (!deckctrl_gpio_write(ctx->deckInfo, GPIO_I2C_ADDR_LSB, LOW)) {
+    DEBUG_PRINT("Failed to set GPIO 11 LOW for I2C address selection\n");
+    return false;
+  }
+
+  vTaskDelay(M2T(2)); // Allow pin to settle
+
+  if (!i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
+    DEBUG_PRINT("Failed to write I2C command for LOW state test\n");
+    return false;
+  }
+  vTaskDelay(M2T(1));
+
+  if (!i2cdevRead(I2C1_DEV, ctx->i2cAddress, RXBUFFERSIZE, response)) {
+    DEBUG_PRINT("Failed to read I2C response for LOW state test\n");
+    return false;
+  }
+
+  if (response[0] != CMD_GET_I2C_ADDR_PIN) {
+    DEBUG_PRINT("Invalid response command: 0x%02x\n", response[0]);
+    return false;
+  }
+
+  uint8_t pinState = response[1];
+  if (pinState != 0) {
+    DEBUG_PRINT("I2C Address Pin test failed: expected LOW state\n");
+    return false;
+  }
+
+  // Test with pin HIGH
+  if (!deckctrl_gpio_write(ctx->deckInfo, GPIO_I2C_ADDR_LSB, HIGH)) {
+    DEBUG_PRINT("Failed to set GPIO 11 HIGH for I2C address selection\n");
+    return false;
+  }
+
+  vTaskDelay(M2T(2)); // Allow pin to settle
+
+  if (!i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
+    DEBUG_PRINT("Failed to write I2C command for HIGH state test\n");
+    return false;
+  }
+  vTaskDelay(M2T(1));
+
+  if (!i2cdevRead(I2C1_DEV, ctx->i2cAddress, RXBUFFERSIZE, response)) {
+    DEBUG_PRINT("Failed to read I2C response for HIGH state test\n");
+    return false;
+  }
+
+  if (response[0] != CMD_GET_I2C_ADDR_PIN) {
+    DEBUG_PRINT("Invalid response command: 0x%02x\n", response[0]);
+    return false;
+  }
+
+  pinState = response[1];
+  if (pinState != 1) {
+    DEBUG_PRINT("I2C Address Pin test failed: expected HIGH state\n");
+    return false;
+  }
+
+  return true;
 }
 
 static void task(void *param) {
@@ -592,7 +671,7 @@ static const DeckMemDef_t colorTopMemoryDef = {
 static const DeckDriver color_led_bottom_deck = {
   .vid = 0xBC,
   .pid = 0x13,
-  .name = "bcColorLEDBot",
+  .name = "bcColorLedBot",
 
   .memoryDef = &colorBottomMemoryDef,
 
@@ -604,7 +683,7 @@ static const DeckDriver color_led_bottom_deck = {
 static const DeckDriver color_led_top_deck = {
   .vid = 0xBC,
   .pid = 0x14,
-  .name = "bcColorLEDTop",
+  .name = "bcColorLedTop",
 
   .memoryDef = &colorTopMemoryDef,
 
