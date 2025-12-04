@@ -111,10 +111,6 @@ static bool deckctrlMemoryRead(const uint8_t internal_id, const uint32_t memAddr
     return i2cdevReadReg16(I2C1_DEV, deck_contexts[internal_id].i2cAddress, memAddr, readLen, buffer);
 }
 
-static bool deckctrlMemoryWrite(const uint8_t internal_id, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
-    return i2cdevWriteReg16(I2C1_DEV, deck_contexts[internal_id].i2cAddress, memAddr, writeLen, buffer);
-}
-
 static uint32_t deckctrlMemorySize(const uint8_t internal_id) {
     return DECKCTRL_CONFIG_PAGE_SIZE;
 }
@@ -269,7 +265,7 @@ static DeckInfo* deckctrl_getNextDeck(void)
         .type = MEM_TYPE_DECKCTRL,
         .getSize = deckctrlMemorySize,
         .read = deckctrlMemoryRead,
-        .write = deckctrlMemoryWrite,
+        .write = 0, // Memory is read only
         .getSerialNbr = deckctrlMemorySerialNbr,
         .internal_id = current_deck,
     };
