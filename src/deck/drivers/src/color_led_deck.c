@@ -262,12 +262,12 @@ static void colorLedDeckInit(DeckInfo *info, colorLedContext_t *ctx, const char 
 
 // Common test function used by both bottom and top variants
 static bool colorLedDeckTest(colorLedContext_t *ctx, uint8_t expectedPosition) {
+  // Clear test results
+  ctx->testResults = 0;
+
   if (!ctx->isInit) {
     return false;
   }
-
-  // Clear test results
-  ctx->testResults = 0;
 
   // Test 1: Protocol version check
   if (checkProtocolVersion(ctx->i2cAddress)) {
