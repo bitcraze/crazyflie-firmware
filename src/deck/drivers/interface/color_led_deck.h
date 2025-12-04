@@ -13,6 +13,11 @@
 // Expected protocol version
 #define COLORLED_PROTOCOL_VERSION_REQUIRED 3
 
+// LED physical position on the deck PCB (hardware-configured)
+#define COLORLED_LED_POS_NONE           0x00  // No LED / floating
+#define COLORLED_LED_POS_BOTTOM         0x01  // Bottom-mounted
+#define COLORLED_LED_POS_TOP            0x02  // Top-mounted
+
 #define TXBUFFERSIZE  5
 #define RXBUFFERSIZE  9
 

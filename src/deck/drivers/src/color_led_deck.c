@@ -61,6 +61,7 @@ typedef struct {
   DeckInfo *deckInfo;
   bool isInBootloader;
   bool isInFirmware;
+  uint8_t testResults;  // Bitmap of self-test results
 } colorLedContext_t;
 
 // Instance indices for accessing contexts array
@@ -69,8 +70,8 @@ typedef struct {
 
 // Two instances: bottom and top
 static colorLedContext_t contexts[2] = {
-  { .isInit = false, .brightnessCorr = true, .i2cAddress = COLORLED_BOT_DECK_I2C_ADDRESS, .isInFirmware = true, .isInBootloader = false }, // bottom
-  { .isInit = false, .brightnessCorr = true, .i2cAddress = COLORLED_TOP_DECK_I2C_ADDRESS, .isInFirmware = true, .isInBootloader = false }  // top
+  { .isInit = false, .brightnessCorr = true, .i2cAddress = COLORLED_BOT_DECK_I2C_ADDRESS, .isInFirmware = true, .isInBootloader = false, .testResults = 0 }, // bottom
+  { .isInit = false, .brightnessCorr = true, .i2cAddress = COLORLED_TOP_DECK_I2C_ADDRESS, .isInFirmware = true, .isInBootloader = false, .testResults = 0 }  // top
 };
 
 // Enable deck power by pulling high
@@ -80,10 +81,15 @@ static colorLedContext_t contexts[2] = {
 // Set Color LED MCU I2C address LSB by pulling high/low
 #define GPIO_I2C_ADDR_LSB DECKCTRL_GPIO_PIN_11
 
+// Self-test result bits
+#define TEST_PROTOCOL_VERSION (1 << 0)  // Bit 0: Protocol version check passed
+#define TEST_LED_POSITION     (1 << 1)  // Bit 1: LED position read passed
+#define TEST_I2C_ADDR_PIN     (1 << 2)  // Bit 2: I2C address pin test passed
+
 static void task(void* param);
 static bool pollThermalStatus(colorLedContext_t *ctx);
 static bool pollLedCurrent(colorLedContext_t *ctx);
-static bool pollLedPosition(colorLedContext_t *ctx);
+static bool verifyLedPosition(colorLedContext_t *ctx, uint8_t expectedPosition);
 static bool testI2cAddrPin(colorLedContext_t *ctx);
 
 // Generic LED controller callback - forwards to all initialized instances
@@ -255,24 +261,36 @@ static void colorLedDeckInit(DeckInfo *info, colorLedContext_t *ctx, const char 
 }
 
 // Common test function used by both bottom and top variants
-static bool colorLedDeckTest(colorLedContext_t *ctx) {
+static bool colorLedDeckTest(colorLedContext_t *ctx, uint8_t expectedPosition) {
   if (!ctx->isInit) {
     return false;
   }
 
-  if (!checkProtocolVersion(ctx->i2cAddress)) {
+  // Clear test results
+  ctx->testResults = 0;
+
+  // Test 1: Protocol version check
+  if (checkProtocolVersion(ctx->i2cAddress)) {
+    ctx->testResults |= TEST_PROTOCOL_VERSION;
+  } else {
     DEBUG_PRINT("Color LED deck protocol version check failed\n");
     return false;
   }
 
-  // Read LED position once during initialization (fixed by hardware)
-  if (!pollLedPosition(ctx)) {
-    DEBUG_PRINT("Failed to poll LED position\n");
+  // Test 2: Verify LED position matches expected (fixed by hardware)
+  if (verifyLedPosition(ctx, expectedPosition)) {
+    ctx->testResults |= TEST_LED_POSITION;
+  } else {
+    DEBUG_PRINT("LED position test failed (wrong side or communication error)\n");
+    return false;
   }
 
-  // Test I2C_ADDRESS pin
-  if (!testI2cAddrPin(ctx)) {
-    DEBUG_PRINT("Failed to poll I2C address pin\n");
+  // Test 3: I2C_ADDRESS pin test
+  if (testI2cAddrPin(ctx)) {
+    ctx->testResults |= TEST_I2C_ADDR_PIN;
+  } else {
+    DEBUG_PRINT("Failed I2C address pin test\n");
+    return false;
   }
 
   return true;
@@ -284,7 +302,7 @@ static void colorLedBottomDeckInit(DeckInfo *info) {
 }
 
 static bool colorLedBottomDeckTest() {
-  return colorLedDeckTest(&contexts[BOTTOM_IDX]);
+  return colorLedDeckTest(&contexts[BOTTOM_IDX], COLORLED_LED_POS_BOTTOM);
 }
 
 // Top deck wrapper functions
@@ -303,7 +321,7 @@ static void colorLedTopDeckInit(DeckInfo *info) {
 }
 
 static bool colorLedTopDeckTest() {
-  return colorLedDeckTest(&contexts[TOP_IDX]);
+  return colorLedDeckTest(&contexts[TOP_IDX], COLORLED_LED_POS_TOP);
 }
 
 static bool pollThermalStatus(colorLedContext_t *ctx) {
@@ -343,20 +361,49 @@ static bool pollLedCurrent(colorLedContext_t *ctx) {
   return false;
 }
 
-static bool pollLedPosition(colorLedContext_t *ctx) {
+static bool verifyLedPosition(colorLedContext_t *ctx, uint8_t expectedPosition) {
   uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_LED_POSITION, 0, 0, 0, 0};
   uint8_t response[RXBUFFERSIZE];
 
-  if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
-    vTaskDelay(M2T(1));
-    if (i2cdevRead(I2C1_DEV, ctx->i2cAddress, RXBUFFERSIZE, response)) {
-      if (response[0] == CMD_GET_LED_POSITION) {
-        ctx->ledPosition = response[1];
-        return true;
-      }
-    }
+  if (!i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
+    DEBUG_PRINT("Failed to write CMD_GET_LED_POSITION\n");
+    return false;
   }
-  return false;
+
+  vTaskDelay(M2T(1));
+
+  if (!i2cdevRead(I2C1_DEV, ctx->i2cAddress, RXBUFFERSIZE, response)) {
+    DEBUG_PRINT("Failed to read LED position response\n");
+    return false;
+  }
+
+  if (response[0] != CMD_GET_LED_POSITION) {
+    DEBUG_PRINT("Invalid response command: 0x%02x\n", response[0]);
+    return false;
+  }
+
+  uint8_t actualPosition = response[1];
+  ctx->ledPosition = actualPosition;
+
+  const char* expectedStr = (expectedPosition == COLORLED_LED_POS_BOTTOM) ? "BOTTOM" : "TOP";
+  const char* actualStr;
+  if (actualPosition == COLORLED_LED_POS_BOTTOM) {
+    actualStr = "BOTTOM";
+  } else if (actualPosition == COLORLED_LED_POS_TOP) {
+    actualStr = "TOP";
+  } else if (actualPosition == COLORLED_LED_POS_NONE) {
+    actualStr = "NONE";
+  } else {
+    actualStr = "UNKNOWN";
+  }
+
+  if (actualPosition != expectedPosition) {
+    DEBUG_PRINT("LED position mismatch: expected 0x%02x (%s side), got 0x%02x (%s side)\n",
+                expectedPosition, expectedStr, actualPosition, actualStr);
+    return false;
+  }
+
+  return true;
 }
 
 static bool testI2cAddrPin(colorLedContext_t *ctx) {
@@ -738,11 +785,6 @@ LOG_ADD(LOG_UINT8, deckTemp, &contexts[BOTTOM_IDX].deckTemperature)
 LOG_ADD(LOG_UINT8, throttlePct, &contexts[BOTTOM_IDX].throttlePercentage)
 
 /**
- * @brief LED position detection value for bottom deck (0=none, 1=bottom, 2=top)
- */
-LOG_ADD(LOG_UINT8, ledPos, &contexts[BOTTOM_IDX].ledPosition)
-
-/**
  * @brief Red LED current in milliamps for bottom deck
  */
 LOG_ADD(LOG_UINT16, ledCurR, &contexts[BOTTOM_IDX].ledCurrent[0])
@@ -776,11 +818,6 @@ LOG_ADD(LOG_UINT8, deckTemp, &contexts[TOP_IDX].deckTemperature)
  * @brief Thermal throttle percentage (0-100) for top deck
  */
 LOG_ADD(LOG_UINT8, throttlePct, &contexts[TOP_IDX].throttlePercentage)
-
-/**
- * @brief LED position detection value for top deck (0=none, 1=bottom, 2=top)
- */
-LOG_ADD(LOG_UINT8, ledPos, &contexts[TOP_IDX].ledPosition)
 
 /**
  * @brief Red LED current in milliamps for top deck
@@ -817,3 +854,25 @@ PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcColorLedBot, &contexts[BOTTOM_IDX].i
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcColorLedTop, &contexts[TOP_IDX].isInit)
 
 PARAM_GROUP_STOP(deck)
+
+PARAM_GROUP_START(deckTest)
+
+/**
+ * @brief Self-test result bitmap for bottom Color LED deck
+ *
+ * Bit 0: Protocol version check passed
+ * Bit 1: LED position read passed
+ * Bit 2: I2C address pin test passed
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcColorLedBot, &contexts[BOTTOM_IDX].testResults)
+
+/**
+ * @brief Self-test result bitmap for top Color LED deck
+ *
+ * Bit 0: Protocol version check passed
+ * Bit 1: LED position read passed
+ * Bit 2: I2C address pin test passed
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcColorLedTop, &contexts[TOP_IDX].testResults)
+
+PARAM_GROUP_STOP(deckTest)
