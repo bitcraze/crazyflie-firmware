@@ -6,6 +6,7 @@ obj-y += collision_avoidance.o
 obj-y += commander.o
 obj-y += comm.o
 obj-y += console.o
+obj-y += crtp_supervisor.o
 obj-y += crtp_commander_generic.o
 obj-y += crtp_commander_high_level.o
 obj-y += crtp_commander.o
