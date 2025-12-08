@@ -8,8 +8,8 @@
 #include <string.h>
 
 // Functions under test
-bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
-bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
+bool handleMemRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
+bool handleMemWrite(const uint8_t internal_id, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
 
 
 // Fixtures
@@ -134,7 +134,7 @@ void testFirstByteOfInfoIsVersion() {
     deckCount_ExpectAndReturn(0);
 
     // Test
-    handleMemRead(0, 1, buffer);
+    handleMemRead(0, 0, 1, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(3, buffer[0]);
@@ -145,7 +145,7 @@ void testNoInstalledDecks() {
     deckCount_ExpectAndReturn(0);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemRead(0, 0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(0, buffer[DECK_0_INFO_PRIMARY] & MASK_IS_VALID);
@@ -165,7 +165,7 @@ void testTwoDecksWithoutMemorySupport() {
     deckInfo_ExpectAndReturn(1, &deckNoMem);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemRead(0, 0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(0, buffer[DECK_0_INFO_PRIMARY] & MASK_IS_VALID);
@@ -182,7 +182,7 @@ void testOneDeckReadPrimarySupported() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemRead(0, 0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(MASK_IS_VALID | MASK_SUPPORTS_READ, buffer[DECK_0_INFO_PRIMARY]);
@@ -196,7 +196,7 @@ void testOneDeckWritePrimarySupported() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemRead(0, 0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(MASK_IS_VALID | MASK_SUPPORTS_WRITE, buffer[DECK_0_INFO_PRIMARY]);
@@ -211,7 +211,7 @@ void testOneDeckUpgradePrimarySupported() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemRead(0, 0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(MASK_IS_VALID | MASK_SUPPORTS_WRITE | MASK_SUPPORTS_UPGRADE, buffer[DECK_0_INFO_PRIMARY]);
@@ -225,7 +225,7 @@ void testOneDeckPrimaryStarted() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemRead(0, 0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(MASK_IS_VALID | MASK_IS_STARTED, buffer[DECK_0_INFO_PRIMARY]);
@@ -239,7 +239,7 @@ void testOneDeckRequiresPrimaryUpgrade() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemRead(0, 0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(MASK_IS_VALID | MASK_UPGRADE_REQUIRED, buffer[DECK_0_INFO_PRIMARY]);
@@ -253,7 +253,7 @@ void testOneDeckPrimaryInBootloaderMode() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemRead(0, 0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(MASK_IS_VALID | MASK_BOOTLOADER_ACTIVE, buffer[DECK_0_INFO_PRIMARY]);
@@ -265,7 +265,7 @@ void testOneDeckPrimaryNoSupportForCommands() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemRead(0, 0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(0, buffer[DECK_0_INFO_PRIMARY + 1]);
@@ -279,7 +279,7 @@ void testOneDeckPrimaryBitFieldSupportsResetToFw() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemRead(0, 0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(MASK_RESET_TO_FW_SUPPORTED, buffer[DECK_0_INFO_PRIMARY + 1]);
@@ -293,7 +293,7 @@ void testOneDeckPrimaryBitFieldSupportsResetToBootloader() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemRead(0, 0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(MASK_RESET_TO_BOOTLOADER_SUPPORTED, buffer[DECK_0_INFO_PRIMARY + 1]);
@@ -308,7 +308,7 @@ void testOneDeckPrimaryResetToFw() {
     uint8_t commandBitField = MASK_RESET_TO_FW;
 
     // Test
-    handleMemWrite(DECK_0_CMD_PRIMARY + COMMAND_ADR, 1, &commandBitField);
+    handleMemWrite(0, DECK_0_CMD_PRIMARY + COMMAND_ADR, 1, &commandBitField);
 
     // Assert
     TEST_ASSERT_TRUE(command_isCalled);
@@ -324,7 +324,7 @@ void testSecondDeckSecondaryResetToBootloader() {
     uint8_t commandBitField = MASK_RESET_TO_BOOTLOADER;
 
     // Test
-    handleMemWrite(DECK_1_CMD_SECONDARY + COMMAND_ADR, 1, &commandBitField);
+    handleMemWrite(0, DECK_1_CMD_SECONDARY + COMMAND_ADR, 1, &commandBitField);
 
     // Assert
     TEST_ASSERT_TRUE(command_isCalled);
@@ -338,7 +338,7 @@ void testCommandForNonExistingDeck() {
     uint8_t commandBitField = MASK_RESET_TO_FW;
 
     // Test
-    bool actual = handleMemWrite(DECK_0_CMD_PRIMARY + COMMAND_ADR, 1, &commandBitField);
+    bool actual = handleMemWrite(0, DECK_0_CMD_PRIMARY + COMMAND_ADR, 1, &commandBitField);
 
     // Assert
     TEST_ASSERT_TRUE(actual); // Always true, regardless of "bad" address/data
@@ -355,7 +355,7 @@ void testOneDeckPrimaryFlashBinarySize() {
     uint32_t expected = 0x12345678;
 
     // Test
-    handleMemWrite(DECK_0_CMD_PRIMARY + 0, 4, (uint8_t*)&expected);
+    handleMemWrite(0, DECK_0_CMD_PRIMARY + 0, 4, (uint8_t*)&expected);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT32(expected, actual);
@@ -369,7 +369,7 @@ void testOneDeckPrimaryFlashBinarySizeNoReceptorSet() {
     uint32_t someData = 4711;
 
     // Test
-    handleMemWrite(DECK_0_CMD_PRIMARY + 0, 4, (uint8_t*)&someData);
+    handleMemWrite(0, DECK_0_CMD_PRIMARY + 0, 4, (uint8_t*)&someData);
 
     // Assert
     // Not testable, but would write to invalid address
@@ -383,7 +383,7 @@ void testOneDeckSecondaryInfoNotSetByPrimary() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemRead(0, 0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(MASK_IS_VALID | MASK_SUPPORTS_WRITE, buffer[DECK_0_INFO_PRIMARY]);
@@ -401,7 +401,7 @@ void testOneDeckAtleastOneSecondaryInfoBitIsSet() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemRead(0, 0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(MASK_IS_VALID | MASK_SUPPORTS_WRITE, buffer[DECK_0_INFO_PRIMARY]);
@@ -416,7 +416,7 @@ void testOneDeckRequiredHashPrimary() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemRead(0, 0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(0x78, buffer[DECK_0_INFO_PRIMARY + 2]);
@@ -433,7 +433,7 @@ void testOneDeckRequiredLengthPrimary() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemRead(0, 0, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(0x78, buffer[DECK_0_INFO_PRIMARY + 6]);
@@ -451,7 +451,7 @@ void testBaseAddressSecondDeckPrimary() {
     uint32_t expected = DECK_MEM_MAP_SIZE * 3;
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemRead(0, 0, BUF_SIZE, buffer);
 
     // Assert
     uint32_t actual = 0;
@@ -471,7 +471,7 @@ void testBaseAddressSecondDeckSecondary() {
     uint32_t expected = DECK_MEM_MAP_SIZE * 3 + DECK_MEM_MAP_SIZE;
 
     // Test
-    handleMemRead(0, BUF_SIZE, buffer);
+    handleMemRead(0, 0, BUF_SIZE, buffer);
 
     // Assert
     uint32_t actual = 0;
@@ -488,7 +488,7 @@ void testNameFirstDeckPrimary() {
     stockDriver.memoryDefSecondary = &stockSecondaryMemDef;
 
     // Test
-    handleMemRead(DECK_0_INFO_PRIMARY + 0xe, BUF_SIZE, buffer);
+    handleMemRead(0, DECK_0_INFO_PRIMARY + 0xe, BUF_SIZE, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_STRING("A name:anId", buffer);
@@ -502,7 +502,7 @@ void testReadOfFiveFirstBytes() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    handleMemRead(0, 5, buffer);
+    handleMemRead(0, 0, 5, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT8(3, buffer[0]);      // Version
@@ -520,7 +520,7 @@ void testReadNotFromZero() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    handleMemRead(4, 2, buffer);
+    handleMemRead(0, 4, 2, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_UINT32(0x56, buffer[0]);  // Required hash
@@ -535,7 +535,7 @@ void testReadFromPrimaryDeckMemory() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    bool actual = handleMemRead(DECK_MEM_MAP_SIZE + 100, 30, buffer);
+    bool actual = handleMemRead(0, DECK_MEM_MAP_SIZE + 100, 30, buffer);
 
     // Assert
     TEST_ASSERT_TRUE(read_isCalled);
@@ -553,7 +553,7 @@ void testReadFromSecondaryDeckMemory() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    bool actual = handleMemRead(DECK_MEM_MAP_SIZE * 2 + 100, 30, buffer);
+    bool actual = handleMemRead(0, DECK_MEM_MAP_SIZE * 2 + 100, 30, buffer);
 
     // Assert
     TEST_ASSERT_TRUE(read_isCalled);
@@ -570,7 +570,7 @@ void testReadFromDeckWithoutReadFunction() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    bool actual = handleMemRead(DECK_MEM_MAP_SIZE + 100, 30, buffer);
+    bool actual = handleMemRead(0, DECK_MEM_MAP_SIZE + 100, 30, buffer);
 
     // Assert
     TEST_ASSERT_FALSE(read_isCalled);
@@ -582,7 +582,7 @@ void testReadFromNonExistingDeck() {
     deckCount_ExpectAndReturn(0);
 
     // Test
-    bool actual = handleMemRead(DECK_MEM_MAP_SIZE + 100, 30, buffer);
+    bool actual = handleMemRead(0, DECK_MEM_MAP_SIZE + 100, 30, buffer);
 
     // Assert
     TEST_ASSERT_FALSE(read_isCalled);
@@ -597,7 +597,7 @@ void testWriteToPrimaryDeckMemory() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    bool actual = handleMemWrite(DECK_MEM_MAP_SIZE + 100, 30, buffer);
+    bool actual = handleMemWrite(0, DECK_MEM_MAP_SIZE + 100, 30, buffer);
 
     // Assert
     TEST_ASSERT_TRUE(write_isCalled);
@@ -615,7 +615,7 @@ void testWriteToSecondaryDeckMemory() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    bool actual = handleMemWrite(DECK_MEM_MAP_SIZE * 2 + 100, 30, buffer);
+    bool actual = handleMemWrite(0, DECK_MEM_MAP_SIZE * 2 + 100, 30, buffer);
 
     // Assert
     TEST_ASSERT_TRUE(write_isCalled);
@@ -632,7 +632,7 @@ void testWriteToSecondDeckPrimaryMemory() {
     deckInfo_ExpectAndReturn(1, &stockInfo);
 
     // Test
-    bool actual = handleMemWrite(DECK_MEM_MAP_SIZE * 3 + 100, 30, buffer);
+    bool actual = handleMemWrite(0, DECK_MEM_MAP_SIZE * 3 + 100, 30, buffer);
 
     // Assert
     TEST_ASSERT_TRUE(write_isCalled);
@@ -651,7 +651,7 @@ void testWriteToSecondaryDeckMemoryPassesInMemDef() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    handleMemWrite(DECK_MEM_MAP_SIZE * 2 + 100, 30, buffer);
+    handleMemWrite(0, DECK_MEM_MAP_SIZE * 2 + 100, 30, buffer);
 
     // Assert
     TEST_ASSERT_EQUAL_PTR(stockDriver.memoryDefSecondary, write_memDef);
@@ -666,7 +666,7 @@ void testWriteToSecondDeckSecondaryMemory() {
     deckInfo_ExpectAndReturn(1, &stockInfo);
 
     // Test
-    bool actual = handleMemWrite(DECK_MEM_MAP_SIZE * 4 + 100, 30, buffer);
+    bool actual = handleMemWrite(0, DECK_MEM_MAP_SIZE * 4 + 100, 30, buffer);
 
     // Assert
     TEST_ASSERT_TRUE(write_isCalled);
@@ -683,7 +683,7 @@ void testWriteToDeckWithoutWriteFunction() {
     deckInfo_ExpectAndReturn(0, &stockInfo);
 
     // Test
-    bool actual = handleMemWrite(DECK_MEM_MAP_SIZE + 100, 30, buffer);
+    bool actual = handleMemWrite(0, DECK_MEM_MAP_SIZE + 100, 30, buffer);
 
     // Assert
     TEST_ASSERT_FALSE(write_isCalled);
@@ -695,7 +695,7 @@ void testWriteToNonExistingDeck() {
     deckCount_ExpectAndReturn(0);
 
     // Test
-    bool actual = handleMemWrite(DECK_MEM_MAP_SIZE + 100, 30, buffer);
+    bool actual = handleMemWrite(0, DECK_MEM_MAP_SIZE + 100, 30, buffer);
 
     // Assert
     TEST_ASSERT_FALSE(write_isCalled);

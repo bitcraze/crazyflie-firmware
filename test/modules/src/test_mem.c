@@ -90,7 +90,7 @@ void testRead() {
   uint8_t buffer[10];
 
   // Test
-  bool actual = memRead(0, index, READ_ADDRESS, READ_LEN, buffer);
+  bool actual = memRead(index, READ_ADDRESS, READ_LEN, buffer);
 
   // Assert
   // Verified in read function
@@ -104,7 +104,7 @@ void testWrite() {
   uint8_t buffer[10];
 
   // Test
-  bool actual = memWrite(0, index, WRITE_ADDRESS, WRITE_LEN, buffer);
+  bool actual = memWrite(index, WRITE_ADDRESS, WRITE_LEN, buffer);
 
   // Assert
   // Verified in write function
