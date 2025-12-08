@@ -125,12 +125,12 @@ bool memWrite(const uint16_t memId, const uint32_t memAddr, const uint8_t writeL
   return result;
 }
 
-bool memSerialNbr(const uint16_t memId, const uint8_t maxLen, uint8_t* buffer) {
+bool memSerialNbr(const uint16_t memId, const uint8_t maxLen, uint8_t* len, uint8_t* buffer) {
   bool result = false;
 
   ASSERT(memId < nrOfHandlers);
   if (handlers[memId]->getSerialNbr) {
-    result = handlers[memId]->getSerialNbr(handlers[memId]->internal_id, maxLen, buffer);
+    result = handlers[memId]->getSerialNbr(handlers[memId]->internal_id, maxLen, len, buffer);
   }
 
   return result;

@@ -51,7 +51,7 @@ typedef enum {
 typedef struct {
   MemoryType_t type;
   uint32_t (*getSize)(const uint8_t internal_id);
-  bool (*getSerialNbr)(const uint8_t internal_id, const uint8_t max_length, uint8_t* buffer);
+  bool (*getSerialNbr)(const uint8_t internal_id, const uint8_t max_length, uint8_t* len, uint8_t* buffer);
   bool (*read)(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
   bool (*write)(const uint8_t internal_id, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
   uint8_t internal_id;
@@ -102,11 +102,12 @@ uint32_t memGetSize(const uint16_t memId);
  *
  * @param memId The id of the memory to get the type for. The id is an index based on the registration order, between 0 and memGetNrOfMems() - 1.
  * @param maxLen The maximum length of the provided buffer
+ * @param len The length of the serial number returned
  * @param buffer The buffer to copy the serial number into
  * @return true If successful
  * @return false If failure
  */
-bool memSerialNbr(const uint16_t memId, const uint8_t maxLen, uint8_t* buffer);
+bool memSerialNbr(const uint16_t memId, const uint8_t maxLen, uint8_t* len, uint8_t* buffer);
 
 /**
  * @brief Read data from a memory handler

@@ -75,7 +75,7 @@ static void memWriteProcess(CRTPPacket* p);
 static void memReadProcess(CRTPPacket* p);
 static void createNbrResponse(CRTPPacket* p);
 static void createInfoResponse(CRTPPacket* p, uint8_t memId);
-static void createInfoResponseBody(CRTPPacket* p, uint8_t type, uint32_t memSize, const uint8_t data[MEMORY_SERIAL_LENGTH]);
+static void createInfoResponseBody(CRTPPacket* p, uint8_t type, uint32_t memSize, const uint8_t serialLen, const uint8_t data[MEMORY_SERIAL_LENGTH]);
 
 static bool isInit = false;
 
@@ -171,19 +171,28 @@ static void createInfoResponse(CRTPPacket* p, uint8_t memId) {
   p->data[1] = memId;
 
   uint8_t serialNr[MEMORY_SERIAL_LENGTH] = {0};
-  memSerialNbr(memId, MEMORY_SERIAL_LENGTH, serialNr);
-  createInfoResponseBody(p, memGetType(memId), memGetSize(memId), serialNr);
+  uint8_t serialLen = 0;
+  memSerialNbr(memId, MEMORY_SERIAL_LENGTH, &serialLen, serialNr);
+  if (serialLen > MEMORY_SERIAL_LENGTH) {
+    serialLen = MEMORY_SERIAL_LENGTH;
+  }
+  // The old library expects at least 8 bytes of serial number even if the memory
+  // has none. So make sure this is the case.
+  if (serialLen < 8) {
+    serialLen = 8;
+  }
+  createInfoResponseBody(p, memGetType(memId), memGetSize(memId), serialLen, serialNr);
 }
 
-static void createInfoResponseBody(CRTPPacket* p, uint8_t type, uint32_t memSize, const uint8_t data[MEMORY_SERIAL_LENGTH]) {
+static void createInfoResponseBody(CRTPPacket* p, uint8_t type, uint32_t memSize, const uint8_t serialLen, const uint8_t data[MEMORY_SERIAL_LENGTH]) {
   p->data[2] = type;
   p->size += 1;
 
   memcpy(&p->data[3], &memSize, 4);
   p->size += 4;
 
-  memcpy(&p->data[7], data, MEMORY_SERIAL_LENGTH);
-  p->size += MEMORY_SERIAL_LENGTH;
+  memcpy(&p->data[7], data, serialLen);
+  p->size += serialLen;
 }
 
 
