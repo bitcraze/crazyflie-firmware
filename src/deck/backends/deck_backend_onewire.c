@@ -84,11 +84,10 @@ static uint32_t owMemorySize(const uint8_t internal_id) {
     return OW_MAX_SIZE;
 }
 
-bool owMemorySerialNbr(const uint8_t internal_id, const uint8_t max_length, uint8_t* buffer) {
+bool owMemorySerialNbr(const uint8_t internal_id, const uint8_t max_length, uint8_t* len, uint8_t* buffer) {
     ASSERT(max_length >= sizeof(OwSerialNum));
-    // Make sure we will the serial from LSB
-    uint8_t* adj_buffer = (uint8_t*) (buffer + max_length - sizeof(OwSerialNum));
-    return owGetinfo(internal_id, (OwSerialNum*) adj_buffer);
+    *len = sizeof(OwSerialNum);
+    return owGetinfo(internal_id, (OwSerialNum*) buffer);
 }
 
 static bool owBackendInit(void) {
