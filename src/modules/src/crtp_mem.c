@@ -165,8 +165,6 @@ static void createNbrResponse(CRTPPacket* p) {
 }
 
 static void createInfoResponse(CRTPPacket* p, uint8_t memId) {
-  const uint8_t nrOfMems = memGetNrOfMems();
-
   p->header = CRTP_HEADER(CRTP_PORT_MEM, MEM_SETTINGS_CH);
   p->size = 2;
   p->data[0] = MEM_CMD_GET_INFO;
