@@ -1,4 +1,52 @@
-# Crazyflie Firmware  [![CI](https://github.com/bitcraze/crazyflie-firmware/workflows/CI/badge.svg)](https://github.com/bitcraze/crazyflie-firmware/actions?query=workflow%3ACI)
+# Flying Pen  [![CI](https://github.com/bitcraze/crazyflie-firmware/workflows/CI/badge.svg)](https://github.com/bitcraze/crazyflie-firmware/actions?query=workflow%3ACI)
+
+---
+
+## Project Note
+
+**Flying Pen Project**  
+Mobile Robotics Lab
+
+Forked from the official Bitcraze crazyflie-firmware repository on **December 8, 2025**, and extended for research on aerial physical interaction and contact-based control using the Crazyflie platform.
+
+
+### Branches
+
+- **`flyingpen`**: Stable branch (verified working version)
+- **`flyingpen_temp`**: Development branch (work in progress)
+
+---
+
+## How to Clone
+
+```bash
+git clone --recursive https://github.com/SEOSUK/crazyflie-firmware.git
+cd crazyflie-firmware
+git checkout flyingpen
+```
+
+## How to Build
+
+```bash
+cd <your_directory>
+make distclean
+make cf21bl_defconfig
+make -j$(nproc)
+```
+
+
+---
+
+## Legacy (Upstream Documentation)
+
+> The following content is copied from the original Bitcraze
+> crazyflie-firmware repository and is kept here for reference.
+>  
+> No functional changes are introduced in this section.
+
+
+
+# Crazyflie firmware  [![CI](https://github.com/bitcraze/crazyflie-firmware/workflows/CI/badge.svg)](https://github.com/bitcraze/crazyflie-firmware/actions?query=workflow%3ACI)
 
 This project contains the source code for the firmware used in the Crazyflie range of platforms, including the Crazyflie 2.x and the Roadrunner.
 
