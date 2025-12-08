@@ -118,7 +118,7 @@ static uint32_t deckctrlMemorySize(const uint8_t internal_id) {
 static bool deckctrlMemorySerialNbr(const uint8_t internal_id, const uint8_t max_length, uint8_t* buffer) {
     ASSERT(max_length >= DECKCTRL_SERIAL_SIZE);
     uint8_t* adj_buffer = (uint8_t*) (buffer + max_length - DECKCTRL_SERIAL_SIZE);
-    return i2cdevReadReg16(I2C1_DEV, deck_contexts[internal_id].i2cAddress, 0x1900, DECKCTRL_SERIAL_SIZE, buffer);
+    return i2cdevReadReg16(I2C1_DEV, deck_contexts[internal_id].i2cAddress, 0x1900, DECKCTRL_SERIAL_SIZE, adj_buffer);
 }
 
 /**
