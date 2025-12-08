@@ -64,9 +64,6 @@ typedef struct owSerialNum_s
 } OwSerialNum;
 
 void owInit();
-bool owTest();
-void owCommonInit();
-bool owCommonTest();
 void owSyslinkReceive(SyslinkPacket *slp);
 bool owScan(uint8_t *nMem);
 bool owGetinfo(uint8_t selectMem, OwSerialNum *serialNum);

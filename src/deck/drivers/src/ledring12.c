@@ -74,9 +74,9 @@ static ledtimings ledringtimingsmem;
 static bool isInit = false;
 
 // Memory handler for ledringmem
-static uint32_t handleLedringmemGetSize(void) { return sizeof(ledringmem); }
-static bool handleLedringmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
-static bool handleLedringmemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
+static uint32_t handleLedringmemGetSize(const uint8_t internal_id) { return sizeof(ledringmem); }
+static bool handleLedringmemRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
+static bool handleLedringmemWrite(const uint8_t internal_id, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
 static const MemoryHandlerDef_t ledringmemDef = {
   .type = MEM_TYPE_LED12,
   .getSize = handleLedringmemGetSize,
@@ -85,9 +85,9 @@ static const MemoryHandlerDef_t ledringmemDef = {
 };
 
 // Memory handler for timingmem
-static uint32_t handleTimingmemGetSize(void) { return sizeof(ledringtimingsmem); }
-static bool handleTimingmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
-static bool handleTimingmemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
+static uint32_t handleTimingmemGetSize(const uint8_t internal_id) { return sizeof(ledringtimingsmem); }
+static bool handleTimingmemRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
+static bool handleTimingmemWrite(const uint8_t internal_id, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
 static const MemoryHandlerDef_t timingmemDef = {
   .type = MEM_TYPE_LEDMEM,
   .getSize = handleTimingmemGetSize,
@@ -1123,7 +1123,7 @@ static void ledring12Init(DeckInfo *info)
   xTimerStart(timer, 100);
 }
 
-static bool handleLedringmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+static bool handleLedringmemRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
   bool result = false;
 
   if (memAddr + readLen <= sizeof(ledringmem)) {
@@ -1135,7 +1135,7 @@ static bool handleLedringmemRead(const uint32_t memAddr, const uint8_t readLen, 
   return result;
 }
 
-static bool handleLedringmemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
+static bool handleLedringmemWrite(const uint8_t internal_id, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
   bool result = false;
 
   if ((memAddr + writeLen) <= sizeof(ledringmem)) {
@@ -1146,7 +1146,7 @@ static bool handleLedringmemWrite(const uint32_t memAddr, const uint8_t writeLen
   return result;
 }
 
-static bool handleTimingmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+static bool handleTimingmemRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
   bool result = false;
 
   if (memAddr + readLen <= sizeof(ledringtimingsmem.timings)) {
@@ -1158,7 +1158,7 @@ static bool handleTimingmemRead(const uint32_t memAddr, const uint8_t readLen, u
   return result;
 }
 
-static bool handleTimingmemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
+static bool handleTimingmemWrite(const uint8_t internal_id, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
   bool result = false;
 
   if ((memAddr + writeLen) <= sizeof(ledringtimingsmem.timings)) {

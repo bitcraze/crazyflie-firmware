@@ -48,7 +48,7 @@
 #include "autoconf.h"
 #include "i2cdev.h"
 #include "deckctrl_gpio.h"
-
+#include "mem.h"
 
 #define DEBUG_MODULE "DECKCTRL"
 #include "debug.h"
@@ -91,6 +91,9 @@ static const DeckDiscoveryBackend_t deckctrlBackend;
 #define DECKCTRL_MEM_BOARD_REV_OFFSET 6    ///< Board revision ASCII character
 #define DECKCTRL_MEM_PRODUCT_NAME_OFFSET 7 ///< Product name (null-terminated, max 14 chars)
 
+#define DECKCTRL_CONFIG_PAGE_SIZE 2048     ///< Size of configuration memory page
+#define DECKCTRL_SERIAL_SIZE 12            ///< Size of serial number stored in memory
+
 /**
  * Static storage for discovered decks
  *
@@ -101,6 +104,22 @@ static DeckInfo deck_info[CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS];           ///
 static char product_names[CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS][16];       ///< Product name strings
 static DeckCtrlContext deck_contexts[CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS]; ///< Backend-specific contexts
 static int deck_count = 0;  ///< Number of decks discovered so far
+
+static MemoryHandlerDef_t deckctrl_memory_handlers[CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS];
+
+static bool deckctrlMemoryRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+    return i2cdevReadReg16(I2C1_DEV, deck_contexts[internal_id].i2cAddress, memAddr, readLen, buffer);
+}
+
+static uint32_t deckctrlMemorySize(const uint8_t internal_id) {
+    return DECKCTRL_CONFIG_PAGE_SIZE;
+}
+
+static bool deckctrlMemorySerialNbr(const uint8_t internal_id, const uint8_t max_length, uint8_t* len, uint8_t* buffer) {
+    ASSERT(max_length >= DECKCTRL_SERIAL_SIZE);
+    *len = DECKCTRL_SERIAL_SIZE;
+    return i2cdevReadReg16(I2C1_DEV, deck_contexts[internal_id].i2cAddress, 0x1900, DECKCTRL_SERIAL_SIZE, buffer);
+}
 
 /**
  * @brief Initialize the DeckCtrl discovery backend
@@ -241,6 +260,17 @@ static DeckInfo* deckctrl_getNextDeck(void)
     // Deck drivers can access this via info->backendContext to communicate with the deck
     deck_contexts[current_deck].i2cAddress = deck_address;
     info->backendContext = &deck_contexts[current_deck];
+
+    deckctrl_memory_handlers[current_deck] = (MemoryHandlerDef_t) {
+        .type = MEM_TYPE_DECKCTRL,
+        .getSize = deckctrlMemorySize,
+        .read = deckctrlMemoryRead,
+        .write = 0, // Memory is read only
+        .getSerialNbr = deckctrlMemorySerialNbr,
+        .internal_id = current_deck,
+    };
+
+    memoryRegisterHandler(&deckctrl_memory_handlers[current_deck]);
 
     return info;
 }
