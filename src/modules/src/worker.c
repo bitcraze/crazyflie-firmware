@@ -45,6 +45,9 @@ struct worker_work {
 static xQueueHandle workerQueue;
 STATIC_MEM_QUEUE_ALLOC(workerQueue, WORKER_QUEUE_LENGTH, sizeof(struct worker_work));
 
+void workerTask(void *arg);
+STATIC_MEM_TASK_ALLOC(workerTask, WORKER_TASK_STACKSIZE);
+
 void workerInit()
 {
   if (workerQueue)
@@ -52,6 +55,9 @@ void workerInit()
 
   workerQueue = STATIC_MEM_QUEUE_CREATE(workerQueue);
   DEBUG_QUEUE_MONITOR_REGISTER(workerQueue);
+
+  STATIC_MEM_TASK_CREATE(workerTask, workerTask, WORKER_TASK_NAME, NULL, WORKER_TASK_PRI);
+
 }
 
 bool workerTest()
@@ -59,7 +65,7 @@ bool workerTest()
   return (workerQueue != NULL);
 }
 
-void workerLoop()
+void workerTask(void *arg)
 {
   struct worker_work work;
 

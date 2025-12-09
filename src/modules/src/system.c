@@ -325,9 +325,6 @@ void systemTask(void *arg)
   }
   DEBUG_PRINT("Free heap: %d bytes\n", xPortGetFreeHeapSize());
 
-  workerLoop();
-
-  //Should never reach this point!
   while(1)
     vTaskDelay(portMAX_DELAY);
 }
