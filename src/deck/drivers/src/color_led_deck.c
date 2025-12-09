@@ -81,10 +81,10 @@ static colorLedContext_t contexts[2] = {
 // Set Color LED MCU I2C address LSB by pulling high/low
 #define GPIO_I2C_ADDR_LSB DECKCTRL_GPIO_PIN_11
 
-// Self-test result bits
-#define TEST_PROTOCOL_VERSION (1 << 0)  // Bit 0: Protocol version check passed
-#define TEST_LED_POSITION     (1 << 1)  // Bit 1: LED position read passed
-#define TEST_I2C_ADDR_PIN     (1 << 2)  // Bit 2: I2C address pin test passed
+// Self-test result bits (1 = failure, 0 = success)
+#define TEST_PROTOCOL_VERSION (1 << 0)  // Bit 0: Protocol version check failed
+#define TEST_LED_POSITION     (1 << 1)  // Bit 1: LED position read failed
+#define TEST_I2C_ADDR_PIN     (1 << 2)  // Bit 2: I2C address pin test failed
 
 static void task(void* param);
 static bool pollThermalStatus(colorLedContext_t *ctx);
@@ -270,25 +270,22 @@ static bool colorLedDeckTest(colorLedContext_t *ctx, uint8_t expectedPosition) {
   }
 
   // Test 1: Protocol version check
-  if (checkProtocolVersion(ctx->i2cAddress)) {
+  if (!checkProtocolVersion(ctx->i2cAddress)) {
     ctx->testResults |= TEST_PROTOCOL_VERSION;
-  } else {
     DEBUG_PRINT("Color LED deck protocol version check failed\n");
     return false;
   }
 
   // Test 2: Verify LED position matches expected (fixed by hardware)
-  if (verifyLedPosition(ctx, expectedPosition)) {
+  if (!verifyLedPosition(ctx, expectedPosition)) {
     ctx->testResults |= TEST_LED_POSITION;
-  } else {
     DEBUG_PRINT("LED position test failed (wrong side or communication error)\n");
     return false;
   }
 
   // Test 3: I2C_ADDRESS pin test
-  if (testI2cAddrPin(ctx)) {
+  if (!testI2cAddrPin(ctx)) {
     ctx->testResults |= TEST_I2C_ADDR_PIN;
-  } else {
     DEBUG_PRINT("Failed I2C address pin test\n");
     return false;
   }
@@ -860,18 +857,20 @@ PARAM_GROUP_START(deckTest)
 /**
  * @brief Self-test result bitmap for bottom Color LED deck
  *
- * Bit 0: Protocol version check passed
- * Bit 1: LED position read passed
- * Bit 2: I2C address pin test passed
+ * 0 = all tests passed. Any non-zero value indicates failure:
+ * Bit 0: Protocol version check failed
+ * Bit 1: LED position read failed
+ * Bit 2: I2C address pin test failed
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcColorLedBot, &contexts[BOTTOM_IDX].testResults)
 
 /**
  * @brief Self-test result bitmap for top Color LED deck
  *
- * Bit 0: Protocol version check passed
- * Bit 1: LED position read passed
- * Bit 2: I2C address pin test passed
+ * 0 = all tests passed. Any non-zero value indicates failure:
+ * Bit 0: Protocol version check failed
+ * Bit 1: LED position read failed
+ * Bit 2: I2C address pin test failed
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcColorLedTop, &contexts[TOP_IDX].testResults)
 
