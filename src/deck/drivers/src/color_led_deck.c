@@ -382,19 +382,18 @@ static bool verifyLedPosition(colorLedContext_t *ctx, uint8_t expectedPosition) 
   uint8_t actualPosition = response[1];
   ctx->ledPosition = actualPosition;
 
-  const char* expectedStr = (expectedPosition == COLORLED_LED_POS_BOTTOM) ? "BOTTOM" : "TOP";
-  const char* actualStr;
-  if (actualPosition == COLORLED_LED_POS_BOTTOM) {
-    actualStr = "BOTTOM";
-  } else if (actualPosition == COLORLED_LED_POS_TOP) {
-    actualStr = "TOP";
-  } else if (actualPosition == COLORLED_LED_POS_NONE) {
-    actualStr = "NONE";
-  } else {
-    actualStr = "UNKNOWN";
-  }
-
   if (actualPosition != expectedPosition) {
+    const char* expectedStr = (expectedPosition == COLORLED_LED_POS_BOTTOM) ? "BOTTOM" : "TOP";
+    const char* actualStr;
+    if (actualPosition == COLORLED_LED_POS_BOTTOM) {
+      actualStr = "BOTTOM";
+    } else if (actualPosition == COLORLED_LED_POS_TOP) {
+      actualStr = "TOP";
+    } else if (actualPosition == COLORLED_LED_POS_NONE) {
+      actualStr = "NONE";
+    } else {
+      actualStr = "UNKNOWN";
+    }
     DEBUG_PRINT("LED position mismatch: expected 0x%02x (%s side), got 0x%02x (%s side)\n",
                 expectedPosition, expectedStr, actualPosition, actualStr);
     return false;
