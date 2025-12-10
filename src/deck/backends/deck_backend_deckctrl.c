@@ -263,9 +263,13 @@ static DeckInfo* deckctrl_getNextDeck(void)
     if (info->production_year == 0 || info->production_month == 0 || info->production_day == 0 ||
         info->production_year == 0xFF || info->production_month == 0xFF || info->production_day == 0xFF)
     {
-        DEBUG_PRINT("Warning: Invalid production date read from deck controller: %02d-%02d-%02d\n",
+        DEBUG_PRINT("Invalid production date read from deck controller: %02d-%02d-%02d\n",
             info->production_year, info->production_month, info->production_day);
+#ifndef CONFIG_DEBUG
+        // When debug is enabled allow a deck without a valid production date to be used.
+        // This is the case in production until the decks pass testing and the date is set
         return NULL;
+#endif
     } else {
         DECKCTRL_DEBUG_PRINT("Production date: 20%02d-%02d-%02d\n",
             info->production_year, info->production_month, info->production_day);
