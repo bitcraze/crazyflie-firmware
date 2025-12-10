@@ -159,6 +159,10 @@ typedef struct deckInfo_s {
   char * productName;
   char * boardRevision;
 
+  uint8_t production_year;
+  uint8_t production_month;
+  uint8_t production_day;
+
 } DeckInfo;
 
 /**
