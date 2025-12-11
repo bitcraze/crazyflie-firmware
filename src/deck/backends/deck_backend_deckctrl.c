@@ -221,7 +221,7 @@ static DeckInfo* deckctrl_getNextDeck(void)
     DECKCTRL_DEBUG_PRINT("Assigned new I2C address: 0x%02x\n", deck_address);
 
     // Read deck information from the newly assigned address at register 0x0000
-    // Format: magic(2) + versions(2) + vendor(1) + product(1) + revision(1) + name(14) + production date(3) + checksum(1)
+    // Format: magic(2) + versions(2) + vendor(1) + product(1) + revision(1) + name(15) + production date(3) + reserved (6) + checksum(1)
     uint8_t deck_mem_data[0x20];
     bool read_info_result = i2cdevReadReg16(I2C1_DEV, deck_address, 0x0000, sizeof(deck_mem_data), deck_mem_data);
 
