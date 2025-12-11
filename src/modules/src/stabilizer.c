@@ -315,10 +315,6 @@ static void stabilizerTask(void* param)
     // The sensor should unlock at 1kHz
     sensorsWaitDataReady();
 
-#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
-//    motorsDshotBidirectionalSet(true);
-#endif
-
     // update sensorData struct (for logging variables)
     sensorsAcquire(&sensorData);
 
