@@ -50,6 +50,7 @@ fw_sources = [
     "src/modules/src/axis3fSubSampler.c",
     "src/modules/src/kalman_core/kalman_core.c",
     "src/modules/src/kalman_core/mm_tdoa.c",
+    "src/modules/src/kalman_core/mm_pose.c",
     "src/modules/src/outlierfilter/outlierFilterTdoa.c",
 ]
 
