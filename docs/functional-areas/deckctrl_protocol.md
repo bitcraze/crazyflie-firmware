@@ -114,7 +114,7 @@ The 32-byte deck information block contains:
 | 0x17   |    1 | Manufacturing month | Month of manufacture (1-12) |
 | 0x18   |    1 | Manufacturing day | Day of manufacture (1-31) |
 | 0x19   |    6 | Reserved | Reserved for future use |
-| 0x1F   |    1 | Reserved | Value to make the checksum (modulo 256) of bytes 0-31 equal to zero |
+| 0x1F   |    1 | Checksum | Value to make the checksum (modulo 256) of bytes 0-31 equal to zero |
 
 #### Magic Number
 
