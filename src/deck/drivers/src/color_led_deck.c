@@ -149,32 +149,28 @@ static inline uint8_t applyGammaCorrection(const uint8_t value) {
     return gamma8[value];
 }
 
-static wrgb_t normalizeLuminance(const wrgb_t *input_rgb) {
-    // Normalize brightness across all channels based on LED datasheet luminance values
-    // This ensures equal perceived brightness when channels are set to the same value
+static wrgb_t applyPerceptualScaling(const wrgb_t *input_rgb) {
+    // Apply perceptual balance factors from user survey
+    // These scale brightness values to achieve perceptually balanced colors
     //
     // This scales ALL channels down to match the weakest LED
     // This significantly reduces maximum achievable brightness but provides perceptual uniformity
     //
     // Use brightnessCorr parameter to bypass this normalization for maximum brightness
 
-    uint8_t target_lumens = fminf(fminf(fminf(LED_LUMINANCE.r_lumens, LED_LUMINANCE.g_lumens),
-                                            LED_LUMINANCE.b_lumens),
-                                        LED_LUMINANCE.w_lumens);
-
     wrgb_t result = {
-        .w = input_rgb->w * target_lumens / LED_LUMINANCE.w_lumens,
-        .r = input_rgb->r * target_lumens / LED_LUMINANCE.r_lumens,
-        .g = input_rgb->g * target_lumens / LED_LUMINANCE.g_lumens,
-        .b = input_rgb->b * target_lumens / LED_LUMINANCE.b_lumens
+        .w = (uint8_t)(input_rgb->w * LED_PERCEPTUAL_SCALE.w),
+        .r = (uint8_t)(input_rgb->r * LED_PERCEPTUAL_SCALE.r),
+        .g = (uint8_t)(input_rgb->g * LED_PERCEPTUAL_SCALE.g),
+        .b = (uint8_t)(input_rgb->b * LED_PERCEPTUAL_SCALE.b)
     };
 
     return result;
 }
 
 static wrgb_t applyBrightnessCorrection(const wrgb_t *input_wrgb){
-    // Apply intensity scaling based on LED datasheet
-    wrgb_t led_wrgb = normalizeLuminance(input_wrgb);
+    // Apply perceptual scaling from user survey
+    wrgb_t led_wrgb = applyPerceptualScaling(input_wrgb);
 
     // Apply gamma correction for perceptual linearity
     // This makes brightness changes feel uniform across the entire range
