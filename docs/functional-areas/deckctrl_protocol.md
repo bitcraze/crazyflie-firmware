@@ -91,7 +91,7 @@ Once configured, the deck-control behaves like an I2C memory with the following 
 
 | Register | Size | Description                                 |
 |----------|------|---------------------------------------------|
-|   0x0000 |   21 | Deck identification information (Read-only) |
+|   0x0000 |   32 | Deck identification information (Read-only) |
 |   0x0020 | 2016 | ROM partitions                              |
 |   0x1000 |    4 | GPIO                                        |
 |   0x1800 |    1 | Address assignment (write-only)             |
@@ -99,7 +99,7 @@ Once configured, the deck-control behaves like an I2C memory with the following 
 
 ### Deck Information Format (Register 0x0000)
 
-The 21-byte deck information block contains:
+The 32-byte deck information block contains:
 
 | Offset | Size | Field | Description |
 |--------|------|-------|-------------|
@@ -109,7 +109,12 @@ The 21-byte deck information block contains:
 | 0x04   |    1 | Vendor ID | Deck vendor ID |
 | 0x05   |    1 | Product ID | Deck product ID |
 | 0x06   |    1 | Board Revision | Board revision character |
-| 0x07   |   14 | Product Name | Null-terminated product name string |
+| 0x07   |   15 | Product Name | Null-terminated product name string |
+| 0x16   |    1 | Manufacturing year | Year of manufacture (from 2000) |
+| 0x17   |    1 | Manufacturing month | Month of manufacture (1-12) |
+| 0x18   |    1 | Manufacturing day | Day of manufacture (1-31) |
+| 0x19   |    6 | Reserved | Reserved for future use |
+| 0x1F   |    1 | Checksum | Value to make the checksum (modulo 256) of bytes 0-31 equal to zero |
 
 #### Magic Number
 
