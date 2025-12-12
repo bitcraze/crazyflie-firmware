@@ -285,20 +285,21 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
     TIM_TimeBaseInit(motorMap[i]->tim, &TIM_TimeBaseStructure);
 
     TIM_ARRPreloadConfig(motorMap[i]->tim, DISABLE);
+
+    MOTORS_GPIO_AF_CFG(motorMap[i]->gpioPort, motorMap[i]->gpioPinSource, motorMap[i]->gpioAF);
   }
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
-  if (motorMap[MOTOR_M1]->hasPC15ESCReset)
-  {
-    // Release reset for all CF-BL ESC:s after motor signal is activated
-    GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_SET);
-  }
-  vTaskDelay(M2T(110)); // wait for ESC to boot up
-    //Map timers to alternate functions
-  for (i = 0; i < NBR_OF_MOTORS; i++)
-  {
-    MOTORS_GPIO_AF_CFG(motorMap[i]->gpioPort, motorMap[i]->gpioPinSource, motorMap[i]->gpioAF);
-  }
+//   if (motorMap[MOTOR_M1]->hasPC15ESCReset)
+//   {
+//     // Release reset for all CF-BL ESC:s after motor signal is activated
+//     GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_SET);
+//   }
+// //  vTaskDelay(M2T(150)); // wait for ESC to boot up
+//   //   //Map timers to alternate functions
+//   for (i = 0; i < NBR_OF_MOTORS; i++)
+//   {
+//   }
   motorsDshotDMASetup();
 
 #else
@@ -378,19 +379,17 @@ void motorsStop()
 }
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
-// static bool firstime = true;
 static void motorsDshotOutputSetup(int id)
 {
   TIM_OCInitTypeDef TIM_OCInitStructure;
 
-//   if (firstime) {
-//       GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_RESET);
-//       vTaskDelay(M2T(1)); // wait for ESC to reset
-//       GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_SET);
-
-// //    MOTORS_GPIO_AF_CFG(motorMap[id]->gpioPort, motorMap[id]->gpioPinSource, motorMap[id]->gpioAF);
-//     firstime = false;
-//   }
+  // Due to complicated ESC behavior, it is best to have the DHOT output
+  // running when we release the reset so it doesn't enter bootloader mode
+  // and detect the DHOT signal correct (inverted or none-inverted)
+  if (motorMap[id]->hasPC15ESCReset) 
+  {
+      GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_SET);
+  }
 
   TIM_Cmd(motorMap[id]->tim, DISABLE);
   motorMap[id]->tim->ARR = motorMap[id]->timPeriod;
@@ -416,20 +415,8 @@ static void motorsDshotOutputSetup(int id)
   motorMap[id]->ocInit(motorMap[id]->tim, &TIM_OCInitStructure);
   motorMap[id]->preloadConfig(motorMap[id]->tim, TIM_OCPreload_Enable);
 
-  // Preparation of common things in DMA setup struct
-  DMA_InitStructureShare.DMA_MemoryInc = DMA_MemoryInc_Enable;
-  DMA_InitStructureShare.DMA_MemoryBurst = DMA_MemoryBurst_Single;
-  DMA_InitStructureShare.DMA_MemoryDataSize = DMA_MemoryDataSize_Word;
   DMA_InitStructureShare.DMA_BufferSize = DSHOT_DMA_BUFFER_SIZE;
-  DMA_InitStructureShare.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-  DMA_InitStructureShare.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Word;
-  DMA_InitStructureShare.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
   DMA_InitStructureShare.DMA_DIR = DMA_DIR_MemoryToPeripheral;
-  DMA_InitStructureShare.DMA_Mode = DMA_Mode_Normal;
-  DMA_InitStructureShare.DMA_Priority = DMA_Priority_High;
-  DMA_InitStructureShare.DMA_FIFOMode = DMA_FIFOMode_Disable;
-  DMA_InitStructureShare.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull ;
-
   DMA_InitStructureShare.DMA_PeripheralBaseAddr = motorMap[id]->DMA_PerifAddr;
   DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)dshotDmaBuffer[id];
   DMA_InitStructureShare.DMA_Channel = motorMap[id]->DMA_Channel;
@@ -443,11 +430,20 @@ static void motorsDshotDMASetup()
   /* DMA clock enable */
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
 
+  // Preparation of common things in DMA setup struct that will the same every time
+  DMA_InitStructureShare.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_InitStructureShare.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  DMA_InitStructureShare.DMA_MemoryDataSize = DMA_MemoryDataSize_Word;
+  DMA_InitStructureShare.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructureShare.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Word;
+  DMA_InitStructureShare.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+  DMA_InitStructureShare.DMA_Mode = DMA_Mode_Normal;
+  DMA_InitStructureShare.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructureShare.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  DMA_InitStructureShare.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull ;
+
   for (int i = 0; i < NBR_OF_MOTORS; i++)
   {
-#ifndef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
-    motorsDshotOutputSetup(i);
-#endif
     NVIC_InitStructure.NVIC_IRQChannel = motorMap[i]->DMA_IRQChannel;
     NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MOTORS_PRI;
     NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
@@ -494,16 +490,16 @@ static void motorsDshotInputSetup(int id)
   DMA_InitStructureShare.DMA_MemoryInc = DMA_MemoryInc_Enable;
   DMA_InitStructureShare.DMA_MemoryBurst = DMA_MemoryBurst_Single;
   DMA_InitStructureShare.DMA_MemoryDataSize = DMA_MemoryDataSize_Word;
-  DMA_InitStructureShare.DMA_BufferSize = DSHOT_TELEMETRY_MAX_GCR_EDGES;
   DMA_InitStructureShare.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
   DMA_InitStructureShare.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Word;
   DMA_InitStructureShare.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
-  DMA_InitStructureShare.DMA_DIR = DMA_DIR_PeripheralToMemory;
   DMA_InitStructureShare.DMA_Mode = DMA_Mode_Normal;
   DMA_InitStructureShare.DMA_Priority = DMA_Priority_High;
   DMA_InitStructureShare.DMA_FIFOMode = DMA_FIFOMode_Disable;
   DMA_InitStructureShare.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull;
 
+  DMA_InitStructureShare.DMA_BufferSize = DSHOT_TELEMETRY_MAX_GCR_EDGES;
+  DMA_InitStructureShare.DMA_DIR = DMA_DIR_PeripheralToMemory;
   DMA_InitStructureShare.DMA_PeripheralBaseAddr = motorMap[id]->DMA_PerifAddr;
   DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)dshotDmaInputBuffer[id];
   DMA_InitStructureShare.DMA_Channel = motorMap[id]->DMA_Channel;
