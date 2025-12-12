@@ -54,9 +54,11 @@ static uint16_t motor_ratios[] = {0, 0, 0, 0};  // actual PWM signals
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
 static DMA_InitTypeDef DMA_InitStructureShare;
+static bool doResetESCs = true;
 // Memory buffer for DSHOT bits
 static uint32_t dshotDmaBuffer[NBR_OF_MOTORS][DSHOT_DMA_BUFFER_SIZE];
-static void motorsDshotDMASetup();
+static void motorsDshotSetup();
+static void motorsDshotOutputSetup(int id);
 static volatile uint32_t dmaWait;
 
 #define DSHOT_TELEMETRY_INVALID         (UINT16_MAX)
@@ -236,6 +238,8 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
   if (motorMap[MOTOR_M1]->hasPC15ESCReset)
   {
     MOTORS_RCC_GPIO_CMD(RCC_AHB1Periph_GPIOC, ENABLE);
+    // Don't reset just yet but when we start sending DSHOT signals
+    GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_SET);
     // Configure the GPIO for CF-BL ESC RST
     GPIO_StructInit(&GPIO_InitStructure);
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
@@ -243,8 +247,6 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_15;
     GPIO_Init(GPIOC, &GPIO_InitStructure);
-    // Hold reset for all CF-BL ESC:s by pulling low.
-    GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_RESET);
   }
 
   for (i = 0; i < NBR_OF_MOTORS; i++)
@@ -273,8 +275,6 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
     GPIO_InitStructure.GPIO_OType = motorMap[i]->gpioOType;
     GPIO_InitStructure.GPIO_Pin = motorMap[i]->gpioPin;
     GPIO_Init(motorMap[i]->gpioPort, &GPIO_InitStructure);
-    // Output low at init (mainly for DSHOT)
-    GPIO_WriteBit(motorMap[i]->gpioPort, motorMap[i]->gpioPin, Bit_RESET);
 
     // Timer configuration
     TIM_TimeBaseStructure.TIM_Period = motorMap[i]->timPeriod;
@@ -291,7 +291,7 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
   }
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
-  motorsDshotDMASetup();
+  motorsDshotSetup();
 #else
   // Start the timers
   for (i = 0; i < NBR_OF_MOTORS; i++)
@@ -366,7 +366,7 @@ void motorsStop()
 }
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
-static void motorsDshotDMASetup()
+static void motorsDshotSetup()
 {
   NVIC_InitTypeDef  NVIC_InitStructure;
 
@@ -387,6 +387,9 @@ static void motorsDshotDMASetup()
 
   for (int i = 0; i < NBR_OF_MOTORS; i++)
   {
+#ifndef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+    motorsDshotOutputSetup(i);
+#endif
     NVIC_InitStructure.NVIC_IRQChannel = motorMap[i]->DMA_IRQChannel;
     NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MOTORS_PRI;
     NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
@@ -405,12 +408,15 @@ static void motorsDshotOutputSetup(int id)
 {
   TIM_OCInitTypeDef TIM_OCInitStructure;
 
-  // Due to complicated ESC behavior, it is best to have the DHOT output
+  // Due to complicated ESC startup behavior, it is best to have the DHOT output
   // running when we release the reset so it doesn't enter bootloader mode
-  // and detect the DHOT signal correct (inverted or none-inverted)
-  if (motorMap[id]->hasPC15ESCReset) 
+  // and that it detect the DHOT signal correct (inverted or none-inverted)
+  if (doResetESCs && motorMap[id]->hasPC15ESCReset) 
   {
+      GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_RESET);
+      vTaskDelay(M2T(1));
       GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_SET);
+      doResetESCs = false;
   }
 
   TIM_Cmd(motorMap[id]->tim, DISABLE);
