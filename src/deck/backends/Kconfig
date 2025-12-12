@@ -30,6 +30,7 @@ config DECK_BACKEND_DECKCTRL_DEBUG
       initialization, and communication for debugging purposes.
 
 config ACCEPT_DECKCTRL_DECKS_UNDER_PRODUCTION
+    depends on DECK_BACKEND_DECKCTRL
     bool "Accept DeckCtrl decks under production"
     default n
     help
