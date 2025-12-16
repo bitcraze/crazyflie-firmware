@@ -53,12 +53,12 @@ static uint16_t motorPowerSet[] = {0, 0, 0, 0}; // user-requested PWM signals (o
 static uint16_t motor_ratios[] = {0, 0, 0, 0};  // actual PWM signals
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
-static bool dshotBidirectional = false;
-static bool _dshotBidirectional = false;
 static DMA_InitTypeDef DMA_InitStructureShare;
+static bool doResetESCs = true;
 // Memory buffer for DSHOT bits
 static uint32_t dshotDmaBuffer[NBR_OF_MOTORS][DSHOT_DMA_BUFFER_SIZE];
-static void motorsDshotDMASetup();
+static void motorsDshotSetup();
+static void motorsDshotOutputSetup(int id);
 static volatile uint32_t dmaWait;
 
 #define DSHOT_TELEMETRY_INVALID         (UINT16_MAX)
@@ -73,13 +73,18 @@ typedef enum {
 static dshotState_t dshotState[NBR_OF_MOTORS] = {
   DSHOT_STATE_IDLE, DSHOT_STATE_IDLE, DSHOT_STATE_IDLE, DSHOT_STATE_IDLE
 };
+
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+static uint8_t motorNbrOfPoles = CONFIG_MOTORS_NBR_OF_POLES;
+
 static uint32_t dshotDmaInputBuffer[NBR_OF_MOTORS][DSHOT_TELEMETRY_MAX_GCR_EDGES];
 static uint16_t dshotTelemetryPackets[NBR_OF_MOTORS] = {
   DSHOT_TELEMETRY_INVALID, DSHOT_TELEMETRY_INVALID, DSHOT_TELEMETRY_INVALID, DSHOT_TELEMETRY_INVALID
 };
-static uint32_t motorERPMs[NBR_OF_MOTORS] = {
+static uint32_t motorRPMs[NBR_OF_MOTORS] = {
   DSHOT_ERPM_INVALID, DSHOT_ERPM_INVALID, DSHOT_ERPM_INVALID, DSHOT_ERPM_INVALID
 };
+#endif
 #endif
 
 void motorsPlayTone(uint16_t frequency, uint16_t duration_msec);
@@ -212,7 +217,7 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
 
 /* Public functions */
 
-//Initialization. Will set all motors ratio to 0%
+//Initialization. Will set all motors ratio to 0%.
 void motorsInit(const MotorPerifDef** motorMapSelect)
 {
   int i;
@@ -233,6 +238,8 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
   if (motorMap[MOTOR_M1]->hasPC15ESCReset)
   {
     MOTORS_RCC_GPIO_CMD(RCC_AHB1Periph_GPIOC, ENABLE);
+    // Don't reset just yet but when we start sending DSHOT signals
+    GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_SET);
     // Configure the GPIO for CF-BL ESC RST
     GPIO_StructInit(&GPIO_InitStructure);
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
@@ -240,13 +247,11 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_15;
     GPIO_Init(GPIOC, &GPIO_InitStructure);
-    // Hold reset for all CF-BL ESC:s by pulling low.
-    GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_RESET);
   }
 
   for (i = 0; i < NBR_OF_MOTORS; i++)
   {
-    //Clock the gpio and the timers
+    // Clock the gpio and the timers
     MOTORS_RCC_GPIO_CMD(motorMap[i]->gpioPerif, ENABLE);
     MOTORS_RCC_GPIO_CMD(motorMap[i]->gpioPowerswitchPerif, ENABLE);
     MOTORS_RCC_TIM_CMD(motorMap[i]->timPerif, ENABLE);
@@ -271,10 +276,7 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
     GPIO_InitStructure.GPIO_Pin = motorMap[i]->gpioPin;
     GPIO_Init(motorMap[i]->gpioPort, &GPIO_InitStructure);
 
-    //Map timers to alternate functions
-    MOTORS_GPIO_AF_CFG(motorMap[i]->gpioPort, motorMap[i]->gpioPinSource, motorMap[i]->gpioAF);
-
-    //Timer configuration
+    // Timer configuration
     TIM_TimeBaseStructure.TIM_Period = motorMap[i]->timPeriod;
     TIM_TimeBaseStructure.TIM_Prescaler = motorMap[i]->timPrescaler;
     TIM_TimeBaseStructure.TIM_ClockDivision = 0;
@@ -283,26 +285,22 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
     TIM_TimeBaseInit(motorMap[i]->tim, &TIM_TimeBaseStructure);
 
     TIM_ARRPreloadConfig(motorMap[i]->tim, DISABLE);
+
+    // Map timers to alternate functions
+    MOTORS_GPIO_AF_CFG(motorMap[i]->gpioPort, motorMap[i]->gpioPinSource, motorMap[i]->gpioAF);
   }
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
-  motorsDshotDMASetup();
-#endif
-
+  motorsDshotSetup();
+#else
   // Start the timers
   for (i = 0; i < NBR_OF_MOTORS; i++)
   {
     TIM_Cmd(motorMap[i]->tim, ENABLE);
   }
-
-  if (motorMap[MOTOR_M1]->hasPC15ESCReset)
-  {
-    // Release reset for all CF-BL ESC:s after motor signal is activated
-    GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_SET);
-  }
-
   // Output zero power
   motorsStop();
+#endif
 
   isInit = true;
 }
@@ -368,67 +366,30 @@ void motorsStop()
 }
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
-static void motorsDshotOutputSetup(int id)
-{
-  TIM_OCInitTypeDef TIM_OCInitStructure;
-
-  TIM_Cmd(motorMap[id]->tim, DISABLE);
-  motorMap[id]->tim->ARR = motorMap[id]->timPeriod;
-  motorMap[id]->tim->CNT = 0;
-  TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
-  TIM_ITConfig(motorMap[id]->tim, TIM_IT_Update, DISABLE);
-  TIM_Cmd(motorMap[id]->tim, ENABLE);
-
-  uint16_t timPolarity = motorMap[id]->timPolarity;
-
-  #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
-    if (_dshotBidirectional) {
-      // For bidirectional DSHOT we need active high PWM
-      timPolarity = (timPolarity == TIM_OCPolarity_High) ? TIM_OCPolarity_Low : TIM_OCPolarity_High;
-    }
-  #endif
-
-  TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
-  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-  TIM_OCInitStructure.TIM_Pulse = 0;
-  TIM_OCInitStructure.TIM_OCPolarity = timPolarity;
-  TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set;
-
-  // Configure Output Compare for PWM
-  motorMap[id]->ocInit(motorMap[id]->tim, &TIM_OCInitStructure);
-  motorMap[id]->preloadConfig(motorMap[id]->tim, TIM_OCPreload_Enable);
-
-  // Preparation of common things in DMA setup struct
-  DMA_InitStructureShare.DMA_MemoryInc = DMA_MemoryInc_Enable;
-  DMA_InitStructureShare.DMA_MemoryBurst = DMA_MemoryBurst_Single;
-  DMA_InitStructureShare.DMA_MemoryDataSize = DMA_MemoryDataSize_Word;
-  DMA_InitStructureShare.DMA_BufferSize = DSHOT_DMA_BUFFER_SIZE;
-  DMA_InitStructureShare.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-  DMA_InitStructureShare.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Word;
-  DMA_InitStructureShare.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
-  DMA_InitStructureShare.DMA_DIR = DMA_DIR_MemoryToPeripheral;
-  DMA_InitStructureShare.DMA_Mode = DMA_Mode_Normal;
-  DMA_InitStructureShare.DMA_Priority = DMA_Priority_High;
-  DMA_InitStructureShare.DMA_FIFOMode = DMA_FIFOMode_Disable;
-  DMA_InitStructureShare.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull ;
-
-  DMA_InitStructureShare.DMA_PeripheralBaseAddr = motorMap[id]->DMA_PerifAddr;
-  DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)dshotDmaBuffer[id];
-  DMA_InitStructureShare.DMA_Channel = motorMap[id]->DMA_Channel;
-  DMA_Init(motorMap[id]->DMA_stream, &DMA_InitStructureShare);
-}
-
-static void motorsDshotDMASetup()
+static void motorsDshotSetup()
 {
   NVIC_InitTypeDef  NVIC_InitStructure;
 
   /* DMA clock enable */
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
 
+  // Preparation of common things in DMA setup struct that will the same every time
+  DMA_InitStructureShare.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_InitStructureShare.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  DMA_InitStructureShare.DMA_MemoryDataSize = DMA_MemoryDataSize_Word;
+  DMA_InitStructureShare.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructureShare.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Word;
+  DMA_InitStructureShare.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+  DMA_InitStructureShare.DMA_Mode = DMA_Mode_Normal;
+  DMA_InitStructureShare.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructureShare.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  DMA_InitStructureShare.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull ;
+
   for (int i = 0; i < NBR_OF_MOTORS; i++)
   {
+#ifndef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
     motorsDshotOutputSetup(i);
-
+#endif
     NVIC_InitStructure.NVIC_IRQChannel = motorMap[i]->DMA_IRQChannel;
     NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_MOTORS_PRI;
     NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
@@ -443,6 +404,54 @@ static void motorsDshotDMASetup()
   NVIC_Init(&NVIC_InitStructure);
 }
 
+static void motorsDshotOutputSetup(int id)
+{
+  TIM_OCInitTypeDef TIM_OCInitStructure;
+
+  // Due to complicated ESC startup behavior, it is best to have the DHOT output
+  // running when we release the reset so it doesn't enter bootloader mode
+  // and that it detect the DHOT signal correct (inverted or none-inverted)
+  if (doResetESCs && motorMap[id]->hasPC15ESCReset) 
+  {
+      GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_RESET);
+      vTaskDelay(M2T(1));
+      GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_SET);
+      doResetESCs = false;
+  }
+
+  TIM_Cmd(motorMap[id]->tim, DISABLE);
+  motorMap[id]->tim->ARR = motorMap[id]->timPeriod;
+  motorMap[id]->tim->CNT = 0;
+  TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+  TIM_ITConfig(motorMap[id]->tim, TIM_IT_Update, DISABLE);
+  TIM_Cmd(motorMap[id]->tim, ENABLE);
+
+  uint16_t timPolarity = motorMap[id]->timPolarity;
+
+  #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+      // For bidirectional DSHOT we need active high PWM
+      timPolarity = (timPolarity == TIM_OCPolarity_High) ? TIM_OCPolarity_Low : TIM_OCPolarity_High;
+  #endif
+
+  TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
+  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+  TIM_OCInitStructure.TIM_Pulse = 0;
+  TIM_OCInitStructure.TIM_OCPolarity = timPolarity;
+  TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set;
+
+  // Configure Output Compare for PWM
+  motorMap[id]->ocInit(motorMap[id]->tim, &TIM_OCInitStructure);
+  motorMap[id]->preloadConfig(motorMap[id]->tim, TIM_OCPreload_Enable);
+
+  DMA_InitStructureShare.DMA_BufferSize = DSHOT_DMA_BUFFER_SIZE;
+  DMA_InitStructureShare.DMA_DIR = DMA_DIR_MemoryToPeripheral;
+  DMA_InitStructureShare.DMA_PeripheralBaseAddr = motorMap[id]->DMA_PerifAddr;
+  DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)dshotDmaBuffer[id];
+  DMA_InitStructureShare.DMA_Channel = motorMap[id]->DMA_Channel;
+  DMA_Init(motorMap[id]->DMA_stream, &DMA_InitStructureShare);
+}
+
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
 static void motorsDshotInputSetup(int id)
 {
   dshotState[id] = DSHOT_STATE_INPUT;
@@ -470,20 +479,9 @@ static void motorsDshotInputSetup(int id)
   TIM_ICInitStructure.TIM_ICFilter = 0x02;
   TIM_ICInit(motorMap[id]->tim, &TIM_ICInitStructure);
 
-  // Preparation of common things in DMA setup struct
-  DMA_InitStructureShare.DMA_MemoryInc = DMA_MemoryInc_Enable;
-  DMA_InitStructureShare.DMA_MemoryBurst = DMA_MemoryBurst_Single;
-  DMA_InitStructureShare.DMA_MemoryDataSize = DMA_MemoryDataSize_Word;
+  // Only changing what is different from output setup
   DMA_InitStructureShare.DMA_BufferSize = DSHOT_TELEMETRY_MAX_GCR_EDGES;
-  DMA_InitStructureShare.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-  DMA_InitStructureShare.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Word;
-  DMA_InitStructureShare.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
   DMA_InitStructureShare.DMA_DIR = DMA_DIR_PeripheralToMemory;
-  DMA_InitStructureShare.DMA_Mode = DMA_Mode_Normal;
-  DMA_InitStructureShare.DMA_Priority = DMA_Priority_High;
-  DMA_InitStructureShare.DMA_FIFOMode = DMA_FIFOMode_Disable;
-  DMA_InitStructureShare.DMA_FIFOThreshold = DMA_FIFOThreshold_1QuarterFull;
-
   DMA_InitStructureShare.DMA_PeripheralBaseAddr = motorMap[id]->DMA_PerifAddr;
   DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)dshotDmaInputBuffer[id];
   DMA_InitStructureShare.DMA_Channel = motorMap[id]->DMA_Channel;
@@ -543,24 +541,29 @@ static uint16_t dshotDecodeTelemetryPacket(const uint32_t *buffer, uint32_t gcrE
   return decodedValue >> 4;
 }
 
-static uint32_t dshotDecodeTelemetryERPM(uint16_t value)
+static uint32_t dshotDecodeTelemetryERPM(uint16_t valueGCR)
 {
-    // eRPM range
-    if (value > 0x0fff) {
+  uint16_t period;
+  uint16_t rpm;
+    
+  // eRPM range
+  if (valueGCR == 0x0fff) {
+    return DSHOT_ERPM_INVALID;
+  } else if (valueGCR == 0x0fff) {
+      return 0;
+  }
+
+  // Convert value to 16 bit period from the GCR telemetry format (eeem mmmm mmmm)
+  period = (valueGCR & 0x01ff) << ((valueGCR & 0xfe00) >> 9);
+  if (!period) {
       return DSHOT_ERPM_INVALID;
-    } else if (value == 0x0fff) {
-        return 0;
-    }
+  }
 
-    // Convert value to 16 bit from the GCR telemetry format (eeem mmmm mmmm)
-    value = (value & 0x01ff) << ((value & 0x0e00) >> 9);
-    if (!value) {
-        return DSHOT_ERPM_INVALID;
-    }
-
-    // Convert period to erpm / 100
-    return (1000000 * 60 / 100 + value / 2) / value;
+  // Convert period to rpm
+  rpm = (uint16_t)((1000000UL * 60 * 2 / period) / (motorNbrOfPoles ));
+  return rpm;
 }
+#endif
 
 static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
 {
@@ -586,13 +589,13 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
 
   for (int i = 0; i < 3; i++)
   {
-        cs ^=  csData; // xor data by nibbles
-        csData >>= 4;
+    cs ^=  csData; // xor data by nibbles
+    csData >>= 4;
   }
 
-  if (dshotBidirectional) {
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
     cs = ~cs;
-  }
+#endif
 
   cs &= 0xf;
   dshotBits = (dshotBits << 4) | cs;
@@ -604,27 +607,26 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
   }
   dshotDmaBuffer[id][16] = 0; // Set to 0 gives low output afterwards
 
-  if (dshotBidirectional) {
-    DMA_Cmd(motorMap[id]->DMA_stream, DISABLE);
-    TIM_DMACmd(motorMap[id]->tim, motorMap[id]->TIM_DMASource, DISABLE);
-  }
-  
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+  DMA_Cmd(motorMap[id]->DMA_stream, DISABLE);
+  TIM_DMACmd(motorMap[id]->tim, motorMap[id]->TIM_DMASource, DISABLE);
+#endif
+
   // Wait for DMA to be free. Can happen at startup but doesn't seem to wait afterwards.
   while(DMA_GetCmdStatus(motorMap[id]->DMA_stream) != DISABLE)
   {
     dmaWait++;
   }
   
-  if (dshotBidirectional) {
-    uint32_t gcrEdges = DSHOT_TELEMETRY_MAX_GCR_EDGES - motorMap[id]->DMA_stream->NDTR;
-    if (gcrEdges > DSHOT_TELEMETRY_MIN_GCR_EDGES) {
-      dshotTelemetryPackets[id] = dshotDecodeTelemetryPacket(dshotDmaInputBuffer[id], gcrEdges);
-      motorERPMs[id] = dshotDecodeTelemetryERPM(dshotTelemetryPackets[id]);
-    }
-
-    DMA_ClearITPendingBit(motorMap[id]->DMA_stream, motorMap[id]->DMA_ITFlag_TC);
-    motorsDshotOutputSetup(id);
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+  uint32_t gcrEdges = DSHOT_TELEMETRY_MAX_GCR_EDGES - motorMap[id]->DMA_stream->NDTR;
+  if (gcrEdges > DSHOT_TELEMETRY_MIN_GCR_EDGES) {
+    dshotTelemetryPackets[id] = dshotDecodeTelemetryPacket(dshotDmaInputBuffer[id], gcrEdges);
+    motorRPMs[id] = dshotDecodeTelemetryERPM(dshotTelemetryPackets[id]);
   }
+  DMA_ClearITPendingBit(motorMap[id]->DMA_stream, motorMap[id]->DMA_ITFlag_TC);
+  motorsDshotOutputSetup(id);
+#endif
 }
 
 /**
@@ -634,11 +636,6 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
  */
 void motorsBurstDshot()
 {
-    if (dshotBidirectional != _dshotBidirectional) {
-      // Bidirectional DSHOT mode changed, will reconfigure on next motorsPrepareDshot
-      return;
-    }
-
     dshotState[0] = DSHOT_STATE_OUTPUT;
     motorMap[0]->DMA_stream->NDTR = DSHOT_DMA_BUFFER_SIZE;
     /* Enable TIM DMA Requests M1*/
@@ -668,6 +665,7 @@ void motorsBurstDshot()
     /* Enable DMA TIM Stream */
     DMA_Cmd(motorMap[3]->DMA_stream, ENABLE);
 }
+
 #endif
 
 // Ithrust is thrust mapped for 65536 <==> max thrust
@@ -916,11 +914,11 @@ void __attribute__((used)) DMA1_Stream1_IRQHandler(void)  // M4
   DMA_Cmd(DMA1_Stream1, DISABLE);
   DMA_ClearITPendingBit(DMA1_Stream1, DMA_IT_TCIF1);
 
-  if (dshotBidirectional) {
-    motorsDshotInputSetup(3);
-  } else {
-    motorsDshotTransferEnded(3);
-  }
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+  motorsDshotInputSetup(3);
+#else
+  motorsDshotTransferEnded(3);
+#endif
 }
 
 void __attribute__((used)) DMA1_Stream5_IRQHandler(void)  // M3
@@ -930,11 +928,11 @@ void __attribute__((used)) DMA1_Stream5_IRQHandler(void)  // M3
   DMA_Cmd(DMA1_Stream5, DISABLE);
   DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_TCIF5);
 
-  if (dshotBidirectional) {
-    motorsDshotInputSetup(2);
-  } else {
-    motorsDshotTransferEnded(2);
-  }
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+  motorsDshotInputSetup(2);
+#else
+  motorsDshotTransferEnded(2);
+#endif
 }
 
 void __attribute__((used)) DMA1_Stream6_IRQHandler(void) // M1
@@ -944,11 +942,11 @@ void __attribute__((used)) DMA1_Stream6_IRQHandler(void) // M1
   DMA_Cmd(DMA1_Stream6, DISABLE);
   DMA_ClearITPendingBit(DMA1_Stream6, DMA_IT_TCIF6);
 
-  if (dshotBidirectional) {
-    motorsDshotInputSetup(0);
-  } else {
-    motorsDshotTransferEnded(0);
-  }
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+  motorsDshotInputSetup(0);
+#else
+  motorsDshotTransferEnded(0);
+#endif
 }
 
 void __attribute__((used)) DMA1_Stream7_IRQHandler(void)  // M2
@@ -958,18 +956,19 @@ void __attribute__((used)) DMA1_Stream7_IRQHandler(void)  // M2
   DMA_Cmd(DMA1_Stream7, DISABLE);
   DMA_ClearITPendingBit(DMA1_Stream7, DMA_IT_TCIF7);
 
-  if (dshotBidirectional) {
-    motorsDshotInputSetup(1);
-  } else {
-    dshotState[1] = DSHOT_STATE_IDLE;
-  }
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+  motorsDshotInputSetup(1);
+#else
+  dshotState[1] = DSHOT_STATE_IDLE;
+#endif
 }
 
 void __attribute__((used)) TIM2_IRQHandler(void)
 {
   TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
 
-  if (dshotBidirectional && dshotState[0] == DSHOT_STATE_INPUT) {
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+  if (dshotState[0] == DSHOT_STATE_INPUT) {
     TIM_DMACmd(TIM2, TIM_DMA_CC2, DISABLE);
     DMA_ITConfig(DMA1_Stream6, DMA_IT_TC, DISABLE);
     DMA_Cmd(DMA1_Stream6, DISABLE);
@@ -978,7 +977,7 @@ void __attribute__((used)) TIM2_IRQHandler(void)
     motorsDshotTransferEnded(0);
   }
 
-  if (dshotBidirectional && dshotState[1] == DSHOT_STATE_INPUT) {
+  if (dshotState[1] == DSHOT_STATE_INPUT) {
     TIM_DMACmd(TIM2, TIM_DMA_CC4, DISABLE);
     DMA_ITConfig(DMA1_Stream7, DMA_IT_TC, DISABLE);
     DMA_Cmd(DMA1_Stream7, DISABLE);
@@ -987,7 +986,7 @@ void __attribute__((used)) TIM2_IRQHandler(void)
     dshotState[1] = DSHOT_STATE_IDLE;
   }
   
-  if (dshotBidirectional && dshotState[2] == DSHOT_STATE_INPUT) {
+  if (dshotState[2] == DSHOT_STATE_INPUT) {
     TIM_DMACmd(TIM2, TIM_DMA_CC1, DISABLE);
     DMA_ITConfig(DMA1_Stream5, DMA_IT_TC, DISABLE);
     DMA_Cmd(DMA1_Stream5, DISABLE);
@@ -996,7 +995,7 @@ void __attribute__((used)) TIM2_IRQHandler(void)
     motorsDshotTransferEnded(2);
   }
 
-  if (dshotBidirectional && dshotState[3] == DSHOT_STATE_INPUT) {
+  if (dshotState[3] == DSHOT_STATE_INPUT) {
     TIM_DMACmd(TIM2, TIM_DMA_CC3, DISABLE);
     DMA_ITConfig(DMA1_Stream1, DMA_IT_TC, DISABLE);
     DMA_Cmd(DMA1_Stream1, DISABLE);
@@ -1004,21 +1003,7 @@ void __attribute__((used)) TIM2_IRQHandler(void)
     
     motorsDshotTransferEnded(3);
   }
-}
-
-static void dshotBidirectionalChanged() {
-  if (dshotBidirectional == _dshotBidirectional) {
-    // Nothing to do
-    return;
-  }
-
-  motorsDeInit(motorMap);
-
-  isInit = false;
-  
-  motorsInit(motorMap);
-
-  dshotBidirectional = _dshotBidirectional;
+#endif
 }
 
 #endif
@@ -1033,13 +1018,6 @@ PARAM_GROUP_START(motorPowerSet)
  * 1 to hand PWM right to the motors, 2 to hand m1 to all motors, 3 to hand m1 to all motors and activate battery compensation.
  */
 PARAM_ADD_CORE(PARAM_UINT8, enable, &motorSetEnable)
-
-#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
-/**
-  * @brief Nonzero to enable bidirectional DSHOT (only for brushless motors)
- */
-PARAM_ADD_CORE_WITH_CALLBACK(PARAM_UINT8, bidiDshot, &_dshotBidirectional, dshotBidirectionalChanged)
-#endif
 
 /**
  * @brief motor power for m1: `0 - UINT16_MAX`
@@ -1063,7 +1041,6 @@ PARAM_ADD_CORE(PARAM_UINT16, m4, &motorPowerSet[3])
 
 PARAM_GROUP_STOP(motorPowerSet)
 
-
 /**
  * Motor output related log variables.
  */
@@ -1085,23 +1062,23 @@ LOG_ADD_CORE(LOG_UINT16, m3, &motor_ratios[MOTOR_M3])
  */
 LOG_ADD_CORE(LOG_UINT16, m4, &motor_ratios[MOTOR_M4])
 
-#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
 /**
- * @brief Motor eRPM telemetry for M1
+ * @brief Motor RPM telemetry for M1
  */
-LOG_ADD_CORE(LOG_UINT32, m1_erpm,      &motorERPMs[MOTOR_M1])
+LOG_ADD(LOG_UINT16, m1_rpm, &motorRPMs[MOTOR_M1])
 /**
- * @brief Motor eRPM telemetry for M2
+ * @brief Motor RPM telemetry for M2
  */
-LOG_ADD_CORE(LOG_UINT32, m2_erpm,      &motorERPMs[MOTOR_M2])
+LOG_ADD(LOG_UINT16, m2_rpm, &motorRPMs[MOTOR_M2])
 /**
- * @brief Motor eRPM telemetry for M3
+ * @brief Motor RPM telemetry for M3
  */
-LOG_ADD_CORE(LOG_UINT32, m3_erpm,      &motorERPMs[MOTOR_M3])
+LOG_ADD(LOG_UINT16, m3_rpm, &motorRPMs[MOTOR_M3])
 /**
- * @brief Motor eRPM telemetry for M4
+ * @brief Motor RPM telemetry for M4
  */
-LOG_ADD_CORE(LOG_UINT32, m4_erpm,      &motorERPMs[MOTOR_M4])
+LOG_ADD(LOG_UINT16, m4_rpm, &motorRPMs[MOTOR_M4])
 #endif
 
 LOG_GROUP_STOP(motor)

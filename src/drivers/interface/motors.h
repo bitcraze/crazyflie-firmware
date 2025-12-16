@@ -325,6 +325,11 @@ int motorsESCIsLo(uint32_t id);
 void motorsBurstDshot();
 
 /**
+ * Enable or disable bidirectional DSHOT communication. This will potentially reboot the ESC.
+ */
+void motorsDshotBidirectionalEnable(bool enable);
+
+/**
  * Set the PWM ratio of the motor 'id'
  */
 void motorsSetRatio(uint32_t id, uint16_t ratio);
