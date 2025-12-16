@@ -36,8 +36,8 @@ typedef struct {
 // These scale brightness values to achieve perceptually balanced colors
 // Blue is observed as weakest, others are scaled relative to it
 static const ledPerceptualScale_t LED_PERCEPTUAL_SCALE = {
-    .w = 0.84f,
-    .r = 0.692f,
-    .g = 0.421f,
+    .w = 0.99f,
+    .r = 0.78f,
+    .g = 0.51f,
     .b = 1.0f
 };
