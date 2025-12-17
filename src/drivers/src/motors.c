@@ -25,6 +25,13 @@
  * motors.c - Motor driver
  *
  * This code mainly interfacing the PWM peripheral lib of ST.
+ * 
+ * Bidirectional DSHOT telemetry driver based on code from:
+ *     R. Busetto, E. Cereda, M. Forgione, G. Maroni, D. Piga, D. Palossi,
+ *     "Nonlinear System Identification Nano-drone Benchmark",
+ *     arXiv preprint arXiv:2512.14450, 2025. https://arxiv.org/abs/2512.14450
+ * If you find it useful for your research, academic citations are appreciated.
+ * 
  */
 #define DEBUG_MODULE "MTR-DRV"
 
