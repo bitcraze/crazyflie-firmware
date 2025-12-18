@@ -3,7 +3,7 @@
 This folder contains scripts to measure propellers and motors using the systemId deck. Some more information can be found in those two blog articles:
 
 - [Building a Crazyflie thrust stand (2021)](https://www.bitcraze.io/2021/08/building-a-crazyflie-thrust-stand/)
-- [Keeping Thrust Consistent as the Battery Drains (2025) TODO](https://www.bitcraze.io/?p=14335&preview=true)
+- [Keeping Thrust Consistent as the Battery Drains (2025)](https://www.bitcraze.io/2025/10/keeping-thrust-consistent-as-the-battery-drains/)
 
 ## Setup
 
@@ -74,6 +74,18 @@ To verify the parameters, after adding the new values and flashing, we run the d
 
 #### Dynamic parameters
 
-Lastly, we want to know how fast the motors can change speed/thrust. In `mode = dynamic`, data is first collected with motors changing speed from lowest PWM to highest PWM command, once with and once without battery compensation.
+Lastly, we want to know how fast the motors can change speed/thrust. In `mode = dynamic`, data is first collected with motors following a reference for system identification with battery compensation enabled. Make sure to use a full battery for the data collection, since the trajectory is quite long.
 
-In the system_id part, we can observe the thrust dynamics. They can be modelled in two ways. From first principles we know the torque of a DC motor beeing $T=k\frac{V}{R}-k^2 \omega$ (in steady state, neglecting electrical dynamics) and the differential equation for the motor and propeller speed beeing $T=J\dot{\omega} + k_T \omega^2$. Rearranging the terms and ignoring the drag part ($k_T \omega^2$), we get a first order system for the propeller dynamics as: $\dot{RPM} = \frac{1}{\tau_{RPM}} (RPM_{CMD}-RPM)$. Alternatively, we can set up the thrust directly as first order system, which is also done in some works: $\dot{f} = \frac{1}{\tau_f} (f_{CMD}-f)$. We identify both parameters and save them in the same file as before.
+In the system_id part, we can observe the thrust dynamics. They can be modelled in two ways. From first principles we know the torque of a DC motor beeing $T=k\frac{V}{R}-k^2 \Omega$ (in steady state, neglecting electrical dynamics) and the differential equation for the motor and propeller speed beeing $T=J\dot{\Omega} + k_T \Omega^2$. Rearranging the terms and abusing $\Omega$ as RPM, we get the a system of the form: $\dot{\Omega} = a\Omega_\mathrm{set} + b\Omega + c\Omega^2$, where $\Omega_\mathrm{set}$ is the setpoint known from the thrust curves. This equation has two problems: First, the thrust curves should be collected on multiple runs using different motors to get a good average thrust curve. This is not possible here and it will overfit the particular motor from the experiment. Second, the parameters ($a,b,c$) are most likely different for acceleration and deceleration, since some motor types cannot brake (due to the used electronics). Thus, we adjust the model to fix both issues: 
+
+$$
+\dot{\Omega} = \begin{cases}
+    a\cdot(\Omega_\mathrm{set}-\Omega) + b\cdot(\Omega_\mathrm{set}^2-\Omega^2),  & \forall u_\Omega>\Omega. \\
+    c\cdot(\Omega_\mathrm{set}-\Omega) + d\cdot(\Omega_\mathrm{set}^2-\Omega^2),  & \forall u_\Omega\leq\Omega.
+\end{cases}
+$$
+Note: A good result here is dependent on a good fit earlier. 
+
+For brushless motors, the even simpler form of $\dot{\Omega} = a(\Omega_\mathrm{set}-\Omega)$ also provides a relatively good fit, so this parameter is also computed. 
+
+Alternatively, we can set up the thrust directly as first order system, which is also done in some works: $\dot{f} = \frac{1}{\tau_f} (f_{CMD}-f)$. We identify all parameters and save them in the same file as before. Also, the results of the fits are shown in plots and the console.

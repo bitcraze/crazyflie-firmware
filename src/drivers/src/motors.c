@@ -159,11 +159,11 @@ float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVol
   */
   if (supplyVoltage < 2.0f)
   {
-      return 0.0f; // iThrust;
-    }
+    return 0.0f;
+  }
 
   float thrust = (iThrust / 65535.0f) * THRUST_MAX; // rescaling integer thrust to N
-  if (thrust < THRUST_MIN)                          // Make sure sqrt function gets positive values
+  if (thrust < THRUST_MIN)                          // Make sure inversion is unique
   {
     return 0.0f;
   }

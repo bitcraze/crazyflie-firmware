@@ -2,9 +2,8 @@ import argparse
 
 from toml import load, dump
 import numpy as np
-from sklearn.linear_model import LinearRegression, RANSACRegressor
+from sklearn.linear_model import LinearRegression, RANSACRegressor, Ridge
 from scipy.optimize import least_squares
-from scipy.signal import savgol_filter
 import matplotlib.pyplot as plt
 from utils import (
     loadFiles,
@@ -28,6 +27,22 @@ def system_id_static(filenames, validations=[]):
     print("#########################################################")
     print("#### V_motors [V] to Thrust [N] curve")
     print("#########################################################")
+    # INFO: We want to achieve the max thrust for all SoC of the battery. Thus,
+    # we limit the maximum thrust to a relatively convervative value. For a
+    # discussion on that see #1526
+    # The min thrust is determined by the min pwm hard coded on the drone by
+    # CONFIG_MOTORS_DEFAULT_IDLE_THRUST
+    if "L250" in comb or "P250" in comb:
+        THRUST_MAX = 0.48 / 4
+    elif "T350" in comb or "T500" in comb:
+        THRUST_MAX = 0.72 / 4
+    elif "B" in comb:
+        THRUST_MAX = 0.8 / 4
+    else:
+        THRUST_MAX = 0.48 / 4
+        print(f"WARNING: Comb {comb} not found, setting THRUST_MAX={THRUST_MAX}")
+    THRUST_MIN = PWM_MIN / PWM_MAX * THRUST_MAX
+
     plt.figure(figsize=FIGSIZE)
 
     data["vmotors"] = data["vbat"] * data["pwm"] / PWM_MAX
@@ -42,29 +57,18 @@ def system_id_static(filenames, validations=[]):
         )
 
     # Fitting
-    X = np.vstack((data["vmotors"], data["vmotors"] ** 2, data["vmotors"] ** 3)).T
-    ransac = RANSACRegressor(LinearRegression()).fit(
-        X, data["thrust"] / 4
+    # Remove datapoints outside the min and max thrust region
+    mask = np.ones_like(data["thrust"], dtype=bool)
+    # mask = mask & (data["thrust"] > THRUST_MIN * 4 * 0.6)
+    # mask = mask & (data["thrust"] < THRUST_MAX * 4 * 1.5)
+    X = data["vmotors"][mask]
+    X = np.vstack((X, X**2, X**3)).T
+    reg = Ridge(positive=True).fit(
+        X, data["thrust"][mask] / 4
     )  # positive=True, Ridge, LinearRegression
-    reg = ransac.estimator_
-    error = reg.predict(X) - (data["thrust"] / 4)
+    error = reg.predict(X) - (data["thrust"][mask] / 4)
     vmotor2thrust = [reg.intercept_, reg.coef_[0], reg.coef_[1], reg.coef_[2]]
     parameters["vmotor2thrust"] = vmotor2thrust
-    # INFO: We want to achieve the max thrust for all SoC of the battery. Thus,
-    # we limit the maximum thrust to a relatively convervative value. For a
-    # discussion on that see #1526
-    # The min thrust is determined by the min pwm hard coded on the drone by
-    # CONFIG_MOTORS_DEFAULT_IDLE_THRUST
-    if "L250" in comb or "P250" in comb:
-        THRUST_MAX = 0.45 / 4
-    elif "T350" in comb or "T500" in comb:
-        THRUST_MAX = 0.65 / 4
-    elif "B" in comb:
-        THRUST_MAX = 0.8 / 4
-    else:
-        THRUST_MAX = 0.45 / 4
-        print(f"WARNING: Comb {comb} not found, setting THRUST_MAX={THRUST_MAX}")
-    THRUST_MIN = PWM_MIN / PWM_MAX * THRUST_MAX
 
     VMOTOR_MIN = inversepoly(THRUST_MIN, vmotor2thrust, 3)[0]
     VMOTOR_MAX = inversepoly(THRUST_MAX, vmotor2thrust, 3)[0]
@@ -133,8 +137,14 @@ def system_id_static(filenames, validations=[]):
         )
 
     # Fitting
-    X = np.vstack((data["vmotors"], data["vmotors"] ** 2, data["vmotors"] ** 3)).T
-    reg = LinearRegression().fit(X, data["torque_z"] / 4)
+    mask = data["torque_z"] / 4 < 0.001
+    X = data["vmotors"][mask]
+    X = np.vstack((X, X**2, X**3)).T
+    Y = data["torque_z"][mask] / 4
+    reg = RANSACRegressor(
+        LinearRegression(), residual_threshold=0.00001, stop_probability=0.999
+    ).fit(X, Y)
+    reg = reg.estimator_
     vmotor2torque = [reg.intercept_, reg.coef_[0], reg.coef_[1], reg.coef_[2]]
     parameters["vmotor2torque"] = vmotor2torque
 
@@ -224,11 +234,15 @@ def system_id_static(filenames, validations=[]):
         axs[1].scatter(
             data_val["rpm_avg"], data_val["torque_z"] / 4, label="validation data"
         )
-    X = np.vstack((data["rpm_avg"], data["rpm_avg"] ** 2)).T  # , data["rpm_avg"] ** 3
-    reg = LinearRegression(fit_intercept=False, positive=True).fit(
-        X, data["torque_z"] / 4
-    )
-    error = reg.predict(X) - (data["torque_z"] / 4)
+    mask = data["torque_z"] / 4 < 0.001
+    X = data["rpm_avg"][mask]
+    X = np.vstack((X, X**2)).T
+    Y = data["torque_z"][mask] / 4
+    reg = RANSACRegressor(
+        LinearRegression(fit_intercept=False, positive=True), residual_threshold=0.0001
+    ).fit(X, Y)
+    reg = reg.estimator_
+    error = reg.predict(X) - Y
     print(f"Prediction RMSE = {np.sqrt(np.mean(error**2)) * 1000:.6f}mN")
     rpm2torque = [reg.intercept_, reg.coef_[0], reg.coef_[1]]  # , reg.coef_[2]
     parameters["rpm2torque"] = rpm2torque
@@ -256,11 +270,14 @@ def system_id_static(filenames, validations=[]):
     if len(validations) > 0:
         plt.scatter(data_val["thrust"], data_val["torque_z"], label="validation data")
 
-
     # fit
-    X = np.vstack((data["thrust"]))
-    Y = data["torque_z"]
-    reg = LinearRegression(fit_intercept=False).fit(X, Y)
+    mask = data["torque_z"] < 0.003
+    X = np.vstack((data["thrust"][mask]))
+    Y = data["torque_z"][mask]
+    reg = RANSACRegressor(
+        LinearRegression(fit_intercept=False), residual_threshold=0.001
+    ).fit(X, Y)
+    reg = reg.estimator_
     thrust2torque = reg.coef_[0]
     parameters["thrust2torque"] = thrust2torque
     print(f"Torque = {thrust2torque:.6f}*Thrust")
@@ -353,6 +370,10 @@ def system_id_verification(filenames, validations=[]):
     Y = X / PWM_MAX * parameters["THRUST_MAX"]
     plt.plot(X, Y, label="ideal compensation", color="tab:red")
     plt.scatter(data["cmd"], data["thrust"] / 4, label="compensated")
+    # thrust_from_curve = poly(
+    #     data["vbat"] * data["pwm"] / PWM_MAX, parameters["vmotor2thrust"], 3
+    # )
+    # plt.scatter(data["cmd"], thrust_from_curve, label="onboard applied thrust")
     if len(validations) > 0:
         Y_OLD = X / PWM_MAX * (0.06 * 9.81 / 4)
         plt.plot(X, Y_OLD, "--", label="ideal compensation old")
@@ -365,15 +386,16 @@ def system_id_verification(filenames, validations=[]):
     plt.tight_layout()
     plt.show()
 
-    points_plane = data["cmd"] / PWM_MAX * parameters["THRUST_MAX"]
-    errors = points_plane - data["thrust"] / 4
+    mask = data["cmd"] >= PWM_MIN
+    points_plane = data["cmd"][mask] / PWM_MAX * parameters["THRUST_MAX"]
+    errors = points_plane - data["thrust"][mask] / 4
     print(f"max error = {np.max(np.abs(errors)) * 1000:.4f}mN")
     print(f"mean error = {np.mean(np.abs(errors)) * 1000:.4f}mN")
 
 
 def system_id_dynamic(filenames, validations=[]):
     data = loadFiles(filenames)
-    data = cutData(data, tStart=17.5, tEnd=33)  # cut off the non compensated part
+    data = cutData(data, tStart=19.0, tEnd=-1.0)
 
     thrustCMD = data["cmd"] / PWM_MAX * parameters["THRUST_MAX"] * 4
     rpmCMD = inversepoly(thrustCMD / 4, parameters["rpm2thrust"], 2)
@@ -387,76 +409,161 @@ def system_id_dynamic(filenames, validations=[]):
     Vmotor = data["vbat"] * data["pwm"] / PWM_MAX
 
     ### Fit dynamics
-    # There are two possible ways to calculate the thrust dynamics:
-    # The first one is to assume the motor speed as a first order system, which is
-    # physically correct, if we ignore the drag, viscous part, and DC motor electrical
-    # dynamics. The equation is
-    # rpm_dot = 1/tau_rpm * (rpm_cmd - rpm) - k_visc * rpm - k_drag * rpm^2,
-    # which is simplified to rpm_dot = 1/tau_rpm * (rpm_cmd - rpm).
+    # There are multiple possible ways to calculate the thrust dynamics. Refer to the
+    # readme for further information on the ODEs.
     # Since we have 4 motors, we average the rpms and ramp them all at once. However,
     # due to the suboptimal battery, the dynamics will be different than ramping a
     # single motor. Still, we believe this is the better way since we want higher
     # accuracy when accelerating all motors at once.
-    # Alternatively, we can assume the thrust itself to be a first order system:
-    # thrust_dot = 1/tau_f * (thrust_cmd - thrust)
+    scale = 1e-5  # used to better condition the problem
 
-    def first_order_system(x, u, tau, dt, kv=0, kd=0):
-        x_dot = 1 / tau * (u - x) + kv * x + kd * x**2
+    def ode_dc_motor(x, u, dt, a, b, c, d):
+        # x = state variable, u = input variable/setpoint
+        if u > x:
+            x_dot = a * (u - x) + b * (u**2 - x**2)
+        else:
+            x_dot = c * (u - x) + d * (u**2 - x**2)
         return x + x_dot * dt
 
-    def residuals(params, x, u, t):
+    def residuals_simple(params, x, u, t):
         y = [x[0]]
         dts = np.diff(t)
-        if len(params) == 1:
-            params = [params[0], 0, 0]
+        for i, dt in enumerate(dts):
+            y.append(ode_dc_motor(y[-1], u[i], dt, params[0], 0.0, params[0], 0.0))
+        return x - y
+
+    def residuals_full(params, x, u, t):
+        y = [x[0]]
+        dts = np.diff(t)
         for i, dt in enumerate(dts):
             y.append(
-                first_order_system(y[-1], u[i], params[0], dt, params[1], params[2])
+                ode_dc_motor(
+                    y[-1],
+                    u[i],
+                    dt,
+                    params[0],
+                    params[1] * scale,
+                    params[2],
+                    params[3] * scale,
+                )
             )
-        return np.linalg.norm(x - y, axis=-1)
+        return x - y
 
-    res = least_squares(
-        residuals,
-        # x0=[1.0, 0.0, 0.0],
-        # bounds=([1e-3, -1e-3, -1e-6], [1e3, 1e-3, 1e-6]),
+    res_rpm_simple = least_squares(
+        residuals_simple,
         x0=[1.0],
         bounds=([1e-3], [1e3]),
         args=(data["rpm_avg"], rpmCMD, data["time"]),
         method="trf",
+        ftol=1e-10,
         xtol=1e-10,
         verbose=False,
     )
-    tau_rpm = res.x[0]
+    rpm_coef_simple = res_rpm_simple.x
+    print(f"{rpm_coef_simple=}, cond={np.linalg.cond(res_rpm_simple.jac)}")
 
-    res = least_squares(
-        residuals,
+    res_rpm = least_squares(
+        residuals_full,
+        x0=[10, 0.0, 0.0, 1e-3],
+        bounds=([0, 0, 0, 0], [1e3, 1e3, 1e3, 1e3]),
+        args=(data["rpm_avg"], rpmCMD, data["time"]),
+        method="trf",
+        ftol=1e-10,
+        xtol=1e-10,
+        verbose=False,
+    )
+    rpm_coef = res_rpm.x
+    rpm_coef[1] *= scale  # scaling back
+    rpm_coef[3] *= scale  # scaling back
+    rpm_coef[np.abs(rpm_coef) < 1e-10] = 0.0
+    print(f"{rpm_coef=}, cond={np.linalg.cond(res_rpm.jac)}")
+
+    res_thrust = least_squares(
+        residuals_simple,
         x0=[1.0],
         bounds=(1e-3, 1e3),
         args=(data["thrust"], thrustCMD, data["time"]),
         method="trf",
+        ftol=1e-10,
         xtol=1e-10,
         verbose=False,
     )
-    tau_f = res.x[0]
+    thrust_coef = res_thrust.x
 
     ### Simulate dynamics
     dts = np.diff(data["time"])
     rpmPred = [rpmCMD[0]]
+    rpmPred_simple = [rpmCMD[0]]
     thrustPred = [thrustCMD[0]]
     for i, dt in enumerate(dts):
-        # rpm = first_order_system(
-        #     rpmPred[-1], rpmCMD[i], 1 / rpm_params[1], dt, rpm_params[2], rpm_params[3]
-        # )
-        rpm = first_order_system(rpmPred[-1], rpmCMD[i], tau_rpm, dt)
-        rpmPred.append(rpm)
-        thrust = first_order_system(thrustPred[-1], thrustCMD[i], tau_f, dt)
-        thrustPred.append(thrust)
+        rpmPred_simple.append(
+            ode_dc_motor(
+                rpmPred_simple[-1],
+                rpmCMD[i],
+                dt,
+                rpm_coef_simple[0],
+                0.0,
+                rpm_coef_simple[0],
+                0.0,
+            )
+        )
+        rpmPred.append(
+            ode_dc_motor(
+                rpmPred[-1],
+                rpmCMD[i],
+                dt,
+                rpm_coef[0],
+                rpm_coef[1],
+                rpm_coef[2],
+                rpm_coef[3],
+            )
+        )
+        thrustPred.append(
+            ode_dc_motor(
+                thrustPred[-1],
+                thrustCMD[i],
+                dt,
+                thrust_coef[0],
+                0.0,
+                thrust_coef[0],
+                0.0,
+            )
+        )
 
-    parameters["tau_rpm"] = tau_rpm
-    parameters["tau_f"] = tau_f
+    parameters["rpm_coef"] = rpm_coef
+    parameters["rpm_coef_simple"] = rpm_coef_simple[0]
+    parameters["thrust_coef"] = thrust_coef[0]
 
+    ### Print stats
+    error_rpm_simple = rpmPred_simple - data["rpm_avg"]
+    error_thrust_rpm_simple = (
+        poly(np.array(rpmPred_simple), parameters["rpm2thrust"], 2) * 4 - data["thrust"]
+    )
+    error_rpm = rpmPred - data["rpm_avg"]
+    error_thrust_rpm = (
+        poly(np.array(rpmPred), parameters["rpm2thrust"], 2) * 4 - data["thrust"]
+    )
+    error_thrust_direct = thrustPred - data["thrust"]
+    print(f"Speed RMSE (simple) = {np.sqrt(np.mean(error_rpm_simple**2)):.1f}RPM")
+    print(f"Speed RMSE = {np.sqrt(np.mean(error_rpm**2)):.1f}RPM")
+    print(
+        f"Thrust RMSE (based on thrust) = {np.sqrt(np.mean(error_thrust_direct**2) * 1000):.3f}mN"
+    )
+    print(
+        f"Thrust RMSE (based on speed) [simple] = {np.sqrt(np.mean(error_thrust_rpm_simple**2) * 1000):.3f}mN"
+    )
+    print(
+        f"Thrust RMSE (based on speed) = {np.sqrt(np.mean(error_thrust_rpm**2) * 1000):.3f}mN"
+    )
+
+    ### Plot
     plt.figure(figsize=FIGSIZE)
     plt.plot(data["time"], data["thrust"], label="Thrust Measurement")
+    # plt.plot(
+    #     data["time"],
+    #     poly(data["rpm_avg"], parameters["rpm2thrust"], 2) * 4,
+    #     label="Thrust from RPM",
+    # )
     plt.plot(data["time"], thrustCMD, label="Thrust CMD")
     plt.plot(
         data["time"],
@@ -469,6 +576,12 @@ def system_id_dynamic(filenames, validations=[]):
         poly(np.array(rpmPred), parameters["rpm2thrust"], 2) * 4,
         "--",
         label="Thrust Prediction from RPM dynamics",
+    )
+    plt.plot(
+        data["time"],
+        poly(np.array(rpmPred_simple), parameters["rpm2thrust"], 2) * 4,
+        "--",
+        label="Thrust Prediction from RPM dynamics [simple]",
     )
     plt.xlabel("Time [s]")
     plt.ylabel("Total Thrust [N]")
@@ -505,9 +618,10 @@ def system_id_dynamic(filenames, validations=[]):
     # plt.plot(data["time"], data["rpm2"], label="RPM 2")
     # plt.plot(data["time"], data["rpm3"], label="RPM 3")
     # plt.plot(data["time"], data["rpm4"], label="RPM 4")
-    plt.plot(data["time"], data["rpm_avg"], label="RPM Motors")
-    plt.plot(data["time"], rpmCMD, label="RPM CMD")
+    plt.plot(data["time"], data["rpm_avg"], "--", label="RPM Motors")
+    plt.plot(data["time"], rpmCMD, ":", label="RPM CMD")
     plt.plot(data["time"], np.array(rpmPred), label="RPM Prediction")
+    plt.plot(data["time"], np.array(rpmPred_simple), label="RPM Prediction (simple)")
     plt.xlabel("Time [s]")
     plt.ylabel("RPM")
     plt.title("Propeller Speed Curve")
