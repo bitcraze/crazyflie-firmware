@@ -836,12 +836,12 @@ LOG_GROUP_STOP(colorLedTop)
 PARAM_GROUP_START(deck)
 
 /**
- * @brief Nonzero if bottom [Color LED deck](%https://store.bitcraze.io/collections/decks/products/color-led-deck) is attached
+ * @brief Nonzero if [Color LED deck bottom-mounted](%https://store.bitcraze.io/products/color-led-deck-copy?variant=62615266722141) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcColorLedBot, &contexts[BOTTOM_IDX].isInit)
 
 /**
- * @brief Nonzero if top [Color LED deck](%https://store.bitcraze.io/collections/decks/products/color-led-deck) is attached
+ * @brief Nonzero if [Color LED deck top-mounted](%https://store.bitcraze.io/products/color-led-deck?variant=58838312616285) is attached
  */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcColorLedTop, &contexts[TOP_IDX].isInit)
 
