@@ -61,6 +61,8 @@
 #include "kalman_core_params_defaults.h"
 #include "cfassert.h"
 #include "autoconf.h"
+#include "platform_defaults.h"
+#include "param.h"
 
 #include "physicalConstants.h"
 
@@ -68,6 +70,14 @@
 #include "static_mem.h"
 
 // #define DEBUG_STATE_CHECK
+
+// The drag coefficients, used to model the drag on the flapper
+float dragBx = EKF_DRAG_BX; // drag on the X axis 
+float dragBy = EKF_DRAG_BY; // drag on the Y axis
+float dragBz = EKF_DRAG_BZ; // drag on the Z axis
+float drag_rx = EKF_DRAG_RX; // CoP distance to CoM in X axis
+float drag_ry = EKF_DRAG_RY; // CoP distance to CoM in Y axis
+float drag_rz = EKF_DRAG_RZ; // CoP distance to CoM in Z axis
 
 /**
  * Supporting and utility functions
@@ -384,17 +394,23 @@ static void predictDt(kalmanCoreData_t* this, const kalmanCoreParams_t *params, 
   A[KC_STATE_Z][KC_STATE_D2] = (this->S[KC_STATE_PX]*this->R[2][1] - this->S[KC_STATE_PY]*this->R[2][0])*dt;
 
   // body-frame velocity from body-frame velocity
-  A[KC_STATE_PX][KC_STATE_PX] = 1; //drag negligible
+  A[KC_STATE_PX][KC_STATE_PX] = 1; //drag negligible when not flying
   A[KC_STATE_PY][KC_STATE_PX] =-gyro->z*dt;
   A[KC_STATE_PZ][KC_STATE_PX] = gyro->y*dt;
 
   A[KC_STATE_PX][KC_STATE_PY] = gyro->z*dt;
-  A[KC_STATE_PY][KC_STATE_PY] = 1; //drag negligible
+  A[KC_STATE_PY][KC_STATE_PY] = 1; //drag negligible when not flying
   A[KC_STATE_PZ][KC_STATE_PY] =-gyro->x*dt;
 
   A[KC_STATE_PX][KC_STATE_PZ] =-gyro->y*dt;
   A[KC_STATE_PY][KC_STATE_PZ] = gyro->x*dt;
-  A[KC_STATE_PZ][KC_STATE_PZ] = 1; //drag negligible
+  A[KC_STATE_PZ][KC_STATE_PZ] = 1; //drag negligible when not flying
+
+  if (quadIsFlying) { // when flying, drag is not negligible
+    A[KC_STATE_PX][KC_STATE_PX] = 1 - dt * dragBx;
+    A[KC_STATE_PY][KC_STATE_PY] = 1 - dt * dragBy;
+    A[KC_STATE_PZ][KC_STATE_PZ] = 1 - dt * dragBz;
+  }
 
   // body-frame velocity from attitude error
   A[KC_STATE_PX][KC_STATE_D0] =  0;
@@ -476,10 +492,21 @@ static void predictDt(kalmanCoreData_t* this, const kalmanCoreParams_t *params, 
     tmpSPY = this->S[KC_STATE_PY];
     tmpSPZ = this->S[KC_STATE_PZ];
 
-    // body-velocity update: accelerometers - gyros cross velocity - gravity in body frame
-    this->S[KC_STATE_PX] += dt * (gyro->z * tmpSPY - gyro->y * tmpSPZ - GRAVITY_MAGNITUDE * this->R[2][0]);
-    this->S[KC_STATE_PY] += dt * (-gyro->z * tmpSPX + gyro->x * tmpSPZ - GRAVITY_MAGNITUDE * this->R[2][1]);
-    this->S[KC_STATE_PZ] += dt * (zacc + gyro->y * tmpSPX - gyro->x * tmpSPY - GRAVITY_MAGNITUDE * this->R[2][2]);
+    // omega x r_d (body frame). omega is gyro (rad/s).
+    float odr_x = gyro->y * drag_rz - gyro->z * drag_ry;
+    float odr_y = gyro->z * drag_rx - gyro->x * drag_rz;
+    float odr_z = gyro->x * drag_ry - gyro->y * drag_rx;
+    
+    // body-velocity update: accelerometers - gyros cross velocity - gravity in body 
+    this->S[KC_STATE_PX] += dt * (gyro->z * tmpSPY - gyro->y * tmpSPZ - GRAVITY_MAGNITUDE * this->R[2][0]
+                               - dragBx * tmpSPX
+                               + dragBx * odr_x);
+    this->S[KC_STATE_PY] += dt * (-gyro->z * tmpSPX + gyro->x * tmpSPZ - GRAVITY_MAGNITUDE * this->R[2][1]
+                               - dragBy * tmpSPY
+                               + dragBy * odr_y);
+    this->S[KC_STATE_PZ] += dt * (zacc + gyro->y * tmpSPX - gyro->x * tmpSPY - GRAVITY_MAGNITUDE * this->R[2][2]
+                               - dragBz * tmpSPZ
+                               + dragBz * odr_z);
   }
   else // Acceleration can be in any direction, as measured by the accelerometer. This occurs, eg. in freefall or while being carried.
   {
@@ -783,3 +810,31 @@ void kalmanCoreDecoupleXY(kalmanCoreData_t* this)
   decoupleState(this, KC_STATE_Y);
   decoupleState(this, KC_STATE_PY);
 }
+
+PARAM_GROUP_START(kalman)
+/**
+ * @brief drag in x direction
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, dragBx, &dragBx)
+/**
+ * @brief drag in y direction
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, dragBy, &dragBy)
+/**
+ * @brief drag in z direction
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, dragBz, &dragBz)
+/**
+ * @brief aerodynamic force lever arm X (meters)
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, drag_rx, &drag_rx)
+/**
+ * @brief aerodynamic force lever arm Y (meters)
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, drag_ry, &drag_ry)
+/**
+ * @brief aerodynamic force lever arm Z (meters)
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, drag_rz, &drag_rz)
+
+PARAM_GROUP_STOP(kalman)

@@ -318,7 +318,7 @@ PARAM_ADD(PARAM_UINT8, adaptive, &useAdaptiveStd)
 /**
  * @brief Set standard deviation flow measurement (default: 2.0f)
  */
-PARAM_ADD_CORE(PARAM_FLOAT, flowStdFixed, &flowStdFixed)
+PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, flowStdFixed, &flowStdFixed)
 PARAM_GROUP_STOP(motion)
 
 PARAM_GROUP_START(deck)
