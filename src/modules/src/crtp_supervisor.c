@@ -75,7 +75,7 @@ static void handleSupervisorInfo(CRTPPacket* p)
 
     uint8_t cmd = p->data[0];
     uint8_t value8 = 0;
-    uint32_t bitfield = supervisorMem.infoBitfield;
+    uint16_t bitfield = supervisorMem.infoBitfield;
 
     // Bit mapping: bit 0 = canBeArmed, bit 1 = isArmed, etc.
     switch (cmd)
