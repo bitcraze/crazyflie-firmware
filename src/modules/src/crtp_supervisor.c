@@ -43,6 +43,9 @@ static void sendSupervisorResponse(uint8_t cmd, const void* data, uint8_t len);
 
 void crtpSupervisorInit(void)
 {
+    if(isInit) {
+        return;
+    }
     // Register the callback for the supervisor port
     crtpRegisterPortCB(CRTP_PORT_SUPERVISOR, crtpSupervisorCB);
     isInit = true;
