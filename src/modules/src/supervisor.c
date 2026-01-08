@@ -66,8 +66,39 @@
 static uint16_t preflightTimeoutDuration = PREFLIGHT_TIMEOUT_MS;
 static uint16_t landingTimeoutDuration = LANDING_TIMEOUT_MS;
 
-SupervisorMem_t supervisorMem;
+typedef struct {
+  bool canFly;
+  bool isFlying;
+  bool isTumbled;
+  bool isArmingActivated;
+  bool isCrashed;
+  uint16_t infoBitfield;
+  uint8_t paramEmergencyStop;
 
+  // The time (in ticks) of the first tumble event. 0=no tumble
+  uint32_t initialTumbleTick;
+
+  // The time (in ticks) of the latest high thrust event. 0=no high thrust event yet
+  uint32_t latestThrustTick;
+
+  // The time (in ticks) of the latest arming event. 0=no arming event yet
+  uint32_t latestArmingTick;
+
+  // The time (in ticks) of the latest landing event. 0=no landing event yet
+  uint32_t latestLandingTick;
+
+  supervisorState_t state;
+
+  // Copy of latest conditions, for logging
+  supervisorConditionBits_t latestConditions;
+  uint8_t doinfodump;
+} SupervisorMem_t;
+
+static SupervisorMem_t supervisorMem;
+
+uint16_t supervisorGetInfoBitfield(void) {
+  return supervisorMem.infoBitfield;
+}
 const static setpoint_t nullSetpoint;
 
 void infoDump(const SupervisorMem_t* this);
