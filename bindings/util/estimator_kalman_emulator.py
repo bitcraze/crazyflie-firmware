@@ -1,9 +1,6 @@
+import math
 import numpy as np
 import cffirmware
-
-
-
-
 
 class EstimatorKalmanEmulator:
     """
@@ -83,7 +80,7 @@ class EstimatorKalmanEmulator:
         self.next_prediction_ms = self.now_ms + self.PREDICT_STEP_MS
 
         GRAVITY_MAGNITUDE = 9.81
-        DEG_TO_RAD = np.pi / 180.0
+        DEG_TO_RAD = math.pi / 180.0
         cffirmware.axis3fSubSamplerInit(self.accSubSampler, GRAVITY_MAGNITUDE)
         cffirmware.axis3fSubSamplerInit(self.gyroSubSampler, DEG_TO_RAD)
 
@@ -104,7 +101,7 @@ class EstimatorKalmanEmulator:
             # Peek at the first sample without removing it
             sample = sensor_samples[0]
             time_ms = int(sample[1]['timestamp'])
-            
+
             # If the sample is ready to be processed (past or present time)
             if time_ms <= now_ms:
                 sensor_samples.pop(0)  # Now it's safe to remove it
@@ -146,11 +143,11 @@ class EstimatorKalmanEmulator:
             gyro.z = float(gyro_data['gyro.z'])
 
             cffirmware.axis3fSubSamplerAccumulate(self.gyroSubSampler, gyro)
-        
+
         elif sample[0] == 'estExtPose':
             ext_pose = cffirmware.poseMeasurement_t()
             ext_quat = cffirmware.quaternion_t()
-            
+
             pose_data = sample[1]
 
             ext_pose.x = float(pose_data['pos_x'])
@@ -168,6 +165,6 @@ class EstimatorKalmanEmulator:
             ext_pose.stdDevQuat = float(pose_data.get('stdDevQuat', self.EXT_QUAT_STD_DEV))
 
             cffirmware.kalmanCoreUpdateWithPose(self.coreData, ext_pose)
-        
+
         else:
             print(f"Unhandled measurement!: {sample[0]}")
