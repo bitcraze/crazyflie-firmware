@@ -46,10 +46,20 @@
   .procNoiseAcc_z = 1.0f
 #endif
 
+#define USE_EXTERNAL_POSITIONING
+
+#ifdef USE_EXTERNAL_POSITIONING
+// For a uniform distribution over a range [−a,a], the standard deviation is:
+// σ= a/√3​
+// We are completely uncertain, could be anywhere in [−π,π]:
+// σ=π/√3≈1.81 rad
+#define KALMAN_INITIAL_YAW_STD 1.81f
+#else
 #ifdef CONFIG_ESTIMATOR_KALMAN_INITIAL_YAW_STD
 #define KALMAN_INITIAL_YAW_STD (CONFIG_ESTIMATOR_KALMAN_INITIAL_YAW_STD / 1000.0f)
 #else
 #define KALMAN_INITIAL_YAW_STD 0.01f
+#endif
 #endif
 
 /**
@@ -60,8 +70,8 @@
  */
 #define KALMAN_CORE_DEFAULT_PARAMS_INIT \
   /* Initial variances, uncertain of position, but know we're stationary and roughly flat */ \
-  .stdDevInitialPosition_xy = 100, \
-  .stdDevInitialPosition_z = 1, \
+  .stdDevInitialPosition_xy = 2.3, /* meters, could be anywhere in ~8x8m room */ \
+  .stdDevInitialPosition_z = 0.2, /* meters, expect on floor or very low platform */ \
   .stdDevInitialVelocity = 0.01, \
   .stdDevInitialAttitude_rollpitch = 0.01, \
   .stdDevInitialAttitude_yaw = KALMAN_INITIAL_YAW_STD, \
