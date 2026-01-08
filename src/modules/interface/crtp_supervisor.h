@@ -26,8 +26,6 @@
 #ifndef _CRTP_SUPERVISOR_H_
 #define _CRTP_SUPERVISOR_H_
 
-#pragma once
-
 #include "crtp.h"
 #include <stdint.h>
 
