@@ -31,8 +31,8 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
   // sensor's temporary position in the global reference frame due to Crazyflie's rotation.
   // Then, we add the result to the Crazyflie's global position.
   // Relative sensor position in global reference frame
-  vec3d temp_ps;
-  arm_matrix_instance_f32 temp_ps_ = {3, 1, temp_ps};
+  vec3d sensor_offset_global;
+  arm_matrix_instance_f32 temp_ps_ = {3, 1, sensor_offset_global};
   // Rotation matrix from Crazyflie to global reference frame
   arm_matrix_instance_f32 Rcf_ = {3, 3, (float32_t *)this->R};
   // Relative sensor position in Crazyflie reference frame
@@ -43,7 +43,7 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
 
   // Sensor position in global reference frame
   // Gets the current state values of the position of the Crazyflie in the global reference frame and add the relative sensor pos
-  vec3d ps = {this->S[KC_STATE_X] + ps[0], this->S[KC_STATE_Y] + ps[1], this->S[KC_STATE_Z] + ps[2]};
+  vec3d ps = {this->S[KC_STATE_X] + sensor_offset_global[0], this->S[KC_STATE_Y] + sensor_offset_global[1], this->S[KC_STATE_Z] + sensor_offset_global[2]};
 
   // Rotor position in global reference frame
   const vec3d* pr = sweepInfo->rotorPos;
@@ -133,15 +133,15 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
       //        [  0        0     1]
 
       float dx_droll = 0.0f; // ∂x/∂(δφ)
-      float dy_droll = -ps[2]; // ∂y/∂(δφ)
-      float dz_droll = ps[1]; // ∂z/∂(δφ)
+      float dy_droll = -sensor_offset_global[2]; // ∂y/∂(δφ)
+      float dz_droll = sensor_offset_global[1]; // ∂z/∂(δφ)
 
-      float dx_dpitch = -ps[2]; // ∂x/∂(δθ)
+      float dx_dpitch = -sensor_offset_global[2]; // ∂x/∂(δθ)
       float dy_dpitch = 0.0f; // ∂y/∂(δθ)
-      float dz_dpitch = ps[0]; // ∂z/∂(δθ)
+      float dz_dpitch = sensor_offset_global[0]; // ∂z/∂(δθ)
 
-      float dx_dyaw = -ps[1]; // ∂x/∂(δψ)
-      float dy_dyaw = ps[0]; // ∂y/∂(δψ)
+      float dx_dyaw = -sensor_offset_global[1]; // ∂x/∂(δψ)
+      float dy_dyaw = sensor_offset_global[0]; // ∂y/∂(δψ)
       float dz_dyaw = 0.0f; // ∂z/∂(δψ)
 
       // Update the H vector with Orientation Jacobians (in the global reference frame)
