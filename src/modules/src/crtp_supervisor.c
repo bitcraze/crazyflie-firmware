@@ -38,7 +38,8 @@ static bool isInit = false;
 
 static void crtpSupervisorCB(CRTPPacket* p);
 static void handleSupervisorInfo(CRTPPacket* p);
-static void sendSupervisorResponse(uint8_t cmd, const void* data, uint8_t len);
+static void handleSupervisorCommand(CRTPPacket* p);
+static void sendSupervisorResponse(uint8_t channel, uint8_t cmd, const void* data, uint8_t len);
 
 
 void crtpSupervisorInit(void)
@@ -60,6 +61,10 @@ static void crtpSupervisorCB(CRTPPacket* pk)
     {
         case SUPERVISOR_CH_INFO:
             handleSupervisorInfo(pk);
+            break;
+
+        case SUPERVISOR_CH_COMMAND:
+            handleSupervisorCommand(pk);
             break;
 
         default:
@@ -96,25 +101,67 @@ static void handleSupervisorInfo(CRTPPacket* p)
         case CMD_HL_CONTROL_DISABLED: value8 = (bitfield >> 10) & 0x01; break;
 
         case CMD_GET_STATE_BITFIELD:
-            sendSupervisorResponse(cmd, &bitfield, sizeof(bitfield));
+            sendSupervisorResponse(SUPERVISOR_CH_INFO, cmd, &bitfield, sizeof(bitfield));
             return;
 
         default:
             return;
     }
 
-    sendSupervisorResponse(cmd, &value8, 1);
+    sendSupervisorResponse(SUPERVISOR_CH_INFO, cmd, &value8, 1);
 }
 
 
-static void sendSupervisorResponse(uint8_t cmd, const void* data, uint8_t len)
+static void handleSupervisorCommand(CRTPPacket* p)
+{
+    if (p->size < 1) {
+        return;
+    }
+
+    uint8_t cmd = p->data[0];
+    uint8_t* data = &p->data[1];
+
+    switch (cmd) {
+
+        case CMD_ARM_SYSTEM:
+        {
+            const bool doArm = data[0];
+            const bool success = supervisorRequestArming(doArm);
+
+            uint8_t resp[2];
+            resp[0] = success;
+            resp[1] = supervisorIsArmed();
+
+            sendSupervisorResponse(SUPERVISOR_CH_COMMAND, cmd, resp, sizeof(resp));
+            break;
+        }
+
+        case CMD_RECOVER_SYSTEM:
+        {
+            const bool success = supervisorRequestCrashRecovery(true);
+
+            uint8_t resp[2];
+            resp[0] = success;
+            resp[1] = !supervisorIsCrashed();
+
+            sendSupervisorResponse(SUPERVISOR_CH_COMMAND, cmd, resp, sizeof(resp));
+            break;
+        }
+
+        default:
+            break;
+    }
+}
+
+
+static void sendSupervisorResponse(uint8_t channel, uint8_t cmd, const void* data, uint8_t len)
 // Helper to send a response packet.
 {
     CRTPPacket response;
-    response.header = CRTP_HEADER(CRTP_PORT_SUPERVISOR, SUPERVISOR_CH_INFO);
+    response.header = CRTP_HEADER(CRTP_PORT_SUPERVISOR, channel);
     response.size = 1 + len;
 
-    response.data[0] = CMD_STATE_RESPONSE | cmd;  // e.g. 0x82 = response to CMD_IS_ARMED
+    response.data[0] = CMD_RESPONSE | cmd;
     memcpy(&response.data[1], data, len);
 
     crtpSendPacket(&response);

@@ -30,7 +30,13 @@
 #include <stdint.h>
 
 #define SUPERVISOR_CH_INFO    0
+#define SUPERVISOR_CH_COMMAND 1
 
+// Commands
+#define CMD_ARM_SYSTEM         0x01
+#define CMD_RECOVER_SYSTEM     0x02
+
+// State info
 #define CMD_CAN_BE_ARMED          0x01
 #define CMD_IS_ARMED              0x02
 #define CMD_IS_AUTO_ARMED         0x03
@@ -44,7 +50,7 @@
 #define CMD_HL_CONTROL_DISABLED   0x0B
 #define CMD_GET_STATE_BITFIELD    0x0C
 
-#define CMD_STATE_RESPONSE        0x80 
+#define CMD_RESPONSE        0x80
 
 void crtpSupervisorInit(void);
 

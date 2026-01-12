@@ -40,7 +40,6 @@
 #include "platform.h"
 #include "app_channel.h"
 #include "static_mem.h"
-#include "supervisor.h"
 #include "ledseq.h"
 #include "worker.h"
 
@@ -55,8 +54,8 @@ typedef enum {
 
 typedef enum {
   setContinuousWave    = 0x00,
-  armSystem            = 0x01,
-  recoverSystem        = 0x02,
+  // armSystem            = 0x01, (moved to crtp_supervisor)
+  // recoverSystem        = 0x02, (moved to crtp_supervisor)
   userNotification     = 0x03,
 } PlatformCommand;
 
@@ -129,23 +128,6 @@ static void platformCommandProcess(CRTPPacket *p)
       slp.length = 1;
       slp.data[0] = data[0];
       syslinkSendPacket(&slp);
-      break;
-    }
-    case armSystem:
-    {
-      const bool doArm = data[0];
-      const bool success = supervisorRequestArming(doArm);
-      data[0] = success;
-      data[1] = supervisorIsArmed();
-      p->size = 2;
-      break;
-    }
-    case recoverSystem:
-    {
-      const bool success = supervisorRequestCrashRecovery(true);
-      data[0] = success;
-      data[1] = !supervisorIsCrashed();
-      p->size = 2;
       break;
     }
     case userNotification:
