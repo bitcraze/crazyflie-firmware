@@ -117,17 +117,22 @@ static bool activeMarkerDeckTest() {
     return false;
   }
 
-#ifndef ACTIVE_MARKER_DECK_TEST
-  if (0 == strcmp("Qualisys0.A", versionString)) {
-    deckFwVersion = version_0_A;
-  } else if (0 == strcmp("Qualisys1.0", versionString)) {
-    deckFwVersion = version_1_0;
+  if (strlen(versionString) == 0) {
+    DEBUG_PRINT("Deck FW version string not available, assuming compatible\n");
+  } else {
+    DEBUG_PRINT("Deck FW %s\n", versionString);
   }
 
-  isVerified = (versionUndefined != deckFwVersion);
-  if (! isVerified) {
-    DEBUG_PRINT("Incompatible deck FW\n");
+#ifndef ACTIVE_MARKER_DECK_TEST
+  if (!i2cOk) {
+    DEBUG_PRINT("Deck I2C communication failed\n");
+    isVerified = false;
+    return false;
   }
+
+  deckFwVersion = version_1_0;
+  isVerified = true;
+
 #else
   isVerified = true;
   deckFwVersion = version_1_0;
