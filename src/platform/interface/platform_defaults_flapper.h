@@ -152,3 +152,21 @@
 #define SUPERVISOR_TUMBLE_CHECK_ACCEPTED_UPSIDEDOWN_TIME 200
 
 #define YAW_MAX_DELTA 30.0
+
+// EKF drag defaults
+// First three are the drag coefficients in x, y and z
+// Second three are the offset of the CoP to the CoM in meters
+// NOTE: For X, this offset is not constant but depends on dihedral angle. Influence seems to be negligible.
+#define EKF_DRAG_BX 4.2f
+#define EKF_DRAG_BY 1.8f
+#define EKF_DRAG_BZ 0.3f
+#define EKF_DRAG_RX 0.0f
+#define EKF_DRAG_RY 0.0f
+#define EKF_DRAG_RZ 0.06f
+
+// flowdeck position offset
+// Note that this depends on flowdeck placement and might vary. These values assume placement directly under the legs with the STL provided here:
+// https://github.com/flapper-drones/3Dmodels/blob/main/Bitcraze_flowdeck_support%20v17.stl
+#define FLOWDECK_POS_X 0.0f 
+#define FLOWDECK_POS_Y 0.0f
+#define FLOWDECK_POS_Z -0.12f
