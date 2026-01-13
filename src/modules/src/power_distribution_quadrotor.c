@@ -139,6 +139,24 @@ static void powerDistributionForce(const control_t *control, motors_thrust_uncap
   }
 }
 
+static void powerDistributionPWM(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped) {
+  // Direct PWM control - bypass all mixing, just set motor PWM directly
+  for (int motorIndex = 0; motorIndex < STABILIZER_NR_OF_MOTORS; motorIndex++) {
+    float normalizedPWM = control->normalizedForces[motorIndex];
+    
+    // Safety clamp to [0..1]
+    if (normalizedPWM < 0.0f) {
+      normalizedPWM = 0.0f;
+    }
+    if (normalizedPWM > 1.0f) {
+      normalizedPWM = 1.0f;
+    }
+    
+    // Convert normalized [0..1] to PWM [0..UINT16_MAX]
+    motorThrustUncapped->list[motorIndex] = (uint16_t)(normalizedPWM * UINT16_MAX);
+  }
+}
+
 void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
 {
   switch (control->controlMode) {
@@ -150,6 +168,9 @@ void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motor
       break;
     case controlModeForce:
       powerDistributionForce(control, motorThrustUncapped);
+      break;
+    case controlModePWM:
+      powerDistributionPWM(control, motorThrustUncapped);
       break;
     default:
       // Nothing here
