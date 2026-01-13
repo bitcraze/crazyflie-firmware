@@ -52,11 +52,18 @@ void vApplicationMallocFailedHook( void )
 void vApplicationStackOverflowHook(TaskHandle_t xTask, char * pcTaskName)
 {
   portDISABLE_INTERRUPTS();
-  DEBUG_PRINT("\nStack overflow!\n");
+  DEBUG_PRINT("\nStack overflow in task: %s\n", pcTaskName);
   ledSet(ERR_LED1, 1);
   ledSet(ERR_LED2, 1);
   motorsStop();
-  storeAssertTextData("Stack overflow");
+
+  // Store task name directly so we can see which task overflowed
+  if (pcTaskName && pcTaskName[0] != '\0') {
+    storeAssertTextData(pcTaskName);
+  } else {
+    storeAssertTextData("Stack overflow: unknown");
+  }
+
   while(1);
 }
 #endif
