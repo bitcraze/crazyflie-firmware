@@ -38,6 +38,10 @@ typedef enum {
 #ifdef CONFIG_CONTROLLER_OOT
   ControllerTypeOot,
 #endif
+
+  // our new controller -----------------------------------------------------------------------------------------------
+  ControllerTypeForceTorqueExternal,
+
   ControllerType_COUNT,
 } ControllerType;
 

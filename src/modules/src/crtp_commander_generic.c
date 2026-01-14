@@ -75,6 +75,9 @@ enum packet_type {
   zDistanceType           = 9,
   hoverType               = 10,
   manualType              = 11,
+
+  // this is the new F, tx, ty, tz command
+  forceTorqueSIType       = 12,
 };
 
 /* ---===== 2 - Decoding functions =====--- */
@@ -521,6 +524,43 @@ static void positionDecoder(setpoint_t *setpoint, uint8_t type, const void *data
   setpoint->attitude.yaw = values->yaw;
 }
 
+// this is the new packer we want to send.
+// has a struct and a decoder methodd
+
+struct forceTorqueSIPacket_s{
+  float thrust_N; // thrust in Newtons
+  float tau_x_Nm; // x-torque in Nm
+  float tau_y_Nm; // y-torque in Nm
+  float tau_z_Nm; // z-torque in Nm
+}__attribute__((packed));
+
+static void forceTorqueSIDecoder(setpoint_t *setpoint, uint8_t type, const void *data, size_t datalen)
+{
+  const struct forceTorqueSIPacket_s *values = data;
+
+  ASSERT(datalen == sizeof(struct forceTorqueSIPacket_s));
+
+  // We are NOT asking the normal attitude/position controller to do anything.
+  // We are simply bypassing them and passing torque/thrust through to the powerDistribution module directly.
+
+  setpoint->mode.x = modeDisable;
+  setpoint->mode.y = modeDisable;
+  setpoint->mode.z = modeDisable;
+  setpoint->mode.roll = modeDisable;
+  setpoint->mode.pitch = modeDisable;
+  setpoint->mode.yaw = modeDisable;
+  setpoint->mode.quat = modeDisable;
+
+  // Store SI values in the setpoint (field is declared in the stabilizer_types.h file)
+  // look for the "forceTorqueSI" struct
+
+  setpoint->forceTorqueSI.valid = true;
+  setpoint->forceTorqueSI.thrust_N = values->thrust_N;
+  setpoint->forceTorqueSI.torque_Nm[0] = values->tau_x_Nm;
+  setpoint->forceTorqueSI.torque_Nm[1] = values->tau_y_Nm;
+  setpoint->forceTorqueSI.torque_Nm[2] = values->tau_z_Nm;
+}
+
  /* ---===== 3 - packetDecoders array =====--- */
 const static packetDecoder_t packetDecoders[] = {
   [stopType]                = stopDecoder,
@@ -535,6 +575,9 @@ const static packetDecoder_t packetDecoders[] = {
   [zDistanceType]           = zDistanceDecoder,
   [hoverType]               = hoverDecoder,
   [manualType]              = manualDecoder,
+
+  // the new decoded
+  [forceTorqueSIType]       = forceTorqueSIDecoder,
 };
 
 /* Decoder switch */

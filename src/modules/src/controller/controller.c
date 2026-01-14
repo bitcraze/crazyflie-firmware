@@ -8,6 +8,7 @@
 #include "controller_indi.h"
 #include "controller_brescianini.h"
 #include "controller_lee.h"
+#include "controller_force_torque_external.h"
 
 #include "autoconf.h"
 
@@ -33,6 +34,9 @@ static ControllerFcns controllerFunctions[] = {
   #ifdef CONFIG_CONTROLLER_OOT
   {.init = controllerOutOfTreeInit, .test = controllerOutOfTreeTest, .update = controllerOutOfTree, .name = "OutOfTree"},
   #endif
+
+  // adding our new function -------------------------------------------------------------------------------------------
+  {.init = controllerForceTorqueExternalInit, .test = controllerForceTorqueExternalTest, .update = controllerForceTorqueExternal, .name = "ForceTorqueExternal"},
 };
 
 
