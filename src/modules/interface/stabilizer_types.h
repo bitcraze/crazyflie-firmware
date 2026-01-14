@@ -248,7 +248,8 @@ typedef enum mode_e {
   modeVelocity
 } stab_mode_t;
 
-// the new struct we care about ----------------------------------------------------------------------------------------
+// the new struct we care about
+/*--------------------------------------------------------------------------------------------------------------------*/
 typedef struct {
   bool valid;
   float thrust_N;
@@ -267,8 +268,8 @@ typedef struct setpoint_s {
   acc_t acceleration;       // m/s^2
   jerk_t jerk;              // m/s^3
   bool velocity_body;       // true if velocity is given in body frame; false if velocity is given in world frame
-
-  setpointForceTorqueSI_t forceTorqueSI; // this is the new struct added here ------------------------------------------
+ /*--------------------------------------------------------------------------------------------------------------------*/
+  setpointForceTorqueSI_t forceTorqueSI; // this is the new struct added here
 
   struct {
     stab_mode_t x;

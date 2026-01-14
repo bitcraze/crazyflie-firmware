@@ -39,7 +39,8 @@ typedef enum {
   ControllerTypeOot,
 #endif
 
-  // our new controller -----------------------------------------------------------------------------------------------
+  //our new controller
+  /*--------------------------------------------------------------------------------------------------------------------*/
   ControllerTypeForceTorqueExternal,
 
   ControllerType_COUNT,

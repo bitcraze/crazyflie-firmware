@@ -14,14 +14,15 @@ void controllerForceTorqueExternal(control_t *control,
   (void)state;
   (void)tick;
 
+
   if (!setpoint->forceTorqueSI.valid) {
     return;
   }
 
   control->controlMode = controlModeForceTorque;
 
-  // FIRST BRING-UP mapping (you will scale later)
-  control->thrust  = setpoint->forceTorqueSI.thrust_N;
+  // Your current bring-up mapping
+  control->thrustSi  = setpoint->forceTorqueSI.thrust_N;
   control->torqueX = setpoint->forceTorqueSI.torque_Nm[0];
   control->torqueY = setpoint->forceTorqueSI.torque_Nm[1];
   control->torqueZ = setpoint->forceTorqueSI.torque_Nm[2];
