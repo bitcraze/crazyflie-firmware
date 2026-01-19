@@ -253,7 +253,7 @@
     #define EKF_DRAG_RY 0.0f
 #endif
 #ifndef EKF_DRAG_RZ
-#define EKF_DRAG_RZ 0.0f
+    #define EKF_DRAG_RZ 0.0f
 #endif
 
 // Autonomous navigation defaults

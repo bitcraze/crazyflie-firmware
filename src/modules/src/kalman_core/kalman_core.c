@@ -71,7 +71,7 @@
 
 // #define DEBUG_STATE_CHECK
 
-// The drag coefficients, used to model the drag on the flapper
+// The drag coefficients
 float dragBx = EKF_DRAG_BX; // drag on the X axis 
 float dragBy = EKF_DRAG_BY; // drag on the Y axis
 float dragBz = EKF_DRAG_BZ; // drag on the Z axis
