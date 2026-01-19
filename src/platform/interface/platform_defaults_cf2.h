@@ -54,32 +54,36 @@
         #define CF_MASS 0.029f  // kg
     #endif
 #endif
-// thrust coefficients
+// Thrust curve coefficients (per motor) and minimum and maximal thrust per motor
+// Note: The maximum thrust is a trade-off between consistency of thrust over all battery levels
+// and maximum performance with a full battery. Increase this value at your own risk. More info
+// in #1526 or this blog post: 
+// https://www.bitcraze.io/2025/10/keeping-thrust-consistent-as-the-battery-drains/
 #ifdef CONFIG_ENABLE_THRUST_BAT_COMPENSATED
     #if defined(CONFIG_CRAZYFLIE_21_PLUS)    // default case, 2.1+ propellers
         #define VMOTOR2THRUST0  -0.02476537915958403f
         #define VMOTOR2THRUST1  0.06523793527519485f
         #define VMOTOR2THRUST2  -0.026792504967750107f
         #define VMOTOR2THRUST3  0.006776789303971145f
-        #define THRUST_MIN      0.02f
-        #define THRUST_MAX      0.1125f
-        #define THRUST2TORQUE   0.005964552f // TODO, value is for the legacy propellers and old battery compensation
-    #elif defined(CONFIG_CRAZYFLIE_THRUST_UPGRADE_KIT)  // Thrust upgrade kit
-        #define VMOTOR2THRUST0  -0.03978221591250353f
-        #define VMOTOR2THRUST1  0.10979738851226176f
-        #define VMOTOR2THRUST2  -0.05545304285403245f
-        #define VMOTOR2THRUST3  0.016215002062640885f
-        #define THRUST_MIN      0.03f
-        #define THRUST_MAX      0.1625f
-        #define THRUST2TORQUE   0.005964552f // TODO, value is for the legacy propellers and old battery compensation
+        #define THRUST_MIN      0.012817578393224994f  // N (per motor)
+        #define THRUST_MAX      0.12f                  // N (per motor)
+        #define THRUST2TORQUE   0.0069928948992470565f // m
+    #elif defined(CONFIG_CRAZYFLIE_THRUST_UPGRADE_KIT) // Thrust upgrade kit
+        #define VMOTOR2THRUST0  0.006728127583707208f
+        #define VMOTOR2THRUST1  0.01011557616217668f
+        #define VMOTOR2THRUST2  0.010263198062061085f
+        #define VMOTOR2THRUST3  0.0028358638322392503f
+        #define THRUST_MIN      0.01922636758983749f   // N (per motor)
+        #define THRUST_MAX      0.18f                  // N (per motor)
+        #define THRUST2TORQUE   0.0051648627905205285f // m
     #elif defined(CONFIG_CRAZYFLIE_LEGACY_PROPELLERS)  // legacy propellers
         #define VMOTOR2THRUST0  -0.014830744918356092f
         #define VMOTOR2THRUST1  0.04724465241828281f
         #define VMOTOR2THRUST2  -0.01847364358025878f
         #define VMOTOR2THRUST3  0.005960923942142f
-        #define THRUST_MIN      0.02f
-        #define THRUST_MAX      0.1125f
-        #define THRUST2TORQUE   0.005964552f
+        #define THRUST_MIN      0.012817578393224994f  // N (per motor)
+        #define THRUST_MAX      0.12f                  // N (per motor)
+        #define THRUST2TORQUE   0.007350862856566459f  // m
     #endif
 #endif
 

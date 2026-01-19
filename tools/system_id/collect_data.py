@@ -447,6 +447,8 @@ class CollectDataStatic(CollectData):
                 )
                 raise NotImplementedError(error)
             self._cf.param.set_value("motorPowerSet.enable", 3)
+            global PWM_MIN
+            PWM_MIN = 0  # in testing mode, we also want to check 0 thrust commands
             print("Collecting data with battery compensation")
         else:
             if self.torques:
@@ -488,8 +490,8 @@ class CollectDataStatic(CollectData):
 
                 info = f"time={time.time() - t_start:.1f}s, "
                 info += f"pwm cmd={pwm}, "
-                info += f"pwm actual={(data['motor.m1']) if not self.torques else (data['motor.m1'] + data['motor.m2']) / 2}, "
-                info += f"rotor speed={(data['rpm.m1']) if not self.torques else (data['rpm.m1'] + data['rpm.m2']) / 2}, "
+                info += f"pwm actual={(data['motor.m1']) if not self.torques else (data['motor.m1'] + data['motor.m2']) / 2:.1f}, "
+                info += f"rotor speed={(data['rpm.m1']) if not self.torques else (data['rpm.m1'] + data['rpm.m2']) / 2:.1f}, "
                 info += f"vbat={data['pm.vbatMV'] / 1000:.3f}V, "
                 info += f"vmotors={data['pm.vbatMV'] / 1000 * pwm / PWM_MAX:.3f}V, "
                 info += f"thrust={data['loadcell.weight'] * self.g:.3f}mN"
@@ -509,7 +511,7 @@ class CollectDataStatic(CollectData):
             if self.loadcell is not None and i % 20 == 0:
                 self._measure(0, min_samples=10)
                 self._measure(0, min_samples=10, a_motors=False)
-                time.sleep(1.0)
+                time.sleep(2.0)
                 self.loadcell.calibrate()
 
             if time.time() - t_start > t_max:
@@ -526,7 +528,14 @@ class CollectDataDynamic(CollectData):
     """
 
     def __init__(
-        self, link_uri, calib_a, calib_b, comb, extra, loadcell=None, verbose=False
+        self,
+        link_uri,
+        calib_a,
+        calib_b,
+        comb,
+        extra,
+        loadcell=None,
+        verbose=False,
     ):
         """Initialize and run the example with the specified link_uri"""
         self.samplerate = 7  # has to be in [0,7], where 7 is the highest.
@@ -539,6 +548,7 @@ class CollectDataDynamic(CollectData):
             "dynamic",
             comb,
             extra,
+            batComp=True,
             loadcell=loadcell,
             verbose=verbose,
         )
@@ -571,73 +581,105 @@ class CollectDataDynamic(CollectData):
         self._cf.param.set_value("motorPowerSet.m1", int(thrust))
         print(f"Applied pwm={thrust}, waiting for {duration}s")
         while time.time() - start < duration:
-            self._localization.send_emergency_stop_watchdog()
-            time.sleep(0.1)
+            # self._localization.send_emergency_stop_watchdog()
+            time.sleep(0.001)
 
     def _ramp_motors(self):
         self._check_parameters()
 
         self._cf.param.set_value("motorPowerSet.m1", 0)
 
-        duration = 1.0
+        if self.batComp:
+            self._cf.param.set_value("motorPowerSet.enable", 3)
+            print("Collecting data with battery compensation")
+        else:
+            self._cf.param.set_value("motorPowerSet.enable", 2)
+            print("Collecting data without battery compensation")
 
-        # collecting data twice:
-        # Once with and once without battery compensation
-        while self.is_connected:
-            if self.batComp:
-                self._cf.param.set_value("motorPowerSet.enable", 3)
-                print("Collecting data with battery compensation")
-            else:
-                self._cf.param.set_value("motorPowerSet.enable", 2)
-                print("Collecting data without battery compensation")
-
-            # base speed
-            self._applyThrust(PWM_MIN, duration)
-
-            # 0 -> 0.25
-            self._applyThrust((PWM_MAX + PWM_MIN) * 1 / 4, duration)
-            # 0.25 -> 0
-            self._applyThrust(PWM_MIN, duration)
-
-            # 0 -> 0.5
-            self._applyThrust((PWM_MAX + PWM_MIN) / 2, duration)
-            # 0.5 -> 0
-            self._applyThrust(PWM_MIN, duration)
-
-            # 0 -> 0.75
-            self._applyThrust((PWM_MAX + PWM_MIN) * 3 / 4, duration)
-            # 0.75 -> 0
-            self._applyThrust(PWM_MIN, duration)
-
-            # 0 -> 1
-            self._applyThrust(PWM_MAX, duration)
-            # 1 -> 0
-            self._applyThrust(PWM_MIN, duration)
-
-            # 0.5 -> 0.25
-            self._applyThrust((PWM_MAX + PWM_MIN) / 2, duration)
-            self._applyThrust((PWM_MAX + PWM_MIN) * 1 / 4, duration)
-            # 0.25 -> 0.5
-            self._applyThrust((PWM_MAX + PWM_MIN) / 2, duration)
-
-            # 0.5 -> 0.75
-            self._applyThrust((PWM_MAX + PWM_MIN) * 3 / 4, duration)
-            # 0.75 -> 0.5
-            self._applyThrust((PWM_MAX + PWM_MIN) / 2, duration)
-
-            # 0.5 -> 1.0
-            self._applyThrust(PWM_MAX, duration)
-            # 1.0 -> 0.5
-            self._applyThrust((PWM_MAX + PWM_MIN) / 2, duration)
-
-            self._applyThrust(0, duration)
-
-            if self.batComp:
-                break
-            else:
-                self.batComp = True
+        self._ramp_motors_chirp()
+        self._ramp_motors_step()
 
         self._close()
+
+    def _ramp_motors_step(self, duration: float = 1.0):
+        # base speed
+        self._applyThrust(PWM_MIN, 2 * duration)
+
+        # 0 -> 0.25
+        self._applyThrust((PWM_MAX + PWM_MIN) * 1 / 4, duration)
+        # 0.25 -> 0
+        self._applyThrust(PWM_MIN, duration)
+
+        # 0 -> 0.5
+        self._applyThrust((PWM_MAX + PWM_MIN) / 2, duration)
+        # 0.5 -> 0
+        self._applyThrust(PWM_MIN, duration)
+
+        # 0 -> 0.75
+        self._applyThrust((PWM_MAX + PWM_MIN) * 3 / 4, duration)
+        # 0.75 -> 0
+        self._applyThrust(PWM_MIN, duration)
+
+        # 0 -> 1
+        self._applyThrust(PWM_MAX, duration)
+        # 1 -> 0
+        self._applyThrust(PWM_MIN, duration)
+
+        # 0.5 -> 0.25
+        self._applyThrust((PWM_MAX + PWM_MIN) / 2, duration)
+        self._applyThrust((PWM_MAX + PWM_MIN) * 1 / 4, duration)
+        # 0.25 -> 0.5
+        self._applyThrust((PWM_MAX + PWM_MIN) / 2, duration)
+
+        # 0.5 -> 0.75
+        self._applyThrust((PWM_MAX + PWM_MIN) * 3 / 4, duration)
+        # 0.75 -> 0.5
+        self._applyThrust((PWM_MAX + PWM_MIN) / 2, duration)
+
+        # 0.5 -> 1.0
+        self._applyThrust(PWM_MAX, duration)
+        # 1.0 -> 0.5
+        self._applyThrust((PWM_MAX + PWM_MIN) / 2, duration)
+
+        # base speed
+        self._applyThrust(PWM_MIN, 2 * duration)
+
+    def _ramp_motors_chirp(self):
+        # base speed
+        self._applyThrust(PWM_MAX / 4, 2.0)
+
+        chirp_duration = 30  # s
+        chirp_send_frequency = 100  # Hz
+        chirp_f0 = 0.1  # Hz
+        chirp_f1 = 5  # Hz
+
+        from scipy.signal import chirp
+
+        t = np.linspace(0, chirp_duration, chirp_duration * chirp_send_frequency)
+        c = chirp(t, chirp_f0, chirp_duration, chirp_f1, method="lin", phi=180)
+        # [PWM_MIN, PWM_MIN+PWM_MAX/4]
+        for sine in c:
+            sine = (sine + 1) / 2  # Scaling to [0,1]
+            pwm = sine * PWM_MAX / 4 + PWM_MIN  # Scaling to useful PWM values
+            self._applyThrust(pwm, 1 / chirp_send_frequency)
+
+        # [PWM_MIN, PWM_MIN+PWM_MAX/2]
+        for sine in c:
+            sine = (sine + 1) / 2  # Scaling to [0,1]
+            pwm = sine * PWM_MAX / 2 + PWM_MIN  # Scaling to useful PWM values
+            self._applyThrust(pwm, 1 / chirp_send_frequency)
+
+        # [PWM_MAX/4, PWM_MAX*3/4]
+        for sine in c:
+            sine = (sine + 1) / 2  # Scaling to [0,1]
+            pwm = sine * PWM_MAX / 2 + PWM_MAX / 4  # Scaling to useful PWM values
+            self._applyThrust(pwm, 1 / chirp_send_frequency)
+
+        # [PWM_MAX/2, PWM_MAX]
+        for sine in c:
+            sine = (sine + 1) / 2  # Scaling to [0,1]
+            pwm = sine * PWM_MAX / 2 + PWM_MAX / 2  # Scaling to useful PWM values
+            self._applyThrust(pwm, 1 / chirp_send_frequency)
 
 
 if __name__ == "__main__":
