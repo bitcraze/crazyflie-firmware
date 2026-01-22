@@ -98,11 +98,13 @@ typedef float * (*paramGetterFloat)(void);
 // CRTP Misc
 #define MISC_SETBYNAME            0
 #define MISC_VALUE_UPDATED        1
-#define MISC_GET_EXTENDED_TYPE    2
+#define MISC_GET_EXTENDED_TYPE    2  // Deprecated: Use MISC_GET_EXTENDED_TYPE_V2 (CRTP protocol v11+)
 #define MISC_PERSISTENT_STORE     3
 #define MISC_PERSISTENT_GET_STATE 4
 #define MISC_PERSISTENT_CLEAR     5
-#define MISC_GET_DEFAULT_VALUE    6
+#define MISC_GET_DEFAULT_VALUE    6  // Deprecated: Use MISC_GET_DEFAULT_VALUE_V2 (CRTP protocol v11+)
+#define MISC_GET_EXTENDED_TYPE_V2 7
+#define MISC_GET_DEFAULT_VALUE_V2 8
 
 /* Macros */
 
