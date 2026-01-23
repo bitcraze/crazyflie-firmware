@@ -76,6 +76,14 @@ config ESTIMATOR_KALMAN_GENERAL_PURPOSE
         use any drone specific information for state estimation, this is useful when using the Crazyflie as a general
         positioning tag (tracker).
 
+config ESTIMATOR_KALMAN_INITIAL_YAW_STD
+    int "Configure the initial yaw standard deviation in the Kalman filter."
+    default 10
+    depends on ESTIMATOR_KALMAN_ENABLE
+    help
+        The initial yaw standard deviation describes how uncertain the Kalman estimator assumes the yaw angle is at startup.
+        Note that the entered value is in milliradians (mrad).
+
 config ESTIMATOR_UKF_ENABLE
     bool "Enable error-state UKF estimator"
     select ESTIMATOR_OUTLIER_FILTERS
@@ -91,6 +99,7 @@ config ESTIMATOR_OUTLIER_FILTERS
 choice
     prompt "Default estimator"
     default CONFIG_ESTIMATOR_AUTO_SELECT
+    depends on !ESTIMATOR_OOT
 
 config ESTIMATOR_AUTO_SELECT
     bool "Auto select Estimator"

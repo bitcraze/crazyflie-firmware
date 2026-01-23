@@ -1,10 +1,6 @@
 import math
 import cffirmware
 
-
-
-
-
 class EstimatorKalmanEmulator:
     """
     This class emulates the behavior of estimator_kalman.c and is used as a helper to enable testing of the kalman
@@ -28,6 +24,9 @@ class EstimatorKalmanEmulator:
         self.TDOA_ENGINE_MEASUREMENT_NOISE_STD = 0.30
         self.PREDICT_RATE = 100
         self.PREDICT_STEP_MS = 1000 / self.PREDICT_RATE
+
+        self.EXT_POS_STD_DEV = 0.01
+        self.EXT_QUAT_STD_DEV = 4.5e-3
 
         self._is_initialized = False
 
@@ -96,14 +95,18 @@ class EstimatorKalmanEmulator:
         self._is_initialized = True
 
     def _update_queued_measurements(self, now_ms: int, sensor_samples):
-        done = False
-
+        # Continue processing as long as there is data
         while len(sensor_samples):
-            sample = sensor_samples.pop(0)
+            # Peek at the first sample without removing it
+            sample = sensor_samples[0]
             time_ms = int(sample[1]['timestamp'])
+
+            # If the sample is ready to be processed (past or present time)
             if time_ms <= now_ms:
+                sensor_samples.pop(0)  # Now it's safe to remove it
                 self._update_with_sample(sample, now_ms)
             else:
+                # The next sample is in the future; stop processing for this step
                 return
 
     def _update_with_sample(self, sample, now_ms):
@@ -120,7 +123,7 @@ class EstimatorKalmanEmulator:
 
             cffirmware.kalmanCoreUpdateWithTdoa(self.coreData, tdoa, now_ms, self.outlierFilterState)
 
-        if sample[0] == 'estAcceleration':
+        elif sample[0] == 'estAcceleration':
             acc_data = sample[1]
 
             acc = cffirmware.Axis3f()
@@ -130,7 +133,7 @@ class EstimatorKalmanEmulator:
 
             cffirmware.axis3fSubSamplerAccumulate(self.accSubSampler, acc)
 
-        if sample[0] == 'estGyroscope':
+        elif sample[0] == 'estGyroscope':
             gyro_data = sample[1]
 
             gyro = cffirmware.Axis3f()
@@ -139,3 +142,28 @@ class EstimatorKalmanEmulator:
             gyro.z = float(gyro_data['gyro.z'])
 
             cffirmware.axis3fSubSamplerAccumulate(self.gyroSubSampler, gyro)
+
+        elif sample[0] == 'estExtPose':
+            ext_pose = cffirmware.poseMeasurement_t()
+            ext_quat = cffirmware.quaternion_t()
+
+            pose_data = sample[1]
+
+            ext_pose.x = float(pose_data['pos_x'])
+            ext_pose.y = float(pose_data['pos_y'])
+            ext_pose.z = float(pose_data['pos_z'])
+
+            ext_quat.x = float(pose_data['quat_x'])
+            ext_quat.y = float(pose_data['quat_y'])
+            ext_quat.z = float(pose_data['quat_z'])
+            ext_quat.w = float(pose_data['quat_w'])
+
+            ext_pose.quat = ext_quat
+
+            ext_pose.stdDevPos = float(pose_data.get('stdDevPos', self.EXT_POS_STD_DEV))
+            ext_pose.stdDevQuat = float(pose_data.get('stdDevQuat', self.EXT_QUAT_STD_DEV))
+
+            cffirmware.kalmanCoreUpdateWithPose(self.coreData, ext_pose)
+
+        else:
+            print(f"Unhandled measurement!: {sample[0]}")
