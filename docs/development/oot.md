@@ -52,6 +52,17 @@ EXTRA_CFLAGS += -I$(PWD)/src/inc
 
 OOT builds can be configured with [Kbuild](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/development/kbuild/) using terminal interfaces like `make menuconfig` or by loading a default configuration, such as with `make cf2_defconfig`. Any definitions in $(OOT_CONFIG) will override conflicting settings.
 
+> **Note:** If you are using **macOS** you may encounter errors when trying to build your app, such as: 
+> ```
+> readlink: illegal option -- m
+> sed: invalid command code .
+> cp: illegal option -- T
+> ```
+> This happens because the app-layer build expects the GNU versions of `readlink`, `sed` and `cp`. To fix the errors, install and use the GNU utilities:
+> ```
+> brew install coreutils gnu-sed
+> ```
+
 ## OOT estimators
 The `config` file needs to enable ESTIMATOR_OOT, and can also set other config options:
 
