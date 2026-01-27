@@ -167,7 +167,7 @@ This packet is send by the Crazyflie when a parameters has been modified in the 
 This can for example happen when an app is controlling the Crazyflie autonomously.
 
 ### Get extended type
-**Deprecated**: Use [Get extended type V2 (0x07)](#get-extended-type-v2) instead. This command has ambiguous responses for parameters without extended type.
+**Deprecated**: Use [Get extended type V2 (0x07)](#get-extended-type-v2) instead. This command may have ambiguous responses if the extended_type value equals an error code (e.g., ENOENT=2). Currently not an issue (only extended_type=1 exists), but the V2 command provides an unambiguous format.
 
 Get the extended type of a parameter.
 
