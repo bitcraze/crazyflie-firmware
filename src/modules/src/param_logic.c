@@ -651,6 +651,9 @@ void paramSetByName(CRTPPacket *p)
 
 #define KEY_LEN 30  // FIXME
 
+// Deprecated: Use paramGetExtendedTypeV2() (MISC_GET_EXTENDED_TYPE_V2) instead.
+// This version may have ambiguous responses if extended_type value equals an error code (e.g., ENOENT=2).
+// Currently not an issue (only extended_type=1 exists), but kept for backward compatibility.
 void paramGetExtendedType(CRTPPacket *p)
 {
   int index;
@@ -668,6 +671,31 @@ void paramGetExtendedType(CRTPPacket *p)
 
   p->data[3] = params[index].extended_type;
   p->size = 4;
+
+  crtpSendPacketBlock(p);
+}
+
+void paramGetExtendedTypeV2(CRTPPacket *p)
+{
+  int index;
+  uint16_t id;
+
+  memcpy(&id, &p->data[1], 2);
+  index = variableGetIndex(id);
+
+  if (index < 0 || !(params[index].type & PARAM_EXTENDED)) {
+    p->data[3] = ENOENT;
+    p->size = 4;
+    crtpSendPacketBlock(p);
+    return;
+  }
+
+  // CRTP protocol v11+: Unambiguous format with status byte
+  // Success: [CMD, ID_LOW, ID_HIGH, STATUS=0x00, EXTENDED_TYPE] - size = 5
+  // Error:   [CMD, ID_LOW, ID_HIGH, ERROR_CODE] - size = 4
+  p->data[3] = 0x00;  // Status: success
+  p->data[4] = params[index].extended_type;
+  p->size = 5;
 
   crtpSendPacketBlock(p);
 }
@@ -714,6 +742,10 @@ void paramPersistentStore(CRTPPacket *p)
   crtpSendPacketBlock(p);
 }
 
+// Deprecated: Use paramGetDefaultValueV2() (MISC_GET_DEFAULT_VALUE_V2) instead.
+// This version has ambiguous responses for U8 parameters with default value 2 (ENOENT):
+// both success [CMD, ID_L, ID_H, 0x02] and error [CMD, ID_L, ID_H, ENOENT=0x02] are identical.
+// Kept for backward compatibility with older clients.
 void paramGetDefaultValue(CRTPPacket *p)
 {
   uint16_t id;
@@ -738,6 +770,38 @@ void paramGetDefaultValue(CRTPPacket *p)
     memcpy(&p->data[3], paramGetDefault(index), paramLen);
   }
   p->size = 3 + paramLen;
+  crtpSendPacketBlock(p);
+}
+
+void paramGetDefaultValueV2(CRTPPacket *p)
+{
+  uint16_t id;
+
+  memcpy(&id, &p->data[1], sizeof(id));
+  int index = variableGetIndex(id);
+
+  const bool doesParamExist = (index >= 0);
+  // Read-only parameters have no default value
+  if (!doesParamExist || params[index].type & PARAM_RONLY) {
+    p->data[3] = ENOENT;
+    p->size = 4;
+    crtpSendPacketBlock(p);
+    return;
+  }
+
+  // CRTP protocol v11+: Unambiguous format with status byte
+  // Success: [CMD, ID_LOW, ID_HIGH, STATUS=0x00, VALUE...] - size = 4 + paramLen
+  // Error:   [CMD, ID_LOW, ID_HIGH, ERROR_CODE] - size = 4
+  p->data[3] = 0x00;  // Status: success
+
+  // Add default value after status byte
+  uint8_t paramLen = paramGetLen(index);
+  if (params[index].getter) {
+    memcpy(&p->data[4], params[index].getter(), paramLen);
+  } else {
+    memcpy(&p->data[4], paramGetDefault(index), paramLen);
+  }
+  p->size = 4 + paramLen;
   crtpSendPacketBlock(p);
 }
 

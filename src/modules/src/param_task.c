@@ -94,6 +94,9 @@ void paramTask(void * prm)
         case MISC_GET_EXTENDED_TYPE:
           paramGetExtendedType(&p);
           break;
+        case MISC_GET_EXTENDED_TYPE_V2:
+          paramGetExtendedTypeV2(&p);
+          break;
         case MISC_PERSISTENT_STORE:
           paramPersistentStore(&p);
           break;
@@ -105,6 +108,9 @@ void paramTask(void * prm)
           break;
         case MISC_GET_DEFAULT_VALUE:
           paramGetDefaultValue(&p);
+          break;
+        case MISC_GET_DEFAULT_VALUE_V2:
+          paramGetDefaultValueV2(&p);
           break;
         default:
           break;
