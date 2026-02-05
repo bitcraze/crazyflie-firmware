@@ -52,6 +52,9 @@
 
 #define CMD_RESPONSE        0x80
 
+// Initializes supervisor CRTP handling:
+// - SUPERVISOR_CH_COMMAND handled in CRTP RX callback (high priority)
+// - SUPERVISOR_CH_INFO handled in a low-priority task via queue
 void crtpSupervisorInit(void);
 
 #endif

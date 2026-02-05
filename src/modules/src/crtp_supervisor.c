@@ -28,13 +28,27 @@
 
 
 #include "cfassert.h"
+#include "config.h"
 #include "crtp.h"
 #include "supervisor.h"
 #include "crtp_supervisor.h"
 #include <string.h>
 #include "debug.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+
+#include "static_mem.h"
+
+// Hybrid CRTP handling for supervisor:
+// - SUPERVISOR_CH_COMMAND handled in CRTP RX callback (high priority)
+// - SUPERVISOR_CH_INFO handled in a low-priority task via queue
+
 static bool isInit = false;
+
+STATIC_MEM_TASK_ALLOC(supervisorTask, SUPERVISOR_TASK_STACKSIZE);
+
+static void supervisorTask(void *param);
 
 static void crtpSupervisorCB(CRTPPacket* p);
 static void handleSupervisorInfo(CRTPPacket* p);
@@ -47,30 +61,38 @@ void crtpSupervisorInit(void)
     if(isInit) {
         return;
     }
-    // Register the callback for the supervisor port
+
+    // Register the callback for high-priority commands
     crtpRegisterPortCB(CRTP_PORT_SUPERVISOR, crtpSupervisorCB);
+
+    // Create a low-priority task/queue for info requests
+    crtpInitTaskQueue(CRTP_PORT_SUPERVISOR);
+    STATIC_MEM_TASK_CREATE(supervisorTask, supervisorTask, SUPERVISOR_TASK_NAME, NULL, SUPERVISOR_TASK_PRI);
+
     isInit = true;
 }
 
 
 static void crtpSupervisorCB(CRTPPacket* pk)
-// It reads the channel from the packet and dispatches it to the correct handler.
+// High-priority handler: only time-critical commands.
 {
-
-    switch (pk->channel)
-    {
-        case SUPERVISOR_CH_INFO:
-            handleSupervisorInfo(pk);
-            break;
-
-        case SUPERVISOR_CH_COMMAND:
-            handleSupervisorCommand(pk);
-            break;
-
-        default:
-            break;
+    if (pk->channel == SUPERVISOR_CH_COMMAND) {
+        handleSupervisorCommand(pk);
     }
+}
 
+static void supervisorTask(void *param)
+// Low-priority handler: status/info requests.
+{
+    CRTPPacket p;
+
+    while (true) {
+        crtpReceivePacketBlock(CRTP_PORT_SUPERVISOR, &p);
+
+        if (p.channel == SUPERVISOR_CH_INFO) {
+            handleSupervisorInfo(&p);
+        }
+    }
 }
 
 
