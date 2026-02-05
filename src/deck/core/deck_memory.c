@@ -37,9 +37,9 @@
 
 static const uint32_t DECK_MEM_MAX_SIZE = 0x10000000;
 
-static uint32_t handleMemGetSize(void) { return DECK_MEM_MAX_SIZE * (DECK_MAX_COUNT + 1); }
-TESTABLE_STATIC bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
-TESTABLE_STATIC bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
+static uint32_t handleMemGetSize(const uint8_t internal_id) { return DECK_MEM_MAX_SIZE * (DECK_MAX_COUNT + 1); }
+TESTABLE_STATIC bool handleMemRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
+TESTABLE_STATIC bool handleMemWrite(const uint8_t internal_id, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
 static const MemoryHandlerDef_t memoryDef = {
   .type = MEM_TYPE_DECK_MEM,
   .getSize = handleMemGetSize,
@@ -304,7 +304,7 @@ static bool handleDeckSectionWrite(const uint32_t memAddr, const uint8_t writeLe
     return result;
 }
 
-TESTABLE_STATIC bool handleMemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+TESTABLE_STATIC bool handleMemRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
     bool result = false;
     int nrOfDecks = deckCount();
 
@@ -324,7 +324,7 @@ TESTABLE_STATIC bool handleMemRead(const uint32_t memAddr, const uint8_t readLen
     return result;
 }
 
-TESTABLE_STATIC bool handleMemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
+TESTABLE_STATIC bool handleMemWrite(const uint8_t internal_id, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
     bool result = false;
     int nrOfDecks = deckCount();
 

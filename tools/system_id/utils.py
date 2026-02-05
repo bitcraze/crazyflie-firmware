@@ -1,14 +1,12 @@
 """Helper functions for plotting"""
 
 import numpy as np
-import os
-import yaml
 
 
 def loadFile(filename: str) -> dict:
     rawdata = np.loadtxt(filename, delimiter=",", skiprows=1, ndmin=2)
     data = {}
-    time = rawdata[:, 0] / 1000  # scale to seconds
+    time = rawdata[:, 0]
     data["time"] = time - time[0]  # make time start at 0
     data["thrust"] = rawdata[:, 1]  # load cell force in [N]
     data["pwm"] = rawdata[:, 2]
@@ -22,7 +20,15 @@ def loadFile(filename: str) -> dict:
     data["i"] = rawdata[:, 9]  # in [A]
     data["p"] = rawdata[:, 10]  # in [W]
     data["cmd"] = rawdata[:, 11]  # in [PWM]
-    # data["maxThrustVbat"] = rawdata[:,11] # in [V]
+    try:
+        data["torque_x"] = rawdata[:, 12]  # in [N]
+        data["torque_y"] = rawdata[:, 13]  # in [N]
+        data["torque_z"] = rawdata[:, 14]  # in [N]
+    except IndexError:
+        print(f"Warning: {filename} does not contain torque data. Setting it to 0")
+        data["torque_x"] = 0.0 * rawdata[:, 1]
+        data["torque_y"] = 0.0 * rawdata[:, 1]
+        data["torque_z"] = 0.0 * rawdata[:, 1]
     return data
 
 
@@ -36,8 +42,9 @@ def loadFiles(filenames: list) -> dict:
     return data
 
 
-def cutData(data: dict, tStart: float = None, tEnd: float = None):
+def cutData(data: dict, tStart: float | None = None, tEnd: float | None = None):
     if tEnd is not None:
+        tEnd = data["time"][-1] + tEnd if tEnd < 0 else tEnd
         end_idx = np.searchsorted(data["time"], tEnd, side="left") - 1
     else:
         end_idx = -1
@@ -69,53 +76,47 @@ def inversepoly(y, param, order):
             2 * param[2]
         )
     elif order == 3:
-        # https://math.vanderbilt.edu/schectex/courses/cubic/
-        # a = p[3], b = p[2], c = p[1], d = p[0]-thrust
-        p = -param[2] / (3 * param[3])
-        q = p**3 + (param[2] * param[1] - 3 * param[3] * (param[0] - y)) / (
-            6 * param[3] ** 2
-        )
-        r = param[1] / (3 * param[3])
+        # # https://math.vanderbilt.edu/schectex/courses/cubic/
+        # # a = p[3], b = p[2], c = p[1], d = p[0]-thrust
+        # p = -param[2] / (3 * param[3])
+        # q = p**3 + (param[2] * param[1] - 3 * param[3] * (param[0] - y)) / (
+        #     6 * param[3] ** 2
+        # )
+        # r = param[1] / (3 * param[3])
 
-        qrp = np.sqrt(q**2 + (r - p**2) ** 3)
-        return np.cbrt(q + qrp) + np.cbrt(q - qrp) + p
+        # qrp = np.sqrt(q**2 + (r - p**2) ** 3)
+        # return np.cbrt(q + qrp) + np.cbrt(q - qrp) + p
+        sol = []
+        y = np.atleast_1d(y)
+        for yi in y:
+            # Cubic solved via numpy.roots
+            coeffs = [param[3], param[2], param[1], param[0] - yi]
+            roots = np.roots(coeffs)
+            real_roots = roots[np.isreal(roots)].real
+            # for our fits, the solution is always the largest root
+            sol.append(float(np.max(real_roots)))
+        return np.array(sol)
     else:
         raise NotImplementedError(
             f"Inverted polynomial of order {order} not supported."
         )
 
 
-def loadYAML(comb: str, variableName, arrayLength=0):
-    filename = f"params_{comb}.yaml"
-    with open(filename, "r") as f:
-        file = yaml.safe_load(f)
-    if arrayLength == 0:
-        return file[variableName]
+def convert_parameters(obj):
+    """Recursively convert:
+    - NumPy arrays -> lists
+    - NumPy floats/ints -> Python floats/ints
+    Works for nested dicts and lists.
+    """
+    if isinstance(obj, dict):
+        return {k: convert_parameters(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_parameters(x) for x in obj]
+    elif isinstance(obj, np.ndarray):
+        return convert_parameters(obj.tolist())
+    elif isinstance(obj, (np.float32, np.float64)):
+        return float(obj)
+    elif isinstance(obj, (np.int32, np.int64)):
+        return int(obj)
     else:
-        variables = []
-        for i in range(arrayLength):
-            variables.append(file[f"{variableName}{i}"])
-        return variables
-
-
-def storeYAML(comb: str, variable, variableName, verbose=False):
-    filename = f"params_{comb}.yaml"
-    # Check if file already exist -> if so, add/overwrite variable
-    file = {}
-    if os.path.isfile(filename):
-        if verbose:
-            print("Overwriting file")
-        with open(filename, "r") as f:
-            file = yaml.safe_load(f)
-
-    if type(variable) is np.ndarray or type(variable) is list:
-        for i in range(len(variable)):
-            file[f"{variableName}{i}"] = float(variable[i])
-    else:
-        file[variableName] = float(variable)
-
-    with open(filename, "w") as f:
-        yaml.dump(file, f)
-
-    if verbose:
-        print(f"Stored {variableName} in {filename}")
+        return obj

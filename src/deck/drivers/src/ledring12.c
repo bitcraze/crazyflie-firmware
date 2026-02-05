@@ -46,6 +46,7 @@
 #include "pulse_processor.h"
 #endif
 #include "mem.h"
+#include "led_deck_controller.h"
 
 #define DEBUG_MODULE "LED"
 #include "debug.h"
@@ -73,9 +74,9 @@ static ledtimings ledringtimingsmem;
 static bool isInit = false;
 
 // Memory handler for ledringmem
-static uint32_t handleLedringmemGetSize(void) { return sizeof(ledringmem); }
-static bool handleLedringmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
-static bool handleLedringmemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
+static uint32_t handleLedringmemGetSize(const uint8_t internal_id) { return sizeof(ledringmem); }
+static bool handleLedringmemRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
+static bool handleLedringmemWrite(const uint8_t internal_id, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
 static const MemoryHandlerDef_t ledringmemDef = {
   .type = MEM_TYPE_LED12,
   .getSize = handleLedringmemGetSize,
@@ -84,9 +85,9 @@ static const MemoryHandlerDef_t ledringmemDef = {
 };
 
 // Memory handler for timingmem
-static uint32_t handleTimingmemGetSize(void) { return sizeof(ledringtimingsmem); }
-static bool handleTimingmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
-static bool handleTimingmemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
+static uint32_t handleTimingmemGetSize(const uint8_t internal_id) { return sizeof(ledringtimingsmem); }
+static bool handleTimingmemRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
+static bool handleTimingmemWrite(const uint8_t internal_id, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer);
 static const MemoryHandlerDef_t timingmemDef = {
   .type = MEM_TYPE_LEDMEM,
   .getSize = handleTimingmemGetSize,
@@ -143,6 +144,11 @@ typedef void (*Ledring12Effect)(uint8_t buffer[][3], bool reset);
 static uint32_t effect = LEDRING_DEFAULT_EFFECT;
 static uint32_t neffect;
 static uint8_t headlightEnable = 0;
+
+// Generic LED controller
+static paramVarId_t fadeColorParamId;
+static paramVarId_t fadeTimeParamId;
+static paramVarId_t effectParamId;
 static uint8_t black[][3] = {BLACK, BLACK, BLACK,
                              BLACK, BLACK, BLACK,
                              BLACK, BLACK, BLACK,
@@ -154,6 +160,24 @@ static const uint8_t red[] = {0xFF, 0x00, 0x00};
 static const uint8_t blue[] = {0x00, 0x00, 0xFF};
 static const uint8_t white[] = WHITE;
 static const uint8_t part_black[] = BLACK;
+
+// Generic LED controller callback
+static void ledring12SetColor(const uint8_t *rgb888) {
+  // Build RGB888 value: 0x00RRGGBB (standard format)
+  uint32_t color = ((uint32_t)rgb888[0] << 16) |
+                   ((uint32_t)rgb888[1] << 8) |
+                   rgb888[2];
+
+  // Set fadeColor and fadeTime=0 for instant color change, then switch to fadeColor effect (14)
+  float zeroTime = 0.0f;
+  paramSetInt(fadeColorParamId, color);
+  paramSetFloat(fadeTimeParamId, zeroTime);
+  paramSetInt(effectParamId, 14);
+}
+
+static const ledDeckHandlerDef_t ledring12LedHandler = {
+  .setColor = ledring12SetColor,
+};
 
 /**************** Black (LEDs OFF) ***************/
 
@@ -1086,6 +1110,12 @@ static void ledring12Init(DeckInfo *info)
   memoryRegisterHandler(&ledringmemDef);
   memoryRegisterHandler(&timingmemDef);
 
+  // Register with generic LED controller
+  fadeColorParamId = paramGetVarId("ring", "fadeColor");
+  fadeTimeParamId = paramGetVarId("ring", "fadeTime");
+  effectParamId = paramGetVarId("ring", "effect");
+  ledDeckRegisterHandler(&ledring12LedHandler);
+
   isInit = true;
 
   timer = xTimerCreate( "ringTimer", M2T(50),
@@ -1093,7 +1123,7 @@ static void ledring12Init(DeckInfo *info)
   xTimerStart(timer, 100);
 }
 
-static bool handleLedringmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+static bool handleLedringmemRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
   bool result = false;
 
   if (memAddr + readLen <= sizeof(ledringmem)) {
@@ -1105,7 +1135,7 @@ static bool handleLedringmemRead(const uint32_t memAddr, const uint8_t readLen, 
   return result;
 }
 
-static bool handleLedringmemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
+static bool handleLedringmemWrite(const uint8_t internal_id, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
   bool result = false;
 
   if ((memAddr + writeLen) <= sizeof(ledringmem)) {
@@ -1116,7 +1146,7 @@ static bool handleLedringmemWrite(const uint32_t memAddr, const uint8_t writeLen
   return result;
 }
 
-static bool handleTimingmemRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+static bool handleTimingmemRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
   bool result = false;
 
   if (memAddr + readLen <= sizeof(ledringtimingsmem.timings)) {
@@ -1128,7 +1158,7 @@ static bool handleTimingmemRead(const uint32_t memAddr, const uint8_t readLen, u
   return result;
 }
 
-static bool handleTimingmemWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
+static bool handleTimingmemWrite(const uint8_t internal_id, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
   bool result = false;
 
   if ((memAddr + writeLen) <= sizeof(ledringtimingsmem.timings)) {

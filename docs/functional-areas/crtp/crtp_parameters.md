@@ -113,10 +113,13 @@ The following misc commands are implemented:
 |  ------| ------------------------------------------------------|
 |  0x00  | [Set by name](#set-by-name)                           |
 |  0x01  | [Value updated](#value-updated)                       |
-|  0x02  | [Get extended type](#get-extended-type)               |
+|  0x02  | [Get extended type](#get-extended-type) (deprecated, use 0x07) |
 |  0x03  | [Persistent store](#persistent-store)                 |
 |  0x04  | [Persistent get state](#persistent-get-state)         |
 |  0x05  | [Persistent clear](#persistent-clear)                 |
+|  0x06  | [Get default value](#get-default-value) (deprecated, use 0x08) |
+|  0x07  | [Get extended type V2](#get-extended-type-v2) |
+|  0x08  | [Get default value V2](#get-default-value-v2) |
 
 ### Set by name
 
@@ -164,6 +167,7 @@ This packet is send by the Crazyflie when a parameters has been modified in the 
 This can for example happen when an app is controlling the Crazyflie autonomously.
 
 ### Get extended type
+**Deprecated**: Use [Get extended type V2 (0x07)](#get-extended-type-v2) instead. This command may have ambiguous responses if the extended_type value equals an error code (e.g., ENOENT=2). Currently not an issue (only extended_type=1 exists), but the V2 command provides an unambiguous format.
 
 Get the extended type of a parameter.
 
@@ -236,3 +240,63 @@ Clear the persistent data for a parameter. After reboot the parameter will be se
 | 0          | PERSISTENT_CLEAR | 0x05                             |
 | 1-2        | ID               | ID of the parameter              |
 | 3          | result           | 0x00 == success<br>0x02 (ENOENT) == parameter ID does not exist or other error |
+
+### Get default value
+
+**Deprecated**: Use [Get default value V2 (0x08)](#get-default-value-v2) instead. This command has ambiguous responses for U8 parameters with default value 2 (ENOENT).
+
+Get the default value of a parameter. The default value is the value the parameter has at startup if not overridden by persistent storage.
+
+| Byte       | Request fields      | Content                          |
+| -----------| --------------------| ---------------------------------|
+| 0          | GET_DEFAULT_VALUE   | 0x06                             |
+| 1-2        | ID                  | ID of the parameter              |
+
+| Byte       | Answer fields       | Content                          |
+| -----------| --------------------| ---------------------------------|
+| 0          | GET_DEFAULT_VALUE   | 0x06                             |
+| 1-2        | ID                  | ID of the parameter              |
+| 3          | result/value        | On error: 0x02 (ENOENT) == parameter ID does not exist or is read-only<br>On success: First byte of default value |
+| 4-...      | [value continued]   | Remaining bytes of default value (if applicable) |
+
+**Protocol ambiguity**: For U8 parameters with default value 2, the success response `[0x06, ID_L, ID_H, 0x02]` is identical to the error response with ENOENT. Clients should check the packet size to distinguish, or preferably use the V2 command.
+
+### Get extended type V2
+
+This command provides unambiguous responses compared to the deprecated [Get extended type (0x02)](#get-extended-type).
+
+Get the extended type of a parameter with an explicit status byte.
+
+| Byte       | Request fields           | Content                          |
+| -----------| -------------------------| ---------------------------------|
+| 0          | GET_EXTENDED_TYPE_V2     | 0x07                             |
+| 1-2        | ID                       | ID of the parameter              |
+
+| Byte       | Answer fields            | Content                          |
+| -----------| -------------------------| ---------------------------------|
+| 0          | GET_EXTENDED_TYPE_V2     | 0x07                             |
+| 1-2        | ID                       | ID of the parameter              |
+| 3          | status/error             | 0x00 == success<br>0x02 (ENOENT) == parameter ID does not exist or has no extended type |
+| 4          | [Extended type]          | Bit field of extended types (only present on success) |
+
+The status byte (byte 3) allows clients to distinguish success from error unambiguously. On error, the packet is 4 bytes. On success, the packet is 5 bytes with the extended type in byte 4.
+
+### Get default value V2
+
+This command provides unambiguous responses compared to the deprecated [Get default value (0x06)](#get-default-value).
+
+Get the default value of a parameter with an explicit status byte.
+
+| Byte       | Request fields          | Content                          |
+| -----------| ------------------------| ---------------------------------|
+| 0          | GET_DEFAULT_VALUE_V2    | 0x08                             |
+| 1-2        | ID                      | ID of the parameter              |
+
+| Byte       | Answer fields           | Content                          |
+| -----------| ------------------------| ---------------------------------|
+| 0          | GET_DEFAULT_VALUE_V2    | 0x08                             |
+| 1-2        | ID                      | ID of the parameter              |
+| 3          | status/error            | 0x00 == success<br>0x02 (ENOENT) == parameter ID does not exist or is read-only |
+| 4-...      | [default value]         | Default value (only present on success, size described in TOC) |
+
+The status byte (byte 3) allows clients to distinguish success from error unambiguously. On error, the packet is 4 bytes. On success, the packet is 4 + parameter_size bytes with the default value starting at byte 4.

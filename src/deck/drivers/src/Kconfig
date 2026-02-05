@@ -502,7 +502,7 @@ config DECK_LOADCELL
     default n
     help
         Enables the support for the NAU7802 loadcell.
-
+  
 config DECK_DECKCTRL_DEVBOARD
     depends on DECK_BACKEND_DECKCTRL
     bool "Support for the deckctrl devboard deck"
@@ -510,3 +510,10 @@ config DECK_DECKCTRL_DEVBOARD
     help
         Enables the support for the deckctrl devboard deck.
         This deck is used for the deckctrl development.
+
+config DECK_COLORLED
+    depends on DECK_BACKEND_DECKCTRL
+    bool "Support for Color LED deck"
+    default y
+    help
+        Enables the support for Color LED deck.

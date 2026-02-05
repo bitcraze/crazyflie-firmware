@@ -30,6 +30,7 @@
 
 #include "deck.h"
 #include "deck_memory.h"
+#include "deckctrl_dfu_memory.h"
 #include "debug.h"
 
 #ifdef CONFIG_DEBUG
@@ -45,6 +46,7 @@ void deckInit()
   deckDriverCount();
   deckInfoInit();
   deckMemoryInit();
+  deckCtrlDFUMemoryInit();
 
   int nDecks;
   int i;

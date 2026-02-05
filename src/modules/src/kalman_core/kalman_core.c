@@ -58,6 +58,7 @@
  */
 
 #include "kalman_core.h"
+#include "kalman_core_params_defaults.h"
 #include "cfassert.h"
 #include "autoconf.h"
 
@@ -116,42 +117,12 @@ static void assertStateNotNaN(const kalmanCoreData_t* this)
 // Small number epsilon, to prevent dividing by zero
 #define EPS (1e-6f)
 
+__attribute__((used))
 void kalmanCoreDefaultParams(kalmanCoreParams_t* params)
 {
-  // Initial variances, uncertain of position, but know we're stationary and roughly flat
-  params->stdDevInitialPosition_xy = 100;
-  params->stdDevInitialPosition_z = 1;
-  params->stdDevInitialVelocity = 0.01;
-  params->stdDevInitialAttitude_rollpitch = 0.01;
-  params->stdDevInitialAttitude_yaw = 0.01;
-
-  #ifdef CONFIG_ESTIMATOR_KALMAN_GENERAL_PURPOSE
-  params->procNoiseAcc_xy = 0.5f;
-  params->procNoiseAcc_z = 0.5f;
-  #else
-  params->procNoiseAcc_xy = 0.5f;
-  params->procNoiseAcc_z = 1.0f;
-  #endif
-  params->procNoiseVel = 0;
-  params->procNoisePos = 0;
-  params->procNoiseAtt = 0;
-  params->measNoiseBaro = 2.0f;           // meters
-  params->measNoiseGyro_rollpitch = 0.1f; // radians per second
-  params->measNoiseGyro_yaw = 0.1f;       // radians per second
-
-  params->initialX = 0.0;
-  params->initialY = 0.0;
-  params->initialZ = 0.0;
-
-  // Initial yaw of the Crazyflie in radians.
-  // 0 --- facing positive X
-  // PI / 2 --- facing positive Y
-  // PI --- facing negative X
-  // 3 * PI / 2 --- facing negative Y
-  params->initialYaw = 0.0;
-
-  // Roll/pitch/yaw zero reversion is on by default. Will be overridden by estimator_kalman.c if requested by the deck.
-  params->attitudeReversion = 0.001f;
+  *params = (kalmanCoreParams_t){
+    KALMAN_CORE_DEFAULT_PARAMS_INIT
+  };
 }
 
 void kalmanCoreInit(kalmanCoreData_t *this, const kalmanCoreParams_t *params, const uint32_t nowMs)

@@ -34,9 +34,9 @@
 #define MEM_TESTER_SIZE            0x1000
 
 // Private functions, mem tester
-static uint32_t handleMemTesterGetSize(void) { return MEM_TESTER_SIZE; }
-static bool handleMemTesterRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
-static bool handleMemTesterWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* startOfData);
+static uint32_t handleMemTesterGetSize(const uint8_t internal_id) { return MEM_TESTER_SIZE; }
+static bool handleMemTesterRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
+static bool handleMemTesterWrite(const uint8_t internal_id, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* startOfData);
 static uint32_t memTesterWriteErrorCount = 0;
 static uint8_t memTesterWriteReset = 0;
 static const MemoryHandlerDef_t memTesterDef = {
@@ -49,12 +49,9 @@ static const MemoryHandlerDef_t memTesterDef = {
 static bool isInit = false;
 static bool registrationEnabled = true;
 
-static uint8_t nrOfOwMems = 0;
-
 #define MAX_NR_HANDLERS 20
 static const MemoryHandlerDef_t* handlers[MAX_NR_HANDLERS];
 static uint8_t nrOfHandlers = 0;
-static const MemoryOwHandlerDef_t* owMemHandler = 0;
 
 
 void memInit(void)
@@ -73,10 +70,6 @@ bool memTest(void) {
     return false;
   }
 
-  if (owMemHandler == 0) {
-    return false;
-  }
-
   return true;
 }
 
@@ -86,26 +79,14 @@ void memReset() {
 
   registrationEnabled = true;
   nrOfHandlers = 0;
-  owMemHandler = 0;
 }
 #endif
 
 void memoryRegisterHandler(const MemoryHandlerDef_t* handlerDef){
-  for (int i = 0; i < nrOfHandlers; i++) {
-    ASSERT(handlerDef->type != handlers[i]->type);
-  }
   ASSERT(nrOfHandlers < MAX_NR_HANDLERS);
   ASSERT(registrationEnabled);
   handlers[nrOfHandlers] = handlerDef;
   nrOfHandlers++;
-}
-
-void memoryRegisterOwHandler(const MemoryOwHandlerDef_t* handlerDef){
-  ASSERT(owMemHandler == 0);
-  ASSERT(registrationEnabled);
-  owMemHandler = handlerDef;
-
-  nrOfOwMems = handlerDef->nrOfMems;
 }
 
 void memBlockHandlerRegistration() {
@@ -119,12 +100,7 @@ MemoryType_t memGetType(const uint16_t memId) {
 
 uint32_t memGetSize(const uint16_t memId) {
   ASSERT(memId < nrOfHandlers);
-  return handlers[memId]->getSize();
-}
-
-uint32_t memGetOwSize() {
-  ASSERT(owMemHandler);
-  return owMemHandler->size;
+  return handlers[memId]->getSize(handlers[memId]->internal_id);
 }
 
 bool memRead(const uint16_t memId, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
@@ -132,7 +108,7 @@ bool memRead(const uint16_t memId, const uint32_t memAddr, const uint8_t readLen
 
   ASSERT(memId < nrOfHandlers);
   if (handlers[memId]->read) {
-    result = handlers[memId]->read(memAddr, readLen, buffer);
+    result = handlers[memId]->read(handlers[memId]->internal_id, memAddr, readLen, buffer);
   }
 
   return result;
@@ -143,35 +119,26 @@ bool memWrite(const uint16_t memId, const uint32_t memAddr, const uint8_t writeL
 
   ASSERT(memId < nrOfHandlers);
   if (handlers[memId]->write) {
-    result = handlers[memId]->write(memAddr, writeLen, buffer);
+    result = handlers[memId]->write(handlers[memId]->internal_id, memAddr, writeLen, buffer);
   }
 
   return result;
 }
 
-bool memReadOw(const uint16_t owMemId, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
-  ASSERT(owMemHandler);
-  return owMemHandler->read(owMemId, memAddr, readLen, buffer);
-}
+bool memSerialNbr(const uint16_t memId, const uint8_t maxLen, uint8_t* len, uint8_t* buffer) {
+  bool result = false;
 
-bool memGetOwSerialNr(const uint8_t owMemId, uint8_t* serialNr) {
-  ASSERT(owMemHandler);
-  return owMemHandler->getSerialNr(owMemId, serialNr);
-}
+  ASSERT(memId < nrOfHandlers);
+  if (handlers[memId]->getSerialNbr) {
+    result = handlers[memId]->getSerialNbr(handlers[memId]->internal_id, maxLen, len, buffer);
+  }
 
-bool memWriteOw(const uint16_t owMemId, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
-  ASSERT(owMemHandler);
-  return owMemHandler->write(owMemId, memAddr, writeLen, buffer);
+  return result;
 }
 
 uint16_t memGetNrOfMems() {
   return nrOfHandlers;
 }
-
-uint16_t memGetNrOfOwMems() {
-  return nrOfOwMems;
-}
-
 
 /**
  * @brief The memory tester is used to verify the functionality of the memory sub system.
@@ -186,7 +153,7 @@ uint16_t memGetNrOfOwMems() {
  * @param startOfData - address to write result to
  * @return Always returns true
  */
-static bool handleMemTesterRead(const uint32_t memAddr, const uint8_t readLen, uint8_t* startOfData) {
+static bool handleMemTesterRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* startOfData) {
   for (int i = 0; i < readLen; i++) {
     uint32_t addr = memAddr + i;
     uint8_t data = addr & 0xff;
@@ -205,7 +172,7 @@ static bool handleMemTesterRead(const uint32_t memAddr, const uint8_t readLen, u
  * @param startOfData - pointer to the data in the packet that is provided by the client
  * @return Always returns true
  */
-static bool handleMemTesterWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* startOfData) {
+static bool handleMemTesterWrite(const uint8_t internal_id, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* startOfData) {
   if (memTesterWriteReset) {
     memTesterWriteReset = 0;
     memTesterWriteErrorCount = 0;

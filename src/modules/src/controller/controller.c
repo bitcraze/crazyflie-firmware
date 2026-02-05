@@ -41,33 +41,27 @@ void controllerInit(ControllerType controller) {
     return;
   }
 
-  currentController = controller;
+  ControllerType selectedController = controller;
 
-  if (ControllerTypeAutoSelect == currentController) {
-    currentController = DEFAULT_CONTROLLER;
+  if (selectedController == ControllerTypeAutoSelect) {
+    #if defined(CONFIG_CONTROLLER_PID)
+      selectedController = ControllerTypePID;
+    #elif defined(CONFIG_CONTROLLER_INDI)
+      selectedController = ControllerTypeINDI;
+    #elif defined(CONFIG_CONTROLLER_MELLINGER)
+      selectedController = ControllerTypeMellinger;
+    #elif defined(CONFIG_CONTROLLER_BRESCIANINI)
+      selectedController = ControllerTypeBrescianini;
+    #elif defined(CONFIG_CONTROLLER_LEE)
+      selectedController = ControllerTypeLee;
+    #elif defined(CONFIG_CONTROLLER_OOT)
+      selectedController = ControllerTypeOot;
+    #else
+      selectedController = DEFAULT_CONTROLLER;
+    #endif
   }
 
-  #if defined(CONFIG_CONTROLLER_PID)
-    #define CONTROLLER ControllerTypePID
-  #elif defined(CONFIG_CONTROLLER_INDI)
-    #define CONTROLLER ControllerTypeINDI
-  #elif defined(CONFIG_CONTROLLER_MELLINGER)
-    #define CONTROLLER ControllerTypeMellinger
-  #elif defined(CONFIG_CONTROLLER_BRESCIANINI)
-    #define CONTROLLER ControllerTypeBrescianini
-  #elif defined(CONFIG_CONTROLLER_LEE)
-    #define CONTROLLER ControllerTypeLee
-  #elif defined(CONFIG_CONTROLLER_OOT)
-    #define CONTROLLER ControllerTypeOot
-  #else
-    #define CONTROLLER ControllerTypeAutoSelect
-  #endif
-
-  ControllerType forcedController = CONTROLLER;
-  if (forcedController != ControllerTypeAutoSelect) {
-    DEBUG_PRINT("Controller type forced\n");
-    currentController = forcedController;
-  }
+  currentController = selectedController;
 
   initController();
 
