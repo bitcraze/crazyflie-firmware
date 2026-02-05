@@ -394,22 +394,34 @@ static void predictDt(kalmanCoreData_t* this, const kalmanCoreParams_t *params, 
   A[KC_STATE_Z][KC_STATE_D2] = (this->S[KC_STATE_PX]*this->R[2][1] - this->S[KC_STATE_PY]*this->R[2][0])*dt;
 
   // body-frame velocity from body-frame velocity
-  A[KC_STATE_PX][KC_STATE_PX] = 1; //drag negligible when not flying
-  A[KC_STATE_PY][KC_STATE_PX] =-gyro->z*dt;
-  A[KC_STATE_PZ][KC_STATE_PX] = gyro->y*dt;
-
-  A[KC_STATE_PX][KC_STATE_PY] = gyro->z*dt;
-  A[KC_STATE_PY][KC_STATE_PY] = 1; //drag negligible when not flying
-  A[KC_STATE_PZ][KC_STATE_PY] =-gyro->x*dt;
-
-  A[KC_STATE_PX][KC_STATE_PZ] =-gyro->y*dt;
-  A[KC_STATE_PY][KC_STATE_PZ] = gyro->x*dt;
-  A[KC_STATE_PZ][KC_STATE_PZ] = 1; //drag negligible when not flying
-
-  if (quadIsFlying) { // when flying, drag is not negligible
+  // TODO: Add reference to relevant papers
+  if (quadIsFlying) {
+    // Compensate for drag
     A[KC_STATE_PX][KC_STATE_PX] = 1 - dt * dragBx;
+    A[KC_STATE_PY][KC_STATE_PX] =-gyro->z*dt;
+    A[KC_STATE_PZ][KC_STATE_PX] = gyro->y*dt;
+
+    A[KC_STATE_PX][KC_STATE_PY] = gyro->z*dt;
     A[KC_STATE_PY][KC_STATE_PY] = 1 - dt * dragBy;
+    A[KC_STATE_PZ][KC_STATE_PY] =-gyro->x*dt;
+
+    A[KC_STATE_PX][KC_STATE_PZ] =-gyro->y*dt;
+    A[KC_STATE_PY][KC_STATE_PZ] = gyro->x*dt;
     A[KC_STATE_PZ][KC_STATE_PZ] = 1 - dt * dragBz;
+  }
+  else {
+    // No drag when stationary
+    A[KC_STATE_PX][KC_STATE_PX] = 1;
+    A[KC_STATE_PY][KC_STATE_PX] =-gyro->z*dt;
+    A[KC_STATE_PZ][KC_STATE_PX] = gyro->y*dt;
+
+    A[KC_STATE_PX][KC_STATE_PY] = gyro->z*dt;
+    A[KC_STATE_PY][KC_STATE_PY] = 1;
+    A[KC_STATE_PZ][KC_STATE_PY] =-gyro->x*dt;
+
+    A[KC_STATE_PX][KC_STATE_PZ] =-gyro->y*dt;
+    A[KC_STATE_PY][KC_STATE_PZ] = gyro->x*dt;
+    A[KC_STATE_PZ][KC_STATE_PZ] = 1;
   }
 
   // body-frame velocity from attitude error
