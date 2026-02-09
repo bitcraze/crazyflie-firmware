@@ -422,7 +422,6 @@ static void predictDt(kalmanCoreData_t* this, const kalmanCoreParams_t *params, 
   A[KC_STATE_Z][KC_STATE_D2] = (this->S[KC_STATE_PX]*this->R[2][1] - this->S[KC_STATE_PY]*this->R[2][0])*dt;
 
   // body-frame velocity from body-frame velocity
-  // TODO: Add reference to relevant papers
   if (quadIsFlying) {
     // Compensate for drag
     A[KC_STATE_PX][KC_STATE_PX] = 1 - dt * dragBx;
