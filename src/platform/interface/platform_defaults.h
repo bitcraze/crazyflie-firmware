@@ -1,4 +1,4 @@
-/**
+    /**
  * ,---------,       ____  _ __
  * |  ,-^-,  |      / __ )(_) /_______________ _____  ___
  * | (  O  ) |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
@@ -225,15 +225,17 @@
     #endif
 #endif
 
-// flowdeck position constants. Distance with respect to CoM
-#ifndef FLOWDECK_POS_X
-    #define FLOWDECK_POS_X 0.0f
-#endif
-#ifndef FLOWDECK_POS_Y
-    #define FLOWDECK_POS_Y 0.0f
-#endif
-#ifndef FLOWDECK_POS_Z
-    #define FLOWDECK_POS_Z 0.0f
+// Flow deck position constants. Distance in meters with respect to center of mass
+#ifdef CONFIG_DECK_FLOW
+    #ifndef FLOWDECK_POS_X
+        #define FLOWDECK_POS_X 0.0f
+    #endif
+    #ifndef FLOWDECK_POS_Y
+        #define FLOWDECK_POS_Y 0.0f
+    #endif
+    #ifndef FLOWDECK_POS_Z
+        #define FLOWDECK_POS_Z 0.0f
+    #endif
 #endif
 
 // EKF drag parameters

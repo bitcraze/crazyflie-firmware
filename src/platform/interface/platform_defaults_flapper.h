@@ -164,9 +164,11 @@
 #define EKF_DRAG_RY 0.0f
 #define EKF_DRAG_RZ 0.06f
 
-// flowdeck position offset
+// Flow deck position offset (in meters)
 // Note that this depends on flowdeck placement and might vary. These values assume placement directly under the legs with the STL provided here:
 // https://github.com/flapper-drones/3Dmodels/blob/main/Bitcraze_flowdeck_support%20v17.stl
-#define FLOWDECK_POS_X 0.0f 
-#define FLOWDECK_POS_Y 0.0f
-#define FLOWDECK_POS_Z -0.12f
+#ifdef CONFIG_DECK_FLOW
+    #define FLOWDECK_POS_X 0.0f 
+    #define FLOWDECK_POS_Y 0.0f
+    #define FLOWDECK_POS_Z -0.12f
+#endif
