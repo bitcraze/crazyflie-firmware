@@ -58,6 +58,7 @@
 static uint8_t motorSetEnable = 0;
 static uint16_t motorPowerSet[] = {0, 0, 0, 0}; // user-requested PWM signals (overrides)
 static uint16_t motor_ratios[] = {0, 0, 0, 0};  // actual PWM signals
+static uint16_t timPolarity;
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
 static DMA_InitTypeDef DMA_InitStructureShare;
@@ -294,7 +295,7 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
 
     TIM_ARRPreloadConfig(motorMap[i]->tim, DISABLE); //TODO: Why?
 
-  uint16_t timPolarity = motorMap[i]->timPolarity;
+    timPolarity = motorMap[i]->timPolarity;
   #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
       // For bidirectional DSHOT we need active high PWM
       timPolarity = (timPolarity == TIM_OCPolarity_High) ? TIM_OCPolarity_Low : TIM_OCPolarity_High;
@@ -303,7 +304,7 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
     TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
     TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
     TIM_OCInitStructure.TIM_Pulse = 0;
-    TIM_OCInitStructure.TIM_OCPolarity = motorMap[i]->timPolarity;
+    TIM_OCInitStructure.TIM_OCPolarity = timPolarity;
     TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set;
 
     // Configure Output Compare for PWM
@@ -451,6 +452,19 @@ static void motorsDshotOutputSetup(int id)
   TIM_ITConfig(motorMap[id]->tim, TIM_IT_Update, DISABLE);
   TIM_Cmd(motorMap[id]->tim, ENABLE);
 
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+  TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
+  TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+  TIM_OCInitStructure.TIM_Pulse = 0;
+  TIM_OCInitStructure.TIM_OCPolarity = timPolarity;
+  TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set;
+  // Configure Output Compare for PWM
+  motorMap[id]->ocInit(motorMap[id]->tim, &TIM_OCInitStructure);
+  motorMap[id]->preloadConfig(motorMap[id]->tim, TIM_OCPreload_Enable);
+#endif
+  DMA_Cmd(motorMap[id]->DMA_stream, DISABLE);
+  TIM_DMACmd(motorMap[id]->tim, motorMap[id]->TIM_DMASource, DISABLE);
+
   DMA_InitStructureShare.DMA_BufferSize = DSHOT_DMA_BUFFER_SIZE;
   DMA_InitStructureShare.DMA_DIR = DMA_DIR_MemoryToPeripheral;
   DMA_InitStructureShare.DMA_PeripheralBaseAddr = motorMap[id]->DMA_PerifAddr;
@@ -584,6 +598,14 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
 
   ASSERT(id < NBR_OF_MOTORS);
 
+  // Stop any ongoing DMA transfer
+  DMA_Cmd(motorMap[id]->DMA_stream, DISABLE);  
+  // Wait for DMA to be free. Can happen at startup but doesn't seem to wait afterwards.
+  while(DMA_GetCmdStatus(motorMap[id]->DMA_stream) != DISABLE)
+  {
+    dmaWait++;
+  }
+
   // Scale 16 -> 11 bits
   dshotRatio = (ratio >> 5);
   // Remove command area of DSHOT
@@ -618,11 +640,6 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
   }
   dshotDmaBuffer[id][16] = 0; // Set to 0 gives low output afterwards
 
-  // Wait for DMA to be free. Can happen at startup but doesn't seem to wait afterwards.
-  while(DMA_GetCmdStatus(motorMap[id]->DMA_stream) != DISABLE)
-  {
-    dmaWait++;
-  }
 }
 
 /**
@@ -966,7 +983,7 @@ void __attribute__((used)) DMA1_Stream6_IRQHandler(void) // M1
 {
   TIM_DMACmd(TIM2, TIM_DMA_CC2, DISABLE);
   DMA_ITConfig(DMA1_Stream6, DMA_IT_TC, DISABLE);
-//  DMA_Cmd(DMA1_Stream6, DISABLE);
+  DMA_Cmd(DMA1_Stream6, DISABLE);
   DMA_ClearITPendingBit(DMA1_Stream6, DMA_IT_TCIF6);
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
