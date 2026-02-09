@@ -82,7 +82,7 @@ void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *f
   float v_cam_bx_add =  omegay_b * FLOWDECK_POS_Z - omegaz_b * FLOWDECK_POS_Y;
   float v_cam_by_add =  omegaz_b * FLOWDECK_POS_X - omegax_b * FLOWDECK_POS_Z;
   
-  // Effective camera point velocities in global frame
+  // Effective camera point velocities in body frame
   float v_cam_bx = dx_b + v_cam_bx_add;
   float v_cam_by = dy_b + v_cam_by_add;
 
