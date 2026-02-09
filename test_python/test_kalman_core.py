@@ -18,4 +18,4 @@ def test_kalman_core_with_tdoa3():
     # Assert
     # Verify that the final position is close-ish to (0, 0, 0)
     actual_final_pos = np.array(actual[-1][1])
-    assert np.linalg.norm(actual_final_pos - [0.0, 0.0, 0.0]) < 0.4
+    assert np.linalg.norm(actual_final_pos - [0.0, 0.0, 0.0]) < 0.01
