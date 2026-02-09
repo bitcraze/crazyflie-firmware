@@ -154,8 +154,6 @@
 #define YAW_MAX_DELTA 30.0
 
 // EKF drag defaults
-// First three are the drag coefficients in x, y and z
-// Second three are the offset of the CoP to the CoM in meters
 // NOTE: For X, this offset is not constant but depends on dihedral angle. Influence seems to be negligible.
 #define EKF_DRAG_BX 4.2f
 #define EKF_DRAG_BY 1.8f

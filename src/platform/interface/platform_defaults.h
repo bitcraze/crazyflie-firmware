@@ -225,7 +225,8 @@
     #endif
 #endif
 
-// Flow deck position constants. Distance in meters with respect to center of mass
+// Flow deck position constants
+// Distance in meters with respect to center of mass.
 #ifdef CONFIG_DECK_FLOW
     #ifndef FLOWDECK_POS_X
         #define FLOWDECK_POS_X 0.0f
@@ -239,6 +240,8 @@
 #endif
 
 // EKF drag parameters
+// First three are the drag coefficients in x, y and z.
+// Second three are the offset of the CoP to the CoM in meters.
 #ifndef EKF_DRAG_BX
     #define EKF_DRAG_BX 0.0f
 #endif

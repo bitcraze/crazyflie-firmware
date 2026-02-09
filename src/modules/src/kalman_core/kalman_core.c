@@ -852,27 +852,27 @@ void kalmanCoreDecoupleXY(kalmanCoreData_t* this)
 
 PARAM_GROUP_START(kalman)
 /**
- * @brief drag in x direction
+ * @brief Drag in x direction
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, dragBx, &dragBx)
 /**
- * @brief drag in y direction
+ * @brief Drag in y direction
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, dragBy, &dragBy)
 /**
- * @brief drag in z direction
+ * @brief Drag in z direction
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, dragBz, &dragBz)
 /**
- * @brief aerodynamic force lever arm X (meters)
+ * @brief Aerodynamic force lever arm X (meters)
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, drag_rx, &drag_rx)
 /**
- * @brief aerodynamic force lever arm Y (meters)
+ * @brief Aerodynamic force lever arm Y (meters)
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, drag_ry, &drag_ry)
 /**
- * @brief aerodynamic force lever arm Z (meters)
+ * @brief Aerodynamic force lever arm Z (meters)
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, drag_rz, &drag_rz)
 
