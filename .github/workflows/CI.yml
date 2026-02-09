@@ -12,6 +12,7 @@ on:
   schedule:
     # Weekly build to make sure dependencies are OK
     - cron:  '30 16 * * 1'
+  workflow_dispatch:
 
 permissions:
   contents: read
