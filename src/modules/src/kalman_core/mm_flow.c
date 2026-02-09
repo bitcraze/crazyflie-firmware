@@ -35,9 +35,6 @@ static float predictedNY;
 static float measuredNX;
 static float measuredNY;
 
-// Define your optical flow sensor offset from IMU in body frame [m]
-static const Axis3f flow_pos_body = { .axis = { FLOWDECK_POS_X, FLOWDECK_POS_Y, FLOWDECK_POS_Z } };
-
 void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *flow, const Axis3f *gyro)
 {
   // Inclusion of flow measurements in the EKF done by two scalar updates
@@ -82,8 +79,8 @@ void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *f
 
   // Lever-arm induced translational velocity at camera
   // omega x r
-  float v_cam_bx_add =  omegay_b * flow_pos_body.z - omegaz_b * flow_pos_body.y;
-  float v_cam_by_add =  omegaz_b * flow_pos_body.x - omegax_b * flow_pos_body.z;
+  float v_cam_bx_add =  omegay_b * FLOWDECK_POS_Z - omegaz_b * FLOWDECK_POS_Y;
+  float v_cam_by_add =  omegaz_b * FLOWDECK_POS_X - omegax_b * FLOWDECK_POS_Z;
   
   // Effective camera point velocities in global frame
   float v_cam_bx = dx_b + v_cam_bx_add;
