@@ -56,6 +56,26 @@
       pages={1--7},
       year={2016},
       publisher={American Institute of Aeronautics and Astronautics}}
+
+      @ARTICLE{Kajak2019,
+      author={Kajak, K. M. and Kar\'{a}sek, M. and Chu, Q. P. and de Croon, G. C. H. E.},
+      title={A minimal longitudinal dynamic model of a tailless flapping wing robot for control design},
+      journal={Bioinspiration \& Biomimetics},
+      year={2019},
+      volume={14},
+      number={4},
+      pages={046008},
+      doi={10.1088/1748-3190/ab1e0b}}
+
+      @ARTICLE{Karasek2018,
+      author={Kar\'{a}sek, M. and Muijres, F. T. and De Wagter, C. and Remes, B. D. W. and de Croon, G. C. H. E.},
+      title={A tailless aerial robotic flapper reveals that flies use torque coupling in rapid banked turns},
+      journal={Science},
+      year={2018},
+      volume={361},
+      number={6407},
+      pages={1089--1094},
+      doi={10.1126/science.aat0350}}
  * \endverbatim
  *
  * ============================================================================
