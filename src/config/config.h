@@ -212,7 +212,7 @@
 #define FLAPPERDECK_TASK_STACKSIZE      (2 * configMINIMAL_STACK_SIZE)
 #define ERROR_UKF_TASK_STACKSIZE        (4 * configMINIMAL_STACK_SIZE)
 #define COLORLED_TASK_STACKSIZE         configMINIMAL_STACK_SIZE
-#define WORKER_TASK_STACKSIZE           configMINIMAL_STACK_SIZE
+#define WORKER_TASK_STACKSIZE           (2 * configMINIMAL_STACK_SIZE)
 
 //The radio channel. From 0 to 125
 #define RADIO_CHANNEL 80

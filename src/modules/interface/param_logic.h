@@ -148,8 +148,10 @@ void paramReadProcess(CRTPPacket *p);
 void paramTOCProcess(CRTPPacket *p, int command);
 
 void paramGetDefaultValue(CRTPPacket *p);
+void paramGetDefaultValueV2(CRTPPacket *p);
 void paramSetByName(CRTPPacket *p);
 void paramGetExtendedType(CRTPPacket *p);
+void paramGetExtendedTypeV2(CRTPPacket *p);
 void paramPersistentStore(CRTPPacket *p);
 void paramPersistentGetState(CRTPPacket *p);
 void paramPersistentClear(CRTPPacket *p);

@@ -103,12 +103,6 @@ static void activeMarkerDeckInit(DeckInfo *info) {
   xTaskCreate(task, ACTIVE_MARKER_TASK_NAME,
               ACTIVEMARKER_TASK_STACKSIZE, NULL, ACTIVE_MARKER_TASK_PRI, NULL);
 
-#ifndef ACTIVE_MARKER_DECK_TEST
-  memset(versionString, 0, VERSION_STRING_LEN + 1);
-  i2cOk = i2cdevReadReg8(I2C1_DEV, ACTIVE_MARKER_DECK_I2C_ADDRESS, MEM_ADR_VER, VERSION_STRING_LEN, (uint8_t*)versionString);
-  DEBUG_PRINT("Deck FW %s\n", versionString);
-#endif
-
   isInit = true;
 }
 
@@ -118,6 +112,12 @@ static bool activeMarkerDeckTest() {
   }
 
 #ifndef ACTIVE_MARKER_DECK_TEST
+  // Read version string here in test function, after system initialization is complete
+  // This avoids I2C bus conflicts with other deck backends (e.g., DeckCtrl) during init
+  memset(versionString, 0, VERSION_STRING_LEN + 1);
+  i2cOk = i2cdevReadReg8(I2C1_DEV, ACTIVE_MARKER_DECK_I2C_ADDRESS, MEM_ADR_VER, VERSION_STRING_LEN, (uint8_t*)versionString);
+  DEBUG_PRINT("Deck FW %s\n", versionString);
+
   if (0 == strcmp("Qualisys0.A", versionString)) {
     deckFwVersion = version_0_A;
   } else if (0 == strcmp("Qualisys1.0", versionString)) {
@@ -126,7 +126,7 @@ static bool activeMarkerDeckTest() {
 
   isVerified = (versionUndefined != deckFwVersion);
   if (! isVerified) {
-    DEBUG_PRINT("Incompatible deck FW\n");
+    DEBUG_PRINT("Incompatible deck FW: %s\n", versionString);
   }
 #else
   isVerified = true;

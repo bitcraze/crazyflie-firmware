@@ -366,7 +366,7 @@ void controllerBrescianini(control_t *control,
     }
 
     if (control_omega[2] * omega[2] < 0 && fabsf(omega[2]) > heuristic_yaw) { // desired rotational rate in direction opposite to current rotational rate
-      control_omega[2] = omega_rp_max * (omega[2] < 0 ? -1 : 1); // maximum rotational rate in direction of current rotation
+      control_omega[2] = omega_yaw_max * (omega[2] < 0 ? -1 : 1); // maximum rotational rate in direction of current rotation
     }
 
     // scale the commands to satisfy rate constraints

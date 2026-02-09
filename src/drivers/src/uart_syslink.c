@@ -68,7 +68,7 @@ static bool syslinkPacketDeliveryReadyToReceive = false;
 static uint8_t dmaRXBuffer[64];
 static DMA_InitTypeDef DMA_InitStructureShareRX;
 #endif
-static uint8_t dmaTXBuffer[64];
+static uint8_t dmaTXBuffer[SYSLINK_MTU + 6];
 static uint8_t *outDataIsr;
 static uint8_t dataIndexIsr;
 static uint8_t dataSizeIsr;
