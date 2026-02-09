@@ -27,6 +27,14 @@
  * "Covariance Correction Step for Kalman Filtering with an Attitude"
  * http://arc.aiaa.org/doi/abs/10.2514/1.G000848
  *
+ * Drag implementation is based on these papers:
+ *
+ * "A minimal longitudinal dynamic model of a tailless flapping wing robot for control design"
+ * https://iopscience.iop.org/article/10.1088/1748-3190/ab1e0b
+ *
+ * "A tailless aerial robotic flapper reveals that flies use torque coupling in rapid banked turns"
+ * https://www.science.org/doi/10.1126/science.aat0350
+ *
  * Academic citation would be appreciated.
  *
  * BIBTEX ENTRIES:
