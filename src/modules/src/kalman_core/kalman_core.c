@@ -865,15 +865,15 @@ PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, dragB_y, &dragB_y)
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, dragB_z, &dragB_z)
 /**
- * @brief Aerodynamic force lever arm X (in meters)
+ * @brief Center of pressure X (in meters)
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, cop_x, &cop_x)
 /**
- * @brief Aerodynamic force lever arm Y (in meters)
+ * @brief Center of pressure Y (in meters)
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, cop_y, &cop_y)
 /**
- * @brief Aerodynamic force lever arm Z (in meters)
+ * @brief Center of pressure Z (in meters)
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, cop_z, &cop_z)
 
