@@ -238,26 +238,25 @@
     #define FLOWDECK_POS_Z 0.0f
 #endif
 
-// EKF drag parameters
-// First three are the drag coefficients in x, y and z.
-// Last three are the offset of the center of pressure
-// relative to the the centre of mass, in meters.
-#ifndef EKF_DRAG_BX
-    #define EKF_DRAG_BX 0.0f
+// Drag coefficients (in N*s/m)
+#ifndef DRAG_B_X
+    #define DRAG_B_X 0.0f
 #endif
-#ifndef EKF_DRAG_BY
-    #define EKF_DRAG_BY 0.0f
+#ifndef DRAG_B_Y
+    #define DRAG_B_Y 0.0f
 #endif
-#ifndef EKF_DRAG_BZ
-    #define EKF_DRAG_BZ 0.0f
+#ifndef DRAG_B_Z
+    #define DRAG_B_Z 0.0f
 #endif
-#ifndef EKF_DRAG_RX
-    #define EKF_DRAG_RX 0.0f
+
+// Center of pressure offset relative to the the centre of mass, in body frame (in meters)
+#ifndef CENTER_OF_PRESSURE_X
+    #define CENTER_OF_PRESSURE_X 0.0f
 #endif
-#ifndef EKF_DRAG_RY
-    #define EKF_DRAG_RY 0.0f
+#ifndef CENTER_OF_PRESSURE_Y
+    #define CENTER_OF_PRESSURE_Y 0.0f
 #endif
-#ifndef EKF_DRAG_RZ
-    #define EKF_DRAG_RZ 0.0f
+#ifndef CENTER_OF_PRESSURE_Z
+    #define CENTER_OF_PRESSURE_Z 0.0f
 #endif
 
