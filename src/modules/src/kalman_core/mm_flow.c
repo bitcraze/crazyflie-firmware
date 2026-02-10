@@ -27,7 +27,7 @@
 #include "log.h"
 #include "platform_defaults.h"
 
-#define FLOW_RESOLUTION 0.10f //We do get the measurements in 10x the motion pixels (experimentally measured)
+#define FLOW_RESOLUTION 0.10f //We get the measurements in 10x the motion pixels (experimentally measured)
 
 // TODO remove the temporary test variables (used for logging)
 static float predictedNX;
@@ -41,33 +41,20 @@ void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *f
 
   // ~~~ Camera constants ~~~
   // The angle of aperture is guessed from the raw data register and thankfully look to be symmetric
-  float Npix = 35.0;                      // [pixels] (same in x and y)
-  //float thetapix = DEG_TO_RAD * 4.0f;     // [rad]    (same in x and y)
-  float thetapix = 0.71674f;// 2*sin(42/2); 42degree is the agnle of aperture, here we computed the corresponding ground length
+  float Npix = 35.0;         // [pixels] (same in x and y)
+  float thetapix = 0.71674f; // [rad] 2*sin(42/2); 42 degrees is the angle of aperture, here we computed the corresponding ground length
 
-  //~~~ Body rates ~~~
-  // TODO check if this is feasible or if some filtering has to be done
+  //~~~ Extract states ~~~
+  // Body rates
   float omegax_b = gyro->x * DEG_TO_RAD;
   float omegay_b = gyro->y * DEG_TO_RAD;
   float omegaz_b = gyro->z * DEG_TO_RAD;
 
-
-  // ~~~ Moves the body velocity into the global coordinate system ~~~
-  // [bar{x},bar{y},bar{z}]_G = R*[bar{x},bar{y},bar{z}]_B
-  //
-  // \dot{x}_G = (R^T*[dot{x}_B,dot{y}_B,dot{z}_B])\dot \hat{x}_G
-  // \dot{x}_G = (R^T*[dot{x}_B,dot{y}_B,dot{z}_B])\dot \hat{x}_G
-  //
-  // where \hat{} denotes a basis vector, \dot{} denotes a derivative and
-  // _G and _B refer to the global/body coordinate systems.
-
-  // Modification 1
-  //dx_g = R[0][0] * S[KC_STATE_PX] + R[0][1] * S[KC_STATE_PY] + R[0][2] * S[KC_STATE_PZ];
-  //dy_g = R[1][0] * S[KC_STATE_PX] + R[1][1] * S[KC_STATE_PY] + R[1][2] * S[KC_STATE_PZ];
-
-
+  // Velocities in body frame
   float dx_b = this->S[KC_STATE_PX];
   float dy_b = this->S[KC_STATE_PY];
+
+  // Height
   float z_g = 0.0;
 
   // Saturate elevation in prediction and correction to avoid singularities
