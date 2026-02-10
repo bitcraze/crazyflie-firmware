@@ -59,6 +59,7 @@
 #define MOTORS_GPIO_AF_CFG(a,b,c) GPIO_PinAFConfig(a,b,c)
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_ONESHOT125
+  #define MOTORS_PROTOCOL_STRING       "ONESHOT125"
 /**
  * *WARNING* Make sure the brushless driver is configured correctly as on the Crazyflie with normal
  * brushed motors connected they can turn on at full speed when it is powered on!
@@ -75,6 +76,7 @@
   #define MOTORS_BL_PWM_PRESCALE       (uint16_t)(MOTORS_BL_PWM_PRESCALE_RAW - 1)
   #define MOTORS_BL_POLARITY           TIM_OCPolarity_Low
 #elif defined(CONFIG_MOTORS_ESC_PROTOCOL_ONESHOT42)
+  #define MOTORS_PROTOCOL_STRING       "ONESHOT42"
 /**
  * *WARNING* Make sure the brushless driver is configured correctly as on the Crazyflie with normal
  * brushed motors connected they can turn on at full speed when it is powered on!
@@ -98,12 +100,19 @@
  */
 #ifdef CONFIG_MOTORS_DSHOT_PWM_150KHZ
   #define MOTORS_BL_PWM_PERIOD         (TIM_CLOCK_HZ / 150000) // 150kHz bitrate DHSOT150
+  #define MOTORS_PROTOCOL_STRING       "DSHOT150"
 #endif
 #ifdef CONFIG_MOTORS_DSHOT_PWM_300KHZ
   #define MOTORS_BL_PWM_PERIOD         (TIM_CLOCK_HZ / 300000) // 300kHz bitrate DHSOT300
+  #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+    #define MOTORS_PROTOCOL_STRING     "BIDIR-DSHOT300"
+  #else
+    #define MOTORS_PROTOCOL_STRING     "DSHOT300"
+  #endif
 #endif
 #ifdef CONFIG_MOTORS_DSHOT_PWM_600KHZ
   #define MOTORS_BL_PWM_PERIOD         (TIM_CLOCK_HZ / 600000) // 600kHz bitrate DHSOT600
+  #define MOTORS_PROTOCOL_STRING       "DSHOT600"
 #endif
   #define MOTORS_BL_PWM_PRESCALE       (0)
   #define MOTORS_BL_POLARITY           TIM_OCPolarity_Low
@@ -122,6 +131,7 @@
 
   #define MOTORS_BL_PWM_CNT_FOR_HIGH   1
 #else
+  #define MOTORS_PROTOCOL_STRING       "PWM"
 /**
  * *WARNING* Make sure the brushless driver is configured correctly as on the Crazyflie with normal
  * brushed motors connected they can turn on at full speed when it is powered on!
@@ -318,6 +328,11 @@ void motorsESCSetLo(uint32_t id);
 int motorsESCIsHi(uint32_t id);
 
 int motorsESCIsLo(uint32_t id);
+
+/**
+ * Reset ESCs. Only for brushless motors with ESC reset pin.
+ */
+void motorsResetESCs(void);
 
 /**
  * Send DSHOT for all motors at once. Must be prepared first with motorsPrepareDshot()

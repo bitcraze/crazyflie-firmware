@@ -62,7 +62,6 @@ static uint16_t timPolarity;
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
 static DMA_InitTypeDef DMA_InitStructureShare;
-static bool doResetESCs = true;
 // Memory buffer for DSHOT bits
 static uint32_t dshotDmaBuffer[NBR_OF_MOTORS][DSHOT_DMA_BUFFER_SIZE];
 static void motorsDshotSetup();
@@ -242,7 +241,9 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
 
   motorMap = motorMapSelect;
 
-  DEBUG_PRINT("Using %s motor driver\n", motorMap[0]->drvType == BRUSHED ? "brushed" : "brushless");
+  DEBUG_PRINT("Using %s motor driver: %s\n", 
+    motorMap[0]->drvType == BRUSHED ? "brushed" : "brushless", 
+    MOTORS_PROTOCOL_STRING);
 
   if (motorMap[MOTOR_M1]->hasPC15ESCReset)
   {
@@ -390,6 +391,20 @@ void motorsStop()
 #endif
 }
 
+void motorsResetESCs(void)
+{
+  // Due to complicated ESC startup behavior, it is best to have the DHOT output
+  // running when we release the reset so it doesn't enter bootloader mode so
+  // that it detects the DHOT signal correct (inverted or none-inverted). So we
+  // wait and do the reset first when the stabalizer task is running.
+  if (motorMap[0]->hasPC15ESCReset)
+  {
+    GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_RESET);
+    vTaskDelay(M2T(1));
+    GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_SET);
+  }
+}
+
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
 static void motorsDshotSetup()
 {
@@ -431,19 +446,6 @@ static void motorsDshotSetup()
 
 static void motorsDshotOutputSetup(int id)
 {
-  TIM_OCInitTypeDef TIM_OCInitStructure;
-
-  // Due to complicated ESC startup behavior, it is best to have the DHOT output
-  // running when we release the reset so it doesn't enter bootloader mode so
-  // that it detects the DHOT signal correct (inverted or none-inverted). So we
-  // wait and do the reset first when the stabalizer task is running.
-  if (doResetESCs && motorMap[id]->hasPC15ESCReset) 
-  {
-      GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_RESET);
-      vTaskDelay(M2T(1));
-      GPIO_WriteBit(GPIOC, GPIO_Pin_15, Bit_SET);
-      doResetESCs = false;
-  }
 
   TIM_Cmd(motorMap[id]->tim, DISABLE);
   motorMap[id]->tim->ARR = motorMap[id]->timPeriod;
@@ -453,6 +455,7 @@ static void motorsDshotOutputSetup(int id)
   TIM_Cmd(motorMap[id]->tim, ENABLE);
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+  TIM_OCInitTypeDef TIM_OCInitStructure;
   TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
   TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
   TIM_OCInitStructure.TIM_Pulse = 0;
@@ -479,14 +482,23 @@ static void motorsDshotInputSetup(int id)
   if (dshotState[0] == DSHOT_STATE_INPUT &&
       dshotState[2] == DSHOT_STATE_INPUT &&
       dshotState[3] == DSHOT_STATE_INPUT) {
-    // Special case for M2 that is delayed 100us due to resourse conflict.
+    // Reconfigure timer for input capture when M1,M3 and M4 has sent their telemetry.
     TIM_Cmd(motorMap[1]->tim, DISABLE);
     motorMap[id]->tim->ARR = TIM_CLOCK_HZ / 10000; // 100us max interval
     motorMap[id]->tim->CNT = 0;
+    // Special case for M2 to trigger interrupt after 100us to start its cycle.
     TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
     TIM_ITConfig(motorMap[1]->tim, TIM_IT_Update, ENABLE);
     TIM_Cmd(motorMap[1]->tim, ENABLE);
   }
+
+  if (dshotState[1] == DSHOT_STATE_INPUT) {
+    // Reconfigure timer for input capture, without interrupt.
+    TIM_Cmd(motorMap[1]->tim, DISABLE);
+    motorMap[1]->tim->ARR = TIM_CLOCK_HZ / 10000; // 100us max interval
+    motorMap[1]->tim->CNT = 0;
+    TIM_Cmd(motorMap[1]->tim, ENABLE);
+   }
 
   TIM_ICInitTypeDef TIM_ICInitStructure;
   
@@ -898,32 +910,16 @@ const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id)
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
 static void motorsDshotTransferEnded(int id)
 {
-  dshotState[id] = DSHOT_STATE_IDLE;
-
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
-  // if (dshotState[0] == DSHOT_STATE_IDLE &&
-  //     dshotState[2] == DSHOT_STATE_IDLE &&
-  //     dshotState[3] == DSHOT_STATE_IDLE) 
-  // {
-  //   TIM_Cmd(motorMap[1]->tim, DISABLE);
-  //   motorMap[1]->tim->ARR = motorMap[1]->timPeriod;
-  //   motorMap[1]->tim->CNT = 0;
-  //   TIM_ClearITPendingBit(motorMap[1]->tim, TIM_IT_Update);
-  //   TIM_ITConfig(motorMap[1]->tim, TIM_IT_Update, DISABLE);
-  //   TIM_Cmd(motorMap[1]->tim, ENABLE);
-
-  //   dshotState[1] = DSHOT_STATE_OUTPUT;
-  //   /* Enable TIM DMA Requests M1*/
-  //   TIM_DMACmd(motorMap[1]->tim, motorMap[1]->TIM_DMASource, ENABLE);
-  //   /* Enable DMA TIM Stream */
-  //   DMA_Cmd(motorMap[1]->DMA_stream, ENABLE);
-  // }
-  uint32_t gcrEdges = DSHOT_TELEMETRY_MAX_GCR_EDGES - motorMap[id]->DMA_stream->NDTR;
-  if (gcrEdges > DSHOT_TELEMETRY_MIN_GCR_EDGES) {
-    dshotTelemetryPackets[id] = dshotDecodeTelemetryPacket(dshotDmaInputBuffer[id], gcrEdges);
-    motorRPMs[id] = dshotDecodeTelemetryERPM(dshotTelemetryPackets[id]);
+  if (dshotState[id] == DSHOT_STATE_INPUT) {
+    uint32_t gcrEdges = DSHOT_TELEMETRY_MAX_GCR_EDGES - motorMap[id]->DMA_stream->NDTR;
+    if (gcrEdges > DSHOT_TELEMETRY_MIN_GCR_EDGES) {
+      dshotTelemetryPackets[id] = dshotDecodeTelemetryPacket(dshotDmaInputBuffer[id], gcrEdges);
+      motorRPMs[id] = dshotDecodeTelemetryERPM(dshotTelemetryPackets[id]);
+    }
   }
 #endif
+  dshotState[id] = DSHOT_STATE_IDLE;
 }
 
 void __attribute__((used)) DMA1_Stream1_IRQHandler(void)  // M4
@@ -997,16 +993,22 @@ void __attribute__((used)) DMA1_Stream7_IRQHandler(void)  // M2
     motorsDshotTransferEnded(1);
   }
 #else
-  dshotState[1] = DSHOT_STATE_IDLE;
+  motorsDshotTransferEnded(1);
 #endif
 }
 
-// Used to terminate receiving
+// Used to start M2 and timeout terminate receiving for M1, M3 and M4.
 void __attribute__((used)) TIM2_IRQHandler(void)
 {
   TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
   TIM_ITConfig(motorMap[1]->tim, TIM_IT_Update, DISABLE);
 
+  // Stop any ongoing input DMA transfer
+  DMA_Cmd(motorMap[0]->DMA_stream, DISABLE);  
+  DMA_Cmd(motorMap[2]->DMA_stream, DISABLE);  
+  DMA_Cmd(motorMap[3]->DMA_stream, DISABLE);  
+
+  motorsDshotOutputSetup(1);
   /* Enable special case TIM DMA Requests M2*/
   TIM_DMACmd(motorMap[1]->tim, motorMap[1]->TIM_DMASource, ENABLE);
   DMA_ITConfig(motorMap[1]->DMA_stream, DMA_IT_TC, ENABLE);
@@ -1015,51 +1017,6 @@ void __attribute__((used)) TIM2_IRQHandler(void)
 #endif
 }
 
-// // Used to terminate receiving
-// void __attribute__((used)) TIM2_IRQHandler(void)
-// {
-//   TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
-
-// #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
-//   if (dshotState[0] == DSHOT_STATE_INPUT) {
-//     TIM_DMACmd(TIM2, TIM_DMA_CC2, DISABLE);
-//     DMA_ITConfig(DMA1_Stream6, DMA_IT_TC, DISABLE);
-//     DMA_Cmd(DMA1_Stream6, DISABLE);
-//     DMA_ClearITPendingBit(DMA1_Stream6, DMA_IT_TCIF6);
-    
-//     motorsDshotTransferEnded(0);
-//   }
-
-//   if (dshotState[1] == DSHOT_STATE_INPUT) {
-//     TIM_DMACmd(TIM2, TIM_DMA_CC4, DISABLE);
-//     DMA_ITConfig(DMA1_Stream7, DMA_IT_TC, DISABLE);
-//     DMA_Cmd(DMA1_Stream7, DISABLE);
-//     DMA_ClearITPendingBit(DMA1_Stream7, DMA_IT_TCIF7);
-
-//     dshotState[1] = DSHOT_STATE_IDLE;
-//   }
-  
-//   if (dshotState[2] == DSHOT_STATE_INPUT) {
-//     TIM_DMACmd(TIM2, TIM_DMA_CC1, DISABLE);
-//     DMA_ITConfig(DMA1_Stream5, DMA_IT_TC, DISABLE);
-//     DMA_Cmd(DMA1_Stream5, DISABLE);
-//     DMA_ClearITPendingBit(DMA1_Stream5, DMA_IT_TCIF5);
-    
-//     motorsDshotTransferEnded(2);
-//   }
-
-//   if (dshotState[3] == DSHOT_STATE_INPUT) {
-//     TIM_DMACmd(TIM2, TIM_DMA_CC3, DISABLE);
-//     DMA_ITConfig(DMA1_Stream1, DMA_IT_TC, DISABLE);
-//     DMA_Cmd(DMA1_Stream1, DISABLE);
-//     DMA_ClearITPendingBit(DMA1_Stream1, DMA_IT_TCIF1);
-    
-//     motorsDshotTransferEnded(3);
-//   }
-// #endif
-// }
-
-//#endif
 
 /**
  * Override power distribution to motors.
@@ -1117,19 +1074,19 @@ LOG_ADD_CORE(LOG_UINT16, m4, &motor_ratios[MOTOR_M4])
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
 /**
- * @brief Motor RPM telemetry for M1. UINT16_MAX is no value.
+ * @brief Motor RPM telemetry for M1. UINT16_MAX is invalid or no value.
  */
 LOG_ADD(LOG_UINT16, m1_rpm, &motorRPMs[MOTOR_M1])
 /**
- * @brief Motor RPM telemetry for M2. UINT16_MAX is no value.
+ * @brief Motor RPM telemetry for M2. UINT16_MAX is invalid or no value.
  */
 LOG_ADD(LOG_UINT16, m2_rpm, &motorRPMs[MOTOR_M2])
 /**
- * @brief Motor RPM telemetry for M3. UINT16_MAX is no value.
+ * @brief Motor RPM telemetry for M3. UINT16_MAX is invalid or no value.
  */
 LOG_ADD(LOG_UINT16, m3_rpm, &motorRPMs[MOTOR_M3])
 /**
- * @brief Motor RPM telemetry for M4. UINT16_MAX is no value.
+ * @brief Motor RPM telemetry for M4. UINT16_MAX is invalid or no value.
  */
 LOG_ADD(LOG_UINT16, m4_rpm, &motorRPMs[MOTOR_M4])
 #endif
