@@ -243,7 +243,7 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
 
   DEBUG_PRINT("Using %s motor driver: %s\n", 
     motorMap[0]->drvType == BRUSHED ? "brushed" : "brushless", 
-    MOTORS_PROTOCOL_STRING);
+    motorMap[0]->drvType == BRUSHED ? "PWM" : MOTORS_PROTOCOL_STRING);
 
   if (motorMap[MOTOR_M1]->hasPC15ESCReset)
   {
@@ -294,7 +294,7 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
     TIM_TimeBaseStructure.TIM_RepetitionCounter = 0;
     TIM_TimeBaseInit(motorMap[i]->tim, &TIM_TimeBaseStructure);
 
-    TIM_ARRPreloadConfig(motorMap[i]->tim, DISABLE); //TODO: Why?
+    TIM_ARRPreloadConfig(motorMap[i]->tim, DISABLE);
 
     timPolarity = motorMap[i]->timPolarity;
   #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
@@ -1014,8 +1014,8 @@ void __attribute__((used)) TIM2_IRQHandler(void)
   DMA_ITConfig(motorMap[1]->DMA_stream, DMA_IT_TC, ENABLE);
   /* Enable DMA TIM Stream */
   DMA_Cmd(motorMap[1]->DMA_stream, ENABLE);
-#endif
 }
+#endif
 
 
 /**
