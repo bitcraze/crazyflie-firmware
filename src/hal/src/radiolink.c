@@ -44,6 +44,7 @@
 #include "queuemonitor.h"
 #include "static_mem.h"
 #include "cfassert.h"
+#include "storage.h"
 
 #define RADIOLINK_TX_QUEUE_SIZE (1)
 #define RADIOLINK_CRTP_QUEUE_SIZE (5)
@@ -62,6 +63,7 @@ static bool isInit;
 static int radiolinkSendCRTPPacket(CRTPPacket *p);
 static int radiolinkSetEnable(bool enable);
 static int radiolinkReceiveCRTPPacket(CRTPPacket *p);
+static void radiolinkSetCrazyflieName();
 
 //Local RSSI variable used to enable logging of RSSI values from Radio
 static uint8_t rssi;
@@ -101,6 +103,7 @@ void radiolinkInit(void)
   radiolinkSetChannel(configblockGetRadioChannel());
   radiolinkSetDatarate(configblockGetRadioSpeed());
   radiolinkSetAddress(configblockGetRadioAddress());
+  radiolinkSetCrazyflieName();
 
   isInit = true;
 }
@@ -108,6 +111,22 @@ void radiolinkInit(void)
 bool radiolinkTest(void)
 {
   return syslinkTest();
+}
+
+static void radiolinkSetCrazyflieName(void)
+{
+  SyslinkPacket slp;
+
+  slp.type = SYSLINK_CRAZYFLIE_NAME;
+  size_t len = storageFetch("name", slp.data, sizeof(slp.data));
+  if (len != 0) {
+    slp.length = len;
+  } else {
+    // Zero terminate the string
+    slp.length = 6;
+    memcpy(slp.data, "TEST\0", 6);
+  }
+  syslinkSendPacket(&slp);
 }
 
 void radiolinkSetChannel(uint8_t channel)

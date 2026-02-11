@@ -43,6 +43,7 @@
 #include "supervisor.h"
 #include "ledseq.h"
 #include "worker.h"
+#include "storage.h"
 
 static bool isInit=false;
 STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(platformSrvTask, PLATFORM_SRV_TASK_STACKSIZE);
@@ -58,6 +59,7 @@ typedef enum {
   armSystem            = 0x01,
   recoverSystem        = 0x02,
   userNotification     = 0x03,
+  setCrazyflieName     = 0x04,
 } PlatformCommand;
 
 typedef enum {
@@ -156,6 +158,12 @@ static void platformCommandProcess(CRTPPacket *p)
 
       workerSchedule(runUserNotification, (void*)(uint32_t)notificationType);
       p->size = 0;
+      break;
+    }
+    case setCrazyflieName:
+    {
+      storageStore("name", data, p->size - 1); // -1?
+      // TODO: Send an answer back
       break;
     }
     default:

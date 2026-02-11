@@ -124,6 +124,14 @@ void systemInit(void)
   DEBUG_PRINT("----------------------------\n");
   DEBUG_PRINT("%s is up and running!\n", platformConfigGetDeviceTypeName());
 
+  char name[15];
+  bool name_found = storageFetch("name", name, sizeof(name)) > 0;
+  if (name_found) {
+    DEBUG_PRINT("Stored crazyflie name: %s\n", name);
+  } else {
+    DEBUG_PRINT("No stored crazyflie name found.\n");
+  }
+
   if (V_PRODUCTION_RELEASE) {
     DEBUG_PRINT("Production release %s\n", V_STAG);
   } else {
