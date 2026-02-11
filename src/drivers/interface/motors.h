@@ -131,7 +131,7 @@
 
   #define MOTORS_BL_PWM_CNT_FOR_HIGH   1
 #else
-  #define MOTORS_PROTOCOL_STRING       "PWM"
+  #define MOTORS_PROTOCOL_STRING       "PWM400"
 /**
  * *WARNING* Make sure the brushless driver is configured correctly as on the Crazyflie with normal
  * brushed motors connected they can turn on at full speed when it is powered on!
