@@ -468,7 +468,7 @@ void testPersistentGetStateWithNonExistingParameter(void) {
   // Assert
   testPk.size = 4;
 
-  testPk.data[3] = ENOENT;
+  testPk.data[3] = PARAM_NOT_FOUND;
 
   TEST_ASSERT_EQUAL_UINT8(testPk.size, replyPk.size);
   TEST_ASSERT_EQUAL_UINT8_ARRAY(&testPk.data[0], &replyPk.data[0], replyPk.size);
