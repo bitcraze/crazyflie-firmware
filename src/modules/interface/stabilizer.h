@@ -30,6 +30,15 @@
 #include <stdint.h>
 
 #include "estimator.h"
+#include "FreeRTOS.h"
+#include "task.h"
+
+/**
+ * Task handles for the stabilizer and rate supervisor tasks.
+ * Can be used by apps to suspend/resume the stabilizer (e.g., for motor beep playback).
+ */
+extern TaskHandle_t stabilizerTaskHandle;
+extern TaskHandle_t rateSupervisorTaskHandle;
 
 /**
  * Initialize the stabilizer subsystem and launch the stabilizer loop task.
