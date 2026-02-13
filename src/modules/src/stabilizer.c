@@ -121,6 +121,10 @@ static struct {
 STATIC_MEM_TASK_ALLOC(stabilizerTask, STABILIZER_TASK_STACKSIZE);
 STATIC_MEM_TASK_ALLOC(rateSupervisorTask, RATE_SUPERVISOR_TASK_STACKSIZE);
 
+// Task handles for external access (e.g., apps that need to suspend stabilizer)
+TaskHandle_t stabilizerTaskHandle = NULL;
+TaskHandle_t rateSupervisorTaskHandle = NULL;
+
 static void stabilizerTask(void* param);
 static void rateSupervisorTask(void* param);
 
@@ -186,7 +190,7 @@ void stabilizerInit(StateEstimatorType estimator)
   estimatorType = stateEstimatorGetType();
   controllerType = controllerGetType();
 
-  STATIC_MEM_TASK_CREATE(stabilizerTask, stabilizerTask, STABILIZER_TASK_NAME, NULL, STABILIZER_TASK_PRI);
+  stabilizerTaskHandle = STATIC_MEM_TASK_CREATE(stabilizerTask, stabilizerTask, STABILIZER_TASK_NAME, NULL, STABILIZER_TASK_PRI);
 
   isInit = true;
 }
@@ -309,7 +313,7 @@ static void stabilizerTask(void* param)
   DEBUG_PRINT("Starting stabilizer loop\n");
   rateSupervisorInit(&rateSupervisorContext, xTaskGetTickCount(), M2T(1000), 997, 1003, 1);
   xRateSupervisorSemaphore = xSemaphoreCreateBinary();
-  STATIC_MEM_TASK_CREATE(rateSupervisorTask, rateSupervisorTask, RATE_SUPERVISOR_TASK_NAME, NULL, RATE_SUPERVISOR_TASK_PRI);
+  rateSupervisorTaskHandle = STATIC_MEM_TASK_CREATE(rateSupervisorTask, rateSupervisorTask, RATE_SUPERVISOR_TASK_NAME, NULL, RATE_SUPERVISOR_TASK_PRI);
 
   while(1) {
     // The sensor should unlock at 1kHz
