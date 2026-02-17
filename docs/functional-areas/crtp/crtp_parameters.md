@@ -167,7 +167,7 @@ This packet is send by the Crazyflie when a parameters has been modified in the 
 This can for example happen when an app is controlling the Crazyflie autonomously.
 
 ### Get extended type
-**Deprecated**: Use [Get extended type V2 (0x07)](#get-extended-type-v2) instead. This command may have ambiguous responses if the extended_type value equals an error code (e.g., ENOENT=2). Currently not an issue (only extended_type=1 exists), but the V2 command provides an unambiguous format.
+**Deprecated**: Use [Get extended type V2 (0x07)](#get-extended-type-v2) instead. This command may have ambiguous responses if the extended_type value equals an error code (e.g., PARAM_NOT_FOUND=2). Currently not an issue (only extended_type=1 exists), but the V2 command provides an unambiguous format.
 
 Get the extended type of a parameter.
 
@@ -217,7 +217,7 @@ Get the persistence state of a parameter.
 | ------------| ---------------------| ----------------------------------|
 | 0           | PERSISTENT_GET_STATE | 0x04                              |
 | 1-2         | ID                   | ID of the parameter               |
-| 3           | result               | 0x00 == parameter is not stored (use default value)<br>0x01 == parameter is stored<br>0x02 (ENOENT) == parameter ID does not exist  |
+| 3           | result               | 0x00 == parameter is not stored (use default value)<br>0x01 == parameter is stored<br>0x02 (PARAM_NOT_FOUND) == parameter ID does not exist  |
 | 4 + ts      | default value        | The default value that is used if no value is stored in persistent memory |
 | 4 + ts + ts | [stored value]       | The stored value, if it is stored |
 
@@ -243,7 +243,7 @@ Clear the persistent data for a parameter. After reboot the parameter will be se
 
 ### Get default value
 
-**Deprecated**: Use [Get default value V2 (0x08)](#get-default-value-v2) instead. This command has ambiguous responses for U8 parameters with default value 2 (ENOENT).
+**Deprecated**: Use [Get default value V2 (0x08)](#get-default-value-v2) instead. This command has ambiguous responses for U8 parameters with default value 2 (PARAM_NOT_FOUND).
 
 Get the default value of a parameter. The default value is the value the parameter has at startup if not overridden by persistent storage.
 
@@ -256,10 +256,10 @@ Get the default value of a parameter. The default value is the value the paramet
 | -----------| --------------------| ---------------------------------|
 | 0          | GET_DEFAULT_VALUE   | 0x06                             |
 | 1-2        | ID                  | ID of the parameter              |
-| 3          | result/value        | On error: 0x02 (ENOENT) == parameter ID does not exist or is read-only<br>On success: First byte of default value |
+| 3          | result/value        | On error: 0x02 (PARAM_NOT_FOUND) == parameter ID does not exist or is read-only<br>On success: First byte of default value |
 | 4-...      | [value continued]   | Remaining bytes of default value (if applicable) |
 
-**Protocol ambiguity**: For U8 parameters with default value 2, the success response `[0x06, ID_L, ID_H, 0x02]` is identical to the error response with ENOENT. Clients should check the packet size to distinguish, or preferably use the V2 command.
+**Protocol ambiguity**: For U8 parameters with default value 2, the success response `[0x06, ID_L, ID_H, 0x02]` is identical to the error response with PARAM_NOT_FOUND. Clients should check the packet size to distinguish, or preferably use the V2 command.
 
 ### Get extended type V2
 

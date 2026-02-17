@@ -356,7 +356,7 @@ void paramWriteProcess(CRTPPacket *p)
   index = variableGetIndex(id);
 
   if (index < 0) {
-    p->data[2] = ENOENT;
+    p->data[2] = PARAM_NOT_FOUND;
     p->size = 3;
 
     crtpSendPacketBlock(p);
@@ -652,7 +652,7 @@ void paramSetByName(CRTPPacket *p)
 #define KEY_LEN 30  // FIXME
 
 // Deprecated: Use paramGetExtendedTypeV2() (MISC_GET_EXTENDED_TYPE_V2) instead.
-// This version may have ambiguous responses if extended_type value equals an error code (e.g., ENOENT=2).
+// This version may have ambiguous responses if extended_type value equals an error code (e.g., PARAM_NOT_FOUND=2).
 // Currently not an issue (only extended_type=1 exists), but kept for backward compatibility.
 void paramGetExtendedType(CRTPPacket *p)
 {
@@ -663,7 +663,7 @@ void paramGetExtendedType(CRTPPacket *p)
   index = variableGetIndex(id);
 
   if (index < 0 || !(params[index].type & PARAM_EXTENDED)) {
-    p->data[3] = ENOENT;
+    p->data[3] = PARAM_NOT_FOUND;
     p->size = 4;
     crtpSendPacketBlock(p);
     return;
@@ -743,8 +743,8 @@ void paramPersistentStore(CRTPPacket *p)
 }
 
 // Deprecated: Use paramGetDefaultValueV2() (MISC_GET_DEFAULT_VALUE_V2) instead.
-// This version has ambiguous responses for U8 parameters with default value 2 (ENOENT):
-// both success [CMD, ID_L, ID_H, 0x02] and error [CMD, ID_L, ID_H, ENOENT=0x02] are identical.
+// This version has ambiguous responses for U8 parameters with default value 2 (PARAM_NOT_FOUND):
+// both success [CMD, ID_L, ID_H, 0x02] and error [CMD, ID_L, ID_H, PARAM_NOT_FOUND=0x02] are identical.
 // Kept for backward compatibility with older clients.
 void paramGetDefaultValue(CRTPPacket *p)
 {
@@ -756,7 +756,7 @@ void paramGetDefaultValue(CRTPPacket *p)
   const bool doesParamExist = (index >= 0);
   // Read-only parameters have no default value
   if (!doesParamExist || params[index].type & PARAM_RONLY) {
-    p->data[3] = ENOENT;
+    p->data[3] = PARAM_NOT_FOUND;
     p->size = 4;
     crtpSendPacketBlock(p);
     return;
@@ -814,7 +814,7 @@ void paramPersistentGetState(CRTPPacket *p)
 
   const bool doesParamExist = (index >= 0);
   if (! doesParamExist) {
-    p->data[3] = ENOENT;
+    p->data[3] = PARAM_NOT_FOUND;
     p->size = 4;
     crtpSendPacketBlock(p);
     return;
