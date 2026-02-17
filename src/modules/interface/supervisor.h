@@ -28,6 +28,8 @@
 
 #include "stabilizer_types.h"
 
+uint16_t supervisorGetInfoBitfield(void);
+
 /**
  * @brief Update the supervisor state.
  *

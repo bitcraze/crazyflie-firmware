@@ -96,6 +96,9 @@ typedef struct {
 
 static SupervisorMem_t supervisorMem;
 
+uint16_t supervisorGetInfoBitfield(void) {
+  return supervisorMem.infoBitfield;
+}
 const static setpoint_t nullSetpoint;
 
 void infoDump(const SupervisorMem_t* this);
