@@ -99,14 +99,6 @@
 
 // #define DEBUG_STATE_CHECK
 
-// The drag coefficients
-static float dragB_x = DRAG_B_X; // drag on the X axis 
-static float dragB_y = DRAG_B_Y; // drag on the Y axis
-static float dragB_z = DRAG_B_Z; // drag on the Z axis
-static float cop_x = CENTER_OF_PRESSURE_X; // CoP distance to CoM in X axis
-static float cop_y = CENTER_OF_PRESSURE_Y; // CoP distance to CoM in Y axis
-static float cop_z = CENTER_OF_PRESSURE_Z; // CoP distance to CoM in Z axis
-
 /**
  * Supporting and utility functions
  */
@@ -424,17 +416,17 @@ static void predictDt(kalmanCoreData_t* this, const kalmanCoreParams_t *params, 
   // body-frame velocity from body-frame velocity
   if (quadIsFlying) {
     // Compensate for drag
-    A[KC_STATE_PX][KC_STATE_PX] = 1 - dt * dragB_x;
+    A[KC_STATE_PX][KC_STATE_PX] = 1 - dt * params->dragB_x;
     A[KC_STATE_PY][KC_STATE_PX] =-gyro->z*dt;
     A[KC_STATE_PZ][KC_STATE_PX] = gyro->y*dt;
 
     A[KC_STATE_PX][KC_STATE_PY] = gyro->z*dt;
-    A[KC_STATE_PY][KC_STATE_PY] = 1 - dt * dragB_y;
+    A[KC_STATE_PY][KC_STATE_PY] = 1 - dt * params->dragB_y;
     A[KC_STATE_PZ][KC_STATE_PY] =-gyro->x*dt;
 
     A[KC_STATE_PX][KC_STATE_PZ] =-gyro->y*dt;
     A[KC_STATE_PY][KC_STATE_PZ] = gyro->x*dt;
-    A[KC_STATE_PZ][KC_STATE_PZ] = 1 - dt * dragB_z;
+    A[KC_STATE_PZ][KC_STATE_PZ] = 1 - dt * params->dragB_z;
   }
   else {
     // No drag when stationary
@@ -532,21 +524,21 @@ static void predictDt(kalmanCoreData_t* this, const kalmanCoreParams_t *params, 
     tmpSPZ = this->S[KC_STATE_PZ];
 
     // Velocity of center of pressure = v_com + omega x r_d, where r_d is the vector from CoM to CoP , in body frame.
-    float vCop_x = tmpSPX + gyro->y * cop_z - gyro->z * cop_y;
-    float vCop_y = tmpSPY + gyro->z * cop_x - gyro->x * cop_z;
-    float vCop_z = tmpSPZ + gyro->x * cop_y - gyro->y * cop_x;
+    float vCop_x = tmpSPX + gyro->y * params->cop_z - gyro->z * params->cop_y;
+    float vCop_y = tmpSPY + gyro->z * params->cop_x - gyro->x * params->cop_z;
+    float vCop_z = tmpSPZ + gyro->x * params->cop_y - gyro->y * params->cop_x;
 
     // body-velocity update: accelerometers - gyros cross velocity - gravity - drag
     this->S[KC_STATE_PX] += dt * (  gyro->z * tmpSPY - gyro->y * tmpSPZ
                                   - GRAVITY_MAGNITUDE * this->R[2][0]
-                                  - dragB_x * vCop_x);
+                                  - params->dragB_x * vCop_x);
     this->S[KC_STATE_PY] += dt * (- gyro->z * tmpSPX + gyro->x * tmpSPZ
                                   - GRAVITY_MAGNITUDE * this->R[2][1]
-                                  - dragB_y * vCop_y);
+                                  - params->dragB_y * vCop_y);
     this->S[KC_STATE_PZ] += dt * (  zacc 
                                   + gyro->y * tmpSPX - gyro->x * tmpSPY
                                   - GRAVITY_MAGNITUDE * this->R[2][2]
-                                  - dragB_z * vCop_z);
+                                  - params->dragB_z * vCop_z);
   }
   else // Acceleration can be in any direction, as measured by the accelerometer. This occurs, eg. in freefall or while being carried.
   {
@@ -851,30 +843,3 @@ void kalmanCoreDecoupleXY(kalmanCoreData_t* this)
   decoupleState(this, KC_STATE_PY);
 }
 
-PARAM_GROUP_START(kalman)
-/**
- * @brief Drag in x direction (in N*s/m)
- */
-PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, dragB_x, &dragB_x)
-/**
- * @brief Drag in y direction (in N*s/m)
- */
-PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, dragB_y, &dragB_y)
-/**
- * @brief Drag in z direction (in N*s/m)
- */
-PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, dragB_z, &dragB_z)
-/**
- * @brief Center of pressure X (in meters)
- */
-PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, cop_x, &cop_x)
-/**
- * @brief Center of pressure Y (in meters)
- */
-PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, cop_y, &cop_y)
-/**
- * @brief Center of pressure Z (in meters)
- */
-PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, cop_z, &cop_z)
-
-PARAM_GROUP_STOP(kalman)
