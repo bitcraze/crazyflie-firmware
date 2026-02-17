@@ -133,6 +133,14 @@ typedef struct {
   float initialYaw;
 
   float attitudeReversion;
+
+  float dragB_x;
+  float dragB_y;
+  float dragB_z;
+
+  float cop_x;
+  float cop_y;
+  float cop_z;
 } kalmanCoreParams_t;
 
 /**

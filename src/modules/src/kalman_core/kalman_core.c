@@ -27,6 +27,14 @@
  * "Covariance Correction Step for Kalman Filtering with an Attitude"
  * http://arc.aiaa.org/doi/abs/10.2514/1.G000848
  *
+ * Drag implementation is based on these papers:
+ *
+ * "A minimal longitudinal dynamic model of a tailless flapping wing robot for control design"
+ * https://iopscience.iop.org/article/10.1088/1748-3190/ab1e0b
+ *
+ * "A tailless aerial robotic flapper reveals that flies use torque coupling in rapid banked turns"
+ * https://www.science.org/doi/10.1126/science.aat0350
+ *
  * Academic citation would be appreciated.
  *
  * BIBTEX ENTRIES:
@@ -48,6 +56,26 @@
       pages={1--7},
       year={2016},
       publisher={American Institute of Aeronautics and Astronautics}}
+
+      @ARTICLE{Kajak2019,
+      author={Kajak, K. M. and Kar\'{a}sek, M. and Chu, Q. P. and de Croon, G. C. H. E.},
+      title={A minimal longitudinal dynamic model of a tailless flapping wing robot for control design},
+      journal={Bioinspiration \& Biomimetics},
+      year={2019},
+      volume={14},
+      number={4},
+      pages={046008},
+      doi={10.1088/1748-3190/ab1e0b}}
+
+      @ARTICLE{Karasek2018,
+      author={Kar\'{a}sek, M. and Muijres, F. T. and De Wagter, C. and Remes, B. D. W. and de Croon, G. C. H. E.},
+      title={A tailless aerial robotic flapper reveals that flies use torque coupling in rapid banked turns},
+      journal={Science},
+      year={2018},
+      volume={361},
+      number={6407},
+      pages={1089--1094},
+      doi={10.1126/science.aat0350}}
  * \endverbatim
  *
  * ============================================================================
@@ -61,6 +89,8 @@
 #include "kalman_core_params_defaults.h"
 #include "cfassert.h"
 #include "autoconf.h"
+#include "platform_defaults.h"
+#include "param.h"
 
 #include "physicalConstants.h"
 
@@ -384,17 +414,34 @@ static void predictDt(kalmanCoreData_t* this, const kalmanCoreParams_t *params, 
   A[KC_STATE_Z][KC_STATE_D2] = (this->S[KC_STATE_PX]*this->R[2][1] - this->S[KC_STATE_PY]*this->R[2][0])*dt;
 
   // body-frame velocity from body-frame velocity
-  A[KC_STATE_PX][KC_STATE_PX] = 1; //drag negligible
-  A[KC_STATE_PY][KC_STATE_PX] =-gyro->z*dt;
-  A[KC_STATE_PZ][KC_STATE_PX] = gyro->y*dt;
+  if (quadIsFlying) {
+    // Compensate for drag
+    A[KC_STATE_PX][KC_STATE_PX] = 1 - dt * params->dragB_x;
+    A[KC_STATE_PY][KC_STATE_PX] =-gyro->z*dt;
+    A[KC_STATE_PZ][KC_STATE_PX] = gyro->y*dt;
 
-  A[KC_STATE_PX][KC_STATE_PY] = gyro->z*dt;
-  A[KC_STATE_PY][KC_STATE_PY] = 1; //drag negligible
-  A[KC_STATE_PZ][KC_STATE_PY] =-gyro->x*dt;
+    A[KC_STATE_PX][KC_STATE_PY] = gyro->z*dt;
+    A[KC_STATE_PY][KC_STATE_PY] = 1 - dt * params->dragB_y;
+    A[KC_STATE_PZ][KC_STATE_PY] =-gyro->x*dt;
 
-  A[KC_STATE_PX][KC_STATE_PZ] =-gyro->y*dt;
-  A[KC_STATE_PY][KC_STATE_PZ] = gyro->x*dt;
-  A[KC_STATE_PZ][KC_STATE_PZ] = 1; //drag negligible
+    A[KC_STATE_PX][KC_STATE_PZ] =-gyro->y*dt;
+    A[KC_STATE_PY][KC_STATE_PZ] = gyro->x*dt;
+    A[KC_STATE_PZ][KC_STATE_PZ] = 1 - dt * params->dragB_z;
+  }
+  else {
+    // No drag when stationary
+    A[KC_STATE_PX][KC_STATE_PX] = 1;
+    A[KC_STATE_PY][KC_STATE_PX] =-gyro->z*dt;
+    A[KC_STATE_PZ][KC_STATE_PX] = gyro->y*dt;
+
+    A[KC_STATE_PX][KC_STATE_PY] = gyro->z*dt;
+    A[KC_STATE_PY][KC_STATE_PY] = 1;
+    A[KC_STATE_PZ][KC_STATE_PY] =-gyro->x*dt;
+
+    A[KC_STATE_PX][KC_STATE_PZ] =-gyro->y*dt;
+    A[KC_STATE_PY][KC_STATE_PZ] = gyro->x*dt;
+    A[KC_STATE_PZ][KC_STATE_PZ] = 1;
+  }
 
   // body-frame velocity from attitude error
   A[KC_STATE_PX][KC_STATE_D0] =  0;
@@ -476,10 +523,22 @@ static void predictDt(kalmanCoreData_t* this, const kalmanCoreParams_t *params, 
     tmpSPY = this->S[KC_STATE_PY];
     tmpSPZ = this->S[KC_STATE_PZ];
 
-    // body-velocity update: accelerometers - gyros cross velocity - gravity in body frame
-    this->S[KC_STATE_PX] += dt * (gyro->z * tmpSPY - gyro->y * tmpSPZ - GRAVITY_MAGNITUDE * this->R[2][0]);
-    this->S[KC_STATE_PY] += dt * (-gyro->z * tmpSPX + gyro->x * tmpSPZ - GRAVITY_MAGNITUDE * this->R[2][1]);
-    this->S[KC_STATE_PZ] += dt * (zacc + gyro->y * tmpSPX - gyro->x * tmpSPY - GRAVITY_MAGNITUDE * this->R[2][2]);
+    // Velocity of center of pressure = v_com + omega x r_d, where r_d is the vector from CoM to CoP , in body frame.
+    float vCop_x = tmpSPX + gyro->y * params->cop_z - gyro->z * params->cop_y;
+    float vCop_y = tmpSPY + gyro->z * params->cop_x - gyro->x * params->cop_z;
+    float vCop_z = tmpSPZ + gyro->x * params->cop_y - gyro->y * params->cop_x;
+
+    // body-velocity update: accelerometers - gyros cross velocity - gravity - drag
+    this->S[KC_STATE_PX] += dt * (  gyro->z * tmpSPY - gyro->y * tmpSPZ
+                                  - GRAVITY_MAGNITUDE * this->R[2][0]
+                                  - params->dragB_x * vCop_x);
+    this->S[KC_STATE_PY] += dt * (- gyro->z * tmpSPX + gyro->x * tmpSPZ
+                                  - GRAVITY_MAGNITUDE * this->R[2][1]
+                                  - params->dragB_y * vCop_y);
+    this->S[KC_STATE_PZ] += dt * (  zacc 
+                                  + gyro->y * tmpSPX - gyro->x * tmpSPY
+                                  - GRAVITY_MAGNITUDE * this->R[2][2]
+                                  - params->dragB_z * vCop_z);
   }
   else // Acceleration can be in any direction, as measured by the accelerometer. This occurs, eg. in freefall or while being carried.
   {
@@ -783,3 +842,4 @@ void kalmanCoreDecoupleXY(kalmanCoreData_t* this)
   decoupleState(this, KC_STATE_Y);
   decoupleState(this, KC_STATE_PY);
 }
+

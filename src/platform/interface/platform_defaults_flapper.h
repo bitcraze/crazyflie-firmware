@@ -152,3 +152,19 @@
 #define SUPERVISOR_TUMBLE_CHECK_ACCEPTED_UPSIDEDOWN_TIME 200
 
 #define YAW_MAX_DELTA 30.0
+
+// Drag and center of pressure
+// NOTE: For X, these values are not constant but depends on dihedral angle. Influence seems to be negligible.
+#define DRAG_B_X 4.2f
+#define DRAG_B_Y 1.8f
+#define DRAG_B_Z 0.3f
+#define CENTER_OF_PRESSURE_X 0.0f
+#define CENTER_OF_PRESSURE_Y 0.0f
+#define CENTER_OF_PRESSURE_Z 0.06f
+
+// Flow deck position offset (in meters)
+// Note that this depends on flowdeck placement and might vary. These values assume placement directly under the legs with the STL provided here:
+// https://github.com/flapper-drones/3Dmodels/blob/main/Bitcraze_flowdeck_support%20v17.stl
+#define FLOWDECK_POS_X 0.0f 
+#define FLOWDECK_POS_Y 0.0f
+#define FLOWDECK_POS_Z -0.12f

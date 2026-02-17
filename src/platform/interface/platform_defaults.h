@@ -1,4 +1,4 @@
-/**
+    /**
  * ,---------,       ____  _ __
  * |  ,-^-,  |      / __ )(_) /_______________ _____  ___
  * | (  O  ) |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
@@ -224,3 +224,39 @@
         #define CONFIG_MOTORS_DEFAULT_IDLE_THRUST 7000
     #endif
 #endif
+
+// Flow deck position constants
+// Distance of camera sensor of the flow deck,
+// with respect to center of mass, in meters.
+#ifndef FLOWDECK_POS_X
+    #define FLOWDECK_POS_X 0.0f
+#endif
+#ifndef FLOWDECK_POS_Y
+    #define FLOWDECK_POS_Y 0.0f
+#endif
+#ifndef FLOWDECK_POS_Z
+    #define FLOWDECK_POS_Z 0.0f
+#endif
+
+// Drag coefficients (in N*s/m)
+#ifndef DRAG_B_X
+    #define DRAG_B_X 0.0f
+#endif
+#ifndef DRAG_B_Y
+    #define DRAG_B_Y 0.0f
+#endif
+#ifndef DRAG_B_Z
+    #define DRAG_B_Z 0.0f
+#endif
+
+// Center of pressure offset relative to the the centre of mass, in body frame (in meters)
+#ifndef CENTER_OF_PRESSURE_X
+    #define CENTER_OF_PRESSURE_X 0.0f
+#endif
+#ifndef CENTER_OF_PRESSURE_Y
+    #define CENTER_OF_PRESSURE_Y 0.0f
+#endif
+#ifndef CENTER_OF_PRESSURE_Z
+    #define CENTER_OF_PRESSURE_Z 0.0f
+#endif
+

@@ -591,4 +591,29 @@ PARAM_GROUP_START(kalman)
  * @brief Initial yaw after reset [rad]
  */
   PARAM_ADD_CORE(PARAM_FLOAT, initialYaw, &coreParams.initialYaw)
-PARAM_GROUP_STOP(kalman)
+  /**
+  * @brief Drag in x direction (in N*s/m)
+  */
+  PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, dragB_x, &coreParams.dragB_x)
+  /**
+   * @brief Drag in y direction (in N*s/m)
+   */
+  PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, dragB_y, &coreParams.dragB_y)
+  /**
+   * @brief Drag in z direction (in N*s/m)
+   */
+  PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, dragB_z, &coreParams.dragB_z)
+  /**
+   * @brief Center of pressure X (in meters)
+   */
+  PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, cop_x, &coreParams.cop_x)
+  /**
+   * @brief Center of pressure Y (in meters)
+   */
+  PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, cop_y, &coreParams.cop_y)
+  /**
+   * @brief Center of pressure Z (in meters)
+   */
+  PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, cop_z, &coreParams.cop_z)
+ 
+ PARAM_GROUP_STOP(kalman)
