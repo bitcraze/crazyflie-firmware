@@ -41,6 +41,7 @@ void systemWaitStart(void);
 
 void systemRequestShutdown();
 void systemRequestNRFVersion();
+void systemSendRadioReady();
 void systemSyslinkReceive();
 
 #endif //__SYSTEM_H__
