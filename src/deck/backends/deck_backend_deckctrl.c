@@ -48,15 +48,16 @@
 #include "autoconf.h"
 #include "i2cdev.h"
 #include "deckctrl_gpio.h"
-
+#include "mem.h"
 
 #define DEBUG_MODULE "DECKCTRL"
 #include "debug.h"
 
 // Only enable debug prints if CONFIG_DECK_BACKEND_DECKCTRL_DEBUG is set by kconfig
-#ifndef CONFIG_DECK_BACKEND_DECKCTRL_DEBUG
-    #undef DEBUG_PRINT
-    #define DEBUG_PRINT(...)
+#ifdef CONFIG_DECK_BACKEND_DECKCTRL_DEBUG
+    #define DECKCTRL_DEBUG_PRINT DEBUG_PRINT
+#else
+    #define DECKCTRL_DEBUG_PRINT(...)
 #endif
 
 static const DeckDiscoveryBackend_t deckctrlBackend;
@@ -67,14 +68,14 @@ static const DeckDiscoveryBackend_t deckctrlBackend;
  * The protocol uses special addresses for broadcast operations and a range
  * of addresses for individually assigned deck controllers.
  */
-#define DECKCTRL_I2C_ADDRESS_RESET     0x41  ///< Broadcast: Reset all deck controllers
-#define DECKCTRL_I2C_ADDRESS_LISTEN    0x42  ///< Broadcast: Put unconfigured decks in listening mode
-#define DECKCTRL_I2C_ADDRESS_DEFAULT   0x43  ///< Default: Read CPU ID and assign address
+#define DECKCTRL_I2C_ADDRESS_RESET    DECKCTRL_RESET_I2C_ADDRESS    ///< Broadcast: Reset all deck controllers
+#define DECKCTRL_I2C_ADDRESS_LISTEN   DECKCTRL_LISTEN_I2C_ADDRESS   ///< Broadcast: Put unconfigured decks in listening mode
+#define DECKCTRL_I2C_ADDRESS_DEFAULT  DECKCTRL_DEFAULT_I2C_ADDRESS  ///< Default: Read CPU ID and assign address
 
 // Address range for assigning I2C addresses to deck controllers
 // The limit of possible decks is set by CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS in Kconfig
-#define DECKCTRL_I2C_ADDRESS_START    0x44  ///< First assigned address
-#define DECKCTRL_I2C_ADDRESS_END      (0x44 + CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS - 1)  ///< Last assigned address
+#define DECKCTRL_I2C_ADDRESS_START    DECKCTRL_START_I2C_ADDRESS  ///< First assigned address
+#define DECKCTRL_I2C_ADDRESS_END      (DECKCTRL_START_I2C_ADDRESS + CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS - 1)  ///< Last assigned address
 
 /**
  * DeckCtrl memory layout at register 0x0000
@@ -91,6 +92,13 @@ static const DeckDiscoveryBackend_t deckctrlBackend;
 #define DECKCTRL_MEM_BOARD_REV_OFFSET 6    ///< Board revision ASCII character
 #define DECKCTRL_MEM_PRODUCT_NAME_OFFSET 7 ///< Product name (null-terminated, max 14 chars)
 
+#define DECKCTRL_MEM_PRODUCTION_YEAR_OFFSET 0x16  ///< Production year offset
+#define DECKCTRL_MEM_PRODUCTION_MONTH_OFFSET 0x17 ///< Production month offset
+#define DECKCTRL_MEM_PRODUCTION_DAY_OFFSET 0x18   ///< Production day offset
+
+#define DECKCTRL_CONFIG_PAGE_SIZE 2048     ///< Size of configuration memory page
+#define DECKCTRL_SERIAL_SIZE 12            ///< Size of serial number stored in memory
+
 /**
  * Static storage for discovered decks
  *
@@ -102,6 +110,22 @@ static char product_names[CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS][16];       ///
 static DeckCtrlContext deck_contexts[CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS]; ///< Backend-specific contexts
 static int deck_count = 0;  ///< Number of decks discovered so far
 
+static MemoryHandlerDef_t deckctrl_memory_handlers[CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS];
+
+static bool deckctrlMemoryRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+    return i2cdevReadReg16(I2C1_DEV, deck_contexts[internal_id].i2cAddress, memAddr, readLen, buffer);
+}
+
+static uint32_t deckctrlMemorySize(const uint8_t internal_id) {
+    return DECKCTRL_CONFIG_PAGE_SIZE;
+}
+
+static bool deckctrlMemorySerialNbr(const uint8_t internal_id, const uint8_t max_length, uint8_t* len, uint8_t* buffer) {
+    ASSERT(max_length >= DECKCTRL_SERIAL_SIZE);
+    *len = DECKCTRL_SERIAL_SIZE;
+    return i2cdevReadReg16(I2C1_DEV, deck_contexts[internal_id].i2cAddress, 0x1900, DECKCTRL_SERIAL_SIZE, buffer);
+}
+
 /**
  * @brief Initialize the DeckCtrl discovery backend
  *
@@ -112,7 +136,7 @@ static int deck_count = 0;  ///< Number of decks discovered so far
  */
 static bool deckctrl_init(void)
 {
-    DEBUG_PRINT("Initializing DeckCtrl backend with support for %d decks\n", CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS);
+    DECKCTRL_DEBUG_PRINT("Initializing DeckCtrl backend with support for %d decks\n", CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS);
 
     // Reset all deck controllers on the bus by reading from broadcast reset address
     // This causes all controllers to return to default state and release their I2C addresses
@@ -120,12 +144,12 @@ static bool deckctrl_init(void)
     bool reset_result = i2cdevReadReg16(I2C1_DEV, DECKCTRL_I2C_ADDRESS_RESET, 0x0000, 2, dummy_buffer);
 
     if (reset_result) {
-        DEBUG_PRINT("Deck controller reset successful\n");
+        DECKCTRL_DEBUG_PRINT("Deck controller reset successful\n");
 
         // Since this is a hardware reset of the controller MCU, wait for it to restart
         vTaskDelay(M2T(10));
     } else {
-        DEBUG_PRINT("Deck controller reset failed, no deck controller on the line\n");
+        DECKCTRL_DEBUG_PRINT("Deck controller reset failed, no deck controller on the line\n");
     }
 
     return true;
@@ -151,11 +175,11 @@ static DeckInfo* deckctrl_getNextDeck(void)
 {
     // Check if we've reached the maximum number of decks
     if (deck_count >= sizeof(deck_info) / sizeof(deck_info[0])) {
-        DEBUG_PRINT_OS("WARNING: Maximum number of deck-controller decks reached, no more decks can be enumerated\n");
+        DEBUG_PRINT("WARNING: Maximum number of deck-controller decks reached, no more decks can be enumerated\n");
         return NULL;
     }
 
-    DEBUG_PRINT("Starting deck detection\n");
+    DECKCTRL_DEBUG_PRINT("Starting deck detection\n");
 
     // Put all unconfigured deck controllers in listening mode (broadcast command)
     // Only controllers that haven't been assigned an address will respond
@@ -163,11 +187,11 @@ static DeckInfo* deckctrl_getNextDeck(void)
     bool listening_result = i2cdevReadReg16(I2C1_DEV, DECKCTRL_I2C_ADDRESS_LISTEN, 0x0000, 2, dummy_buffer);
 
     if (!listening_result) {
-        DEBUG_PRINT("Failed to put deck controllers in listening mode, no more deck to setup.\n");
+        DECKCTRL_DEBUG_PRINT("Failed to put deck controllers in listening mode, no more deck to setup.\n");
         return NULL;
     }
 
-    DEBUG_PRINT("Deck controllers in listening mode\n");
+    DECKCTRL_DEBUG_PRINT("Deck controllers in listening mode\n");
 
     // Read the CPU ID from the next available deck
     // The unconfigured deck with the lowest ID will be read, the others will observe a bus collision and back-off
@@ -175,7 +199,7 @@ static DeckInfo* deckctrl_getNextDeck(void)
     bool read_result = i2cdevReadReg16(I2C1_DEV, DECKCTRL_I2C_ADDRESS_DEFAULT, 0x1900, sizeof(cpu_id), cpu_id);
 
     if (!read_result) {
-        DEBUG_PRINT("Failed to read deck ID data, no more deck to setup?\n");
+        DECKCTRL_DEBUG_PRINT("Failed to read deck ID data, no more deck to setup?\n");
         return NULL;
     }
 
@@ -190,19 +214,19 @@ static DeckInfo* deckctrl_getNextDeck(void)
     }
 
     // Print ID and new I2C address of the detected deck if debugging is enabled
-    DEBUG_PRINT("Found deck with ID: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+    DECKCTRL_DEBUG_PRINT("Found deck with ID: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
                 cpu_id[0], cpu_id[1], cpu_id[2], cpu_id[3],
                 cpu_id[4], cpu_id[5], cpu_id[6], cpu_id[7],
                 cpu_id[8], cpu_id[9], cpu_id[10], cpu_id[11]);
-    DEBUG_PRINT("Assigned new I2C address: 0x%02x\n", deck_address);
+    DECKCTRL_DEBUG_PRINT("Assigned new I2C address: 0x%02x\n", deck_address);
 
     // Read deck information from the newly assigned address at register 0x0000
-    // Format: magic(2) + versions(2) + vendor(1) + product(1) + revision(1) + name(14)
-    uint8_t deck_mem_data[21];
+    // Format: magic(2) + versions(2) + vendor(1) + product(1) + revision(1) + name(15) + production date(3) + reserved (6) + checksum(1)
+    uint8_t deck_mem_data[0x20];
     bool read_info_result = i2cdevReadReg16(I2C1_DEV, deck_address, 0x0000, sizeof(deck_mem_data), deck_mem_data);
 
     if (!read_info_result) {
-        DEBUG_PRINT_OS("Failed to read deck information from I2C address 0x%02x\n", deck_address);
+        DEBUG_PRINT("Failed to read deck information from I2C address 0x%02x\n", deck_address);
         return NULL;
     }
 
@@ -210,7 +234,17 @@ static DeckInfo* deckctrl_getNextDeck(void)
     // This confirms the device is a valid DeckCtrl deck
     uint16_t magic = (deck_mem_data[DECKCTRL_MEM_MAGIC_OFFSET_0] << 8) | deck_mem_data[DECKCTRL_MEM_MAGIC_OFFSET_1];
     if (magic != 0xBCDC) {
-        DEBUG_PRINT_OS("Invalid magic number 0x%04x, expected 0xBCDC\n", magic);
+        DEBUG_PRINT("Invalid magic number 0x%04x, expected 0xBCDC\n", magic);
+        return NULL;
+    }
+
+    // Validate checksum (sum of all bytes modulo 256 should be 0)
+    uint8_t checksum = 0;
+    for (size_t i = 0; i < sizeof(deck_mem_data); i++) {
+        checksum += deck_mem_data[i];
+    }
+    if (checksum != 0) {
+        DEBUG_PRINT("Invalid checksum 0x%02x, expected 0x00\n", checksum);
         return NULL;
     }
 
@@ -222,9 +256,27 @@ static DeckInfo* deckctrl_getNextDeck(void)
     info->vid = deck_mem_data[DECKCTRL_MEM_VENDOR_ID_OFFSET];
     info->pid = deck_mem_data[DECKCTRL_MEM_PRODUCT_ID_OFFSET];
 
-    DEBUG_PRINT("Read deck info - VID: 0x%02x, PID: 0x%02x\n", info->vid, info->pid);
+    info->production_year = deck_mem_data[DECKCTRL_MEM_PRODUCTION_YEAR_OFFSET];
+    info->production_month = deck_mem_data[DECKCTRL_MEM_PRODUCTION_MONTH_OFFSET];
+    info->production_day = deck_mem_data[DECKCTRL_MEM_PRODUCTION_DAY_OFFSET];
 
-    DEBUG_PRINT("Firmware version: %d.%d, Board revision: %c\n",
+    if (info->production_year == 0 || info->production_month == 0 || info->production_day == 0 ||
+        info->production_year == 0xFF || info->production_month == 0xFF || info->production_day == 0xFF)
+    {
+        DEBUG_PRINT("Invalid production date read from deck controller: %02d-%02d-%02d\n",
+            info->production_year, info->production_month, info->production_day);
+#ifndef CONFIG_ACCEPT_DECKCTRL_DECKS_UNDER_PRODUCTION
+        // Allow a deck without a valid production date to be used.
+        return NULL;
+#endif
+    } else {
+        DECKCTRL_DEBUG_PRINT("Production date: 20%02d-%02d-%02d\n",
+            info->production_year, info->production_month, info->production_day);
+    }
+
+    DECKCTRL_DEBUG_PRINT("Read deck info - VID: 0x%02x, PID: 0x%02x\n", info->vid, info->pid);
+
+    DECKCTRL_DEBUG_PRINT("Firmware version: %d.%d, Board revision: %c\n",
                 deck_mem_data[DECKCTRL_MEM_MAJOR_VER_OFFSET],
                 deck_mem_data[DECKCTRL_MEM_MINOR_VER_OFFSET],
                 deck_mem_data[DECKCTRL_MEM_BOARD_REV_OFFSET]);
@@ -232,7 +284,7 @@ static DeckInfo* deckctrl_getNextDeck(void)
     // Copy product name string (null-terminated, max 14 chars + null)
     memcpy(product_names[current_deck], &deck_mem_data[DECKCTRL_MEM_PRODUCT_NAME_OFFSET], 15);
     product_names[current_deck][15] = '\0';  // Ensure null termination
-    DEBUG_PRINT("Product name: %s\n", product_names[current_deck]);
+    DECKCTRL_DEBUG_PRINT("Product name: %s\n", product_names[current_deck]);
 
     info->productName = product_names[current_deck];
     info->discoveryBackend = &deckctrlBackend;
@@ -241,6 +293,17 @@ static DeckInfo* deckctrl_getNextDeck(void)
     // Deck drivers can access this via info->backendContext to communicate with the deck
     deck_contexts[current_deck].i2cAddress = deck_address;
     info->backendContext = &deck_contexts[current_deck];
+
+    deckctrl_memory_handlers[current_deck] = (MemoryHandlerDef_t) {
+        .type = MEM_TYPE_DECKCTRL,
+        .getSize = deckctrlMemorySize,
+        .read = deckctrlMemoryRead,
+        .write = 0, // Memory is read only
+        .getSerialNbr = deckctrlMemorySerialNbr,
+        .internal_id = current_deck,
+    };
+
+    memoryRegisterHandler(&deckctrl_memory_handlers[current_deck]);
 
     return info;
 }

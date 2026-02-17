@@ -26,8 +26,10 @@
 
 #include "deck_discovery.h"
 #include "deck.h"
+#include "mem.h"
 #include "ow.h"
 #include "crc32.h"
+#include "cfassert.h"
 
 #define DEBUG_MODULE "DECK_BACKEND_OW"
 #include "debug.h"
@@ -49,6 +51,45 @@ static DeckInfo deckBuffer; // Buffer for returning deck info
 // Dummy driver for decks that do not have a driver implemented
 extern const DeckDriver dummyDriver;
 
+#define MAX_OW_DECK_COUNT 4
+static MemoryHandlerDef_t ow_memory_handlers[MAX_OW_DECK_COUNT]; // Support up to 4 OW decks
+
+static bool owMemoryRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+
+    bool result = false;
+
+    if (memAddr + readLen <= OW_MAX_SIZE) {
+      if (owRead(internal_id, memAddr, readLen, buffer)) {
+        result = true;
+      }
+    }
+
+    return result;
+}
+
+static bool owMemoryWrite(const uint8_t internal_id, const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer) {
+
+    bool result = false;
+
+    if (memAddr + writeLen <= OW_MAX_SIZE) {
+      if (owWrite(internal_id, memAddr, writeLen, buffer)) {
+        result = true;
+      }
+    }
+
+    return result;
+}
+
+static uint32_t owMemorySize(const uint8_t internal_id) {
+    return OW_MAX_SIZE;
+}
+
+bool owMemorySerialNbr(const uint8_t internal_id, const uint8_t max_length, uint8_t* len, uint8_t* buffer) {
+    ASSERT(max_length >= sizeof(OwSerialNum));
+    *len = sizeof(OwSerialNum);
+    return owGetinfo(internal_id, (OwSerialNum*) buffer);
+}
+
 static bool owBackendInit(void) {
     OW_BACKEND_DEBUG("Initializing OneWire backend\n");
     currentDeck = 0;
@@ -60,6 +101,11 @@ static bool owBackendInit(void) {
 #ifdef CONFIG_DECK_BACKEND_ONEWIRE
     if (!owScan(&totalDecks)) {
         OW_BACKEND_DEBUG("OneWire scan failed\n");
+        return false;
+    }
+
+    if (totalDecks > MAX_OW_DECK_COUNT) {
+        DEBUG_PRINT("OneWire found more decks (%d) than supported (%d)\n", totalDecks, MAX_OW_DECK_COUNT);
         return false;
     }
 
@@ -211,6 +257,17 @@ static DeckInfo* owBackendGetNextDeck(void) {
         return NULL;
 #endif
     }
+
+    ow_memory_handlers[currentDeck] = (MemoryHandlerDef_t) {
+        .type = MEM_TYPE_OW,
+        .getSize = owMemorySize,
+        .read = owMemoryRead,
+        .write = owMemoryWrite,
+        .getSerialNbr = owMemorySerialNbr,
+        .internal_id = currentDeck,
+    };
+
+    memoryRegisterHandler(&ow_memory_handlers[currentDeck]);
 
     currentDeck++;
     return &deckBuffer;

@@ -51,39 +51,6 @@ void owInit()
   // Put reply semaphore in right state.
   xSemaphoreTake(waitForReply, portMAX_DELAY);
 
-  owCommonInit();
-}
-
-bool owTest()
-{
-  uint8_t nOwMem = 0;
-  uint8_t nOwIter = 0;
-  OwSerialNum sn;
-
-  if (owScan(&nOwMem))
-  {
-    DEBUG_PRINT("Found %d.\n", nOwMem);
-  }
-  else
-  {
-    DEBUG_PRINT("Scan [FAILED].\n");
-  }
-
-  for (nOwIter = 0; nOwIter < nOwMem; nOwIter++)
-  {
-    if (owGetinfo(nOwIter, &sn))
-    {
-      DEBUG_PRINT("Serial 0x%X %X %X %X %X %X %X %X.\n",
-                  sn.type, sn.id[0], sn.id[1], sn.id[2],
-                  sn.id[3], sn.id[4], sn.id[5], sn.crc);
-    }
-    else
-    {
-      DEBUG_PRINT("Mem:%d Getinfo [FAILED].\n", nOwIter);
-    }
-  }
-
-  return owCommonTest();
 }
 
 void owSyslinkReceive(SyslinkPacket *slp)

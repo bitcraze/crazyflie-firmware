@@ -213,7 +213,8 @@ void radiolinkSyslinkDispatch(SyslinkPacket *slp)
 
 static int radiolinkReceiveCRTPPacket(CRTPPacket *p)
 {
-  if (xQueueReceive(crtpPacketDelivery, p, M2T(100)) == pdTRUE)
+  if (crtpPacketDelivery != 0 &&
+      xQueueReceive(crtpPacketDelivery, p, M2T(100)) == pdTRUE)
   {
     return 0;
   }
@@ -236,7 +237,8 @@ static int radiolinkSendCRTPPacket(CRTPPacket *p)
   slp.length = p->size + 1;
   memcpy(slp.data, &p->header, p->size + 1);
 
-  if (xQueueSend(txQueue, &slp, M2T(100)) == pdTRUE)
+  if (txQueue != 0 &&
+      xQueueSend(txQueue, &slp, M2T(100)) == pdTRUE)
   {
     return true;
   }

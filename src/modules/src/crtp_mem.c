@@ -75,11 +75,10 @@ static void memWriteProcess(CRTPPacket* p);
 static void memReadProcess(CRTPPacket* p);
 static void createNbrResponse(CRTPPacket* p);
 static void createInfoResponse(CRTPPacket* p, uint8_t memId);
-static void createInfoResponseBody(CRTPPacket* p, uint8_t type, uint32_t memSize, const uint8_t data[8]);
+static void createInfoResponseBody(CRTPPacket* p, uint8_t type, uint32_t memSize, const uint8_t serialLen, const uint8_t data[MEMORY_SERIAL_LENGTH]);
 
 static bool isInit = false;
 
-static const uint8_t NoSerialNr[MEMORY_SERIAL_LENGTH] = {0, 0, 0, 0, 0, 0, 0, 0};
 static CRTPPacket packet;
 
 STATIC_MEM_TASK_ALLOC(memTask, MEM_TASK_STACKSIZE);
@@ -107,11 +106,9 @@ bool crtpMemTest(void) {
 static void memTask(void* param) {
 	crtpInitTaskQueue(CRTP_PORT_MEM);
 
-  // This should be synced with decks starting up, otherwise
-  // there might be late arrivals for the registration that will
-  // trigger assert.
-
-  systemWaitStart();
+  // All memory handlers are registered during deckInit() before this task is created.
+  // Not waiting for systemStart() allows memory operations (e.g., firmware flashing)
+  // to work even when system tests fail.
 
   // Do not allow registration of new handlers after this point as clients now can start
   // to query for available memories
@@ -160,50 +157,47 @@ static void memSettingsProcess(CRTPPacket* p) {
 
 static void createNbrResponse(CRTPPacket* p) {
   const uint8_t nrOfMems = memGetNrOfMems();
-  const uint8_t nbrOwMems = memGetNrOfOwMems();
 
   p->header = CRTP_HEADER(CRTP_PORT_MEM, MEM_SETTINGS_CH);
   p->size = 2;
   p->data[0] = MEM_CMD_GET_NBR;
-  p->data[1] = nbrOwMems + nrOfMems;
+  p->data[1] = nrOfMems;
 }
 
 static void createInfoResponse(CRTPPacket* p, uint8_t memId) {
-  const uint8_t nrOfMems = memGetNrOfMems();
-
   p->header = CRTP_HEADER(CRTP_PORT_MEM, MEM_SETTINGS_CH);
   p->size = 2;
   p->data[0] = MEM_CMD_GET_INFO;
   p->data[1] = memId;
 
-  if (memId < nrOfMems) {
-    createInfoResponseBody(p, memGetType(memId), memGetSize(memId), NoSerialNr);
-  } else {
-    const uint8_t selectedMem = memId - nrOfMems;
-    uint8_t serialNr[MEMORY_SERIAL_LENGTH];
-
-    // No error code if we fail, just send an empty packet back
-    if (memGetOwSerialNr(selectedMem, serialNr)) {
-      createInfoResponseBody(p, MEM_TYPE_OW, memGetOwSize(), serialNr);
-    }
+  uint8_t serialNr[MEMORY_SERIAL_LENGTH] = {0};
+  uint8_t serialLen = 0;
+  memSerialNbr(memId, MEMORY_SERIAL_LENGTH, &serialLen, serialNr);
+  if (serialLen > MEMORY_SERIAL_LENGTH) {
+    serialLen = MEMORY_SERIAL_LENGTH;
   }
+  // The old library expects at least 8 bytes of serial number even if the memory
+  // has none. So make sure this is the case.
+  if (serialLen < 8) {
+    serialLen = 8;
+  }
+  createInfoResponseBody(p, memGetType(memId), memGetSize(memId), serialLen, serialNr);
 }
 
-static void createInfoResponseBody(CRTPPacket* p, uint8_t type, uint32_t memSize, const uint8_t data[8]) {
+static void createInfoResponseBody(CRTPPacket* p, uint8_t type, uint32_t memSize, const uint8_t serialLen, const uint8_t data[MEMORY_SERIAL_LENGTH]) {
   p->data[2] = type;
   p->size += 1;
 
   memcpy(&p->data[3], &memSize, 4);
   p->size += 4;
 
-  memcpy(&p->data[7], data, 8);
-  p->size += 8;
+  memcpy(&p->data[7], data, serialLen);
+  p->size += serialLen;
 }
 
 
 static void memReadProcess(CRTPPacket* p) {
   uint32_t memAddr;
-  const uint8_t nrOfMems = memGetNrOfMems();
 
   MEM_DEBUG("Packet is MEM READ\n");
   p->header = CRTP_HEADER(CRTP_PORT_MEM, MEM_READ_CH);
@@ -213,13 +207,7 @@ static void memReadProcess(CRTPPacket* p) {
   uint8_t readLen = p->data[5];
   uint8_t* startOfData = &p->data[6];
 
-  bool result = false;
-  if (memId < nrOfMems) {
-    result = memRead(memId, memAddr, readLen, startOfData);
-  } else {
-    uint8_t owMemId = memId - nrOfMems;
-    result = memReadOw(owMemId, memAddr, readLen, startOfData);
-  }
+  bool result = memRead(memId, memAddr, readLen, startOfData);
 
   p->data[5] = result ? STATUS_OK : EIO;
   if (result) {
@@ -233,7 +221,6 @@ static void memReadProcess(CRTPPacket* p) {
 
 static void memWriteProcess(CRTPPacket* p) {
   uint32_t memAddr;
-  const uint8_t nrOfMems = memGetNrOfMems();
 
   uint8_t memId = p->data[0];
   memcpy(&memAddr, &p->data[1], 4);
@@ -245,13 +232,7 @@ static void memWriteProcess(CRTPPacket* p) {
   p->header = CRTP_HEADER(CRTP_PORT_MEM, MEM_WRITE_CH);
   // Dont' touch the first 5 bytes, they will be the same.
 
-  bool result = false;
-  if (memId < nrOfMems) {
-    result = memWrite(memId, memAddr, writeLen, startOfData);
-  } else {
-    uint8_t owMemId = memId - nrOfMems;
-    result = memWriteOw(owMemId, memAddr, writeLen, startOfData);
-  }
+  bool result = memWrite(memId, memAddr, writeLen, startOfData);
 
   p->data[5] = result ? STATUS_OK : EIO;
   p->size = 6;

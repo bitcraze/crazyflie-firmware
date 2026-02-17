@@ -76,6 +76,14 @@ config ESTIMATOR_KALMAN_GENERAL_PURPOSE
         use any drone specific information for state estimation, this is useful when using the Crazyflie as a general
         positioning tag (tracker).
 
+config ESTIMATOR_KALMAN_INITIAL_YAW_STD
+    int "Configure the initial yaw standard deviation in the Kalman filter."
+    default 10
+    depends on ESTIMATOR_KALMAN_ENABLE
+    help
+        The initial yaw standard deviation describes how uncertain the Kalman estimator assumes the yaw angle is at startup.
+        Note that the entered value is in milliradians (mrad).
+
 config ESTIMATOR_UKF_ENABLE
     bool "Enable error-state UKF estimator"
     select ESTIMATOR_OUTLIER_FILTERS
@@ -91,6 +99,7 @@ config ESTIMATOR_OUTLIER_FILTERS
 choice
     prompt "Default estimator"
     default CONFIG_ESTIMATOR_AUTO_SELECT
+    depends on !ESTIMATOR_OOT
 
 config ESTIMATOR_AUTO_SELECT
     bool "Auto select Estimator"
@@ -165,6 +174,15 @@ config MOTORS_REQUIRE_ARMING
         When enabled, system must be armed to be able to take off. Arming can
         be done in several ways, e.g. though cfclient or external transmitter.
 
+config MOTORS_DEFAULT_IDLE_THRUST
+    int "Idle thrust for the armed motors"
+    depends on MOTORS_REQUIRE_ARMING
+    range 0 15000
+    default 7000
+    help
+        Sets the baseline motor power level when they are armed. Setting this
+        value above 7000 may cause the platform to move unintentionally, while
+        setting it too low might not provide enough power to spin the motors.
 
 config MOTORS_DEFAULT_PROP_TEST_PWM_RATIO
     int "Override default PWM ratio to use during motor tests"
@@ -213,26 +231,6 @@ config POWER_DISTRIBUTION_FLAPPER_REVB
     default n
     help
         Power distribution function for Flapper Nimble+ with revB PCB
-
-config ENABLE_THRUST_BAT_COMPENSATED
-    bool "Enable battery thrust compensation"
-    default y
-    help
-        Compensate thrust depending on battery voltage so it will produce about the same
-        amount of thrust independent of the battery voltage.
-        The compensation is based on thrust measurements, which are only valid for the specific type, see below.
-        Not applied for brushless motor setup.
-
-config THRUST_BAT_COMPENSATION_TYPE
-    int "Battery thrust compensation type"
-    range 0 2
-    default 0
-    help
-        Compensate thrust depending on battery voltage so it will produce about the same
-        amount of thrust independent of the battery voltage.
-        The compensation is based on thrust measurements for different setups.
-        0 is the CF2.1 stock, 1 is the CF2.1+, and 2 is the thrust upgrade kit configuration.
-        Not applied for brushless motor setup.
 
 config LOG_MOTOR_CAP_WARNING
     bool "Log a warning if the motor thrust is capped"

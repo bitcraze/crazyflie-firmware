@@ -332,9 +332,6 @@ void systemTask(void *arg)
   // the nRF51 will timeout and enable radio anyway for debugging.
   systemSendRadioReady();
 
-  workerLoop();
-
-  //Should never reach this point!
   while(1)
     vTaskDelay(portMAX_DELAY);
 }

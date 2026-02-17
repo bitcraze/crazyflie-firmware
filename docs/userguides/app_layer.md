@@ -93,16 +93,6 @@ Then flash the resulting bin on your crazyflie according to [the flashing instru
 > ```
 > brew install coreutils gnu-sed
 > ```
-> Then replace `readlink`, `sed` and `cp` with `greadlink`, `gsed` and `gcp`, either with temporary aliases:
-> ```
-> alias readlink=greadlink
-> alias sed=gsed
-> alias cp=gcp
-> ```
-> Or by permanently adding them to your path:
-> ```
-> export PATH="/usr/local/opt/coreutils/libexec/gnubin:/usr/local/opt/gnu-sed/libexec gnubin:$PATH"
-> ```
 
 
 ## Internal log and param system

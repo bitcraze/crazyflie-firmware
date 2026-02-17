@@ -82,6 +82,12 @@ if [ "$#" -lt 1 ] ; then
 	exit
 fi
 
+# use GNU commands rather than BSD commands on macOS, requires coreutils and gnu-sed to be installed
+if [ "$(uname -s)" = "Darwin" ]; then
+	HOMEBREW_PREFIX="$(brew --prefix)"
+	export PATH="$HOMEBREW_PREFIX/opt/coreutils/libexec/gnubin:$HOMEBREW_PREFIX/opt/gnu-sed/libexec/gnubin:$PATH"
+fi
+
 if [ -z "$KCONFIG_CONFIG" ]; then
 	if [ "$OUTPUT" != . ]; then
 		KCONFIG_CONFIG=$(readlink -m -- "$OUTPUT/.config")

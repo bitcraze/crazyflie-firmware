@@ -215,3 +215,12 @@
 #ifndef HEALTH_PROPELLER_TEST_THRESHOLD
     #define HEALTH_PROPELLER_TEST_THRESHOLD  0.0f
 #endif
+
+// For safety, when the BigQuad deck is enabled, the user should
+// know when the platform is ready to fly.
+#ifdef CONFIG_DECK_BIGQUAD
+    #define CONFIG_MOTORS_REQUIRE_ARMING 1
+    #ifndef CONFIG_MOTORS_DEFAULT_IDLE_THRUST
+        #define CONFIG_MOTORS_DEFAULT_IDLE_THRUST 7000
+    #endif
+#endif

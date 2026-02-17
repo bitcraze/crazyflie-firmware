@@ -34,12 +34,19 @@ static int32_t myPersistent = 0;
 static float myPersistentFloat = 0;
 static int8_t myShortPersistent = 0;
 static float myFloat = 0.0f;
+static uint8_t myReadOnly = 42;
+static uint8_t myExtendedParam = 0;
 
 // Storage fetch mock
 static int32_t* fetchMockBuffer = 0;
 static size_t fetchMockBufferLength = 0;
 static char* fetchMockExpectedKey = "";
 
+// Mock getter function for testing paramGetDefaultValueV2 with getter
+static uint8_t getterReturnValue = 0;
+static void* testGetter(void) {
+  return &getterReturnValue;
+}
 
 PARAM_GROUP_START(myGroup)
 PARAM_ADD(PARAM_UINT8, myUint8, &myUint8)
@@ -52,6 +59,9 @@ PARAM_ADD(PARAM_FLOAT, myFloat, &myFloat)
 PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, myPersistent, &myPersistent)
 PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, myPersistentFloat, &myPersistentFloat)
 PARAM_ADD_CORE(PARAM_INT8 | PARAM_PERSISTENT, myShortPersistent, &myShortPersistent)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, myReadOnly, &myReadOnly)
+{ .type = (0x0100 | PARAM_UINT8 | PARAM_EXTENDED) & 0xFF, .extended_type = 1, .name = "myExtendedParam", .address = &myExtendedParam, .callback = 0, .getter = 0 },
+PARAM_ADD_FULL(PARAM_UINT8, myGetterParam, &myUint8, 0, testGetter)
 PARAM_GROUP_STOP(myGroup)
 
 CRTPPacket replyPk;
@@ -442,7 +452,6 @@ void testPersistentGetStateWithoutStoredParameter(void) {
   TEST_ASSERT_EQUAL_UINT8_ARRAY(&testPk.data[0], &replyPk.data[0], replyPk.size);
 }
 
-
 void testPersistentGetStateWithNonExistingParameter(void) {
   // Fixture
   CRTPPacket testPk;
@@ -463,4 +472,231 @@ void testPersistentGetStateWithNonExistingParameter(void) {
 
   TEST_ASSERT_EQUAL_UINT8(testPk.size, replyPk.size);
   TEST_ASSERT_EQUAL_UINT8_ARRAY(&testPk.data[0], &replyPk.data[0], replyPk.size);
+}
+
+void testGetDefaultValueV2_Success_Uint8(void) {
+  // Fixture
+  CRTPPacket testPk;
+  paramVarId_t varid = paramGetVarId("myGroup", "myUint8");
+
+  testPk.data[0] = MISC_GET_DEFAULT_VALUE_V2;
+  testPk.data[1] = varid.id & 0xFF;
+  testPk.data[2] = (varid.id >> 8) & 0xFF;
+
+  crtpSendPacketBlock_StubWithCallback(crtpReply);
+
+  // Test
+  paramGetDefaultValueV2(&testPk);
+
+  // Assert
+  // Expected format: [CMD, ID_LOW, ID_HIGH, 0x00, VALUE] with size=5
+  // V2 format is unambiguous: status byte at position 3 (0x00) and size=5 for success
+  // vs error which has size=4 with error code at position 3
+  TEST_ASSERT_EQUAL_UINT8(5, replyPk.size);
+  TEST_ASSERT_EQUAL_UINT8(MISC_GET_DEFAULT_VALUE_V2, replyPk.data[0]);
+  TEST_ASSERT_EQUAL_UINT8(varid.id & 0xFF, replyPk.data[1]);
+  TEST_ASSERT_EQUAL_UINT8((varid.id >> 8) & 0xFF, replyPk.data[2]);
+  TEST_ASSERT_EQUAL_UINT8(0x00, replyPk.data[3]); // Status: success
+  // Default value is 0 (note: default value lookup doesn't work in unit tests)
+  TEST_ASSERT_EQUAL_UINT8(0, replyPk.data[4]);
+}
+
+void testGetDefaultValueV2_Success_Uint16(void) {
+  // Fixture
+  CRTPPacket testPk;
+  paramVarId_t varid = paramGetVarId("myGroup", "myUint16");
+
+  testPk.data[0] = MISC_GET_DEFAULT_VALUE_V2;
+  testPk.data[1] = varid.id & 0xFF;
+  testPk.data[2] = (varid.id >> 8) & 0xFF;
+
+  crtpSendPacketBlock_StubWithCallback(crtpReply);
+
+  // Test
+  paramGetDefaultValueV2(&testPk);
+
+  // Assert
+  // Expected format: [CMD, ID_LOW, ID_HIGH, 0x00, VALUE_LOW, VALUE_HIGH] with size=6
+  TEST_ASSERT_EQUAL_UINT8(6, replyPk.size);
+  TEST_ASSERT_EQUAL_UINT8(0x00, replyPk.data[3]); // Status: success
+  TEST_ASSERT_EQUAL_UINT16(0, *((uint16_t*)&replyPk.data[4])); // Default value is 0
+}
+
+void testGetDefaultValueV2_Success_Float(void) {
+  // Fixture
+  CRTPPacket testPk;
+  paramVarId_t varid = paramGetVarId("myGroup", "myFloat");
+
+  testPk.data[0] = MISC_GET_DEFAULT_VALUE_V2;
+  testPk.data[1] = varid.id & 0xFF;
+  testPk.data[2] = (varid.id >> 8) & 0xFF;
+
+  crtpSendPacketBlock_StubWithCallback(crtpReply);
+
+  // Test
+  paramGetDefaultValueV2(&testPk);
+
+  // Assert
+  // Expected format: [CMD, ID_LOW, ID_HIGH, 0x00, VALUE...] with size=8 (4 bytes for float)
+  TEST_ASSERT_EQUAL_UINT8(8, replyPk.size);
+  TEST_ASSERT_EQUAL_UINT8(0x00, replyPk.data[3]); // Status: success
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, *((float*)&replyPk.data[4])); // Default value is 0.0
+}
+
+void testGetDefaultValueV2_Success_WithGetter(void) {
+  // Fixture
+  CRTPPacket testPk;
+  paramVarId_t varid = paramGetVarId("myGroup", "myGetterParam");
+  getterReturnValue = 42; // Set the value returned by the getter
+
+  testPk.data[0] = MISC_GET_DEFAULT_VALUE_V2;
+  testPk.data[1] = varid.id & 0xFF;
+  testPk.data[2] = (varid.id >> 8) & 0xFF;
+
+  crtpSendPacketBlock_StubWithCallback(crtpReply);
+
+  // Test
+  paramGetDefaultValueV2(&testPk);
+
+  // Assert
+  // Getter path should work correctly
+  TEST_ASSERT_EQUAL_UINT8(5, replyPk.size);
+  TEST_ASSERT_EQUAL_UINT8(0x00, replyPk.data[3]); // Status: success
+  TEST_ASSERT_EQUAL_UINT8(42, replyPk.data[4]); // Value from getter
+}
+
+void testGetDefaultValueV2_Error_InvalidId(void) {
+  // Fixture
+  CRTPPacket testPk;
+
+  testPk.data[0] = MISC_GET_DEFAULT_VALUE_V2;
+  testPk.data[1] = 0xFF; // Invalid ID
+  testPk.data[2] = 0xFF;
+
+  crtpSendPacketBlock_StubWithCallback(crtpReply);
+
+  // Test
+  paramGetDefaultValueV2(&testPk);
+
+  // Assert
+  // Expected error format: [CMD, ID_LOW, ID_HIGH, ENOENT] with size=4
+  TEST_ASSERT_EQUAL_UINT8(4, replyPk.size);
+  TEST_ASSERT_EQUAL_UINT8(MISC_GET_DEFAULT_VALUE_V2, replyPk.data[0]);
+  TEST_ASSERT_EQUAL_UINT8(0xFF, replyPk.data[1]);
+  TEST_ASSERT_EQUAL_UINT8(0xFF, replyPk.data[2]);
+  TEST_ASSERT_EQUAL_UINT8(ENOENT, replyPk.data[3]); // Error code
+}
+
+void testGetDefaultValueV2_Error_ReadOnlyParam(void) {
+  // Fixture
+  CRTPPacket testPk;
+  paramVarId_t varid = paramGetVarId("myGroup", "myReadOnly");
+
+  testPk.data[0] = MISC_GET_DEFAULT_VALUE_V2;
+  testPk.data[1] = varid.id & 0xFF;
+  testPk.data[2] = (varid.id >> 8) & 0xFF;
+
+  crtpSendPacketBlock_StubWithCallback(crtpReply);
+
+  // Test
+  paramGetDefaultValueV2(&testPk);
+
+  // Assert
+  // Read-only parameters have no default value, should return error
+  TEST_ASSERT_EQUAL_UINT8(4, replyPk.size);
+  TEST_ASSERT_EQUAL_UINT8(ENOENT, replyPk.data[3]); // Error code
+}
+
+// ============================================================================
+// Tests for paramGetExtendedTypeV2
+// ============================================================================
+
+void testGetExtendedTypeV2_Success(void) {
+  // Fixture
+  CRTPPacket testPk;
+  paramVarId_t varid = paramGetVarId("myGroup", "myExtendedParam");
+
+  testPk.data[0] = MISC_GET_EXTENDED_TYPE_V2;
+  testPk.data[1] = varid.id & 0xFF;
+  testPk.data[2] = (varid.id >> 8) & 0xFF;
+
+  crtpSendPacketBlock_StubWithCallback(crtpReply);
+
+  // Test
+  paramGetExtendedTypeV2(&testPk);
+
+  // Assert
+  // Expected format: [CMD, ID_LOW, ID_HIGH, 0x00, EXTENDED_TYPE] with size=5
+  TEST_ASSERT_EQUAL_UINT8(5, replyPk.size);
+  TEST_ASSERT_EQUAL_UINT8(MISC_GET_EXTENDED_TYPE_V2, replyPk.data[0]);
+  TEST_ASSERT_EQUAL_UINT8(varid.id & 0xFF, replyPk.data[1]);
+  TEST_ASSERT_EQUAL_UINT8((varid.id >> 8) & 0xFF, replyPk.data[2]);
+  TEST_ASSERT_EQUAL_UINT8(0x00, replyPk.data[3]); // Status: success
+  TEST_ASSERT_EQUAL_UINT8(1, replyPk.data[4]); // Extended type value
+}
+
+void testGetExtendedTypeV2_Error_InvalidId(void) {
+  // Fixture
+  CRTPPacket testPk;
+
+  testPk.data[0] = MISC_GET_EXTENDED_TYPE_V2;
+  testPk.data[1] = 0xFF; // Invalid ID
+  testPk.data[2] = 0xFF;
+
+  crtpSendPacketBlock_StubWithCallback(crtpReply);
+
+  // Test
+  paramGetExtendedTypeV2(&testPk);
+
+  // Assert
+  // Expected error format: [CMD, ID_LOW, ID_HIGH, ENOENT] with size=4
+  TEST_ASSERT_EQUAL_UINT8(4, replyPk.size);
+  TEST_ASSERT_EQUAL_UINT8(MISC_GET_EXTENDED_TYPE_V2, replyPk.data[0]);
+  TEST_ASSERT_EQUAL_UINT8(0xFF, replyPk.data[1]);
+  TEST_ASSERT_EQUAL_UINT8(0xFF, replyPk.data[2]);
+  TEST_ASSERT_EQUAL_UINT8(ENOENT, replyPk.data[3]); // Error code
+}
+
+void testGetExtendedTypeV2_Error_NonExtendedParam(void) {
+  // Fixture
+  CRTPPacket testPk;
+  paramVarId_t varid = paramGetVarId("myGroup", "myUint8"); // Regular param, not extended
+
+  testPk.data[0] = MISC_GET_EXTENDED_TYPE_V2;
+  testPk.data[1] = varid.id & 0xFF;
+  testPk.data[2] = (varid.id >> 8) & 0xFF;
+
+  crtpSendPacketBlock_StubWithCallback(crtpReply);
+
+  // Test
+  paramGetExtendedTypeV2(&testPk);
+
+  // Assert
+  // Non-extended parameters should return error
+  TEST_ASSERT_EQUAL_UINT8(4, replyPk.size);
+  TEST_ASSERT_EQUAL_UINT8(ENOENT, replyPk.data[3]); // Error code
+}
+
+void testGetExtendedTypeV2_UnambiguousFormat(void) {
+  // Fixture - Verify that the format distinguishes success from error
+  CRTPPacket testPk;
+  paramVarId_t varid = paramGetVarId("myGroup", "myExtendedParam");
+
+  testPk.data[0] = MISC_GET_EXTENDED_TYPE_V2;
+  testPk.data[1] = varid.id & 0xFF;
+  testPk.data[2] = (varid.id >> 8) & 0xFF;
+
+  crtpSendPacketBlock_StubWithCallback(crtpReply);
+
+  // Test
+  paramGetExtendedTypeV2(&testPk);
+
+  // Assert
+  // V2 format is unambiguous: success has size=5 with status byte=0x00,
+  // error has size=4 with error code at position 3
+  TEST_ASSERT_EQUAL_UINT8(5, replyPk.size); // Success size is different from error size
+  TEST_ASSERT_EQUAL_UINT8(0x00, replyPk.data[3]); // Status byte at position 3
+
+  // Even if extended_type was 2 (ENOENT), the status byte would be 0x00
+  // and size would be 5, making it unambiguous from error response
 }

@@ -29,6 +29,14 @@ config DECK_BACKEND_DECKCTRL_DEBUG
       This will output additional information about deck detection,
       initialization, and communication for debugging purposes.
 
+config ACCEPT_DECKCTRL_DECKS_UNDER_PRODUCTION
+    depends on DECK_BACKEND_DECKCTRL
+    bool "Accept DeckCtrl decks under production"
+    default n
+    help
+      Accept decks wich still has no production test passed date set. Only
+      for use in production.
+
 config DECK_BACKEND_DECKCTRL_MAX_DECKS
     depends on DECK_BACKEND_DECKCTRL
     int "Maximum number of DeckCtrl decks supported"
