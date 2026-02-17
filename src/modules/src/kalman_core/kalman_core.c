@@ -531,22 +531,22 @@ static void predictDt(kalmanCoreData_t* this, const kalmanCoreParams_t *params, 
     tmpSPY = this->S[KC_STATE_PY];
     tmpSPZ = this->S[KC_STATE_PZ];
 
-    // omega x r_d (body frame). omega is gyro (rad/s).
-    float odr_x = gyro->y * cop_z - gyro->z * cop_y;
-    float odr_y = gyro->z * cop_x - gyro->x * cop_z;
-    float odr_z = gyro->x * cop_y - gyro->y * cop_x;
-    
+    // Velocity of center of pressure = v_com + omega x r_d, where r_d is the vector from CoM to CoP , in body frame.
+    float vCop_x = tmpSPX + gyro->y * cop_z - gyro->z * cop_y;
+    float vCop_y = tmpSPY + gyro->z * cop_x - gyro->x * cop_z;
+    float vCop_z = tmpSPZ + gyro->x * cop_y - gyro->y * cop_x;
+
     // body-velocity update: accelerometers - gyros cross velocity - gravity - drag
     this->S[KC_STATE_PX] += dt * (  gyro->z * tmpSPY - gyro->y * tmpSPZ
                                   - GRAVITY_MAGNITUDE * this->R[2][0]
-                                  - dragB_x * tmpSPX - dragB_x * odr_x);
+                                  - dragB_x * vCop_x);
     this->S[KC_STATE_PY] += dt * (- gyro->z * tmpSPX + gyro->x * tmpSPZ
                                   - GRAVITY_MAGNITUDE * this->R[2][1]
-                                  - dragB_y * tmpSPY - dragB_y * odr_y);
+                                  - dragB_y * vCop_y);
     this->S[KC_STATE_PZ] += dt * (  zacc 
                                   + gyro->y * tmpSPX - gyro->x * tmpSPY
                                   - GRAVITY_MAGNITUDE * this->R[2][2]
-                                  - dragB_z * tmpSPZ - dragB_z * odr_z);
+                                  - dragB_z * vCop_z);
   }
   else // Acceleration can be in any direction, as measured by the accelerometer. This occurs, eg. in freefall or while being carried.
   {
