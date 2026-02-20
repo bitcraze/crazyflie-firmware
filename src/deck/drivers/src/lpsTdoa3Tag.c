@@ -609,7 +609,20 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
   }
 
   uint32_t now = xTaskGetTickCount();
-  tdoaStatsUpdate(&tdoaEngineState.stats, T2M(now));
+  uint32_t now_ms = T2M(now);
+  tdoaStatsUpdate(&tdoaEngineState.stats, now_ms);
+
+  // Update ranging state bitmask for active anchor coverage reporting
+  uint8_t activeIds[16];
+  uint8_t activeCount = tdoaStorageGetListOfActiveAnchorIds(
+      tdoaEngineState.anchorInfoArray, activeIds, 16, now_ms);
+  uint16_t rangingState = 0;
+  for (uint8_t i = 0; i < activeCount; i++) {
+    if (activeIds[i] < 16) {
+      rangingState |= (1 << activeIds[i]);
+    }
+  }
+  locoDeckSetRangingState(rangingState);
 
   uint32_t timeout = startNextEvent(dev, now);
   return timeout;
