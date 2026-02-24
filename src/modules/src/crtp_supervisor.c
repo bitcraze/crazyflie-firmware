@@ -45,6 +45,8 @@
 // - SUPERVISOR_CH_INFO handled in a low-priority task via queue
 
 static bool isInit = false;
+static bool isEmergencyStopRequested = false;
+static uint32_t emergencyStopWatchdogNotificationTick = 0;
 
 STATIC_MEM_TASK_ALLOC(supervisorTask, SUPERVISOR_TASK_STACKSIZE);
 
@@ -145,6 +147,14 @@ static void handleSupervisorCommand(CRTPPacket* p)
 
     switch (cmd) {
 
+        case CMD_EMERGENCY_STOP:
+            isEmergencyStopRequested = true;
+            break;
+
+        case CMD_EMERGENCY_STOP_WATCHDOG:
+            emergencyStopWatchdogNotificationTick = xTaskGetTickCount();
+            break;
+
         case CMD_ARM_SYSTEM:
         {
             const bool doArm = data[0];
@@ -175,6 +185,22 @@ static void handleSupervisorCommand(CRTPPacket* p)
     }
 }
 
+
+void crtpSupervisorSetEmergencyStop(void) {
+    isEmergencyStopRequested = true;
+}
+
+void crtpSupervisorNotifyEmergencyStopWatchdog(void) {
+    emergencyStopWatchdogNotificationTick = xTaskGetTickCount();
+}
+
+bool crtpSupervisorIsEmergencyStopRequested(void) {
+    return isEmergencyStopRequested;
+}
+
+uint32_t crtpSupervisorGetEmergencyStopWatchdogNotificationTick(void) {
+    return emergencyStopWatchdogNotificationTick;
+}
 
 static void sendSupervisorResponse(uint8_t channel, uint8_t cmd, const void* data, uint8_t len)
 // Helper to send a response packet.

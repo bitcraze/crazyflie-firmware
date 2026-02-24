@@ -39,7 +39,7 @@
 #include "supervisor.h"
 #include "supervisor_state_machine.h"
 #include "platform_defaults.h"
-#include "crtp_localization_service.h"
+#include "crtp_supervisor.h"
 #include "system.h"
 #include "autoconf.h"
 
@@ -264,7 +264,7 @@ static bool isTumbledCheck(SupervisorMem_t* this, const sensorData_t *data, cons
 static bool checkEmergencyStopWatchdog(const uint32_t tick) {
   bool isOk = true;
 
-  const uint32_t latestNotification = locSrvGetEmergencyStopWatchdogNotificationTick();
+  const uint32_t latestNotification = crtpSupervisorGetEmergencyStopWatchdogNotificationTick();
   if (latestNotification > 0) {
     isOk = tick < (latestNotification + DEFAULT_EMERGENCY_STOP_WATCHDOG_TIMEOUT);
   }
@@ -351,7 +351,7 @@ static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* th
     conditions |= SUPERVISOR_CB_EMERGENCY_STOP;
   }
 
-  if (locSrvIsEmergencyStopRequested()) {
+  if (crtpSupervisorIsEmergencyStopRequested()) {
     conditions |= SUPERVISOR_CB_EMERGENCY_STOP;
   }
 

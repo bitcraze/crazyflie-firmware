@@ -27,14 +27,17 @@
 #define _CRTP_SUPERVISOR_H_
 
 #include "crtp.h"
+#include <stdbool.h>
 #include <stdint.h>
 
 #define SUPERVISOR_CH_INFO    0
 #define SUPERVISOR_CH_COMMAND 1
 
 // Commands
-#define CMD_ARM_SYSTEM         0x01
-#define CMD_RECOVER_SYSTEM     0x02
+#define CMD_ARM_SYSTEM              0x01
+#define CMD_RECOVER_SYSTEM          0x02
+#define CMD_EMERGENCY_STOP          0x03
+#define CMD_EMERGENCY_STOP_WATCHDOG 0x04
 
 // State info
 #define CMD_CAN_BE_ARMED          0x01
@@ -56,5 +59,11 @@
 // - SUPERVISOR_CH_COMMAND handled in CRTP RX callback (high priority)
 // - SUPERVISOR_CH_INFO handled in a low-priority task via queue
 void crtpSupervisorInit(void);
+
+// Emergency stop state (set via callback or backward-compat forwarding)
+void crtpSupervisorSetEmergencyStop(void);
+void crtpSupervisorNotifyEmergencyStopWatchdog(void);
+bool crtpSupervisorIsEmergencyStopRequested(void);
+uint32_t crtpSupervisorGetEmergencyStopWatchdogNotificationTick(void);
 
 #endif
