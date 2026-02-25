@@ -129,6 +129,8 @@ static void nanDump(kalmanCoreData_t* this, arm_matrix_instance_f32* Hm,
               (int)lastMeasType, (int)lastSensorId,
               (double)error, (double)HPHR);
 
+  vTaskDelay(M2T(20));
+
   // H vector (3 per line)
   for (int i = 0; i < KC_STATE_DIM; i += 3) {
     if (i + 2 < KC_STATE_DIM) {
@@ -141,12 +143,16 @@ static void nanDump(kalmanCoreData_t* this, arm_matrix_instance_f32* Hm,
     }
   }
 
+  vTaskDelay(M2T(20));
+
   // P diagonal
   DEBUG_PRINT("[NAN] Pdiag:");
   for (int i = 0; i < KC_STATE_DIM; i++) {
     DEBUG_PRINT(" %.3e", (double)this->P[i][i]);
   }
   DEBUG_PRINT("\n");
+
+  vTaskDelay(M2T(20));
 
   // P rows/cols for non-zero H elements
   for (int k = 0; k < KC_STATE_DIM; k++) {
@@ -159,6 +165,8 @@ static void nanDump(kalmanCoreData_t* this, arm_matrix_instance_f32* Hm,
     }
   }
 
+  vTaskDelay(M2T(20));
+
   // PH' vector
   DEBUG_PRINT("[NAN] PH:");
   for (int i = 0; i < KC_STATE_DIM; i++) {
@@ -167,6 +175,8 @@ static void nanDump(kalmanCoreData_t* this, arm_matrix_instance_f32* Hm,
   DEBUG_PRINT("\n");
 
   DEBUG_PRINT("[NAN] HPH=%.4e R=%.4e\n", (double)HPH, (double)R);
+
+  vTaskDelay(M2T(20));
 
   // State vector
   DEBUG_PRINT("[NAN] state:");
@@ -180,12 +190,16 @@ static void nanDump(kalmanCoreData_t* this, arm_matrix_instance_f32* Hm,
               (double)this->q[0], (double)this->q[1],
               (double)this->q[2], (double)this->q[3]);
 
+  vTaskDelay(M2T(20));
+
   // TDoA outlier filter state
   if (nanTdoaFilterPtr) {
     DEBUG_PRINT("[NAN] tdoa_filt: open=%d integ=%.2f\n",
                 (int)nanTdoaFilterPtr->isFilterOpen,
                 (double)nanTdoaFilterPtr->integrator);
   }
+
+  vTaskDelay(M2T(20));
 
   // Ring buffer dump
   uint8_t start = (nanRingCount < NAN_RING_SIZE) ? 0 : nanRingIdx;
@@ -353,9 +367,10 @@ void kalmanCoreScalarUpdate(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm,
 #ifdef CONFIG_DEBUG_EKF_NAN
   nanRingRecord(error, HPHR, Hm->pData);
 
-  if (isnan(HPHR)) {
+  if (isnan(HPHR) || isnan(error)) {
     nanDump(this, Hm, error, stdMeasNoise, PHTd, HPHR);
     vTaskDelay(M2T(100));
+    ASSERT(!isnan(error));
     ASSERT(!isnan(HPHR));
   }
 #else
