@@ -309,6 +309,9 @@ static void updateQueuedMeasurements(const uint32_t nowMs, const bool quadIsFlyi
   while (estimatorDequeue(&m)) {
     switch (m.type) {
       case MeasurementTypeTDOA:
+#ifdef CONFIG_DEBUG_EKF_NAN
+        kalmanCoreSetMeasurementContext(MeasurementTypeTDOA, m.data.tdoa.anchorIdB);
+#endif
         if(robustTdoa){
           // robust KF update with TDOA measurements
           kalmanCoreRobustUpdateWithTdoa(&coreData, &m.data.tdoa, &outlierFilterTdoaState);
@@ -318,12 +321,21 @@ static void updateQueuedMeasurements(const uint32_t nowMs, const bool quadIsFlyi
         }
         break;
       case MeasurementTypePosition:
+#ifdef CONFIG_DEBUG_EKF_NAN
+        kalmanCoreSetMeasurementContext(MeasurementTypePosition, 0);
+#endif
         kalmanCoreUpdateWithPosition(&coreData, &m.data.position);
         break;
       case MeasurementTypePose:
+#ifdef CONFIG_DEBUG_EKF_NAN
+        kalmanCoreSetMeasurementContext(MeasurementTypePose, 0);
+#endif
         kalmanCoreUpdateWithPose(&coreData, &m.data.pose);
         break;
       case MeasurementTypeDistance:
+#ifdef CONFIG_DEBUG_EKF_NAN
+        kalmanCoreSetMeasurementContext(MeasurementTypeDistance, m.data.distance.anchorId);
+#endif
         if(robustTwr){
             // robust KF update with UWB TWR measurements
             kalmanCoreRobustUpdateWithDistance(&coreData, &m.data.distance);
@@ -333,18 +345,33 @@ static void updateQueuedMeasurements(const uint32_t nowMs, const bool quadIsFlyi
         }
         break;
       case MeasurementTypeTOF:
+#ifdef CONFIG_DEBUG_EKF_NAN
+        kalmanCoreSetMeasurementContext(MeasurementTypeTOF, 0);
+#endif
         kalmanCoreUpdateWithTof(&coreData, &m.data.tof);
         break;
       case MeasurementTypeAbsoluteHeight:
+#ifdef CONFIG_DEBUG_EKF_NAN
+        kalmanCoreSetMeasurementContext(MeasurementTypeAbsoluteHeight, 0);
+#endif
         kalmanCoreUpdateWithAbsoluteHeight(&coreData, &m.data.height);
         break;
       case MeasurementTypeFlow:
+#ifdef CONFIG_DEBUG_EKF_NAN
+        kalmanCoreSetMeasurementContext(MeasurementTypeFlow, 0);
+#endif
         kalmanCoreUpdateWithFlow(&coreData, &m.data.flow, &gyroLatest);
         break;
       case MeasurementTypeYawError:
+#ifdef CONFIG_DEBUG_EKF_NAN
+        kalmanCoreSetMeasurementContext(MeasurementTypeYawError, 0);
+#endif
         kalmanCoreUpdateWithYawError(&coreData, &m.data.yawError);
         break;
       case MeasurementTypeSweepAngle:
+#ifdef CONFIG_DEBUG_EKF_NAN
+        kalmanCoreSetMeasurementContext(MeasurementTypeSweepAngle, m.data.sweepAngle.baseStationId);
+#endif
         kalmanCoreUpdateWithSweepAngles(&coreData, &m.data.sweepAngle, nowMs, &sweepOutlierFilterState);
         break;
       case MeasurementTypeGyroscope:
@@ -357,6 +384,9 @@ static void updateQueuedMeasurements(const uint32_t nowMs, const bool quadIsFlyi
         break;
       case MeasurementTypeBarometer:
         if (useBaroUpdate) {
+#ifdef CONFIG_DEBUG_EKF_NAN
+          kalmanCoreSetMeasurementContext(MeasurementTypeBarometer, 0);
+#endif
           kalmanCoreUpdateWithBaro(&coreData, &coreParams, m.data.barometer.baro.asl, quadIsFlying);
         }
         break;
@@ -384,6 +414,10 @@ void estimatorKalmanInit(void)
 
   outlierFilterTdoaReset(&outlierFilterTdoaState);
   outlierFilterLighthouseReset(&sweepOutlierFilterState, 0);
+
+#ifdef CONFIG_DEBUG_EKF_NAN
+  kalmanCoreSetTdoaFilterRef(&outlierFilterTdoaState);
+#endif
 
   uint32_t nowMs = T2M(xTaskGetTickCount());
   kalmanCoreInit(&coreData, &coreParams, nowMs);

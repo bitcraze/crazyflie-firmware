@@ -67,6 +67,139 @@
 #include "math3d.h"
 #include "static_mem.h"
 
+#ifdef CONFIG_DEBUG_EKF_NAN
+#define DEBUG_MODULE "KALNAN"
+#include "debug.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "outlierFilterTdoa.h"
+
+#define NAN_RING_SIZE 10
+
+typedef struct {
+  uint8_t measType;
+  uint8_t sensorId;
+  uint32_t timestampMs;
+  float innovation;
+  float hphr;
+  float maxAbsH;
+} nanRingEntry_t;
+
+static nanRingEntry_t nanRing[NAN_RING_SIZE];
+static uint8_t nanRingIdx = 0;
+static uint8_t nanRingCount = 0;
+
+static uint8_t lastMeasType = 0;
+static uint8_t lastSensorId = 0;
+static const OutlierFilterTdoaState_t* nanTdoaFilterPtr = NULL;
+
+void kalmanCoreSetMeasurementContext(uint8_t type, uint8_t sensorId) {
+  lastMeasType = type;
+  lastSensorId = sensorId;
+}
+
+void kalmanCoreSetTdoaFilterRef(const OutlierFilterTdoaState_t* state) {
+  nanTdoaFilterPtr = state;
+}
+
+static void nanRingRecord(float innovation, float hphr, const float* H) {
+  nanRingEntry_t* e = &nanRing[nanRingIdx];
+  e->measType = lastMeasType;
+  e->sensorId = lastSensorId;
+  e->timestampMs = T2M(xTaskGetTickCount());
+  e->innovation = innovation;
+  e->hphr = hphr;
+  float maxH = 0.0f;
+  for (int i = 0; i < KC_STATE_DIM; i++) {
+    float a = fabsf(H[i]);
+    if (a > maxH) maxH = a;
+  }
+  e->maxAbsH = maxH;
+  nanRingIdx = (nanRingIdx + 1) % NAN_RING_SIZE;
+  if (nanRingCount < NAN_RING_SIZE) nanRingCount++;
+}
+
+static void nanDump(kalmanCoreData_t* this, arm_matrix_instance_f32* Hm,
+                     float error, float stdMeasNoise,
+                     const float* PHTd, float HPHR) {
+  float R = stdMeasNoise * stdMeasNoise;
+  float HPH = HPHR - R;
+
+  DEBUG_PRINT("[NAN] type=%d sid=%d inn=%.4f HPHR=%.4e\n",
+              (int)lastMeasType, (int)lastSensorId,
+              (double)error, (double)HPHR);
+
+  // H vector (3 per line)
+  for (int i = 0; i < KC_STATE_DIM; i += 3) {
+    if (i + 2 < KC_STATE_DIM) {
+      DEBUG_PRINT("[NAN] H[%d..%d]: %.4e %.4e %.4e\n", i, i+2,
+                  (double)Hm->pData[i], (double)Hm->pData[i+1], (double)Hm->pData[i+2]);
+    } else {
+      for (int j = i; j < KC_STATE_DIM; j++) {
+        DEBUG_PRINT("[NAN] H[%d]: %.4e\n", j, (double)Hm->pData[j]);
+      }
+    }
+  }
+
+  // P diagonal
+  DEBUG_PRINT("[NAN] Pdiag:");
+  for (int i = 0; i < KC_STATE_DIM; i++) {
+    DEBUG_PRINT(" %.3e", (double)this->P[i][i]);
+  }
+  DEBUG_PRINT("\n");
+
+  // P rows/cols for non-zero H elements
+  for (int k = 0; k < KC_STATE_DIM; k++) {
+    if (Hm->pData[k] != 0.0f) {
+      DEBUG_PRINT("[NAN] P[%d]: ", k);
+      for (int j = 0; j < KC_STATE_DIM; j++) {
+        DEBUG_PRINT("%.3e ", (double)this->P[k][j]);
+      }
+      DEBUG_PRINT("\n");
+    }
+  }
+
+  // PH' vector
+  DEBUG_PRINT("[NAN] PH:");
+  for (int i = 0; i < KC_STATE_DIM; i++) {
+    DEBUG_PRINT(" %.3e", (double)PHTd[i]);
+  }
+  DEBUG_PRINT("\n");
+
+  DEBUG_PRINT("[NAN] HPH=%.4e R=%.4e\n", (double)HPH, (double)R);
+
+  // State vector
+  DEBUG_PRINT("[NAN] state:");
+  for (int i = 0; i < KC_STATE_DIM; i++) {
+    DEBUG_PRINT(" %.4f", (double)this->S[i]);
+  }
+  DEBUG_PRINT("\n");
+
+  // Quaternion
+  DEBUG_PRINT("[NAN] quat: %.4f %.4f %.4f %.4f\n",
+              (double)this->q[0], (double)this->q[1],
+              (double)this->q[2], (double)this->q[3]);
+
+  // TDoA outlier filter state
+  if (nanTdoaFilterPtr) {
+    DEBUG_PRINT("[NAN] tdoa_filt: open=%d integ=%.2f\n",
+                (int)nanTdoaFilterPtr->isFilterOpen,
+                (double)nanTdoaFilterPtr->integrator);
+  }
+
+  // Ring buffer dump
+  uint8_t start = (nanRingCount < NAN_RING_SIZE) ? 0 : nanRingIdx;
+  for (uint8_t n = 0; n < nanRingCount; n++) {
+    uint8_t idx = (start + n) % NAN_RING_SIZE;
+    nanRingEntry_t* e = &nanRing[idx];
+    DEBUG_PRINT("[NAN] ring[%d]: t=%lu type=%d sid=%d inn=%.3f hphr=%.3e maxH=%.3e\n",
+                (int)n, (unsigned long)e->timestampMs,
+                (int)e->measType, (int)e->sensorId,
+                (double)e->innovation, (double)e->hphr, (double)e->maxAbsH);
+  }
+}
+#endif // CONFIG_DEBUG_EKF_NAN
+
 // #define DEBUG_STATE_CHECK
 
 /**
@@ -216,7 +349,18 @@ void kalmanCoreScalarUpdate(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm,
   for (int i=0; i<KC_STATE_DIM; i++) { // Add the element of HPH' to the above
     HPHR += Hm->pData[i]*PHTd[i]; // this obviously only works if the update is scalar (as in this function)
   }
+
+#ifdef CONFIG_DEBUG_EKF_NAN
+  nanRingRecord(error, HPHR, Hm->pData);
+
+  if (isnan(HPHR)) {
+    nanDump(this, Hm, error, stdMeasNoise, PHTd, HPHR);
+    vTaskDelay(M2T(100));
+    ASSERT(!isnan(HPHR));
+  }
+#else
   ASSERT(!isnan(HPHR));
+#endif
 
   // ====== MEASUREMENT UPDATE ======
   // Calculate the Kalman gain and perform the state update

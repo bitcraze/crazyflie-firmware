@@ -55,6 +55,7 @@
 
 #pragma once
 
+#include "autoconf.h"
 #include "cf_math.h"
 #include "stabilizer_types.h"
 
@@ -184,3 +185,9 @@ void kalmanCoreDecoupleXY(kalmanCoreData_t* this);
 void kalmanCoreScalarUpdate(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm, float error, float stdMeasNoise);
 
 void kalmanCoreUpdateWithPKE(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm, arm_matrix_instance_f32 *Km, arm_matrix_instance_f32 *P_w_m, float error);
+
+#ifdef CONFIG_DEBUG_EKF_NAN
+#include "outlierFilterTdoa.h"
+void kalmanCoreSetMeasurementContext(uint8_t type, uint8_t sensorId);
+void kalmanCoreSetTdoaFilterRef(const OutlierFilterTdoaState_t* state);
+#endif

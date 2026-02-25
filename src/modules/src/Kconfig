@@ -84,6 +84,15 @@ config ESTIMATOR_KALMAN_INITIAL_YAW_STD
         The initial yaw standard deviation describes how uncertain the Kalman estimator assumes the yaw angle is at startup.
         Note that the entered value is in milliradians (mrad).
 
+config DEBUG_EKF_NAN
+    bool "EKF NaN diagnostic logging"
+    default n
+    depends on ESTIMATOR_KALMAN_ENABLE
+    help
+        Add a ring buffer and crash snapshot to the EKF scalar update.
+        When HPHR becomes NaN the filter dumps H, P, state, and the
+        last 10 measurement updates to the console before asserting.
+
 config ESTIMATOR_UKF_ENABLE
     bool "Enable error-state UKF estimator"
     select ESTIMATOR_OUTLIER_FILTERS
