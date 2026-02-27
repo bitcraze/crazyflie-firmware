@@ -160,7 +160,7 @@
 #define DRAG_B_Z 0.3f
 #define CENTER_OF_PRESSURE_X 0.0f
 #define CENTER_OF_PRESSURE_Y 0.0f
-#define CENTER_OF_PRESSURE_Z 0.06f
+#define CENTER_OF_PRESSURE_Z 0.03f
 
 // Flow deck position offset (in meters)
 // Note that this depends on flowdeck placement and might vary. These values assume placement directly under the legs with the STL provided here:
