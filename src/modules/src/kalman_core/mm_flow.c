@@ -26,6 +26,7 @@
 #include "mm_flow.h"
 #include "log.h"
 #include "platform_defaults.h"
+#include "param.h"
 
 #define FLOW_RESOLUTION 0.10f //We get the measurements in 10x the motion pixels (experimentally measured)
 
@@ -34,6 +35,8 @@ static float predictedNX;
 static float predictedNY;
 static float measuredNX;
 static float measuredNY;
+
+static Axis3f flowdeckPos = { .axis = { FLOWDECK_POS_X, FLOWDECK_POS_Y, FLOWDECK_POS_Z } }; // In body coordinate system
 
 void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *flow, const Axis3f *gyro)
 {
@@ -66,8 +69,8 @@ void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *f
 
   // Lever-arm induced translational velocity at camera
   // omega x r
-  float v_cam_bx_add =  omegay_b * FLOWDECK_POS_Z - omegaz_b * FLOWDECK_POS_Y;
-  float v_cam_by_add =  omegaz_b * FLOWDECK_POS_X - omegax_b * FLOWDECK_POS_Z;
+  float v_cam_bx_add =  omegay_b * flowdeckPos.z - omegaz_b * flowdeckPos.y;
+  float v_cam_by_add =  omegaz_b * flowdeckPos.x - omegax_b * flowdeckPos.z;
   
   // Effective camera point velocities in body frame
   float v_cam_bx = dx_b + v_cam_bx_add;
@@ -131,3 +134,21 @@ LOG_GROUP_START(kalman_pred)
  */
   LOG_ADD(LOG_FLOAT, measNY, &measuredNY)
 LOG_GROUP_STOP(kalman_pred)
+
+/**
+ * Flowdeck properties
+ */
+PARAM_GROUP_START(flowdeck)
+  /**
+   * @brief Flow deck position X (in meters, body frame)
+   */
+  PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, flowdeckPos_x, &flowdeckPos.x)
+  /**
+   * @brief Flow deck position Y (in meters, body frame)
+   */
+  PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, flowdeckPos_y, &flowdeckPos.y)
+  /**
+   * @brief Flow deck position Z (in meters, body frame)
+   */
+  PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, flowdeckPos_z, &flowdeckPos.z)
+PARAM_GROUP_STOP(flowdeck)
