@@ -130,7 +130,7 @@ static bool evaluatePropTest(float low, float high, float value, uint8_t motor)
                   motor + 1, (double)low, (double)high, (double)value);
       return false;
     }
-    else if (value > low && value < high)
+    else if (value >= low && value =< high)
     {
       DEBUG_PRINT("Propeller test on M%d [PASS]. low: %0.2f, high: %0.2f, measured: %0.2f\n",
         motor + 1, (double)low, (double)high, (double)value);
