@@ -414,7 +414,7 @@ LOG_ADD(LOG_FLOAT, motorVarXM4, &accVarX[3])
  */
 LOG_ADD(LOG_FLOAT, motorVarYM4, &accVarY[3])
 /**
- * @brief Propeller test result, bit is one if OK. [Bit0=M1 Bit1=M2 ...]
+ * @brief Propeller test result, bit is one if OK. [Bit0=M1 Bit1=M2 Bit2=M3 Bit3=M4 Bit7=Test finished]
  */
 LOG_ADD_CORE(LOG_UINT8, motorPass, &motorPass)
 /**
