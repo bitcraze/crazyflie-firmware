@@ -39,6 +39,8 @@ docs/api/log_param_doc.json
 docs/api
 
 build/
+.cache/
+/compile_commands.json
 # To avoid that /tools/build is ignored
 !/tools/*
 
