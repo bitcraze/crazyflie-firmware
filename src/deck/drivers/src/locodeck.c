@@ -514,14 +514,13 @@ static void dwm1000Init(DeckInfo *info)
 
   // Init pins
   pinMode(CS_PIN, OUTPUT);
-  pinMode(GPIO_PIN_RESET, OUTPUT);
   pinMode(GPIO_PIN_IRQ, INPUT);
 
-  // Reset the DW1000 chip
+  // Reset the DW1000 chip. Pull-low. Not allowed to drive high.
+  pinMode(GPIO_PIN_RESET, OUTPUT);
   digitalWrite(GPIO_PIN_RESET, 0);
-  vTaskDelay(M2T(10));
-  digitalWrite(GPIO_PIN_RESET, 1);
-  vTaskDelay(M2T(10));
+  vTaskDelay(M2T(1));
+  pinMode(GPIO_PIN_RESET, INPUT);
 
   // Initialize the driver
   dwInit(dwm, &dwOps);       // Init libdw
