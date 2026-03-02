@@ -466,6 +466,41 @@ LOG_ADD_CORE(LOG_FLOAT, pitch, &setpoint.attitude.pitch)
  * @brief Desired attitude rate, yaw rate [deg/s]
  */
 LOG_ADD_CORE(LOG_FLOAT, yaw, &setpoint.attitudeRate.yaw)
+
+/**
+ * @brief Controller setpoint.mode.x (modeDisable = 0, modeAbs = 1, modeVelocity = 2)
+ */
+LOG_ADD(LOG_UINT8, mode_x, &setpoint.mode.x)
+
+/**
+ * @brief Controller setpoint.mode.y (modeDisable = 0, modeAbs = 1, modeVelocity = 2)
+ */
+LOG_ADD(LOG_UINT8, mode_y, &setpoint.mode.y)
+
+/**
+ * @brief Controller setpoint.mode.z (modeDisable = 0, modeAbs = 1, modeVelocity = 2)
+ */
+LOG_ADD(LOG_UINT8, mode_z, &setpoint.mode.z)
+
+/**
+ * @brief Controller setpoint.mode.roll (modeDisable = 0, modeAbs = 1, modeVelocity = 2)
+ */
+LOG_ADD(LOG_UINT8, mode_roll, &setpoint.mode.roll)
+
+/**
+ * @brief Controller setpoint.mode.pitch (modeDisable = 0, modeAbs = 1, modeVelocity = 2)
+ */
+LOG_ADD(LOG_UINT8, mode_pitch, &setpoint.mode.pitch)
+
+/**
+ * @brief Controller setpoint.mode.yaw (modeDisable = 0, modeAbs = 1, modeVelocity = 2)
+ */
+LOG_ADD(LOG_UINT8, mode_yaw, &setpoint.mode.yaw)
+
+/**
+ * @brief Controller setpoint.mode.quat (modeDisable = 0, modeAbs = 1, modeVelocity = 2)
+ */
+LOG_ADD(LOG_UINT8, mode_quat, &setpoint.mode.quat)
 LOG_GROUP_STOP(ctrltarget)
 
 /**
