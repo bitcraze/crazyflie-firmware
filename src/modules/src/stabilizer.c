@@ -305,11 +305,12 @@ static void stabilizerTask(void* param)
   // Initialize stabilizerStep to something else than 0
   stabilizerStep = 1;
 
-  systemWaitStart();
   DEBUG_PRINT("Starting stabilizer loop\n");
   rateSupervisorInit(&rateSupervisorContext, xTaskGetTickCount(), M2T(1000), 997, 1003, 1);
   xRateSupervisorSemaphore = xSemaphoreCreateBinary();
   STATIC_MEM_TASK_CREATE(rateSupervisorTask, rateSupervisorTask, RATE_SUPERVISOR_TASK_NAME, NULL, RATE_SUPERVISOR_TASK_PRI);
+
+  motorsResetESCs();
 
   while(1) {
     // The sensor should unlock at 1kHz
@@ -352,6 +353,9 @@ static void stabilizerTask(void* param)
       // The supervisor will already set thrust to 0 in the setpoint if needed, but to be extra sure prevent motors from running.
       if (areMotorsAllowedToRun) {
         controlMotors(&control);
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
+        motorsBurstDshot();
+#endif
       } else {
         motorsStop();
       }
@@ -374,10 +378,6 @@ static void stabilizerTask(void* param)
     }
 
     xSemaphoreGive(xRateSupervisorSemaphore);
-
-#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
-    motorsBurstDshot();
-#endif
   }
 }
 

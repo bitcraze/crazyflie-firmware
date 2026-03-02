@@ -167,6 +167,21 @@ config MOTORS_DSHOT_PWM_600KHZ
 
 endchoice
 
+config MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+  bool "Enable bi-directional DSHOT (RPM measurements)"
+  depends on MOTORS_ESC_PROTOCOL_DSHOT
+  default y
+    help
+        This requires 300 kHz DHOT PWM to work with Bluejay ESC FW.
+        
+config MOTORS_NBR_OF_POLES
+  int "Number of poles on the brushless motors"
+  depends on MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+  range 2 24
+  default 12
+    help
+        This is used for RPM calculation and requires bi-directional DSHOT.
+
 config MOTORS_REQUIRE_ARMING
     bool "Require arming to be able to start motors and take off"
     default n
