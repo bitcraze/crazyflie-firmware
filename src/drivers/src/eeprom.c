@@ -138,23 +138,40 @@ bool eepromTestConnection(void)
 
 bool eepromReadBuffer(uint8_t* buffer, uint16_t readAddr, uint16_t len)
 {
-  bool status;
+  // Use a static intermediate buffer to ensure DMA-safe memory is used,
+  // since callers may run from tasks with CCM stacks (not DMA-accessible).
+  static uint8_t dmaBuffer[32];
+  uint16_t offset = 0;
 
   if ((uint32_t)readAddr + len > EEPROM_SIZE)
   {
      return false;
   }
 
-  status = i2cdevRead16(I2Cx, devAddr, readAddr, len, buffer);
+  while (offset < len) {
+    uint16_t chunkLen = len - offset;
+    if (chunkLen > sizeof(dmaBuffer)) {
+      chunkLen = sizeof(dmaBuffer);
+    }
 
-  return status;
+    bool status = i2cdevRead16(I2Cx, devAddr, readAddr + offset, chunkLen, dmaBuffer);
+    if (!status) {
+      return false;
+    }
+
+    memcpy(buffer + offset, dmaBuffer, chunkLen);
+    offset += chunkLen;
+  }
+
+  return true;
 }
 
 bool eepromWriteBuffer(const uint8_t* buffer, uint16_t writeAddr, uint16_t len)
 {
   bool status;
 
-  unsigned char pageBuffer[32];
+  // Static to ensure DMA-safe memory; callers may run from tasks with CCM stacks.
+  static unsigned char pageBuffer[32];
   int bufferIndex = 0;
   int leftToWrite = len;
   uint16_t currentAddress = writeAddr;
@@ -188,7 +205,7 @@ bool eepromWriteBuffer(const uint8_t* buffer, uint16_t writeAddr, uint16_t len)
 
     // Waiting for page to be written
     for (int retry = 0; retry < 30; retry++) {
-      uint8_t dummy;
+      static uint8_t dummy; // static = DMA-safe; not used as data, just for ACK polling
       status = i2cdevWrite(I2Cx, devAddr, 1, &dummy);
 
       if (status) {
