@@ -52,6 +52,9 @@ fw_sources = [
     "src/modules/src/kalman_core/mm_tdoa.c",
     "src/modules/src/kalman_core/mm_pose.c",
     "src/modules/src/outlierfilter/outlierFilterTdoa.c",
+    "src/modules/src/kalman_core/mm_tof.c",        # <-- Add this
+    "src/modules/src/kalman_core/mm_flow.c",       # <-- Add this
+    "src/modules/src/kalman_core/mm_distance.c",   # <-- Add this
 ]
 
 cffirmware = Extension(
