@@ -158,23 +158,6 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   self->i_error_y += r_error.y * dt;
   self->i_error_y = clamp(self->i_error_y, -self->i_range_xy, self->i_range_xy);
 
-  // Desired thrust [F_des]
-  if (setpoint->mode.x == modeAbs) {
-    target_thrust.x = self->mass * setpoint->acceleration.x                       + self->kp_xy * r_error.x + self->kd_xy * v_error.x + self->ki_xy * self->i_error_x;
-    target_thrust.y = self->mass * setpoint->acceleration.y                       + self->kp_xy * r_error.y + self->kd_xy * v_error.y + self->ki_xy * self->i_error_y;
-    target_thrust.z = self->mass * (setpoint->acceleration.z + GRAVITY_MAGNITUDE) + self->kp_z  * r_error.z + self->kd_z  * v_error.z + self->ki_z  * self->i_error_z;
-  } else {
-    target_thrust.x = -sinf(radians(setpoint->attitude.pitch));
-    target_thrust.y = -sinf(radians(setpoint->attitude.roll));
-    // In case of a timeout, the commander tries to level, ie. x/y are disabled, but z will use the previous setting
-    // In that case we ignore the last feedforward term for acceleration
-    if (setpoint->mode.z == modeAbs) {
-      target_thrust.z = self->mass * GRAVITY_MAGNITUDE + self->kp_z  * r_error.z + self->kd_z  * v_error.z + self->ki_z  * self->i_error_z;
-    } else {
-      target_thrust.z = 1;
-    }
-  }
-
   // Rate-controlled YAW is moving YAW angle setpoint
   if (setpoint->mode.yaw == modeVelocity) {
     desiredYaw = state->attitude.yaw + setpoint->attitudeRate.yaw * dt;
@@ -191,31 +174,42 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   struct mat33 R = quat2rotmat(q);
   z_axis = mcolumn(R, 2);
 
-  // yaw correction (only if position control is not used)
-  if (setpoint->mode.x != modeAbs) {
-    struct vec x_yaw = mcolumn(R, 0);
-    x_yaw.z = 0;
-    x_yaw = vnormalize(x_yaw);
-    struct vec y_yaw = vcross(mkvec(0, 0, 1), x_yaw);
-    struct mat33 R_yaw_only = mcolumns(x_yaw, y_yaw, mkvec(0, 0, 1));
-    target_thrust = mvmul(R_yaw_only, target_thrust);
+  current_thrust = 0.0f;
+  
+  if (setpoint->mode.x == modeAbs) {
+    // Desired thrust [F_des]
+    target_thrust.x = self->mass * setpoint->acceleration.x                       + self->kp_xy * r_error.x + self->kd_xy * v_error.x + self->ki_xy * self->i_error_x;
+    target_thrust.y = self->mass * setpoint->acceleration.y                       + self->kp_xy * r_error.y + self->kd_xy * v_error.y + self->ki_xy * self->i_error_y;
+    target_thrust.z = self->mass * (setpoint->acceleration.z + GRAVITY_MAGNITUDE) + self->kp_z  * r_error.z + self->kd_z  * v_error.z + self->ki_z  * self->i_error_z;
+
+    // Current thrust [F]
+    current_thrust = vdot(target_thrust, z_axis);
+
+    // Calculate axis [zB_des]
+    self->z_axis_desired = vnormalize(target_thrust);
+
+    // [xC_des]
+    // x_axis_desired = z_axis_desired x [sin(yaw), cos(yaw), 0]^T
+    x_c_des.x = cosf(radians(desiredYaw));
+    x_c_des.y = sinf(radians(desiredYaw));
+    x_c_des.z = 0;
+    // [yB_des]
+    y_axis_desired = vnormalize(vcross(self->z_axis_desired, x_c_des));
+    // [xB_des]
+    x_axis_desired = vcross(y_axis_desired, self->z_axis_desired);
+  } else {
+    // Directly compute desired rotation for attitude-only control
+    float cmd_roll  = radians(setpoint->attitude.roll);
+    float cmd_pitch = -radians(setpoint->attitude.pitch);
+    float cmd_yaw   = radians(desiredYaw);
+    struct vec cmd_rpy = mkvec(cmd_roll, cmd_pitch, cmd_yaw);
+    struct quat q_cmd = rpy2quat(cmd_rpy);
+    struct mat33 R_cmd = quat2rotmat(q_cmd);
+    x_axis_desired = mcolumn(R_cmd, 0);
+    y_axis_desired = mcolumn(R_cmd, 1);
+    self->z_axis_desired = mcolumn(R_cmd, 2);
   }
 
-  // Current thrust [F]
-  current_thrust = vdot(target_thrust, z_axis);
-
-  // Calculate axis [zB_des]
-  self->z_axis_desired = vnormalize(target_thrust);
-
-  // [xC_des]
-  // x_axis_desired = z_axis_desired x [sin(yaw), cos(yaw), 0]^T
-  x_c_des.x = cosf(radians(desiredYaw));
-  x_c_des.y = sinf(radians(desiredYaw));
-  x_c_des.z = 0;
-  // [yB_des]
-  y_axis_desired = vnormalize(vcross(self->z_axis_desired, x_c_des));
-  // [xB_des]
-  x_axis_desired = vcross(y_axis_desired, self->z_axis_desired);
 
   // [eR]
   // Slow version
