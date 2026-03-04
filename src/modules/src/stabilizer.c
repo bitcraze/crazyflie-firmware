@@ -468,6 +468,11 @@ LOG_ADD_CORE(LOG_FLOAT, pitch, &setpoint.attitude.pitch)
 LOG_ADD_CORE(LOG_FLOAT, yaw, &setpoint.attitudeRate.yaw)
 
 /**
+ * @brief Desired thrust
+ */
+LOG_ADD_CORE(LOG_FLOAT, thrust, &setpoint.thrust)
+
+/**
  * @brief Controller setpoint.mode.x (modeDisable = 0, modeAbs = 1, modeVelocity = 2)
  */
 LOG_ADD(LOG_UINT8, mode_x, &setpoint.mode.x)
