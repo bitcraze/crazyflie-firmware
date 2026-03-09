@@ -122,7 +122,7 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   struct vec v_error;
   struct vec target_thrust;
   struct vec z_axis;
-  float current_thrust;
+  float current_thrust = 0;
   struct vec x_axis_desired;
   struct vec y_axis_desired;
   struct vec x_c_des;
@@ -173,9 +173,8 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
   struct mat33 R = quat2rotmat(q);
   z_axis = mcolumn(R, 2);
-
-  current_thrust = 0.0f;
   
+  // Calculate desired axes and current thrust
   if (setpoint->mode.x == modeAbs) {
     // Desired thrust [F_des]
     target_thrust.x = self->mass * setpoint->acceleration.x                       + self->kp_xy * r_error.x + self->kd_xy * v_error.x + self->ki_xy * self->i_error_x;
@@ -197,8 +196,11 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
     y_axis_desired = vnormalize(vcross(self->z_axis_desired, x_c_des));
     // [xB_des]
     x_axis_desired = vcross(y_axis_desired, self->z_axis_desired);
-  } else {
+  } else if (setpoint->mode.pitch == modeAbs &&
+             setpoint->mode.roll  == modeAbs &&
+             setpoint->mode.z == modeDisable) { // Manual mode, no assist
     // Directly compute desired rotation for attitude-only control
+    // No need to calculate current_thrust as it is not used in this mode
     float cmd_roll  = radians(setpoint->attitude.roll);
     float cmd_pitch = -radians(setpoint->attitude.pitch);
     float cmd_yaw   = radians(desiredYaw);
@@ -208,6 +210,27 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
     x_axis_desired = mcolumn(R_cmd, 0);
     y_axis_desired = mcolumn(R_cmd, 1);
     self->z_axis_desired = mcolumn(R_cmd, 2);
+  } else { // Unknown combination of modes
+    // Hover using the previous z setting
+    // Safe behaviour for unknown combination of modes
+    target_thrust.x = 0;
+    target_thrust.y = 0;
+    target_thrust.z = self->mass * GRAVITY_MAGNITUDE + self->kp_z  * r_error.z + self->kd_z  * v_error.z + self->ki_z  * self->i_error_z;
+
+    // Calculate axis [zB_des]
+    self->z_axis_desired = vnormalize(target_thrust);
+    
+    // [xC_des]
+    // x_axis_desired = z_axis_desired x [sin(yaw), cos(yaw), 0]^T
+    x_c_des.x = cosf(radians(state->attitude.yaw));
+    x_c_des.y = sinf(radians(state->attitude.yaw));
+    x_c_des.z = 0;
+    // [yB_des]
+    y_axis_desired = vnormalize(vcross(self->z_axis_desired, x_c_des));
+    // [xB_des]
+    x_axis_desired = vcross(y_axis_desired, self->z_axis_desired);
+
+    current_thrust = vdot(target_thrust, z_axis);
   }
 
 
