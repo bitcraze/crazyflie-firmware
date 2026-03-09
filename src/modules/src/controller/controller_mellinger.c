@@ -198,21 +198,22 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
     x_axis_desired = vcross(y_axis_desired, self->z_axis_desired);
   } else if (setpoint->mode.pitch == modeAbs &&
              setpoint->mode.roll  == modeAbs &&
-             setpoint->mode.z == modeDisable) { // Manual mode, no assist
+             setpoint->mode.z     == modeDisable) { // Manual mode, no assist
     // Directly compute desired rotation for attitude-only control
     // No need to calculate current_thrust as it is not used in this mode
-    float cmd_roll  = radians(setpoint->attitude.roll);
+    float cmd_roll  =  radians(setpoint->attitude.roll);
     float cmd_pitch = -radians(setpoint->attitude.pitch);
-    float cmd_yaw   = radians(desiredYaw);
+    float cmd_yaw   =  radians(desiredYaw);
+
     struct vec cmd_rpy = mkvec(cmd_roll, cmd_pitch, cmd_yaw);
     struct quat q_cmd = rpy2quat(cmd_rpy);
     struct mat33 R_cmd = quat2rotmat(q_cmd);
-    x_axis_desired = mcolumn(R_cmd, 0);
-    y_axis_desired = mcolumn(R_cmd, 1);
+
+    x_axis_desired       = mcolumn(R_cmd, 0);
+    y_axis_desired       = mcolumn(R_cmd, 1);
     self->z_axis_desired = mcolumn(R_cmd, 2);
   } else { // Unknown combination of modes
-    // Hover using the previous z setting
-    // Safe behaviour for unknown combination of modes
+    // Hover using the received z setpoint (safe behaviour)
     target_thrust.x = 0;
     target_thrust.y = 0;
     target_thrust.z = self->mass * GRAVITY_MAGNITUDE + self->kp_z  * r_error.z + self->kd_z  * v_error.z + self->ki_z  * self->i_error_z;
