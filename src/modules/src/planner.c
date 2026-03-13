@@ -39,6 +39,8 @@ implementation of planning state machine
 #include "planner.h"
 #include "arm_math.h"
 #include "debug.h"
+#include "position_controller.h"
+#include "cfassert.h"
 
 static struct traj_eval plan_eval(struct planner *p, float t);
 
@@ -113,6 +115,9 @@ struct traj_eval plan_current_goal(struct planner *p, float t)
 	switch (p->state) {
 		case TRAJECTORY_STATE_LANDING:
 			if (plan_is_finished(p, t)) {
+#if CONFIG_PLATFORM_CF21BL
+				resetPosPIDParamsToPrevious();
+#endif
 				p->state = TRAJECTORY_STATE_IDLE;
 			}
 			// intentional fall-thru
@@ -166,18 +171,68 @@ int plan_takeoff(struct planner *p, struct vec curr_pos, float curr_yaw, float h
 	return 0;
 }
 
-int plan_land(struct planner *p, struct vec curr_pos, float curr_yaw, float hover_height, float hover_yaw, float duration, float t)
+int plan_land(struct planner *p, struct vec curr_pos, float curr_yaw, float hover_height, float hover_offset, float hover_duration, float hover_yaw, float duration, float kp, float ki, float kd, float t)
 {
 	if (p->state == TRAJECTORY_STATE_LANDING) {
 		return 1;
 	}
 
-	plan_takeoff_or_landing(p, curr_pos, curr_yaw, hover_height, hover_yaw, duration);
+	struct vec hover_pos = curr_pos;
+	struct vec landing_pos = curr_pos;
+	hover_pos.z = hover_height + hover_offset;
+	landing_pos.z = hover_height;
+
+	// compute the shortest possible rotation towards 0
+	hover_yaw = normalize_radians(hover_yaw);
+	curr_yaw = normalize_radians(curr_yaw);
+	float goal_yaw = curr_yaw + shortest_signed_angle_radians(curr_yaw, hover_yaw);
+
+	
+	// the landing trajectory has three pieces. 
+	// 1. go to a positions a few cm over the landing point, 
+	// 2. hower there for a bit to control out disturbances,
+	// 3. Then go down to the landing point.
+	float durations[3];
+	durations[2] = 0.1f;  // we want the last piece to be short.
+	durations[1] = hover_duration;
+	durations[0] = duration - durations[1] - durations[2];
+	ASSERT(durations[0] > 0.0f);
+
+	struct vec positions[4];
+	positions[0] = curr_pos; 
+	positions[1] = hover_pos; 
+	positions[2] = hover_pos;
+	positions[3] = landing_pos;
+	
+	float yaws[4];
+	yaws[0] = curr_yaw;
+	for (int i = 1; i < 4; i++) {
+		yaws[i] = goal_yaw;
+	}
+
+	struct vec velocities[3];
+	float yaw_rates[3];
+	struct vec accelerations[3];
+	for (int i = 0; i < 3; i++) {
+		velocities[i] = vzero();
+		yaw_rates[i] = 0;
+		accelerations[i] = vzero();
+	}
+
+	plan_7th_order_no_jerk(&p->planned_trajectory, durations, positions, yaws, velocities, yaw_rates, accelerations, 3);
+	
 	p->reversed = false;
 	p->state = TRAJECTORY_STATE_LANDING;
 	p->type = TRAJECTORY_TYPE_PIECEWISE;
 	p->planned_trajectory.t_begin = t;
 	p->trajectory = &p->planned_trajectory;
+
+#if CONFIG_PLATFORM_CF21BL
+    positionControllerChangePosPIDParams(kp, ki, kd, NAN,
+										kp, ki, kd, NAN,
+										NAN, NAN, NAN, NAN);
+#endif
+	
 	return 0;
 }
 
