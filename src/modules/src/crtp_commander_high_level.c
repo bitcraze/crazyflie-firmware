@@ -115,7 +115,7 @@ static float defaultLandingVelocity = 0.5f;
 static float landingPosKp = 5.123533f;     
 static float landingPosKi = 1.905738f;
 static float landingPosKd = 1.0f;
-static float landing_hover_offset = 0.025f; // how much above the landing point we want to hover to control out disturbances
+static float landing_hover_offset = 0.08f; // how much above the landing point we want to hover to control out disturbances
 static float landing_hover_duration = 3.0f; // how long we want to hover above the landing point
 
 // Trajectory memory handling from the memory module
