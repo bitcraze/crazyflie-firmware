@@ -133,14 +133,11 @@ static bool eepromTestWriteRead(void)
 bool eepromTestConnection(void)
 {
   uint8_t tmp;
-  bool status;
 
   if (!isInit)
     return false;
 
-  status = i2cdevRead16(I2Cx, devAddr, 0, 1, &tmp);
-
-  return status;
+  return eepromReadBuffer(&tmp, 0, 1);
 }
 
 bool eepromReadBuffer(uint8_t* buffer, uint16_t readAddr, uint16_t len)
