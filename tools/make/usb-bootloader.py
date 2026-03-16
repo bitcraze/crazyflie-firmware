@@ -18,4 +18,4 @@ except IOError:
     #io error expected because the crazyflie will not respond to USB request as it resets into the bootloader
     #TODO usbd_cf_Setup function in firmware needs to return USBD_OK before rebooting to fix this
         #sleep to allow time for crazyflie to get into DFU mode
-        sleep(0.5)
+        sleep(1)
