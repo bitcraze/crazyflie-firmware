@@ -1,3 +1,8 @@
+# Manifest to build the crazyflie-firmware package with pixi
+# See https://pixi.prefix.dev/ for more information about installing and using pixi
+#
+# Run `pixi shell` to enter a shell with the dependencies available, or `pixi run <command>` to run a command with the dependencies available.
+
 [workspace]
 authors = ["Elia Cereda <eliacereda@gmail.com>"]
 channels = ["conda-forge", "Memfault"]
