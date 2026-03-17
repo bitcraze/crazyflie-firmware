@@ -1,4 +1,4 @@
-[project]
+[workspace]
 authors = ["Elia Cereda <eliacereda@gmail.com>"]
 channels = ["conda-forge", "Memfault"]
 name = "crazyflie-firmware"
@@ -20,4 +20,4 @@ coreutils = ">=9.5,<10"
 sed = ">=4.9,<5"
 
 [pypi-dependencies]
-cfclient = ">=2025.9, <2026"
+cfclient = ">=2025.12.1"
