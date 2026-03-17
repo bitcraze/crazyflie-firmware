@@ -111,11 +111,6 @@ NO_DMA_CCM_SAFE_ZERO_INIT static struct log_block logBlocks[LOG_MAX_BLOCKS];
 static xSemaphoreHandle logLock;
 static StaticSemaphore_t logLockBuffer;
 
-struct ops_setting {
-    uint8_t logType;
-    uint8_t id;
-} __attribute__((packed));
-
 struct ops_setting_v2 {
     uint8_t logType;
     uint16_t id;
@@ -129,15 +124,10 @@ struct control_start_block_v2 {
 #define CONTROL_CH  1
 #define LOG_CH      2
 
-#define CMD_GET_ITEM    0 // original version: up to 255 entries
-#define CMD_GET_INFO    1 // original version: up to 255 entries
 #define CMD_GET_ITEM_V2 2 // version 2: up to 16k entries
 #define CMD_GET_INFO_V2 3 // version 2: up to 16k entries
 
-#define CONTROL_CREATE_BLOCK    0
-#define CONTROL_APPEND_BLOCK    1
 #define CONTROL_DELETE_BLOCK    2
-#define CONTROL_START_BLOCK     3
 #define CONTROL_STOP_BLOCK      4
 #define CONTROL_RESET           5
 #define CONTROL_CREATE_BLOCK_V2 6
@@ -169,9 +159,7 @@ static CRTPPacket p;
 static bool isInit = false;
 
 /* Log management functions */
-static int logAppendBlock(int id, struct ops_setting * settings, int len);
 static int logAppendBlockV2(int id, struct ops_setting_v2 * settings, int len);
-static int logCreateBlock(unsigned char id, struct ops_setting * settings, int len);
 static int logCreateBlockV2(unsigned char id, struct ops_setting_v2 * settings, int len);
 static int logDeleteBlock(int id);
 static int logStartBlock(int id, unsigned int period);
@@ -272,63 +260,6 @@ void logTOCProcess(int command)
 
   switch (command)
   {
-  case CMD_GET_INFO: //Get info packet about the log implementation
-    DEBUG_PRINT("Client uses old logging API!\n");
-    LOG_DEBUG("Packet is TOC_GET_INFO\n");
-    ptr = 0;
-    group = "";
-    p.header=CRTP_HEADER(CRTP_PORT_LOG, TOC_CH);
-    p.size=8;
-    p.data[0]=CMD_GET_INFO;
-    if (logsCount < 255) {
-      p.data[1]=logsCount;
-    } else {
-      p.data[1]=255;
-    }
-    memcpy(&p.data[2], &logsCrc, 4);
-    p.data[6]=LOG_MAX_BLOCKS;
-    p.data[7]=LOG_MAX_OPS;
-    crtpSendPacketBlock(&p);
-    break;
-  case CMD_GET_ITEM:  //Get log variable
-    LOG_DEBUG("Packet is TOC_GET_ITEM Id: %d\n", p.data[1]);
-    for (ptr=0; ptr<logsLen; ptr++) //Ptr points a group
-    {
-      if (logs[ptr].type & LOG_GROUP)
-      {
-        if (logs[ptr].type & LOG_START)
-          group = logs[ptr].name;
-        else
-          group = "";
-      }
-      else                          //Ptr points a variable
-      {
-        if (n==p.data[1])
-          break;
-        n++;
-      }
-    }
-
-    if (ptr<logsLen)
-    {
-      LOG_DEBUG("    Item is \"%s\":\"%s\"\n", group, logs[ptr].name);
-      p.header=CRTP_HEADER(CRTP_PORT_LOG, TOC_CH);
-      p.data[0]=CMD_GET_ITEM;
-      p.data[1]=n;
-      p.data[2]=logGetType(ptr);
-      p.size=3+2+strlen(group)+strlen(logs[ptr].name);
-      ASSERT(p.size <= CRTP_MAX_DATA_SIZE); // Too long! The name of the group or the parameter may be too long.
-      memcpy(p.data+3, group, strlen(group)+1);
-      memcpy(p.data+3+strlen(group)+1, logs[ptr].name, strlen(logs[ptr].name)+1);
-      crtpSendPacketBlock(&p);
-    } else {
-      LOG_DEBUG("    Index out of range!");
-      p.header=CRTP_HEADER(CRTP_PORT_LOG, TOC_CH);
-      p.data[0]=CMD_GET_ITEM;
-      p.size=1;
-      crtpSendPacketBlock(&p);
-    }
-    break;
   case CMD_GET_INFO_V2: //Get info packet about the log implementation
     LOG_DEBUG("Packet is TOC_GET_INFO\n");
     ptr = 0;
@@ -391,21 +322,8 @@ void logControlProcess()
 
   switch(p.data[0])
   {
-    case CONTROL_CREATE_BLOCK:
-      ret = logCreateBlock( p.data[1],
-                            (struct ops_setting*)&p.data[2],
-                            (p.size-2)/sizeof(struct ops_setting) );
-      break;
-    case CONTROL_APPEND_BLOCK:
-      ret = logAppendBlock( p.data[1],
-                            (struct ops_setting*)&p.data[2],
-                            (p.size-2)/sizeof(struct ops_setting) );
-      break;
     case CONTROL_DELETE_BLOCK:
       ret = logDeleteBlock( p.data[1] );
-      break;
-    case CONTROL_START_BLOCK:
-      ret = logStartBlock( p.data[1], p.data[2]*10);
       break;
     case CONTROL_STOP_BLOCK:
       ret = logStopBlock( p.data[1] );
@@ -436,35 +354,6 @@ void logControlProcess()
   p.data[2] = ret;
   p.size = 3;
   crtpSendPacketBlock(&p);
-}
-
-static int logCreateBlock(unsigned char id, struct ops_setting * settings, int len)
-{
-  int i;
-
-  for (i=0; i<LOG_MAX_BLOCKS; i++)
-    if (id == logBlocks[i].id) return EEXIST;
-
-  for (i=0; i<LOG_MAX_BLOCKS; i++)
-    if (logBlocks[i].id == BLOCK_ID_FREE) break;
-
-  if (i == LOG_MAX_BLOCKS)
-    return ENOMEM;
-
-  logBlocks[i].id = id;
-  logBlocks[i].timer = xTimerCreateStatic("logTimer", M2T(1000), pdTRUE,
-    &logBlocks[i], logBlockTimed, &logBlocks[i].timerBuffer);
-  logBlocks[i].ops = NULL;
-
-  if (logBlocks[i].timer == NULL)
-  {
-	logBlocks[i].id = BLOCK_ID_FREE;
-	return ENOMEM;
-  }
-
-  LOG_DEBUG("Added block ID %d\n", id);
-
-  return logAppendBlock(id, settings, len);
 }
 
 static int logCreateBlockV2(unsigned char id, struct ops_setting_v2 * settings, int len)
@@ -501,74 +390,6 @@ static struct log_ops * opsMalloc();
 static void opsFree(struct log_ops * ops);
 static void blockAppendOps(struct log_block * block, struct log_ops * ops);
 static int variableGetIndex(int id);
-
-static int logAppendBlock(int id, struct ops_setting * settings, int len)
-{
-  int i;
-  struct log_block * block;
-
-  LOG_DEBUG("Appending %d variable to block %d\n", len, id);
-
-  for (i=0; i<LOG_MAX_BLOCKS; i++)
-    if (logBlocks[i].id == id) break;
-
-  if (i >= LOG_MAX_BLOCKS) {
-    LOG_ERROR("Trying to append block id %d that doesn't exist.", id);
-    return ENOENT;
-  }
-
-  block = &logBlocks[i];
-
-  for (i=0; i<len; i++)
-  {
-    int currentLength = blockCalcLength(block);
-    struct log_ops * ops;
-    int varId;
-
-    if ((currentLength + typeLength[settings[i].logType & LOG_TYPE_MASK])>LOG_MAX_LEN) {
-      LOG_ERROR("Trying to append a full block. Block id %d.\n", id);
-      return E2BIG;
-    }
-
-    ops = opsMalloc();
-
-    if(!ops) {
-      LOG_ERROR("No more ops memory free!\n");
-      return ENOMEM;
-    }
-
-    if (settings[i].id != 255)  //TOC variable
-    {
-      varId = variableGetIndex(settings[i].id);
-
-      if (varId<0) {
-        LOG_ERROR("Trying to add variable Id %d that does not exists.", settings[i].id);
-        return ENOENT;
-      }
-
-      ops->variable    = logs[varId].address;
-      ops->storageType = logGetType(varId);
-      ops->logType     = settings[i].logType & LOG_TYPE_MASK;
-      ops->acquisitionType = acquisitionTypeFromLogType(logs[varId].type);
-
-      LOG_DEBUG("Appended variable %d to block %d\n", settings[i].id, id);
-    } else {                     //Memory variable
-      //TODO: Check that the address is in ram
-      ops->variable    = (void*)(&settings[i]+1);
-      ops->storageType = (settings[i].logType>>4) & LOG_TYPE_MASK;
-      ops->logType     = settings[i].logType & LOG_TYPE_MASK;
-      ops->acquisitionType = acqType_memory;
-      i += 2;
-
-      LOG_DEBUG("Appended var addr 0x%x to block %d\n", (int)ops->variable, id);
-    }
-    blockAppendOps(block, ops);
-
-    LOG_DEBUG("   Now length %d\n", blockCalcLength(block));
-  }
-
-  return 0;
-}
 
 static int logAppendBlockV2(int id, struct ops_setting_v2 * settings, int len)
 {
