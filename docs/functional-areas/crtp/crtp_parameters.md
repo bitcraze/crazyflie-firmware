@@ -146,13 +146,13 @@ will contain the same command byte.
 |------|---------|-----------|
 | 0x00 | [SET_BY_NAME](#set_by_name-command-0x00) | Set a parameter value by group and name |
 | 0x01 | [VALUE_UPDATED](#value_updated-command-0x01) | Sent by Crazyflie when a parameter has been updated (no request) |
-| 0x02 | [GET_EXTENDED_TYPE](#get_extended_type-command-0x02) | Get extended type of a parameter (deprecated, use 0x07) |
+| 0x02 | [GET_EXTENDED_TYPE](#get_extended_type-command-0x02) | Get extended type of a parameter (deprecated, use [GET_EXTENDED_TYPE_V2](#get_extended_type_v2-command-0x07)) |
 | 0x03 | [PERSISTENT_STORE](#persistent_store-command-0x03) | Store a parameter value to persistent storage |
 | 0x04 | [PERSISTENT_GET_STATE](#persistent_get_state-command-0x04) | Get the persistence state of a parameter |
 | 0x05 | [PERSISTENT_CLEAR](#persistent_clear-command-0x05) | Clear persistent data for a parameter |
-| 0x06 | [GET_DEFAULT_VALUE](#get_default_value-command-0x06) | Get the default value of a parameter (deprecated, use 0x08) |
-| 0x07 | [GET_EXTENDED_TYPE_V2](#get_extended_type_v2-command-0x07) | Get extended type of a parameter (unambiguous) |
-| 0x08 | [GET_DEFAULT_VALUE_V2](#get_default_value_v2-command-0x08) | Get the default value of a parameter (unambiguous) |
+| 0x06 | [GET_DEFAULT_VALUE](#get_default_value-command-0x06) | Get the default value of a parameter (deprecated, use [GET_DEFAULT_VALUE_V2](#get_default_value_v2-command-0x08)) |
+| 0x07 | [GET_EXTENDED_TYPE_V2](#get_extended_type_v2-command-0x07) | Get extended type of a parameter |
+| 0x08 | [GET_DEFAULT_VALUE_V2](#get_default_value_v2-command-0x08) | Get the default value of a parameter |
 
 ### SET_BY_NAME (command 0x00)
 
@@ -199,7 +199,7 @@ This can for example happen when an app is controlling the Crazyflie autonomousl
 
 ### GET_EXTENDED_TYPE (command 0x02)
 
-**Deprecated**: Use [GET_EXTENDED_TYPE_V2 (command 0x07)](#get_extended_type_v2-command-0x07) instead. This command may have ambiguous responses if the extended_type value equals an error code (e.g., PARAM_NOT_FOUND=2). Currently not an issue (only extended_type=1 exists), but the V2 command provides an unambiguous format.
+> **Deprecated**: Use [GET_EXTENDED_TYPE_V2 (command 0x07)](#get_extended_type_v2-command-0x07) instead. This command may have ambiguous responses if the extended_type value equals an error code (e.g., PARAM_NOT_FOUND=2). Currently not an issue (only extended_type=1 exists), but the V2 command provides an unambiguous format.
 
 Get the extended type of a parameter.
 
@@ -286,7 +286,7 @@ Answer:
 
 ### GET_DEFAULT_VALUE (command 0x06)
 
-**Deprecated**: Use [GET_DEFAULT_VALUE_V2 (command 0x08)](#get_default_value_v2-command-0x08) instead. This command has ambiguous responses for U8 parameters with default value 2 (PARAM_NOT_FOUND).
+> **Deprecated**: Use [GET_DEFAULT_VALUE_V2 (command 0x08)](#get_default_value_v2-command-0x08) instead. This command has ambiguous responses for U8 parameters with default value 2 (PARAM_NOT_FOUND).
 
 Get the default value of a parameter. The default value is the value the parameter has at startup if not overridden by persistent storage.
 

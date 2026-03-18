@@ -93,7 +93,7 @@ will contain the same command byte.
 | Control command byte | Command | Operation |
 |---|---|---|
 | 0x02 | [DELETE_BLOCK](#delete_block-command-0x02) | Delete a log block |
-| 0x03 | [START_BLOCK](#start_block-command-0x03) | Enable log block transmission at a given period |
+| 0x03 | [START_BLOCK](#start_block-command-0x03) | Enable log block transmission at a given period (deprecated, use [START_BLOCK_V2](#start_block_v2-command-0x08)) |
 | 0x04 | [STOP_BLOCK](#stop_block-command-0x04) | Disable log block transmission |
 | 0x05 | [RESET](#reset-command-0x05) | Delete all log blocks and stop all logging |
 | 0x06 | [CREATE_BLOCK_V2](#create_block_v2-command-0x06) | Create a new log block |
