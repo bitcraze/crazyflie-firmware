@@ -137,7 +137,10 @@ Crazyflie sends back the parameter value as an acknowledgement.
 - Port: 2
 - Channel: 3
 
-The following miscellaneous commands are implemented:
+The following miscellaneous commands are implemented. 
+The first byte of each message's payload corresponds to a command. All communication
+is initiated by the client and all answers from the copter
+will contain the same command byte.
 
 |  Code  | Command                                               |
 |  ------| ------------------------------------------------------|
