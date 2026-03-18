@@ -30,23 +30,23 @@ command byte.
 
 | TOC command byte | Command | Operation |
 |---|---|---|
-| 2 | GET_ITEM_V2 | Get a parameter entry from the TOC by ID |
-| 3 | GET_INFO_V2 | Get the number of parameters and TOC CRC32 |
+| 0x02 | [GET_ITEM_V2](#get_item_v2-command-0x02) | Get a parameter entry from the TOC by ID |
+| 0x03 | [GET_INFO_V2](#get_info_v2-command-0x03) | Get the number of parameters and TOC CRC32 |
 
-### GET_ITEM_V2 (command 2)
+### GET_ITEM_V2 (command 0x02)
 
 Request (PC to Crazyflie):
 
 | Byte | Field | Content |
 |------|-------|---------|
-| 0 | GET_ITEM_V2 | 2 |
+| 0 | GET_ITEM_V2 | 0x02 |
 | 1–2 | ID | ID of the parameter to retrieve (uint16, little-endian) |
 
 Answer (Crazyflie to PC):
 
 | Byte | Field | Content |
 |------|-------|---------|
-| 0 | GET_ITEM_V2 | 2 |
+| 0 | GET_ITEM_V2 | 0x02 |
 | 1–2 | ID | ID of the parameter returned (uint16, little-endian) |
 | 3 | type | Parameter type (see [type table](#type-table) below) |
 | 4.. | group | Null-terminated string |
@@ -72,19 +72,19 @@ The type is one byte describing the parameter type:
 |  0x06      |  float     |  \'&lt;f\' |
 |  0x07      |  double    |  \'&lt;d\' |
 
-### GET_INFO_V2 (command 3)
+### GET_INFO_V2 (command 0x03)
 
 Request (PC to Crazyflie):
 
 | Byte | Field | Content |
 |------|-------|---------|
-| 0 | GET_INFO_V2 | 3 |
+| 0 | GET_INFO_V2 | 0x03 |
 
 Answer (Crazyflie to PC):
 
 | Byte | Field | Content |
 |------|-------|---------|
-| 0 | GET_INFO_V2 | 3 |
+| 0 | GET_INFO_V2 | 0x03 |
 | 1–2 | paramsCount | Number of parameters in the TOC (uint16, little-endian) |
 | 3–6 | paramsCRC | CRC32 fingerprint of the TOC |
 
@@ -137,24 +137,24 @@ Crazyflie sends back the parameter value as an acknowledgement.
 - Port: 2
 - Channel: 3
 
-The following miscellaneous commands are implemented. 
+The following miscellaneous commands are implemented.
 The first byte of each message's payload corresponds to a command. All communication
 is initiated by the client and all answers from the copter
 will contain the same command byte.
 
-|  Code  | Command                                               |
-|  ------| ------------------------------------------------------|
-|  0x00  | [Set by name](#set-by-name)                           |
-|  0x01  | [Value updated](#value-updated)                       |
-|  0x02  | [Get extended type](#get-extended-type) (deprecated, use 0x07) |
-|  0x03  | [Persistent store](#persistent-store)                 |
-|  0x04  | [Persistent get state](#persistent-get-state)         |
-|  0x05  | [Persistent clear](#persistent-clear)                 |
-|  0x06  | [Get default value](#get-default-value) (deprecated, use 0x08) |
-|  0x07  | [Get extended type V2](#get-extended-type-v2) |
-|  0x08  | [Get default value V2](#get-default-value-v2) |
+| Byte | Command | Operation |
+|------|---------|-----------|
+| 0x00 | [SET_BY_NAME](#set_by_name-command-0x00) | Set a parameter value by group and name |
+| 0x01 | [VALUE_UPDATED](#value_updated-command-0x01) | Sent by Crazyflie when a parameter has been updated (no request) |
+| 0x02 | [GET_EXTENDED_TYPE](#get_extended_type-command-0x02) | Get extended type of a parameter (deprecated, use 0x07) |
+| 0x03 | [PERSISTENT_STORE](#persistent_store-command-0x03) | Store a parameter value to persistent storage |
+| 0x04 | [PERSISTENT_GET_STATE](#persistent_get_state-command-0x04) | Get the persistence state of a parameter |
+| 0x05 | [PERSISTENT_CLEAR](#persistent_clear-command-0x05) | Clear persistent data for a parameter |
+| 0x06 | [GET_DEFAULT_VALUE](#get_default_value-command-0x06) | Get the default value of a parameter (deprecated, use 0x08) |
+| 0x07 | [GET_EXTENDED_TYPE_V2](#get_extended_type_v2-command-0x07) | Get extended type of a parameter (unambiguous) |
+| 0x08 | [GET_DEFAULT_VALUE_V2](#get_default_value_v2-command-0x08) | Get the default value of a parameter (unambiguous) |
 
-### Set by name
+### SET_BY_NAME (command 0x00)
 
 *Group* and *name* are ASCII strings of length *n* and *m* respectively.
 The type corresponds to the TOC type of the parameter and is checked for consistency.
@@ -182,7 +182,7 @@ Answer:
 | n+1..n+m+1 | name | Parameter name (null-terminated string) |
 | n+m+2 | result | 0 on success, [error number](crtp_error_numbers.md) on failure |
 
-### Value updated
+### VALUE_UPDATED (command 0x01)
 
 There is no request packet for this message, it is only sent by the Crazyflie.
 
@@ -197,8 +197,9 @@ Answer (Crazyflie to PC):
 This packet is sent by the Crazyflie when a parameter has been modified in the firmware.
 This can for example happen when an app is controlling the Crazyflie autonomously.
 
-### Get extended type
-**Deprecated**: Use [Get extended type V2 (0x07)](#get-extended-type-v2) instead. This command may have ambiguous responses if the extended_type value equals an error code (e.g., PARAM_NOT_FOUND=2). Currently not an issue (only extended_type=1 exists), but the V2 command provides an unambiguous format.
+### GET_EXTENDED_TYPE (command 0x02)
+
+**Deprecated**: Use [GET_EXTENDED_TYPE_V2 (command 0x07)](#get_extended_type_v2-command-0x07) instead. This command may have ambiguous responses if the extended_type value equals an error code (e.g., PARAM_NOT_FOUND=2). Currently not an issue (only extended_type=1 exists), but the V2 command provides an unambiguous format.
 
 Get the extended type of a parameter.
 
@@ -223,7 +224,7 @@ The extended type describes extended properties of the parameter. Currently only
 |------------|------------------|-------------|
 | 0x01       | PERSISTENT       | The parameter can be stored in persistent memory |
 
-### Persistent store
+### PERSISTENT_STORE (command 0x03)
 
 Store the current value of a parameter to persistent storage. The parameter will be set to this value
 after reboot.
@@ -243,7 +244,7 @@ Answer:
 | 1–2 | ID | ID of the parameter (uint16, little-endian) |
 | 3 | result | 0 on success, [error number](crtp_error_numbers.md) on failure |
 
-### Persistent get state
+### PERSISTENT_GET_STATE (command 0x04)
 
 Get the persistence state of a parameter.
 
@@ -264,7 +265,7 @@ Answer:
 | 4..4+ts–1 | default value | Default value (ts = type size from TOC) |
 | 4+ts..4+2ts–1 | stored value | Stored value (only present if result == 0x01) |
 
-### Persistent clear
+### PERSISTENT_CLEAR (command 0x05)
 
 Clear the persistent data for a parameter. After reboot the parameter will be set to the default value.
 
@@ -283,9 +284,9 @@ Answer:
 | 1–2 | ID | ID of the parameter (uint16, little-endian) |
 | 3 | result | 0 on success, [error number](crtp_error_numbers.md) on failure |
 
-### Get default value
+### GET_DEFAULT_VALUE (command 0x06)
 
-**Deprecated**: Use [Get default value V2 (0x08)](#get-default-value-v2) instead. This command has ambiguous responses for U8 parameters with default value 2 (PARAM_NOT_FOUND).
+**Deprecated**: Use [GET_DEFAULT_VALUE_V2 (command 0x08)](#get_default_value_v2-command-0x08) instead. This command has ambiguous responses for U8 parameters with default value 2 (PARAM_NOT_FOUND).
 
 Get the default value of a parameter. The default value is the value the parameter has at startup if not overridden by persistent storage.
 
@@ -307,9 +308,9 @@ Answer:
 
 **Protocol ambiguity**: For U8 parameters with default value 2, the success response `[0x06, ID_L, ID_H, 0x02]` is identical to the error response with PARAM_NOT_FOUND. Clients should check the packet size to distinguish, or preferably use the V2 command.
 
-### Get extended type V2
+### GET_EXTENDED_TYPE_V2 (command 0x07)
 
-This command provides unambiguous responses compared to the deprecated [Get extended type (0x02)](#get-extended-type).
+This command provides unambiguous responses compared to the deprecated [GET_EXTENDED_TYPE (command 0x02)](#get_extended_type-command-0x02).
 
 Get the extended type of a parameter with an explicit status byte.
 
@@ -329,9 +330,9 @@ Answer:
 | 3 | result | 0 on success, [error number](crtp_error_numbers.md) on failure (packet ends here) |
 | 4 | extended type | Bit field of extended types (only present on success) |
 
-### Get default value V2
+### GET_DEFAULT_VALUE_V2 (command 0x08)
 
-This command provides unambiguous responses compared to the deprecated [Get default value (0x06)](#get-default-value).
+This command provides unambiguous responses compared to the deprecated [GET_DEFAULT_VALUE (command 0x06)](#get_default_value-command-0x06).
 
 Get the default value of a parameter with an explicit status byte.
 
