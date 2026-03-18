@@ -310,8 +310,6 @@ Answer:
 
 ### GET_EXTENDED_TYPE_V2 (command 0x07)
 
-This command provides unambiguous responses compared to the deprecated [GET_EXTENDED_TYPE (command 0x02)](#get_extended_type-command-0x02).
-
 Get the extended type of a parameter with an explicit status byte.
 
 Request:
@@ -331,8 +329,6 @@ Answer:
 | 4 | extended type | Bit field of extended types (only present on success) |
 
 ### GET_DEFAULT_VALUE_V2 (command 0x08)
-
-This command provides unambiguous responses compared to the deprecated [GET_DEFAULT_VALUE (command 0x06)](#get_default_value-command-0x06).
 
 Get the default value of a parameter with an explicit status byte.
 
