@@ -128,6 +128,7 @@ struct control_start_block_v2 {
 #define CMD_GET_INFO_V2 3 // version 2: up to 16k entries
 
 #define CONTROL_DELETE_BLOCK    2
+#define CONTROL_START_BLOCK     3
 #define CONTROL_STOP_BLOCK      4
 #define CONTROL_RESET           5
 #define CONTROL_CREATE_BLOCK_V2 6
@@ -324,6 +325,9 @@ void logControlProcess()
   {
     case CONTROL_DELETE_BLOCK:
       ret = logDeleteBlock( p.data[1] );
+      break;
+    case CONTROL_START_BLOCK:
+      ret = logStartBlock( p.data[1], p.data[2]*10);
       break;
     case CONTROL_STOP_BLOCK:
       ret = logStopBlock( p.data[1] );

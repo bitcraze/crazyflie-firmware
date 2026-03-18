@@ -93,6 +93,7 @@ will contain the same command byte.
 | Control command byte | Command | Operation |
 |---|---|---|
 | 0x02 | [DELETE_BLOCK](#delete_block-command-0x02) | Delete a log block |
+| 0x03 | [START_BLOCK](#start_block-command-0x03) | Enable log block transmission at a given period |
 | 0x04 | [STOP_BLOCK](#stop_block-command-0x04) | Disable log block transmission |
 | 0x05 | [RESET](#reset-command-0x05) | Delete all log blocks and stop all logging |
 | 0x06 | [CREATE_BLOCK_V2](#create_block_v2-command-0x06) | Create a new log block |
@@ -113,6 +114,26 @@ Answer:
 | Byte | Field | Content |
 |------|-------|---------|
 | 0 | DELETE_BLOCK | 0x02 |
+| 1 | Block ID | Block identifier (uint8) |
+| 2 | result | 0 on success, [error number](crtp_error_numbers.md) on failure |
+
+### START_BLOCK (command 0x03)
+
+> **Deprecated.** Use [START_BLOCK_V2](#start_block_v2-command-0x08) for new implementations. This command remains supported for backwards compatibility.
+
+Request:
+
+| Byte | Field | Content |
+|------|-------|---------|
+| 0 | START_BLOCK | 0x03 |
+| 1 | Block ID | Block identifier (uint8) |
+| 2 | Period | Transmission period in units of 10 ms (uint8, max 2550 ms) |
+
+Answer:
+
+| Byte | Field | Content |
+|------|-------|---------|
+| 0 | START_BLOCK | 0x03 |
 | 1 | Block ID | Block identifier (uint8) |
 | 2 | result | 0 on success, [error number](crtp_error_numbers.md) on failure |
 
@@ -193,7 +214,7 @@ Request:
 |------|-------|---------|
 | 0 | START_BLOCK_V2 | 0x08 |
 | 1 | Block ID | Block identifier (uint8) |
-| 2–3 | period_in_ms | Period in milliseconds (uint16, little-endian) |
+| 2–3 | period_in_ms | Period in milliseconds (uint16, little-endian, max 65535 ms) |
 
 Answer:
 
