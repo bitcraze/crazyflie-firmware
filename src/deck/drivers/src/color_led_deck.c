@@ -51,7 +51,12 @@ typedef struct {
   bool isInit;
   uint8_t brightnessCorr;
   uint32_t currentWrgb8888;
+  uint32_t targetWrgb8888;
+  uint32_t initialWrgb8888;
   uint32_t wrgb8888;
+  float tFade;
+  float tFadeTarget;
+  float tFadeRemaining;
   uint8_t deckTemperature;
   uint8_t throttlePercentage;
   uint8_t ledPosition;
@@ -252,6 +257,14 @@ static void colorLedDeckInit(DeckInfo *info, colorLedContext_t *ctx, const char 
     ledDeckRegisterHandler(&colorLedDeckLedHandler);
     handlerRegistered = true;
   }
+
+  ctx->currentWrgb8888 = 0;
+  ctx->targetWrgb8888 = 0;
+  ctx->initialWrgb8888 = 0;
+
+  ctx->tFade = 0.0f;
+  ctx->tFadeTarget = 0.0f;
+  ctx->tFadeRemaining = 0.0f;
 
   ctx->isInit = true;
 }
@@ -502,19 +515,41 @@ static void task(void *param) {
         }
         lastCurrentPoll = xTaskGetTickCount();
       }
-
-      // Send color updates when changed
+      
+      // Send color updates when changed color or when fade in progress
       if (ctx->currentWrgb8888 != ctx->wrgb8888) {
-        ctx->currentWrgb8888 = ctx->wrgb8888;
 
-        // Unpack to struct (format: 0xWWRRGGBB)
-        wrgb_t input = {
-            .w = (ctx->currentWrgb8888 >> 24) & 0xFF,
-            .r = (ctx->currentWrgb8888 >> 16) & 0xFF,
-            .g = (ctx->currentWrgb8888 >> 8) & 0xFF,
-            .b = ctx->currentWrgb8888 & 0xFF
-        };
+        if (ctx->targetWrgb8888 != ctx->wrgb8888) {
+          ctx->tFadeRemaining = ctx->tFade;
+          ctx->tFadeTarget = ctx->tFade;
+          ctx->initialWrgb8888 = ctx->currentWrgb8888;
+          ctx->targetWrgb8888 = ctx->wrgb8888;
+        }
 
+        wrgb_t input;
+        if (ctx->tFadeRemaining > 0.0f) {
+          float alpha = ctx->tFadeRemaining / ctx->tFadeTarget;
+                    
+          input.w = alpha * ((ctx->initialWrgb8888 >> 24) & 0xFF) + (1-alpha) * ((ctx->targetWrgb8888 >> 24) & 0xFF);
+          input.r = alpha * ((ctx->initialWrgb8888 >> 16) & 0xFF) + (1-alpha) * ((ctx->targetWrgb8888 >> 16) & 0xFF);
+          input.g = alpha * ((ctx->initialWrgb8888 >> 8) & 0xFF) + (1-alpha) * ((ctx->targetWrgb8888 >> 8) & 0xFF);
+          input.b = alpha * (ctx->initialWrgb8888 & 0xFF) + (1-alpha) * (ctx->targetWrgb8888 & 0xFF);
+          
+          ctx->tFadeRemaining -= 0.01f;
+          
+        } else {
+        
+          ctx->tFadeRemaining = 0.0f;
+          
+          // Unpack to struct (format: 0xWWRRGGBB)
+          input.w = (ctx->targetWrgb8888 >> 24) & 0xFF;
+          input.r = (ctx->targetWrgb8888 >> 16) & 0xFF;
+          input.g = (ctx->targetWrgb8888 >> 8) & 0xFF;
+          input.b = ctx->targetWrgb8888 & 0xFF;
+        }
+        
+        ctx->currentWrgb8888 = (input.w << 24) + (input.r << 16) + (input.g << 8) + input.b;
+        
         wrgb_t output;
         if (ctx->brightnessCorr) {
           // Apply correction
@@ -746,6 +781,11 @@ PARAM_ADD(PARAM_UINT32, wrgb8888, &contexts[BOTTOM_IDX].wrgb8888)
  */
 PARAM_ADD(PARAM_UINT8, brightCorr, &contexts[BOTTOM_IDX].brightnessCorr)
 
+/**
+ * @brief Time to fade into the new color for bottom deck
+ */
+PARAM_ADD(PARAM_FLOAT, tfade, &contexts[BOTTOM_IDX].tFade)
+
 PARAM_GROUP_STOP(colorLedBot)
 
 // Top deck parameters
@@ -760,6 +800,11 @@ PARAM_ADD(PARAM_UINT32, wrgb8888, &contexts[TOP_IDX].wrgb8888)
  * @brief Enable brightness correction (gamma and luminance normalization) for top deck. 0=off, 1=on
  */
 PARAM_ADD(PARAM_UINT8, brightCorr, &contexts[TOP_IDX].brightnessCorr)
+
+/**
+ * @brief Time to fade into the new color for top deck
+ */
+PARAM_ADD(PARAM_FLOAT, tfade, &contexts[TOP_IDX].tFade)
 
 PARAM_GROUP_STOP(colorLedTop)
 
