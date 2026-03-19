@@ -118,6 +118,10 @@ its handling on the ground.
 |  14      | Client-side debugging                        | Debugging the UI and exists only in the Crazyflie Python API and not in the Crazyflie itself.|
 |  15      | [Link layer](crtp_link.md)                   | Low level link-related service. For example *echo* to ping the Crazyflie |
 
+## Error numbers
+
+Many CRTP response packets include a result byte. A value of `0` means success; non-zero values are standard C errno codes. See [Error numbers](crtp_error_numbers.md) for the full table.
+
 Connection procedure
 --------------------
 
