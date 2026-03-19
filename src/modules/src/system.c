@@ -366,6 +366,15 @@ void systemRequestShutdown()
   syslinkSendPacket(&slp);
 }
 
+void systemRequestShutdownSTM()
+{
+  SyslinkPacket slp;
+
+  slp.type = SYSLINK_PM_ONOFF_STM_OFF;
+  slp.length = 0;
+  syslinkSendPacket(&slp);
+}
+
 void systemRequestNRFVersion()
 {
   SyslinkPacket slp;

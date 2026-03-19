@@ -169,6 +169,11 @@ static void pmSystemShutdown(void)
 #endif
 }
 
+void pmSystemShutdownSTM(void)
+{
+  systemRequestShutdownSTM();
+}
+
 /**
  * Returns a number from 0 to 9 where 0 is completely discharged
  * and 9 is 90% charged.
