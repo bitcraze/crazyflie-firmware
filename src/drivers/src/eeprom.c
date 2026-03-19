@@ -32,6 +32,7 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "semphr.h"
 
 #include "eeprom.h"
 #include "debug.h"
@@ -55,11 +56,17 @@ static const MemoryHandlerDef_t memDef = {
 static uint8_t devAddr;
 static I2C_Dev *I2Cx;
 static bool isInit;
+static SemaphoreHandle_t eepromMutex;
 
 bool eepromInit(I2C_Dev *i2cPort)
 {
   if (isInit) {
     return true;
+  }
+
+  eepromMutex = xSemaphoreCreateMutex();
+  if (eepromMutex == NULL) {
+    return false;
   }
 
   memoryRegisterHandler(&memDef);
@@ -126,35 +133,59 @@ static bool eepromTestWriteRead(void)
 bool eepromTestConnection(void)
 {
   uint8_t tmp;
-  bool status;
 
   if (!isInit)
     return false;
 
-  status = i2cdevRead16(I2Cx, devAddr, 0, 1, &tmp);
-
-  return status;
+  return eepromReadBuffer(&tmp, 0, 1);
 }
 
 bool eepromReadBuffer(uint8_t* buffer, uint16_t readAddr, uint16_t len)
 {
-  bool status;
+  // Use a static intermediate buffer to ensure DMA-safe memory is used,
+  // since callers may run from tasks with CCM stacks (not DMA-accessible).
+  // Protected by eepromMutex to prevent concurrent access and ensure
+  // multi-chunk transactions are atomic from the caller's point of view.
+  static uint8_t dmaBuffer[32];
+  uint16_t offset = 0;
 
   if ((uint32_t)readAddr + len > EEPROM_SIZE)
   {
      return false;
   }
 
-  status = i2cdevRead16(I2Cx, devAddr, readAddr, len, buffer);
+  xSemaphoreTake(eepromMutex, portMAX_DELAY);
 
-  return status;
+  bool result = true;
+  while (offset < len) {
+    uint16_t chunkLen = len - offset;
+    if (chunkLen > sizeof(dmaBuffer)) {
+      chunkLen = sizeof(dmaBuffer);
+    }
+
+    bool status = i2cdevRead16(I2Cx, devAddr, readAddr + offset, chunkLen, dmaBuffer);
+    if (!status) {
+      result = false;
+      break;
+    }
+
+    memcpy(buffer + offset, dmaBuffer, chunkLen);
+    offset += chunkLen;
+  }
+
+  xSemaphoreGive(eepromMutex);
+  return result;
 }
 
 bool eepromWriteBuffer(const uint8_t* buffer, uint16_t writeAddr, uint16_t len)
 {
   bool status;
 
-  unsigned char pageBuffer[32];
+  // Static to ensure DMA-safe memory; callers may run from tasks with CCM stacks.
+  // Protected by eepromMutex to prevent concurrent access and ensure
+  // multi-chunk transactions are atomic from the caller's point of view.
+  static unsigned char pageBuffer[32];
+  static uint8_t dummy; // DMA-safe; used only for ACK polling, not data
   int bufferIndex = 0;
   int leftToWrite = len;
   uint16_t currentAddress = writeAddr;
@@ -164,6 +195,8 @@ bool eepromWriteBuffer(const uint8_t* buffer, uint16_t writeAddr, uint16_t len)
   {
      return false;
   }
+
+  xSemaphoreTake(eepromMutex, portMAX_DELAY);
 
   while (leftToWrite > 0) {
     int pageIndex = 0;
@@ -183,12 +216,12 @@ bool eepromWriteBuffer(const uint8_t* buffer, uint16_t writeAddr, uint16_t len)
       vTaskDelay(M2T(6));
     }
     if (!status) {
+      xSemaphoreGive(eepromMutex);
       return false;
     }
 
     // Waiting for page to be written
     for (int retry = 0; retry < 30; retry++) {
-      uint8_t dummy;
       status = i2cdevWrite(I2Cx, devAddr, 1, &dummy);
 
       if (status) {
@@ -198,10 +231,12 @@ bool eepromWriteBuffer(const uint8_t* buffer, uint16_t writeAddr, uint16_t len)
       vTaskDelay(M2T(1));
     }
     if (!status) {
+      xSemaphoreGive(eepromMutex);
       return false;
     }
   }
 
+  xSemaphoreGive(eepromMutex);
   return status;
 }
 

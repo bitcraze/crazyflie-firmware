@@ -57,8 +57,6 @@ static const uint8_t typeLength[] = {
 #define CMD_GET_NEXT 1
 #define CMD_GET_CRC 2
 
-#define CMD_GET_ITEM    0 // original version: up to 255 entries
-#define CMD_GET_INFO    1 // original version: up to 255 entries
 #define CMD_GET_ITEM_V2 2 // version 2: up to 16k entries
 #define CMD_GET_INFO_V2 3 // version 2: up to 16k entries
 
@@ -278,23 +276,6 @@ void paramTOCProcess(CRTPPacket *p, int command)
 
   switch (command)
   {
-    case CMD_GET_INFO: //Get info packet about the param implementation (obsolete)
-      DEBUG_PRINT("Param API V1 not supported anymore!\n");
-      ptr = 0;
-      group = "";
-      p->header = CRTP_HEADER(CRTP_PORT_PARAM, TOC_CH);
-      p->size = 4;
-      p->data[0] = CMD_GET_INFO;
-      p->data[1] = 0; // Param count
-      crtpSendPacketBlock(p);
-      break;
-    case CMD_GET_ITEM:  //Get param variable (obsolete)
-      DEBUG_PRINT("Param API V1 not supported anymore!\n");
-      p->header=CRTP_HEADER(CRTP_PORT_PARAM, TOC_CH);
-      p->data[0]=CMD_GET_ITEM;
-      p->size=1;
-      crtpSendPacketBlock(p);
-      break;
     case CMD_GET_INFO_V2: //Get info packet about the param implementation
       ptr = 0;
       group = "";
