@@ -196,7 +196,14 @@ int plan_land(struct planner *p, struct vec curr_pos, float curr_yaw, float hove
 	durations[2] = 0.1f;  // we want the last piece to be short.
 	durations[1] = hover_duration;
 	durations[0] = duration - durations[1] - durations[2];
-	ASSERT(durations[0] > 0.0f);
+	if (durations[0] < 0.0f) {
+		plan_takeoff_or_landing(p, curr_pos, curr_yaw, hover_height, hover_yaw, duration);
+		p->reversed = false;
+		p->state = TRAJECTORY_STATE_FLYING;
+		p->type = TRAJECTORY_TYPE_PIECEWISE;
+		p->planned_trajectory.t_begin = t;
+		p->trajectory = &p->planned_trajectory;
+	}
 
 	struct vec positions[4];
 	positions[0] = curr_pos; 
