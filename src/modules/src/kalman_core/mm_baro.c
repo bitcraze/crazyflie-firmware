@@ -25,8 +25,24 @@
 
 #include "mm_baro.h"
 
+#include <stdbool.h>
+
+static float lastGroundPressure = 0.0f;
+static bool takeoffComplete = false;
+
 void kalmanCoreUpdateWithBaro(kalmanCoreData_t *this, const kalmanCoreParams_t *params, float baroPressurePa, bool quadIsFlying)
 {
+  if (!quadIsFlying) {
+    lastGroundPressure = baroPressurePa;
+    takeoffComplete = false;
+  } else if (!takeoffComplete) {
+    if (baroPressurePa < lastGroundPressure) {
+      takeoffComplete = true;
+    } else {
+      return;
+    }
+  }
+
   float h[KC_STATE_DIM] = {0};
   arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
 
@@ -43,5 +59,25 @@ void kalmanCoreUpdateWithBaro(kalmanCoreData_t *this, const kalmanCoreParams_t *
   h[KC_STATE_Z] = pRef * 5.2561f * (-0.0065f / 298.15f) * powf(base, 4.2561f);
 
   float innovation = baroPressurePa - pPred;
+
+  // Innovation gate: reject outliers beyond 3-sigma (Mahalanobis distance)
+  float R = params->measNoiseBaro * params->measNoiseBaro;
+  float PHt[KC_STATE_DIM];
+  for (int i = 0; i < KC_STATE_DIM; i++) {
+    PHt[i] = 0;
+    for (int j = 0; j < KC_STATE_DIM; j++) {
+      PHt[i] += this->P[i][j] * h[j];
+    }
+  }
+  float HPHR = R;
+  for (int i = 0; i < KC_STATE_DIM; i++) {
+    HPHR += h[i] * PHt[i];
+  }
+
+  #define BARO_GATE_THRESHOLD 9.0f  // 3-sigma squared
+  if (innovation * innovation > BARO_GATE_THRESHOLD * HPHR) {
+    return;
+  }
+
   kalmanCoreScalarUpdate(this, &H, innovation, params->measNoiseBaro);
 }
