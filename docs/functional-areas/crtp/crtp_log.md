@@ -6,141 +6,234 @@ page_id: crtp_log
 For more information on how to use this and how this is implemented have
 a look [here](/docs/userguides/logparam.md).
 
+The log port is separated in these channels:
+
+| **Port** | **Channel** | **Function** |
+| -------- | ----------- | ------------ |
+| 5        | 0           | [Table of Contents access](#table-of-contents-access): Used for reading out the TOC |
+| 5        | 1           | [Log control](#log-control): Used for adding/removing/starting/pausing log blocks |
+| 5        | 2           | [Log data](#log-data): Used to send log data from the Crazyflie to the client |
+
+From here on in this section, only the payload of each message is described.
+
 ## State machines
 
-### Downloading the Table Of Contents
+### Downloading the Table of Contents
 
 ![crtp log](/docs/images/crtp_log.png)
 
-## Communication protocol
+## Table of Contents access
 
-The log port is separated in 3 channels:
+- Port: 5
+- Channel: 0
 
- | **Port**  | **Channel**  | **Function**|
- | ----------| -------------| ------------------
-|  5         | 0            | Table of content access: Used for reading out the TOC|
-|  5         | 1            | Log control: Used for adding/removing/starting/pausing log blocks|
-|  5         | 2            | Log data: Used to send log data from the Crazyflie to the client|
-
-### Table of content access
-
-This channel is used to download the Table Of Contents that contains all
+This channel is used to download the Table of Contents (TOC) that contains all
 the variables that are available for logging and what types they are.
 
-The first byte of each messages correspond a command. All communication
-on this port are initated by the client and all answer from the copter
+The first byte of each message's payload corresponds to a command. All communication
+is initiated by the client and all answers from the copter
 will contain the same command byte.
 
-|  TOC command byte   |Command    | Operation|
-|  ------------------ |----------- |-----------------------------|
-|  0                  |GET\_ITEM  | Get an item from the TOC|
-|  1                  |GET\_INFO  | Get information about the TOC and the LOG subsystem| implementation
+| TOC command byte | Command                                  | Operation |
+| ---------------- | ---------------------------------------- |-----------|
+| 0x02             | [GET_ITEM_V2](#get_item_v2-command-0x02) | Get an item from the TOC (up to 65535 entries) |
+| 0x03             | [GET_INFO_V2](#get_info_v2-command-0x03) | Get information about the TOC and LOG subsystem |
 
-### Get TOC item
+### GET_ITEM_V2 (command 0x02)
 
-The GET\_ITEM TOC command permits to retrieved the log variables name,
-group and types from the copter. This command is intended to be
-requested from all the ID from 0 to LOG\_LEN (see GET\_INFO).
+Request (PC to Crazyflie):
 
-    Request (PC to Copter):
-            +--------------+----+
-            | GET_ITEM (0) | ID |
-            +--------------+----+
-    Length         1         1
+| Byte | Field       | Content |
+| ---- | ----------- |---------|
+| 0    | GET_ITEM_V2 | 0x02 |
+| 1–2  | ID          | ID of the item to retrieve (uint16, little-endian) |
 
-    Answer (Copter to PC):
-            +--------------+----+
-            | GET_ITEM (0) | ID |                                        If index out of range
-            +--------------+----+------+------------+--------------+
-            | GET_ITEM (0) | ID | Type |   Group    |     Name     |     If returning Item
-            +--------------+----+------+------------+--------------+
-    Length        1          1     1    < Null terminated strings >
+Answer (Crazyflie to PC):
 
- | Byte   |Request fields  | Content|
- | ------| ---------------- |------------------------|
- | 0     | GET\_ITEM       | At 0 for GET\_ITEM operation|
- | 1     | ID              | ID of the item to be retrieved. The variables are numbered from 0 to LOG\_LEN (see GET\_INFO command)|
+| Byte | Field       | Content |
+| ---- | ----------- |---------|
+| 0    | GET_ITEM_V2 | 0x02 |
+| 1–2  | ID          | ID of the item returned (uint16, little-endian) |
+| 3    | Type        | Variable type (see type table) |
+| 4..  | Group       | Null-terminated string |
+| ..   | Name        | Null-terminated string |
 
-|  Byte  | Answer fields  | Content|
-|  ------| ---------------| -------------------------------------------------------|
-|  0     | GET\_ITEM      | 0 for GET\_ITEM operation|
-|  1     | ID             | ID of the item returned|
-|  2     | Type           | Variable type of the element. See variable types list|
-|  3..   | Group          | Null-terminated string containing variable group|
-|  ..    | Name           | Null-terminated string containing the variable name|
+If the requested ID is out of range, the response is 1 byte (command only).
 
-Type, group and name are not sent if the required ID is higher than
-TOC\_LEN-1.
+### GET_INFO_V2 (command 0x03)
 
-### Get Info
+Request (PC to Crazyflie):
 
-The get info command is intended to be requested first when connecting
-to the copter. This permits to know the number of variable, the
-limitations of the log implementation and the fingerprint of the log
-variables.
+| Byte | Field       | Content |
+| ---- | ----------- |---------|
+| 0    | GET_INFO_V2 | 0x03 |
 
-    Request (PC to Copter):
-            +--------------+
-            | GET_INFO (1) |
-            +--------------+
-    Length         1
+Answer (Crazyflie to PC):
 
-    Answer (Copter to PC):
-            +--------------+---------+---------+-----------------+-------------+
-            | GET_INFO (1) | LOG_LEN | LOG_CRC |  LOG_MAX_PACKET | LOG_MAX_OPS |
-            +--------------+---------+---------+-----------------+-------------+
-    Length        1             1         4             1               1
+| Byte | Field          | Content |
+| ---- | -------------- |---------|
+| 0    | GET_INFO_V2    | 0x03 |
+| 1–2  | LOG_LEN        | Number of log variables in the TOC (uint16, little-endian) |
+| 3–6  | LOG_CRC        | CRC32 fingerprint of the TOC |
+| 7    | LOG_MAX_BLOCKS | Maximum number of log blocks that can be created |
+| 8    | LOG_MAX_OPS    | Maximum number of log operations (variable slots across all blocks) |
 
- | Byte   |Request fields  | Content|
- | ------ |----------------| ------------------------------|
- | 0      |GET\_INFO       | At 1 for GET\_INFO operation|
+## Log control
 
-|  Byte  | Answer fields     | Content|
-|  ------| ------------------| ----------------------------------------------------------|
-|  0     | GET\_INFO        |  1 for GET\_INFO operation|
-|  1     | LOG\_LEN         |  Number of log items contained in the log table of content|
-|  2     | LOG\_CRC         |  CRC values of the log TOC memory content. This is a fingerprint of the copter build that can be used to cache the TOC|
-|  6     | LOG\_MAX\_PACKET  | Maximum number of log packets that can be programmed in the copter|
- | 7     | LOG\_MAX\_OPS     | Maximum number of operation programmable in the copter. An operation is one log variable retrieval programming|
-
-### Log control
+- Port: 5
+- Channel: 1
 
 The log control channel permits to setup, activate, deactivate and
-remove log packets. Like the TOC access channel the first data byte
-represents a command.
+remove log blocks.
 
-|  Control command byte  | Command        | Operation|
-|  ----------------------| ---------------| ---------------------------------------|
-|  0                     | CREATE\_BLOCK  | Create a new log block|
-|  1                     | APPEND\_BLOCK  | Append variables to an existing block|
-|  2                     | DELETE\_BLOCK  | Delete log block|
-|  3                     | START\_BLOCK   | Enable log block transmission|
-|  4                     | STOP\_BLOCK    | Disable log block transmission|
-|  5                     | RESET          | Delete all log blocks|
+The first byte of each message's payload corresponds to a command. All communication
+is initiated by the client and all answers from the copter
+will contain the same command byte.
 
-### Create block
+| Control command byte | Command                                          | Operation |
+| -------------------- | ------------------------------------------------ |-----------|
+| 0x02                 | [DELETE_BLOCK](#delete_block-command-0x02)       | Delete a log block |
+| 0x03                 | [START_BLOCK](#start_block-command-0x03)         | Enable log block transmission at a given period (deprecated, use [START_BLOCK_V2](#start_block_v2-command-0x08)) |
+| 0x04                 | [STOP_BLOCK](#stop_block-command-0x04)           | Disable log block transmission |
+| 0x05                 | [RESET](#reset-command-0x05)                     | Delete all log blocks and stop all logging |
+| 0x06                 | [CREATE_BLOCK_V2](#create_block_v2-command-0x06) | Create a new log block |
+| 0x07                 | [APPEND_BLOCK_V2](#append_block_v2-command-0x07) | Append variables to an existing log block |
+| 0x08                 | [START_BLOCK_V2](#start_block_v2-command-0x08)   | Enable log block transmission at a given period |
 
-### Append variable to block
+### DELETE_BLOCK (command 0x02)
 
-### Delete block
+Request:
 
-### Start block
+| Byte | Field        | Content |
+| ---- | ------------ |---------|
+| 0    | DELETE_BLOCK | 0x02 |
+| 1    | Block ID     | Block identifier (uint8) |
 
-### Stop block
+Answer:
 
-### Log data
+| Byte | Field        | Content |
+| ---- | ------------ |---------|
+| 0    | DELETE_BLOCK | 0x02 |
+| 1    | Block ID     | Block identifier (uint8) |
+| 2    | result       | 0 on success, [error number](crtp_error_numbers.md) on failure |
+
+### START_BLOCK (command 0x03)
+
+> **Deprecated.** Use [START_BLOCK_V2](#start_block_v2-command-0x08) for new implementations. This command remains supported for backwards compatibility.
+
+Request:
+
+| Byte | Field       | Content |
+| ---- | ----------- |---------|
+| 0    | START_BLOCK | 0x03 |
+| 1    | Block ID    | Block identifier (uint8) |
+| 2    | Period      | Transmission period in units of 10 ms (uint8, max 2550 ms) |
+
+Answer:
+
+| Byte | Field       | Content |
+| ---- | ----------- |---------|
+| 0    | START_BLOCK | 0x03 |
+| 1    | Block ID    | Block identifier (uint8) |
+| 2    | result      | 0 on success, [error number](crtp_error_numbers.md) on failure |
+
+### STOP_BLOCK (command 0x04)
+
+Request:
+
+| Byte | Field      | Content |
+| ---- | ---------- |---------|
+| 0    | STOP_BLOCK | 0x04 |
+| 1    | Block ID   | Block identifier (uint8) |
+
+Answer:
+
+| Byte | Field      | Content |
+| ---- | ---------- |---------|
+| 0    | STOP_BLOCK | 0x04 |
+| 1    | Block ID   | Block identifier (uint8) |
+| 2    | result     | 0 on success, [error number](crtp_error_numbers.md) on failure |
+
+### RESET (command 0x05)
+
+Request:
+
+| Byte | Field | Content |
+| ---- | ----- |---------|
+| 0    | RESET | 0x05 |
+
+Answer:
+
+| Byte | Field    | Content |
+| ---- | -------- |---------|
+| 0    | RESET    | 0x05 |
+| 1    | (unused) | — |
+| 2    | result   | Always 0 |
+
+### CREATE_BLOCK_V2 (command 0x06)
+
+Request:
+
+| Byte | Field            | Content |
+| ---- | ---------------- |---------|
+| 0    | CREATE_BLOCK_V2  | 0x06 |
+| 1    | Block ID         | Block identifier (uint8) |
+| 2..  | ops_setting_v2[] | Zero or more entries, 3 bytes each: logType (uint8) + variable ID (uint16, little-endian) |
+
+Answer:
+
+| Byte | Field           | Content |
+| ---- | --------------- |---------|
+| 0    | CREATE_BLOCK_V2 | 0x06 |
+| 1    | Block ID        | Block identifier (uint8) |
+| 2    | result          | 0 on success, [error number](crtp_error_numbers.md) on failure |
+
+### APPEND_BLOCK_V2 (command 0x07)
+
+Request:
+
+| Byte | Field            | Content |
+| ---- | ---------------- |---------|
+| 0    | APPEND_BLOCK_V2  | 0x07 |
+| 1    | Block ID         | Block identifier (uint8) |
+| 2..  | ops_setting_v2[] | One or more entries, 3 bytes each: logType (uint8) + variable ID (uint16, little-endian) |
+
+Answer:
+
+| Byte | Field           | Content |
+| ---- | --------------- |---------|
+| 0    | APPEND_BLOCK_V2 | 0x07 |
+| 1    | Block ID        | Block identifier (uint8) |
+| 2    | result          | 0 on success, [error number](crtp_error_numbers.md) on failure |
+
+### START_BLOCK_V2 (command 0x08)
+
+Request:
+
+| Byte | Field          | Content |
+| ---- | -------------- |---------|
+| 0    | START_BLOCK_V2 | 0x08 |
+| 1    | Block ID       | Block identifier (uint8) |
+| 2–3  | period_in_ms   | Period in milliseconds (uint16, little-endian, max 65535 ms) |
+
+Answer:
+
+| Byte | Field          | Content |
+| ---- | -------------- |---------|
+| 0    | START_BLOCK_V2 | 0x08 |
+| 1    | Block ID       | Block identifier (uint8) |
+| 2    | result         | 0 on success, [error number](crtp_error_numbers.md) on failure |
+
+## Log data
+
+- Port: 5
+- Channel: 2
 
 The log data channel is used by the copter to send the log blocks at the
-programmed rate. The packet format is
+programmed rate.
 
-    Answer (Copter to PC):
-            +----------+------------+---------//----------+
-            | BLOCK_ID | TIME_STAMP | LOG VARIABLE VALUES |
-            +----------+------------+---------//----------+
-    Length        1          3           0 to 26
-
- | Byte  | Answer fields        | Content|
- | ------| --------------------- --------------------------------|
-|  0     | BLOCK\_ID             |ID of the block|
-|  1      |ID                    |Timestamp in ms from the copter startup as a little-endian 3 bytes integer|
-|  4..    |Log variable values  | Packed log values in little endian format|
+| Byte | Field     | Content |
+| ---- | --------- |---------|
+| 0    | BLOCK_ID  | ID of the log block |
+| 1–3  | TIMESTAMP | Timestamp in ms since copter startup (uint24, little-endian) |
+| 4..  | values    | Packed log variable values (0 to 26 bytes, little-endian) |
