@@ -63,6 +63,8 @@
 #define SYSLINK_PM_LED_ON             0x17
 #define SYSLINK_PM_LED_OFF            0x18
 #define SYSLINK_PM_DECKCTRL_DFU       0x19
+#define SYSLINK_PM_ONOFF_STM_OFF      0x1A
+
 
 #define SYSLINK_OW_GROUP    0x20
 #define SYSLINK_OW_SCAN     0x20
