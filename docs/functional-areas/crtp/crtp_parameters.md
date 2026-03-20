@@ -11,7 +11,7 @@ parameters:
 
 | Port | Channel | Function |
 | ---- | ------- |----------|
-| 2    | 0       | [Table of Contents access](#toc-access)|
+| 2    | 0       | [Table of Contents access](#table-of-contents-access)|
 | 2    | 1       | [Parameter read](#parameter-read)|
 | 2    | 2       | [Parameter write](#parameter-write)|
 | 2    | 3       | [Miscellaneous commands](#miscellaneous-commands)|
