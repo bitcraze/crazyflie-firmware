@@ -3,9 +3,9 @@
 # Flash a swarm of Crazyflies
 # Usage: ./flash_swarm.sh [count]
 
-COUNT=${1:-1}
+COUNT=${1:-2}
 BASE_ADDRESS="D91F7001"
-CHANNEL=84
+CHANNEL=88
 
 FLASHED=()
 FAILED=()
