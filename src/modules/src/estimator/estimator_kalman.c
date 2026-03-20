@@ -60,6 +60,7 @@
 
 #include "kalman_core.h"
 #include "kalman_core_params_defaults.h"
+#include "mm_baro.h"
 #include "kalman_supervisor.h"
 
 #include "FreeRTOS.h"
@@ -101,7 +102,7 @@
 #include "cfassert.h"
 
 
-// #define KALMAN_USE_BARO_UPDATE
+#define KALMAN_USE_BARO_UPDATE
 
 
 // Semaphore to signal that we got data from the stabilizer loop to process
@@ -333,7 +334,7 @@ static void updateQueuedMeasurements(const uint32_t nowMs, const bool quadIsFlyi
         }
         break;
       case MeasurementTypeTOF:
-        kalmanCoreUpdateWithTof(&coreData, &m.data.tof);
+        // kalmanCoreUpdateWithTof(&coreData, &m.data.tof);
         break;
       case MeasurementTypeAbsoluteHeight:
         kalmanCoreUpdateWithAbsoluteHeight(&coreData, &m.data.height);
@@ -357,7 +358,7 @@ static void updateQueuedMeasurements(const uint32_t nowMs, const bool quadIsFlyi
         break;
       case MeasurementTypeBarometer:
         if (useBaroUpdate) {
-          kalmanCoreUpdateWithBaro(&coreData, &coreParams, m.data.barometer.baro.asl, quadIsFlying);
+          kalmanCoreUpdateWithBaro(&coreData, &coreParams, m.data.barometer.baro.pressure, quadIsFlying);
         }
         break;
       default:

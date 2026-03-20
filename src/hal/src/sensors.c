@@ -41,6 +41,10 @@
   #include "sensors_bmi088_bmp3xx.h"
 #endif
 
+#ifdef CONFIG_SENSORS_BMI088_BMP5XX
+  #include "sensors_bmi088_bmp5xx.h"
+#endif
+
 #ifdef CONFIG_SENSORS_MPU9250_LPS25H
   #include "sensors_mpu9250_lps25h.h"
 #endif
@@ -104,6 +108,23 @@ static const sensorsImplementation_t sensorImplementations[SensorImplementation_
     .readBaro = sensorsBmi088Bmp3xxReadBaro,
     .setAccMode = sensorsBmi088Bmp3xxSetAccMode,
     .dataAvailableCallback = sensorsBmi088Bmp3xxDataAvailableCallback,
+  },
+#endif
+#ifdef CONFIG_SENSORS_BMI088_BMP5XX
+  {
+    .implements = SensorImplementation_bmi088_bmp5xx,
+    .init = sensorsBmi088Bmp5xxInit_I2C,
+    .test = sensorsBmi088Bmp5xxTest,
+    .areCalibrated = sensorsBmi088Bmp5xxAreCalibrated,
+    .manufacturingTest = sensorsBmi088Bmp5xxManufacturingTest,
+    .acquire = sensorsBmi088Bmp5xxAcquire,
+    .waitDataReady = sensorsBmi088Bmp5xxWaitDataReady,
+    .readGyro = sensorsBmi088Bmp5xxReadGyro,
+    .readAcc = sensorsBmi088Bmp5xxReadAcc,
+    .readMag = sensorsBmi088Bmp5xxReadMag,
+    .readBaro = sensorsBmi088Bmp5xxReadBaro,
+    .setAccMode = sensorsBmi088Bmp5xxSetAccMode,
+    .dataAvailableCallback = sensorsBmi088Bmp5xxDataAvailableCallback,
   },
 #endif
 #ifdef CONFIG_SENSORS_MPU9250_LPS25H

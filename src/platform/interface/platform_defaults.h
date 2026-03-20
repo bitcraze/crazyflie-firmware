@@ -34,6 +34,9 @@
 #ifdef CONFIG_PLATFORM_CF2
     #include "platform_defaults_cf2.h"
 #endif
+#ifdef CONFIG_PLATFORM_CF2_BMP581
+    #include "platform_defaults_cf2.h"
+#endif
 #ifdef CONFIG_PLATFORM_CF21BL
     #include "platform_defaults_cf21bl.h"
 #endif

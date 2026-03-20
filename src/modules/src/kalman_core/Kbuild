@@ -1,5 +1,6 @@
 obj-y += kalman_core.o
 obj-y += mm_absolute_height.o
+obj-y += mm_baro.o
 obj-y += mm_distance.o
 obj-y += mm_distance_robust.o
 obj-y += mm_flow.o

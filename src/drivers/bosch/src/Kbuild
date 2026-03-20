@@ -7,4 +7,5 @@ obj-y += bmi160.o
 obj-y += bmm150.o
 obj-y += bmp280.o
 obj-y += bmp3.o
+obj-y += bmp5.o
 obj-y += bstdr_comm_support.o

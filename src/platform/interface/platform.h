@@ -39,6 +39,10 @@ typedef enum {
   SensorImplementation_bmi088_bmp3xx,
   #endif
 
+  #ifdef CONFIG_SENSORS_BMI088_BMP5XX
+  SensorImplementation_bmi088_bmp5xx,
+  #endif
+
   #ifdef CONFIG_SENSORS_BMI088_SPI
   SensorImplementation_bmi088_spi_bmp3xx,
   #endif

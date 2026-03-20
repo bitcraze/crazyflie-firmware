@@ -72,7 +72,7 @@
   .procNoiseVel = 0, \
   .procNoisePos = 0, \
   .procNoiseAtt = 0, \
-  .measNoiseBaro = 2.0f,           /* meters */ \
+  .measNoiseBaro = 0.15f,            /* Pa, BMP581 at 32x pressure OSR (Table 9) */ \
   .measNoiseGyro_rollpitch = 0.1f, /* radians per second */ \
   .measNoiseGyro_yaw = 0.1f,       /* radians per second */ \
   \

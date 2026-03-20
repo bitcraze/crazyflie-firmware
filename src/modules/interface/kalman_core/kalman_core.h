@@ -91,7 +91,7 @@ typedef struct {
   __attribute__((aligned(4))) float P[KC_STATE_DIM][KC_STATE_DIM];
   arm_matrix_instance_f32 Pm;
 
-  float baroReferenceHeight;
+  float baroReferencePressure;
 
   // Quaternion used for initial orientation [w,x,y,z]
   float initialQuaternion[4];
@@ -117,7 +117,7 @@ typedef struct {
   float procNoiseVel;
   float procNoisePos;
   float procNoiseAtt;
-  float measNoiseBaro;           // meters
+  float measNoiseBaro;           // Pa
   float measNoiseGyro_rollpitch; // radians per second
   float measNoiseGyro_yaw;       // radians per second
 
@@ -162,9 +162,6 @@ void kalmanCoreDefaultParams(kalmanCoreParams_t *params);
 void kalmanCoreInit(kalmanCoreData_t *this, const kalmanCoreParams_t *params, const uint32_t nowMs);
 
 /*  - Measurement updates based on sensors */
-
-// Barometer
-void kalmanCoreUpdateWithBaro(kalmanCoreData_t *this, const kalmanCoreParams_t *params, float baroAsl, bool quadIsFlying);
 
 /**
  * Primary Kalman filter functions

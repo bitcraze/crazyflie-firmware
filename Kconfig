@@ -81,6 +81,11 @@ config PLATFORM_FLAPPER
     select SENSORS_BMI088_BMP3XX
     select SENSORS_BMI088_SPI
 
+config PLATFORM_CF2_BMP581
+    bool "Build for CF2 with BMP581"
+    select SENSORS_BMI088_BMP5XX
+    select SENSORS_MPU9250_LPS25H
+
 endchoice
 
 config ENABLE_THRUST_BAT_COMPENSATED
@@ -187,25 +192,30 @@ config SENSORS_BMI088_BMP3XX
         Include support for the Bosch bmi088 inertial and bmp3xx
         barometric sensors
 
+config SENSORS_BMI088_BMP5XX
+    bool "Support for bmi088 and bmp5xx sensors"
+    default n
+    select SENSORS_BMI088_I2C
+
 config SENSORS_BOSCH
     bool "Include Bosch sensors"
     default n
 
 config SENSORS_IGNORE_BAROMETER_FAIL
     bool "Ignore failure from barometer"
-    depends on SENSORS_BMI088_BMP3XX
+    depends on SENSORS_BMI088_BMP3XX || SENSORS_BMI088_BMP5XX
     default n
 
 config SENSORS_BMI088_SPI
     bool "Support for SPI communincation with the bmi088 sensor"
-    depends on SENSORS_BMI088_BMP3XX
+    depends on SENSORS_BMI088_BMP3XX || SENSORS_BMI088_BMP5XX
     default n
     help
         Include support using SPI with the Bosch bmi088 inertial sensor
 
 config SENSORS_BMI088_I2C
     bool "Support for I2C communincation with the bmi088 sensor"
-    depends on SENSORS_BMI088_BMP3XX
+    depends on SENSORS_BMI088_BMP3XX || SENSORS_BMI088_BMP5XX
     default n
     help
         Include support using I2C with the Bosch bmi088 inertial sensor

@@ -205,7 +205,7 @@ void kalmanCoreInit(kalmanCoreData_t *this, const kalmanCoreParams_t *params, co
   this->Pm.numCols = KC_STATE_DIM;
   this->Pm.pData = (float*)this->P;
 
-  this->baroReferenceHeight = 0.0;
+  this->baroReferencePressure = 0.0;
 
   this->isUpdated = false;
   this->lastPredictionMs = nowMs;
@@ -319,22 +319,6 @@ void kalmanCoreUpdateWithPKE(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm
     assertStateNotNaN(this);
 
     this->isUpdated = true;
-}
-
-void kalmanCoreUpdateWithBaro(kalmanCoreData_t *this, const kalmanCoreParams_t *params, float baroAsl, bool quadIsFlying)
-{
-  float h[KC_STATE_DIM] = {0};
-  arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
-
-  h[KC_STATE_Z] = 1;
-
-  if (!quadIsFlying || this->baroReferenceHeight < 1) {
-    //TODO: maybe we could track the zero height as a state. Would be especially useful if UWB anchors had barometers.
-    this->baroReferenceHeight = baroAsl;
-  }
-
-  float meas = (baroAsl - this->baroReferenceHeight);
-  kalmanCoreScalarUpdate(this, &H, meas - this->S[KC_STATE_Z], params->measNoiseBaro);
 }
 
 static void predictDt(kalmanCoreData_t* this, const kalmanCoreParams_t *params, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying)
