@@ -43,6 +43,7 @@
 #include "sensors.h"
 #include "commander.h"
 #include "crtp_commander_high_level.h"
+#include "onboard_guidance.h"
 #include "crtp_localization_service.h"
 #include "controller.h"
 #include "power_distribution.h"
@@ -330,9 +331,15 @@ static void stabilizerTask(void* param)
       // Critical for safety, be careful if you modify this code!
       crtpCommanderBlock(! areMotorsAllowedToRun);
 
-      if (crtpCommanderHighLevelGetSetpoint(&tempSetpoint, &state, stabilizerStep)) {
-        commanderSetSetpoint(&tempSetpoint, COMMANDER_PRIORITY_HIGHLEVEL);
+#ifdef CONFIG_ONBOARD_GUIDANCE_OOT
+      if (onboardGuidanceOutOfTreeGetSetpoint(&tempSetpoint, &state, stabilizerStep)) {
+        commanderSetSetpoint(&tempSetpoint, COMMANDER_PRIORITY_ONBOARD_GUIDANCE);
       }
+#else
+      if (crtpCommanderHighLevelGetSetpoint(&tempSetpoint, &state, stabilizerStep)) {
+        commanderSetSetpoint(&tempSetpoint, COMMANDER_PRIORITY_ONBOARD_GUIDANCE);
+      }
+#endif
       commanderGetSetpoint(&setpoint, &state);
 
       // Critical for safety, be careful if you modify this code!

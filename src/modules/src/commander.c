@@ -32,6 +32,7 @@
 #include "commander.h"
 #include "crtp_commander.h"
 #include "crtp_commander_high_level.h"
+#include "onboard_guidance.h"
 
 #include "cf_math.h"
 #include "param.h"
@@ -66,6 +67,9 @@ void commanderInit(void)
 
   crtpCommanderInit();
   crtpCommanderHighLevelInit();
+#ifdef CONFIG_ONBOARD_GUIDANCE_OOT
+  onboardGuidanceOutOfTreeInit();
+#endif
   lastUpdate = xTaskGetTickCount();
 
   isInit = true;
@@ -83,16 +87,24 @@ void commanderSetSetpoint(setpoint_t *setpoint, int priority)
     // This is a potential race but without effect on functionality
     xQueueOverwrite(setpointQueue, setpoint);
     xQueueOverwrite(priorityQueue, &priority);
-    if (priority > COMMANDER_PRIORITY_HIGHLEVEL) {
+    if (priority > COMMANDER_PRIORITY_ONBOARD_GUIDANCE) {
+#ifdef CONFIG_ONBOARD_GUIDANCE_OOT
+      onboardGuidanceOutOfTreeStop();
+#else
       // Stop the high-level planner so it will forget its current state
       crtpCommanderHighLevelStop();
+#endif
     }
   }
 }
 
 void commanderRelaxPriority()
 {
+#ifdef CONFIG_ONBOARD_GUIDANCE_OOT
+  onboardGuidanceOutOfTreeTellState(&lastState);
+#else
   crtpCommanderHighLevelTellState(&lastState);
+#endif
   int priority = COMMANDER_PRIORITY_LOWEST;
   xQueueOverwrite(priorityQueue, &priority);
 }

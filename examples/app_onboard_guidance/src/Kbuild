@@ -1,0 +1,1 @@
+obj-y += onboard_guidance_example.o

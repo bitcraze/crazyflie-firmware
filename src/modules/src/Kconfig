@@ -131,6 +131,10 @@ config ESTIMATOR_OOT
 
 endmenu
 
+config ONBOARD_GUIDANCE_OOT
+    bool "Out-of-tree onboard guidance"
+    default n
+
 menu "Motor configuration"
 
 choice
