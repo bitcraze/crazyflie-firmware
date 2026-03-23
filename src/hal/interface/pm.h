@@ -143,4 +143,9 @@ void pmIgnoreChargedState(bool ignore);
  */
 bool pmRegisterGracefulShutdownCallback(graceful_shutdown_callback_t cb);
 
+/**
+ * None graceful shutdown of STM domain (powering off VCC & VCOM)
+ */
+void pmSystemShutdownSTM(void);
+
 #endif /* PM_H_ */
