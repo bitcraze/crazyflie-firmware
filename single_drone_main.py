@@ -20,7 +20,7 @@ async def drain_log(log_stream, last_log: dict[str, Any]) -> None:
 
 # Configuration
 
-URI = "radio://0/88/2M/D91F700101"   # D91F700100  84
+URI = "radio://0/88/2M/ABAD1DEA01"   # D91F700100  84
 
 TAKEOFF_HEIGHT = 1.0  # meters
 TAKEOFF_DURATION = 2.0  # seconds

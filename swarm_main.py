@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from cflib2 import Crazyflie, LinkContext
+from cflib2.toc_cache import FileTocCache
 
 
 async def drain_log(log_stream, last_log: dict[str, Any]) -> None:
@@ -18,12 +19,15 @@ async def drain_log(log_stream, last_log: dict[str, Any]) -> None:
 # Configuration
 
 URIS = [
-    "radio://0/88/2M/D91F700101",
-    "radio://0/88/2M/D91F700102",
-    # "radio://0/84/2M/D91F700103",
-    # "radio://0/84/2M/D91F700104",
-    # "radio://0/84/2M/D91F700105",
-    # "radio://0/84/2M/D91F700106",
+    "radio://0/90/2M/ABAD1DEA01",
+    # "radio://0/90/2M/ABAD1DEA02",
+    # "radio://0/90/2M/ABAD1DEA03",
+    # "radio://0/90/2M/ABAD1DEA04",
+    # "radio://0/90/2M/ABAD1DEA05",
+    # "radio://0/90/2M/ABAD1DEA06",
+    # # "radio://0/90/2M/ABAD1DEA07",
+    # "radio://0/90/2M/ABAD1DEA08",
+    # "radio://0/90/2M/ABAD1DEA09",
 ]
 
 TAKEOFF_HEIGHT = 1.0  # meters
@@ -32,8 +36,10 @@ LANDING_DURATION = 6.0  # seconds
 
 LOG_INTERVAL = 100  # ms
 
-WAYPOINT_COUNT = 3
-WAYPOINT_X_RADIUS = 0.5
+WAYPOINT_RADIUS_X = 0.7
+WAYPOINT_RADIUS_Y = 0.2
+WAYPOINT_RADIUS_Z = 0.5
+WAYPOINT_DURATION = 2.0  # seconds per waypoint
 
 
 @dataclass
@@ -106,22 +112,14 @@ async def setup_drone(cf: Crazyflie, uri: str) -> DroneSession:
     )
 
 
-async def send_waypoint(session: DroneSession, index: int) -> None:
-    x_offset = WAYPOINT_X_RADIUS if index % 2 == 1 else -WAYPOINT_X_RADIUS
-    x = session.pad_x + x_offset
-    y = session.pad_y
-    z = session.pad_z + TAKEOFF_HEIGHT
-    yaw = 0.0
-    print(
-        f"[{session.uri}] Waypoint {index}/{WAYPOINT_COUNT}: "
-        f"x={x:.2f} y={y:.2f} z={z:.2f} yaw={yaw:.0f}"
-    )
+async def go_to_waypoint(session: DroneSession, x: float, y: float, z: float, label: str) -> None:
+    print(f"[{session.uri}] {label}: x={x:.2f} y={y:.2f} z={z:.2f}")
     await session.hlc.go_to(
         x,
         y,
         z,
-        yaw,
-        2.0,
+        0.0,
+        WAYPOINT_DURATION,
         relative=False,
         linear=False,
         group_mask=None,
@@ -176,7 +174,7 @@ async def main() -> None:
     print(f"\nConnecting to {len(URIS)} drones...")
     ctx = LinkContext()
     cfs = await asyncio.gather(
-        *[Crazyflie.connect_from_uri(ctx, uri) for uri in URIS]
+        *[Crazyflie.connect_from_uri(ctx, uri, FileTocCache('cache')) for uri in URIS]
     )
     print("All connected!")
 
@@ -202,14 +200,71 @@ async def main() -> None:
         )
         await asyncio.sleep(TAKEOFF_DURATION + 1.0)
 
-        for waypoint_idx in range(1, WAYPOINT_COUNT + 1):
+        # Phase 1 – Z axis: back and forth ±0.5 m
+        print("\nWaypoints: Z axis...")
+        for label, z_off in [("Z+", WAYPOINT_RADIUS_Z), ("Z-", -WAYPOINT_RADIUS_Z)]:
             await asyncio.gather(
                 *[
-                    send_waypoint(session, waypoint_idx)
-                    for session in sessions
+                    go_to_waypoint(
+                        s, s.pad_x, s.pad_y,
+                        s.pad_z + TAKEOFF_HEIGHT + z_off, label,
+                    )
+                    for s in sessions
                 ]
             )
-            await asyncio.sleep(2.5)
+            await asyncio.sleep(WAYPOINT_DURATION + 0.5)
+
+        # Return to centre
+        await asyncio.gather(
+            *[
+                go_to_waypoint(s, s.pad_x, s.pad_y, s.pad_z + TAKEOFF_HEIGHT, "centre")
+                for s in sessions
+            ]
+        )
+        await asyncio.sleep(WAYPOINT_DURATION + 0.5)
+
+        # Phase 2 – X+Y simultaneously: back and forth
+        print("\nWaypoints: X+Y axis...")
+        for label, x_off, y_off in [
+            ("XY+", WAYPOINT_RADIUS_X, WAYPOINT_RADIUS_Y),
+            ("XY-", -WAYPOINT_RADIUS_X, -WAYPOINT_RADIUS_Y),
+        ]:
+            await asyncio.gather(
+                *[
+                    go_to_waypoint(
+                        s, s.pad_x + x_off, s.pad_y + y_off,
+                        s.pad_z + TAKEOFF_HEIGHT, label,
+                    )
+                    for s in sessions
+                ]
+            )
+            await asyncio.sleep(WAYPOINT_DURATION + 0.5)
+
+        # Return to centre
+        await asyncio.gather(
+            *[
+                go_to_waypoint(s, s.pad_x, s.pad_y, s.pad_z + TAKEOFF_HEIGHT, "centre")
+                for s in sessions
+            ]
+        )
+        await asyncio.sleep(WAYPOINT_DURATION + 0.5)
+
+        # Phase 3 – Diagonal X+Y+Z simultaneously: back and forth
+        print("\nWaypoints: X+Y+Z diagonal...")
+        for label, x_off, y_off, z_off in [
+            ("diag+", WAYPOINT_RADIUS_X, WAYPOINT_RADIUS_Y, WAYPOINT_RADIUS_Z),
+            ("diag-", -WAYPOINT_RADIUS_X, -WAYPOINT_RADIUS_Y, -WAYPOINT_RADIUS_Z),
+        ]:
+            await asyncio.gather(
+                *[
+                    go_to_waypoint(
+                        s, s.pad_x + x_off, s.pad_y + y_off,
+                        s.pad_z + TAKEOFF_HEIGHT + z_off, label,
+                    )
+                    for s in sessions
+                ]
+            )
+            await asyncio.sleep(WAYPOINT_DURATION + 0.5)
 
         print("\nFlying to landing start (+1.0m over each pad)...")
         await asyncio.gather(
@@ -229,33 +284,29 @@ async def main() -> None:
         )
         await asyncio.sleep(5.0)
 
-        print("\nLanding drones sequentially (initial attempt)...")
-        charging_by_uri: dict[str, bool] = {}
-        for index, session in enumerate(sessions, start=1):
-            print(f"\nDrone {index}/{len(sessions)} [{session.uri}] initial landing attempt.")
+        async def land_with_retry(session: DroneSession) -> None:
+            print(f"[{session.uri}] Initial landing attempt.")
             await session.hlc.land(session.pad_z, None, LANDING_DURATION, None)
             await asyncio.sleep(LANDING_DURATION)
 
             await session.cf.platform().send_arming_request(False)
             await asyncio.sleep(1.0)
 
-            charging_by_uri[session.uri] = print_landing_status(session)
-
-        print("\nRetrying non-charging drones sequentially...")
-        for index, session in enumerate(sessions, start=1):
-            if charging_by_uri[session.uri]:
-                print(f"\nDrone {index}/{len(sessions)} [{session.uri}] already charging.")
-                continue
-
-            print(f"\nDrone {index}/{len(sessions)} [{session.uri}] requires retry.")
+            charging = print_landing_status(session)
             attempt = 0
-            while not charging_by_uri[session.uri]:
+            while not charging:
                 attempt += 1
                 print(f"[{session.uri}] Retry landing attempt {attempt}...")
                 await retry_landing(session)
-                charging_by_uri[session.uri] = print_landing_status(session)
+                charging = print_landing_status(session)
 
-            print(f"[{session.uri}] Charging confirmed after {attempt} retry attempt(s).")
+            if attempt == 0:
+                print(f"[{session.uri}] Charging confirmed on first attempt.")
+            else:
+                print(f"[{session.uri}] Charging confirmed after {attempt} retry attempt(s).")
+
+        print("\nLanding all drones simultaneously...")
+        await asyncio.gather(*[land_with_retry(session) for session in sessions])
 
     finally:
         if sessions:
