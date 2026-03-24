@@ -46,8 +46,8 @@ implementation of planning state machine
 #include "param.h"
 
 
-static float landing_hover_offset = 0.08f; // how much above the landing point we want to hover to control out disturbances
-static float landing_hover_duration = 3.0f; // how long we want to hover above the landing point
+static float landing_hover_offset = 0.02f; // how much above the landing point we want to hover to control out disturbances
+static float landing_hover_duration = 1.0f; // how long we want to hover above the landing point
 
 PIDControllerLandingParams landingPIDParams = {
   .kp = 5.123533f,
@@ -56,12 +56,12 @@ PIDControllerLandingParams landingPIDParams = {
 };
 
 MellingerControllerLandingParams landingMellingerPIDParams = {
-	.pos_kp = 0.4f, 
-	.pos_ki = 0.2f,
-	.pos_kd = 0.05f,
-	.pos_kp = 70000.0f,
+	.pos_kp = 1.0f, 
+	.pos_ki = 0.7f,
+	.pos_kd = 0.1f,
+	.att_kp = 100000.0f,
 	.att_ki = 0.0f,
-	.att_kd = 20000.0f,
+	.att_kd = 10000.0f,
 };
 
 
