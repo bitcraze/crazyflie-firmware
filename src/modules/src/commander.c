@@ -69,6 +69,7 @@ void commanderInit(void)
   crtpCommanderHighLevelInit();
 #ifdef CONFIG_ONBOARD_GUIDANCE_OOT
   onboardGuidanceOutOfTreeInit();
+  ASSERT(onboardGuidanceOutOfTreeTest());
 #endif
   lastUpdate = xTaskGetTickCount();
 
