@@ -23,7 +23,7 @@ The commander module handles the incoming setpoints from several sources (src/mo
 
 Not all sources need to be active at the same time; the commander simply picks the highest-priority setpoint it has received.
 
-It is important to realize that the commander module also checks how long ago a setpoint has been received. If it has been a little while (defined by threshold `COMMANDER_WDT_TIMEOUT_STABILIZE` in commander.c), it will set the attitude angles to 0 in order to keep the Crazyflie stabilized. If this takes longer than `COMMANDER_WDT_TIMEOUT_SHUTDOWN`, a null setpoint will be given which will result in the Crazyflie shutting down its motors and falling from the sky. This won't happen if you are using onboard guidance, as it continuously feeds setpoints to the commander.
+It is important to realize that the commander module also checks how long ago a setpoint has been received. If it has been a little while (defined by threshold `COMMANDER_WDT_TIMEOUT_STABILIZE` in commander.c), it will set the attitude angles to 0 in order to keep the Crazyflie stabilized. If this takes longer than `COMMANDER_WDT_TIMEOUT_SHUTDOWN`, a null setpoint will be given which will result in the Crazyflie shutting down its motors and falling from the sky. This won't happen if you are using the built-in High-Level Commander, as it continuously feeds setpoints to the commander (including zero setpoints when idle). If you use an out-of-tree onboard guidance implementation, you must ensure it also produces setpoints when inactive/stopped to avoid watchdog timeouts.
 
 ## Setpoint Structure
 
