@@ -56,7 +56,7 @@ Five functions must be implemented:
 * `bool onboardGuidanceOutOfTreeTest(void)`: return `true` if initialization succeeded.
 * `bool onboardGuidanceOutOfTreeGetSetpoint(setpoint_t *setpoint, const state_t *state, stabilizerStep_t stabilizerStep)`: called every stabilizer loop iteration. Write the desired setpoint and return `true` if a setpoint was produced.
 * `void onboardGuidanceOutOfTreeStop(void)`: called when a higher-priority source takes over.
-* `void onboardGuidanceOutOfTreeTellState(const state_t *state)`: called to inform onboard guidance of the current state estimate.
+* `void onboardGuidanceOutOfTreeTellState(const state_t *state)`: called when onboard guidance is re-enabled (via `commanderRelaxPriority()`) after a higher-priority source, to provide a current state snapshot. It is not called periodically; `state` is already passed to `onboardGuidanceOutOfTreeGetSetpoint()` on every stabilizer loop.
 
 These are declared in `src/modules/interface/onboard_guidance.h`.
 
