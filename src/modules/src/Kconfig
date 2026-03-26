@@ -133,28 +133,27 @@ endmenu
 
 menu "Onboard guidance"
 
-config ONBOARD_GUIDANCE_HLC_ENABLE
-    bool "Compile High-Level Commander"
-    default y
-    help
-        Include the built-in High-Level Commander in the firmware.
-
 choice
     prompt "Default onboard guidance"
     default ONBOARD_GUIDANCE_AUTO_SELECT
 
 config ONBOARD_GUIDANCE_AUTO_SELECT
     bool "Auto select"
-    select ONBOARD_GUIDANCE_HLC_ENABLE
 
 config ONBOARD_GUIDANCE_HIGHLEVEL_COMMANDER
     bool "High-Level Commander"
-    depends on ONBOARD_GUIDANCE_HLC_ENABLE
 
 config ONBOARD_GUIDANCE_OOT
     bool "Out-of-tree onboard guidance"
 
 endchoice
+
+config ONBOARD_GUIDANCE_HLC_ENABLE
+    bool "Compile High-Level Commander" if ONBOARD_GUIDANCE_OOT
+    default y
+    help
+        Include the built-in High-Level Commander in the firmware.
+        Can only be disabled when using out-of-tree onboard guidance.
 
 endmenu
 
