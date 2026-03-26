@@ -404,6 +404,8 @@ static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t
     this->infoBitfield |= 0x0080;
   }
 
+// HLC planner state bits (0x0100-0x0400). These are HLC-specific and will
+// be zero when using an out-of-tree onboard guidance implementation.
 #ifdef CONFIG_ONBOARD_GUIDANCE_HLC_ENABLE
   enum trajectory_state traj_state =  crtpCommanderHighLevelGetPlannerState();
 
