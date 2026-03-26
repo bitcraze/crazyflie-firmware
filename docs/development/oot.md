@@ -106,7 +106,7 @@ In your source file, implement the following functions:
 * `onboardGuidanceOutOfTreeStop`
 * `onboardGuidanceOutOfTreeTellState`
 
-See `examples/app_onboard_guidance/` for a working example and the
+See `examples/app_out_of_tree_onboard_guidance/` for a working example and the
 [Onboard Guidance documentation](/docs/functional-areas/sensor-to-control/onboard_guidance.md)
 for details on each function.
 
