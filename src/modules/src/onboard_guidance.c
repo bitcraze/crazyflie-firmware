@@ -80,6 +80,10 @@ void onboardGuidanceInit(OnboardGuidanceType type) {
     #endif
   }
 
+  if (!guidanceFunctions[selected].init) {
+    return;
+  }
+
   currentType = selected;
   guidanceFunctions[currentType].init();
 
