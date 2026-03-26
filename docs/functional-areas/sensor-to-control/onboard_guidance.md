@@ -9,6 +9,8 @@ Onboard guidance is the part of the system that generates setpoints autonomously
 
 Onboard guidance is useful when the Crazyflie needs to decide what to do on its own: autonomous flight, trajectory following, neural-net navigation, and so on. The onboard guidance module receives the current state estimate as input, produces setpoints as output, and feeds them to the [commander](commanders_setpoints.md) at `COMMANDER_PRIORITY_ONBOARD_GUIDANCE`.
 
+Like controllers and estimators, onboard guidance supports runtime switching via the `stabilizer.guidance` parameter.
+
 ## High-Level Commander
 
 ![high level commander](/docs/images/high_level_commander.png){:width="700"}
@@ -48,16 +50,18 @@ not flying a trajectory.
 
 ## Out-of-Tree Onboard Guidance
 
-When `CONFIG_ONBOARD_GUIDANCE_OOT` is enabled, the OOT guidance fully replaces the built-in High-Level Commander. The High-Level Commander is not initialized and its CRTP handler is not registered. Unlike controllers and estimators, onboard guidance does not support runtime switching. The selection is made at compile time.
+When `CONFIG_ONBOARD_GUIDANCE_OOT` is selected as the default, the OOT implementation is used at startup. The High-Level Commander can still be compiled alongside it (controlled by `CONFIG_ONBOARD_GUIDANCE_HLC_ENABLE`), allowing OOT code to use the HLC as a library — for example, delegating trajectory planning while adding custom logic on top.
 
-Five functions must be implemented:
+Seven functions must be implemented:
 
 * `void onboardGuidanceOutOfTreeInit(void)`: called once at startup.
 * `bool onboardGuidanceOutOfTreeTest(void)`: return `true` if initialization succeeded.
 * `bool onboardGuidanceOutOfTreeGetSetpoint(setpoint_t *setpoint, const state_t *state, stabilizerStep_t stabilizerStep)`: called every stabilizer loop iteration. Write the desired setpoint and return `true` if a setpoint was produced.
 * `void onboardGuidanceOutOfTreeStop(void)`: called when a higher-priority source takes over.
 * `void onboardGuidanceOutOfTreeTellState(const state_t *state)`: called when onboard guidance is re-enabled (via `commanderRelaxPriority()`) after a higher-priority source, to provide a current state snapshot. It is not called periodically; `state` is already passed to `onboardGuidanceOutOfTreeGetSetpoint()` on every stabilizer loop.
+* `void onboardGuidanceOutOfTreeBlock(bool doBlock)`: called every stabilizer loop iteration. When `doBlock` is `true`, the guidance must not produce setpoints (motors are not allowed to run). This is critical for safety.
+* `bool onboardGuidanceOutOfTreeIsDone(void)`: return `true` if the guidance has finished its current task (e.g. trajectory completed).
 
 These are declared in `src/modules/interface/onboard_guidance.h`.
 
-See `examples/app_onboard_guidance/` for a working example and the [OOT build documentation](/docs/development/oot.md) for the general build setup.
+See `examples/app_out_of_tree_onboard_guidance/` for a working example and the [OOT build documentation](/docs/development/oot.md) for the general build setup.

@@ -42,9 +42,6 @@
 
 #include "sensors.h"
 #include "commander.h"
-#ifdef CONFIG_ONBOARD_GUIDANCE_HIGHLEVEL_COMMANDER
-#include "crtp_commander_high_level.h"
-#endif
 #include "onboard_guidance.h"
 #include "crtp_localization_service.h"
 #include "controller.h"
@@ -79,6 +76,7 @@ static setpoint_t tempSetpoint;
 
 static StateEstimatorType estimatorType;
 static ControllerType controllerType;
+static OnboardGuidanceType onboardGuidanceType;
 
 static STATS_CNT_RATE_DEFINE(stabilizerRate, 500);
 static rateSupervisor_t rateSupervisorContext;
@@ -188,6 +186,7 @@ void stabilizerInit(StateEstimatorType estimator)
   collisionAvoidanceInit();
   estimatorType = stateEstimatorGetType();
   controllerType = controllerGetType();
+  onboardGuidanceType = onboardGuidanceGetType();
 
   STATIC_MEM_TASK_CREATE(stabilizerTask, stabilizerTask, STABILIZER_TASK_NAME, NULL, STABILIZER_TASK_PRI);
 
@@ -238,6 +237,11 @@ static void updateStateEstimatorAndControllerTypes() {
   if (controllerGetType() != controllerType) {
     controllerInit(controllerType);
     controllerType = controllerGetType();
+  }
+
+  if (onboardGuidanceGetType() != onboardGuidanceType) {
+    onboardGuidanceInit(onboardGuidanceType);
+    onboardGuidanceType = onboardGuidanceGetType();
   }
 }
 
@@ -330,18 +334,12 @@ static void stabilizerTask(void* param)
 
       const bool areMotorsAllowedToRun = supervisorAreMotorsAllowedToRun();
 
-#ifdef CONFIG_ONBOARD_GUIDANCE_HIGHLEVEL_COMMANDER
       // Critical for safety, be careful if you modify this code!
-      crtpCommanderBlock(! areMotorsAllowedToRun);
+      onboardGuidanceBlock(! areMotorsAllowedToRun);
 
-      if (crtpCommanderHighLevelGetSetpoint(&tempSetpoint, &state, stabilizerStep)) {
+      if (onboardGuidanceGetSetpoint(&tempSetpoint, &state, stabilizerStep)) {
         commanderSetSetpoint(&tempSetpoint, COMMANDER_PRIORITY_ONBOARD_GUIDANCE);
       }
-#elif defined(CONFIG_ONBOARD_GUIDANCE_OOT)
-      if (onboardGuidanceOutOfTreeGetSetpoint(&tempSetpoint, &state, stabilizerStep)) {
-        commanderSetSetpoint(&tempSetpoint, COMMANDER_PRIORITY_ONBOARD_GUIDANCE);
-      }
-#endif
       commanderGetSetpoint(&setpoint, &state);
 
       // Critical for safety, be careful if you modify this code!
@@ -405,6 +403,10 @@ PARAM_ADD_CORE(PARAM_UINT8, estimator, &estimatorType)
  * @brief Controller type Auto select(0), PID(1), Mellinger(2), INDI(3), Brescianini(4), Lee(5) (Default: 0)
  */
 PARAM_ADD_CORE(PARAM_UINT8, controller, &controllerType)
+/**
+ * @brief Onboard guidance type Auto select(0), High-Level Commander(1), ... (Default: 0)
+ */
+PARAM_ADD_CORE(PARAM_UINT8, guidance, &onboardGuidanceType)
 
 PARAM_GROUP_STOP(stabilizer)
 

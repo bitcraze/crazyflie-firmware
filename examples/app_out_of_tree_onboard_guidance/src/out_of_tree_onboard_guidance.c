@@ -22,12 +22,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * onboard_guidance_example.c - Example out-of-tree onboard guidance.
+ * out_of_tree_onboard_guidance.c - Example out-of-tree onboard guidance.
  *
- * This example delegates to the high-level commander for trajectory
- * planning. Replace the body of onboardGuidanceOutOfTreeGetSetpoint()
- * with your own guidance logic (e.g. neural-network navigation,
- * behavior trees, custom planners).
+ * This example delegates all functions to the built-in High-Level Commander,
+ * effectively wrapping it. Replace the function bodies with your own guidance
+ * logic (e.g. neural-network navigation, behavior trees, custom planners).
  */
 
 #include <string.h>
@@ -53,24 +52,41 @@ void appMain() {
   }
 }
 
+// Called once at startup. Initialize your guidance state here.
 void onboardGuidanceOutOfTreeInit(void) {
+  crtpCommanderHighLevelInit();
   DEBUG_PRINT("Out-of-tree onboard guidance initialized\n");
 }
 
+// Called once after init. Return true if initialization succeeded.
 bool onboardGuidanceOutOfTreeTest(void) {
   return true;
 }
 
+// Called every stabilizer loop iteration (~1 kHz).
+// Write the desired setpoint and return true if a setpoint was produced.
 bool onboardGuidanceOutOfTreeGetSetpoint(setpoint_t *setpoint, const state_t *state, stabilizerStep_t stabilizerStep) {
-  // Delegate to the high-level commander's trajectory planner.
-  // Replace this with your own guidance logic.
   return crtpCommanderHighLevelGetSetpoint(setpoint, state, stabilizerStep);
 }
 
+// Called when a higher-priority setpoint source takes over.
 void onboardGuidanceOutOfTreeStop(void) {
   crtpCommanderHighLevelStop();
 }
 
+// Called when onboard guidance is re-enabled after a higher-priority source,
+// to provide a current state snapshot. Not called periodically.
 void onboardGuidanceOutOfTreeTellState(const state_t *state) {
   crtpCommanderHighLevelTellState(state);
+}
+
+// Called every stabilizer loop iteration. When doBlock is true, the guidance
+// must not produce setpoints (motors are not allowed to run). Critical for safety.
+void onboardGuidanceOutOfTreeBlock(bool doBlock) {
+  crtpCommanderBlock(doBlock);
+}
+
+// Return true if the guidance has finished its current task (e.g. trajectory completed).
+bool onboardGuidanceOutOfTreeIsDone(void) {
+  return crtpCommanderHighLevelIsTrajectoryFinished();
 }
