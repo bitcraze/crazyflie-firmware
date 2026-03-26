@@ -48,7 +48,7 @@ not flying a trajectory.
 
 ## Out-of-Tree Onboard Guidance
 
-When `CONFIG_ONBOARD_GUIDANCE_OOT` is enabled, the OOT guidance replaces the built-in High-Level Commander's call site in the stabilizer loop. The High-Level Commander code is still compiled and available; an OOT implementation can call `crtpCommanderHighLevelGetSetpoint()` internally to delegate to it if needed.
+When `CONFIG_ONBOARD_GUIDANCE_OOT` is enabled, the OOT guidance fully replaces the built-in High-Level Commander. The High-Level Commander is not initialized and its CRTP handler is not registered. Unlike controllers and estimators, onboard guidance does not support runtime switching. The selection is made at compile time.
 
 Five functions must be implemented:
 

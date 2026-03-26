@@ -16,7 +16,7 @@ detect in the next time step.
  * [Onboard Guidance](onboard_guidance.md)
  * [Commander Framework](commanders_setpoints.md)
  * [Power Distribution](#power-distribution)
- * [Configure estimators and control](configure_estimator_controller.md)
+
 
 
 
@@ -92,4 +92,4 @@ How the motors should respond in order to adhere these attitude based commands d
     * Brushless: The Crazyflie 2.1 Brushless and the Crazyflie Bolt support brushless motor control. Battery compensation is also available for the Crazyflie 2.1 Brushless, but it not on the Crazyflie Bolt, since the settings depend on the user’s motor configuration. For more information, check out the [product page of the Bolt](https://www.bitcraze.io/products/crazyflie-bolt-1-1/).
 
 ## Configuring Controllers and Estimators
-Go to this [configuration page](configure_estimator_controller.md), if you would like to configure different controllers and estimators.
+See the [controllers page](controllers.md) and the [state estimation page](state_estimators.md) for configuration options.
