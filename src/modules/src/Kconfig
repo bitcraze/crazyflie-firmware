@@ -145,6 +145,7 @@ choice
 
 config ONBOARD_GUIDANCE_AUTO_SELECT
     bool "Auto select"
+    select ONBOARD_GUIDANCE_HLC_ENABLE
 
 config ONBOARD_GUIDANCE_HIGHLEVEL_COMMANDER
     bool "High-Level Commander"
