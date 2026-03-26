@@ -29,9 +29,12 @@
 #include "task.h"
 #include "queue.h"
 
+#include "autoconf.h"
 #include "commander.h"
 #include "crtp_commander.h"
+#ifdef CONFIG_ONBOARD_GUIDANCE_HIGHLEVEL_COMMANDER
 #include "crtp_commander_high_level.h"
+#endif
 #include "onboard_guidance.h"
 
 #include "cf_math.h"
@@ -66,8 +69,9 @@ void commanderInit(void)
   xQueueSend(priorityQueue, &priorityDisable, 0);
 
   crtpCommanderInit();
+#ifdef CONFIG_ONBOARD_GUIDANCE_HIGHLEVEL_COMMANDER
   crtpCommanderHighLevelInit();
-#ifdef CONFIG_ONBOARD_GUIDANCE_OOT
+#elif defined(CONFIG_ONBOARD_GUIDANCE_OOT)
   onboardGuidanceOutOfTreeInit();
   ASSERT(onboardGuidanceOutOfTreeTest());
 #endif
@@ -89,11 +93,10 @@ void commanderSetSetpoint(setpoint_t *setpoint, int priority)
     xQueueOverwrite(setpointQueue, setpoint);
     xQueueOverwrite(priorityQueue, &priority);
     if (priority > COMMANDER_PRIORITY_ONBOARD_GUIDANCE) {
-#ifdef CONFIG_ONBOARD_GUIDANCE_OOT
-      onboardGuidanceOutOfTreeStop();
-#else
-      // Stop the high-level planner so it will forget its current state
+#ifdef CONFIG_ONBOARD_GUIDANCE_HIGHLEVEL_COMMANDER
       crtpCommanderHighLevelStop();
+#elif defined(CONFIG_ONBOARD_GUIDANCE_OOT)
+      onboardGuidanceOutOfTreeStop();
 #endif
     }
   }
@@ -101,10 +104,10 @@ void commanderSetSetpoint(setpoint_t *setpoint, int priority)
 
 void commanderRelaxPriority()
 {
-#ifdef CONFIG_ONBOARD_GUIDANCE_OOT
-  onboardGuidanceOutOfTreeTellState(&lastState);
-#else
+#ifdef CONFIG_ONBOARD_GUIDANCE_HIGHLEVEL_COMMANDER
   crtpCommanderHighLevelTellState(&lastState);
+#elif defined(CONFIG_ONBOARD_GUIDANCE_OOT)
+  onboardGuidanceOutOfTreeTellState(&lastState);
 #endif
   int priority = COMMANDER_PRIORITY_LOWEST;
   xQueueOverwrite(priorityQueue, &priority);
