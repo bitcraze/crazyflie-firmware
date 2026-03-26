@@ -4,12 +4,8 @@
 
 typedef enum {
   OnboardGuidanceTypeAutoSelect = 0,
-#ifdef CONFIG_ONBOARD_GUIDANCE_HLC_ENABLE
-  OnboardGuidanceTypeHighLevelCommander,
-#endif
-#ifdef CONFIG_ONBOARD_GUIDANCE_OOT
-  OnboardGuidanceTypeOot,
-#endif
+  OnboardGuidanceTypeHighLevelCommander = 1,
+  OnboardGuidanceTypeOot = 2,
   OnboardGuidanceType_COUNT,
 } OnboardGuidanceType;
 

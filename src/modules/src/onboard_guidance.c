@@ -33,10 +33,10 @@ static void hlcBlockVoid(bool doBlock) { crtpCommanderBlock(doBlock); }
 #endif
 
 
-static OnboardGuidanceFcns guidanceFunctions[] = {
-  {.init = 0, .test = 0, .getSetpoint = 0, .stop = 0, .tellState = 0, .block = 0, .isDone = 0, .name = "None"},
+static OnboardGuidanceFcns guidanceFunctions[OnboardGuidanceType_COUNT] = {
+  [OnboardGuidanceTypeAutoSelect] = {.name = "None"},
 #ifdef CONFIG_ONBOARD_GUIDANCE_HLC_ENABLE
-  {
+  [OnboardGuidanceTypeHighLevelCommander] = {
     .init = crtpCommanderHighLevelInit,
     .test = hlcTestAlwaysTrue,
     .getSetpoint = crtpCommanderHighLevelGetSetpoint,
@@ -48,7 +48,7 @@ static OnboardGuidanceFcns guidanceFunctions[] = {
   },
 #endif
 #ifdef CONFIG_ONBOARD_GUIDANCE_OOT
-  {
+  [OnboardGuidanceTypeOot] = {
     .init = onboardGuidanceOutOfTreeInit,
     .test = onboardGuidanceOutOfTreeTest,
     .getSetpoint = onboardGuidanceOutOfTreeGetSetpoint,

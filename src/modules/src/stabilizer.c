@@ -404,7 +404,7 @@ PARAM_ADD_CORE(PARAM_UINT8, estimator, &estimatorType)
  */
 PARAM_ADD_CORE(PARAM_UINT8, controller, &controllerType)
 /**
- * @brief Onboard guidance type Auto select(0), High-Level Commander(1), ... (Default: 0)
+ * @brief Onboard guidance type Auto select(0), High-Level Commander(1), Out-of-tree(2) (Default: 0)
  */
 PARAM_ADD_CORE(PARAM_UINT8, guidance, &onboardGuidanceType)
 
