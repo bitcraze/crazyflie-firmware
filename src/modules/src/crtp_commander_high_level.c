@@ -592,7 +592,7 @@ int land2(const struct data_land_2* data)
       hover_yaw = yaw;
     }
 
-    result = plan_land(&planner, pos, yaw, data->height, hover_yaw, data->duration, t);
+    result = plan_land(&planner, pos, yaw, data->height, 0.0f, data->duration, t);
     xSemaphoreGive(lockTraj);
   }
   return result;
@@ -1103,3 +1103,4 @@ PARAM_ADD_CORE(PARAM_FLOAT, vland, &defaultLandingVelocity)
 PARAM_ADD_CORE(PARAM_UINT8, groupmask, &group_mask)
 
 PARAM_GROUP_STOP(hlCommander)
+

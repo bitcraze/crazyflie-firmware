@@ -74,8 +74,23 @@ struct planner
 	};
 
 	struct piecewise_traj planned_trajectory; // trajectory for on-board planning
-	struct poly4d pieces[1]; // the on-board planner requires a single piece, only
+	struct poly4d pieces[3]; // the on-board planner requires at most three pieces, only
 };
+
+typedef struct {
+  float kp;
+  float ki;
+  float kd;
+} PIDControllerLandingParams;
+
+typedef struct {
+	float pos_kp;
+	float pos_ki;
+	float pos_kd;
+	float att_kp;
+	float att_ki;
+	float att_kd;
+} MellingerControllerLandingParams;
 
 // initialize the planner
 void plan_init(struct planner *p);
