@@ -51,11 +51,13 @@
 #include "platform_defaults.h"
 
 #define PROPTEST_NBR_OF_VARIANCE_VALUES   100
+#define HEALTH_MOTOR_TEST_FINISHED_BIT    7
 
 static bool startPropTest = false;
 static bool startBatTest = false;
 
 static float propTestThreshold = HEALTH_PROPELLER_TEST_THRESHOLD;
+static float propTestThresholdLow = HEALTH_PROPELLER_TEST_THRESHOLD_LOW;
 
 static uint16_t propTestPWMRatio = CONFIG_MOTORS_DEFAULT_PROP_TEST_PWM_RATIO;
 static uint16_t batTestPWMRatio = CONFIG_MOTORS_DEFAULT_BAT_TEST_PWM_RATIO;
@@ -81,6 +83,7 @@ static float accVarZ[NBR_OF_MOTORS];
 // Bit 1 - 1 = M2 passed
 // Bit 2 - 1 = M3 passed
 // Bit 3 - 1 = M4 passed
+// Bit 7 - 1 = Motor test finished
 static uint8_t motorPass = 0;
 static uint16_t motorTestCount = 0;
 static uint8_t batteryPass = 0;
@@ -127,10 +130,11 @@ static bool evaluatePropTest(float low, float high, float value, uint8_t motor)
                   motor + 1, (double)low, (double)high, (double)value);
       return false;
     }
-    else if (value > low && value < high)
+    else if (value >= low && value <= high)
     {
       DEBUG_PRINT("Propeller test on M%d [PASS]. low: %0.2f, high: %0.2f, measured: %0.2f\n",
         motor + 1, (double)low, (double)high, (double)value);
+      motorPass |= (1 << motor);
       return true;
     }
   }
@@ -139,7 +143,6 @@ static bool evaluatePropTest(float low, float high, float value, uint8_t motor)
     DEBUG_PRINT("Propeller test on M%d. No threshold set. measured: %0.2f\n",
       motor + 1, (double)value);
   }
-  motorPass |= (1 << motor);
 
   return true;
 }
@@ -306,7 +309,7 @@ void healthRunTests(sensorData_t *sensors)
   {
     for (int m = 0; m < NBR_OF_MOTORS; m++)
     {
-      if (!evaluatePropTest(0, propTestThreshold,  accVarX[m] + accVarY[m], m))
+      if (!evaluatePropTest(propTestThresholdLow, propTestThreshold,  accVarX[m] + accVarY[m], m))
       {
         nrFailedTests++;
         for (int j = 0; j < 3; j++)
@@ -332,6 +335,7 @@ void healthRunTests(sensorData_t *sensors)
 #endif
     motorTestCount++;
     testState = testDone;
+    motorPass |= (1 << HEALTH_MOTOR_TEST_FINISHED_BIT);
   }
 }
 
@@ -352,9 +356,14 @@ PARAM_ADD_CORE(PARAM_UINT8, startPropTest, &startPropTest)
 PARAM_ADD_CORE(PARAM_UINT8, startBatTest, &startBatTest)
 
 /**
- * @brief Set nonzero to create a threshold ([0 - propTestThreshold]) for the propeller test.
+ * @brief Set nonzero to create a threshold ([propTestThresholdL - propTestThreshold]) for the propeller test.
  */
 PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, propTestThreshold, &propTestThreshold)
+
+/**
+ * @brief Set nonzero to create a lower threshold ([propTestThresholdL - propTestThreshold]) for the propeller test.
+ */
+PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, propTestThresholdL, &propTestThresholdLow)
 
 /**
  * @brief PWM ratio to use when testing propellers. Required for brushless motors. [0 - UINT16_MAX]
@@ -405,7 +414,7 @@ LOG_ADD(LOG_FLOAT, motorVarXM4, &accVarX[3])
  */
 LOG_ADD(LOG_FLOAT, motorVarYM4, &accVarY[3])
 /**
- * @brief Propeller test result, bit is one if OK. [Bit0=M1 Bit1=M2 ...]
+ * @brief Propeller test result, bit is one if OK. [Bit0=M1 Bit1=M2 Bit2=M3 Bit3=M4 Bit7=Test finished]
  */
 LOG_ADD_CORE(LOG_UINT8, motorPass, &motorPass)
 /**
