@@ -173,7 +173,7 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
   struct mat33 R = quat2rotmat(q);
   z_axis = mcolumn(R, 2);
-  
+
   // Calculate desired axes and current thrust
   if (setpoint->mode.x == modeAbs) {
     // Desired thrust [F_des]
@@ -220,7 +220,7 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
 
     // Calculate axis [zB_des]
     self->z_axis_desired = vnormalize(target_thrust);
-    
+
     // [xC_des]
     // x_axis_desired = z_axis_desired x [sin(yaw), cos(yaw), 0]^T
     x_c_des.x = cosf(radians(state->attitude.yaw));
