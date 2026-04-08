@@ -49,8 +49,8 @@ streams. The format of the packet is:
 |   0  | Range stream report                        |
 |   1  | Range stream report, 16 bit floating point |
 |   2  | LPP Short packet tunnel                    |
-|   3  | Enable emergency stop                      |
-|   4  | Reset emergency stop timeout               |
+|   3  | Enable emergency stop *(deprecated, use [supervisor port](crtp_supervisor.md#emergency-stop))* |
+|   4  | Reset emergency stop timeout *(deprecated, use [supervisor port](crtp_supervisor.md#emergency-stop-watchdog))* |
 |   6  | COMM GNSS NMEA                             |
 |   7  | COMM GNSS proprietary                      |
 |   8  | External pose information                  |
