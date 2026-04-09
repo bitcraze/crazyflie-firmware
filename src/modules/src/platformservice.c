@@ -138,6 +138,12 @@ static void platformCommandProcess(CRTPPacket *p)
     {
       // Deprecated: use CRTP_PORT_SUPERVISOR instead
       DEBUG_PRINT("WARNING: arming via platform port is deprecated, use supervisor port\n");
+      if (p->size < 2) {
+        data[0] = false;
+        data[1] = supervisorIsArmed();
+        p->size = 3;
+        break;
+      }
       const bool doArm = data[0];
       const bool success = supervisorRequestArming(doArm);
       data[0] = success;
