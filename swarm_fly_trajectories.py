@@ -18,8 +18,10 @@ import pandas as pd
 from scipy.interpolate import CubicSpline
 
 from cflib2 import Crazyflie, LinkContext
-from cflib2.memory import Poly, Poly4D
+from cflib2.memory import Poly, Poly4D, CompressedSegment, CompressedStart
 from cflib2.toc_cache import FileTocCache
+
+from bezier import CubicBezierSpline
 
 starting_positions = [[1.0,1.0,1.0], [1.0, 0.0, 1.0], [1.0, -1.0, 1.0],
                       [0.0, 1.0, 1.0], [0.0, 0.0, 1.0], [0.0, -1.0, 1.0],
@@ -46,68 +48,32 @@ def generate_example_csv(path: str, n_drones: int = 1, n_waypoints: int = 21) ->
     print(f"Example trajectory saved to {path}")
 
 
-# ---------------------------------------------------------------------------
-# Spline → Poly4D conversion
-# ---------------------------------------------------------------------------
-
-SEGMENT_DURATION = 1.0  # seconds per waypoint interval
-
-
-def waypoints_to_poly4d(
-    waypoints_x: np.ndarray,
-    waypoints_y: np.ndarray,
-    waypoints_z: np.ndarray,
-) -> list[Poly4D]:
-    """Fit cubic splines through the waypoints and return Poly4D segments.
-
-    SciPy CubicSpline stores segment i coefficients as::
-
-        spline.c[:, i] = [c3, c2, c1, c0]  (descending powers)
-
-    The Crazyflie Poly expects ascending powers::
-
-        [c0, c1, c2, c3, c4, c5, c6, c7]
-
-    So we reverse the four cubic coefficients and pad with zeros to reach the
-    required 7th-order polynomial length of 8 values.
-    """
-    n = len(waypoints_x)
-    t = np.arange(n, dtype=float)  # unit-spaced knots → each segment lasts 1 s
-
-    spline_x = CubicSpline(t, waypoints_x)
-    spline_y = CubicSpline(t, waypoints_y)
-    spline_z = CubicSpline(t, waypoints_z)
-
-    segments: list[Poly4D] = []
-    for i in range(n - 1):
-        # Reverse descending → ascending, then zero-pad to 8 coefficients
-        cx = list(spline_x.c[::-1, i]) + [0.0] * 4
-        cy = list(spline_y.c[::-1, i]) + [0.0] * 4
-        cz = list(spline_z.c[::-1, i]) + [0.0] * 4
-        cyaw = [0.0] * 8
-        segments.append(
-            Poly4D(SEGMENT_DURATION, Poly(cx), Poly(cy), Poly(cz), Poly(cyaw))
-        )
-
-    return segments
-
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
 
-TRAJECTORY_CSV = "swarm_trajectory.csv"
+TRAJECTORY_CSV = "balette_var1_I2V_Wan_FP8_step_distillation_video_seed6514_0.22_simulated_trajectories_final.csv"
+CSV_ROW_STRIDE = 2
+SEGMENT_DURATION = 0.2  # seconds per waypoint interval
 
 URIS = [
-    "radio://0/90/2M/ABAD1DEA01",
-    "radio://0/90/2M/ABAD1DEA02",
-    # "radio://0/90/2M/ABAD1DEA03",
-    "radio://0/90/2M/ABAD1DEA04",
-    # "radio://0/90/2M/ABAD1DEA05",
-    "radio://0/90/2M/ABAD1DEA06",
-    "radio://0/90/2M/ABAD1DEA07",
-    "radio://0/90/2M/ABAD1DEA08",
-    "radio://0/90/2M/ABAD1DEA09",
+    "radio://0/75/2M/DB1F101001",
+    "radio://0/75/2M/DB1F101002",
+    "radio://0/75/2M/DB1F101004",
+    "radio://0/75/2M/DB1F101006",
+    "radio://0/75/2M/DB1F101007",
+    "radio://0/75/2M/DB1F101008",
+    "radio://0/75/2M/DB1F101009",
+    "radio://0/75/2M/DB1F101010",
+    # "radio://0/90/2M/ABAD1DEA02",
+    # # "radio://0/90/2M/ABAD1DEA03",
+    # "radio://0/90/2M/ABAD1DEA04",
+    # # "radio://0/90/2M/ABAD1DEA05",
+    # "radio://0/90/2M/ABAD1DEA06",
+    # "radio://0/90/2M/ABAD1DEA07",
+    # "radio://0/90/2M/ABAD1DEA08",
+    # "radio://0/90/2M/ABAD1DEA09",
 ]
 
 TAKEOFF_HEIGHT = 1.0    # metres
@@ -137,7 +103,7 @@ class DroneSession:
 async def setup_drone(
     cf: Crazyflie,
     uri: str,
-    trajectory: list[Poly4D],
+    trajectory: CubicBezierSpline,
     total_duration: float,
 ) -> DroneSession:
     hlc = cf.high_level_commander()
@@ -155,11 +121,22 @@ async def setup_drone(
     pad_z = float(values["stateEstimate.z"])
     print(f"[{uri}] Pad position: x={pad_x:.3f}  y={pad_y:.3f}  z={pad_z:.3f}")
 
-    print(f"[{uri}] Uploading trajectory ({len(trajectory)} segments)...")
-    bytes_written = await cf.memory().write_trajectory(trajectory)
+    print(f"[{uri}] Uploading trajectory ({len(trajectory.beziers)} segments)...")
+
+    coeffs = []
+    for bezier in trajectory.beziers:
+        cx = [bezier.p1[0], bezier.p2[0], bezier.p3[0]]
+        cy = [bezier.p1[1], bezier.p2[1], bezier.p3[1]]
+        cz = [bezier.p1[2], bezier.p2[2], bezier.p3[2]]
+        cyaw = [0.0] * 3
+        coeffs.append(CompressedSegment(duration=SEGMENT_DURATION, x=cx, y=cy, z=cz, yaw=cyaw))
+
+    
+
+    bytes_written = await cf.memory().write_compressed_trajectory(CompressedStart(trajectory.beziers[0].p0[0], trajectory.beziers[0].p0[1], trajectory.beziers[0].p0[2], 0), coeffs)
     print(f"[{uri}] Uploaded {bytes_written} bytes")
 
-    await hlc.define_trajectory(TRAJECTORY_ID, 0, len(trajectory), 0)
+    await hlc.define_trajectory(TRAJECTORY_ID, 0, len(trajectory.beziers), 1)
     print(f"[{uri}] Trajectory {TRAJECTORY_ID} defined")
 
     return DroneSession(cf=cf, uri=uri, hlc=hlc, total_duration=total_duration,
@@ -171,14 +148,16 @@ async def setup_drone(
 # ---------------------------------------------------------------------------
 
 async def main() -> None:
-    # Load or auto-generate trajectory CSV
-    # try:
-    #     df = pd.read_csv(TRAJECTORY_CSV)
-    #     print(f"Loaded trajectory from {TRAJECTORY_CSV}")
-    # except FileNotFoundError:
-    #     print(f"{TRAJECTORY_CSV} not found – generating example...")
-    generate_example_csv(TRAJECTORY_CSV, n_drones=len(URIS))
+    # Load trajectory CSV
     df = pd.read_csv(TRAJECTORY_CSV)
+    df = df.iloc[0::CSV_ROW_STRIDE].reset_index(drop=True)
+    if len(df) < 2:
+        raise ValueError(
+            f"Trajectory must contain at least 2 waypoints after stride {CSV_ROW_STRIDE}; got {len(df)}"
+        )
+    print(f"Loaded trajectory from {TRAJECTORY_CSV}")
+    print(f"Using every {CSV_ROW_STRIDE}rd CSV row: {len(df)} waypoints")
+
 
     n_drones = len(URIS)
     total_duration = (len(df) - 1) * SEGMENT_DURATION
@@ -188,11 +167,11 @@ async def main() -> None:
     drone_trajectories: list[list[Poly4D]] = []
     start_positions: list[tuple[float, float, float]] = []
     for n in range(n_drones):
-        xs = df[f"x{n}"].values
-        ys = df[f"y{n}"].values
-        zs = df[f"z{n}"].values
-        segs = waypoints_to_poly4d(xs, ys, zs)
-        drone_trajectories.append(segs)
+        xs = df[f"x{n+18}"].values
+        ys = df[f"y{n+18}"].values
+        zs = df[f"z{n+18}"].values
+        spline = CubicBezierSpline.from_waypoints(np.column_stack((xs, ys, zs)))
+        drone_trajectories.append(spline)
         start_positions.append((float(xs[0]), float(ys[0]), float(zs[0])))
 
     # Connect
@@ -213,7 +192,7 @@ async def main() -> None:
         param.set("landingCrtl.hOffset", 0.02)
         param.set("landingCrtl.hDuration", 1.0)
         param.set("ctrlMel.ki_z", 1.5)
-        param.set("stabilizer.controller", 2)
+        param.set("stabilizer.controller", 1)
 
         # param.set("landingCrtl.m_pos_kp", 1.0)
         # param.set("landingCrtl.m_pos_ki", 0.7)
@@ -248,7 +227,7 @@ async def main() -> None:
         )
         await asyncio.sleep(TAKEOFF_DURATION + 1.0)
 
-        # Move to the starting position of the trajectory (relative to hover)
+        # Move to the starting position of the trajectory
         print("Moving to trajectory start position...")
         GO_TO_START_DURATION = 2.0
         await asyncio.gather(
@@ -266,7 +245,8 @@ async def main() -> None:
                 for i, s in enumerate(sessions)
             ]
         )
-        await asyncio.sleep(GO_TO_START_DURATION + 0.5)
+        print("Hovering at start position for 5 s...")
+        await asyncio.sleep(GO_TO_START_DURATION + 5.0)
 
         # Start trajectory (relative=True so each drone flies from its own position)
         print("Starting trajectory...")
@@ -297,6 +277,17 @@ async def main() -> None:
             ]
         )
         await asyncio.sleep(GO_TO_PAD_DURATION + 0.5)
+
+        for cf in cfs:
+            param = cf.param()
+            # param.set("landingCrtl.pkp", 5.5)
+            # param.set("landingCrtl.pki", 1.9)
+            # param.set("landingCrtl.pkd", 1.0)
+            param.set("landingCrtl.hOffset", 0.05)
+            param.set("landingCrtl.hDuration", 1.0)
+            param.set("ctrlMel.ki_z", 1.5)
+            param.set("stabilizer.controller", 1)
+        await asyncio.sleep(2.5)
 
         # Land
         print("Landing...")
