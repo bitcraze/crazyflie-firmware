@@ -81,7 +81,7 @@ struct trajectoryDescription
 // allocate memory to store trajectories
 // 4k allows us to store 31 poly4d pieces
 // other (compressed) formats might be added in the future
-#define TRAJECTORY_MEMORY_SIZE 4096
+#define TRAJECTORY_MEMORY_SIZE 4096 * 10
 
 #define ALL_GROUPS 0
 
@@ -592,7 +592,7 @@ int land2(const struct data_land_2* data)
       hover_yaw = yaw;
     }
 
-    result = plan_land(&planner, pos, yaw, data->height, hover_yaw, data->duration, t);
+    result = plan_land(&planner, pos, yaw, data->height, 0.0f, data->duration, t);
     xSemaphoreGive(lockTraj);
   }
   return result;
@@ -1103,3 +1103,4 @@ PARAM_ADD_CORE(PARAM_FLOAT, vland, &defaultLandingVelocity)
 PARAM_ADD_CORE(PARAM_UINT8, groupmask, &group_mask)
 
 PARAM_GROUP_STOP(hlCommander)
+

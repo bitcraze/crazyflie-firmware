@@ -39,6 +39,31 @@ implementation of planning state machine
 #include "planner.h"
 #include "arm_math.h"
 #include "debug.h"
+#include "position_controller.h"
+#include "cfassert.h"
+#include "controller.h"
+#include "controller_mellinger.h"
+#include "param.h"
+
+
+static float landing_hover_offset = 0.02f; // how much above the landing point we want to hover to control out disturbances
+static float landing_hover_duration = 1.0f; // how long we want to hover above the landing point
+
+PIDControllerLandingParams landingPIDParams = {
+  .kp = 5.123533f,
+  .ki = 1.905738f,
+  .kd = 1.0f,
+};
+
+MellingerControllerLandingParams landingMellingerPIDParams = {
+	.pos_kp = 1.0f, 
+	.pos_ki = 0.7f,
+	.pos_kd = 0.1f,
+	.att_kp = 100000.0f,
+	.att_ki = 0.0f,
+	.att_kd = 10000.0f,
+};
+
 
 static struct traj_eval plan_eval(struct planner *p, float t);
 
@@ -113,6 +138,11 @@ struct traj_eval plan_current_goal(struct planner *p, float t)
 	switch (p->state) {
 		case TRAJECTORY_STATE_LANDING:
 			if (plan_is_finished(p, t)) {
+				if (controllerGetType() == ControllerTypePID) {
+					resetPosPIDParamsToPrevious();
+				} else if (controllerGetType() == ControllerTypeMellinger) {
+					controllerMellingerResetParamsToPrevious();
+				}
 				p->state = TRAJECTORY_STATE_IDLE;
 			}
 			// intentional fall-thru
@@ -172,12 +202,68 @@ int plan_land(struct planner *p, struct vec curr_pos, float curr_yaw, float hove
 		return 1;
 	}
 
-	plan_takeoff_or_landing(p, curr_pos, curr_yaw, hover_height, hover_yaw, duration);
+	struct vec hover_pos = curr_pos;
+	struct vec landing_pos = curr_pos;
+	hover_pos.z = hover_height + landing_hover_offset;
+	landing_pos.z = hover_height;
+
+	// compute the shortest possible rotation towards 0
+	hover_yaw = normalize_radians(hover_yaw);
+	curr_yaw = normalize_radians(curr_yaw);
+	float goal_yaw = curr_yaw + shortest_signed_angle_radians(curr_yaw, hover_yaw);
+
+	
+	// the landing trajectory has three pieces. 
+	// 1. go to a positions a few cm over the landing point, 
+	// 2. hower there for a bit to control out disturbances,
+	// 3. Then go down to the landing point.
+	float durations[3];
+	durations[2] = 0.1f;  // we want the last piece to be short.
+	durations[1] = landing_hover_duration;
+	durations[0] = duration - durations[1] - durations[2];
+	ASSERT(durations[0] > 0.0f);
+
+	struct vec positions[4];
+	positions[0] = curr_pos; 
+	positions[1] = hover_pos; 
+	positions[2] = hover_pos;
+	positions[3] = landing_pos;
+	
+	float yaws[4];
+	yaws[0] = curr_yaw;
+	for (int i = 1; i < 4; i++) {
+		yaws[i] = goal_yaw;
+	}
+
+	struct vec velocities[3];
+	float yaw_rates[3];
+	struct vec accelerations[3];
+	for (int i = 0; i < 3; i++) {
+		velocities[i] = vzero();
+		yaw_rates[i] = 0;
+		accelerations[i] = vzero();
+	}
+
+	plan_7th_order_no_jerk(&p->planned_trajectory, durations, positions, yaws, velocities, yaw_rates, accelerations, 2);
+	
 	p->reversed = false;
 	p->state = TRAJECTORY_STATE_LANDING;
 	p->type = TRAJECTORY_TYPE_PIECEWISE;
 	p->planned_trajectory.t_begin = t;
 	p->trajectory = &p->planned_trajectory;
+
+	if (controllerGetType() == ControllerTypePID) {
+		positionControllerChangePosPIDParams(landingPIDParams.kp, landingPIDParams.ki, landingPIDParams.kd, NAN,
+		                                     landingPIDParams.kp, landingPIDParams.ki, landingPIDParams.kd, NAN,
+		                                     NAN, NAN, NAN, NAN);
+	} else if (controllerGetType() == ControllerTypeMellinger) {
+		// Mellinger position params order: kp_xy, kd_xy, ki_xy, i_range_xy, kp_z, kd_z, ki_z, i_range_z
+		controllerMellingerChangePosParams(landingMellingerPIDParams.pos_kp, landingMellingerPIDParams.pos_kd, landingMellingerPIDParams.pos_ki, NAN,
+		                                   NAN, NAN, NAN, NAN);
+
+		controllerMellingerChangeAttParams(landingMellingerPIDParams.att_kp, landingMellingerPIDParams.att_kd, landingMellingerPIDParams.att_ki, NAN, NAN);	
+	}
+
 	return 0;
 }
 
@@ -384,3 +470,67 @@ int plan_start_compressed_trajectory( struct planner *p, struct piecewise_traj_c
 
 	return 0;
 }
+
+
+
+/**
+ * landing controller PID gains
+ */
+PARAM_GROUP_START(landingCrtl)
+
+/**
+ * @brief Landing position proportional gain
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, pkp, &landingPIDParams.kp)
+
+/**
+ * @brief Landing position integral gain
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, pki, &landingPIDParams.ki)
+
+/**
+ * @brief Landing position derivative gain
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, pkd, &landingPIDParams.kd)
+
+/**
+ * @brief Height above the landing target to control the horizontal position during landing (m)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, hOffset, &landing_hover_offset)
+
+/**
+ * @brief Duration to hover over the landing target to control the horizontal position during landing (s)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, hDuration, &landing_hover_duration)
+
+/**
+ * @brief Mellinger landing position proportional gain (xy)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, m_pos_kp, &landingMellingerPIDParams.pos_kp)
+
+/**
+ * @brief Mellinger landing position integral gain (xy)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, m_pos_ki, &landingMellingerPIDParams.pos_ki)
+
+/**
+ * @brief Mellinger landing position derivative gain (xy)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, m_pos_kd, &landingMellingerPIDParams.pos_kd)
+
+/**
+ * @brief Mellinger landing attitude proportional gain
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, m_att_kp, &landingMellingerPIDParams.att_kp)
+
+/**
+ * @brief Mellinger landing attitude integral gain
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, m_att_ki, &landingMellingerPIDParams.att_ki)
+
+/**
+ * @brief Mellinger landing attitude derivative gain
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, m_att_kd, &landingMellingerPIDParams.att_kd)
+
+PARAM_GROUP_STOP(landingCrtl)

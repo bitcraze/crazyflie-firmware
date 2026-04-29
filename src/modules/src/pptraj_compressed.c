@@ -293,6 +293,10 @@ static void piecewise_compressed_advance_playhead(struct piecewise_traj_compress
 
   traj->current_piece.t_begin_relative += duration;
   traj->current_piece.data = next_piece(traj->current_piece.data);
+  // if (!traj->current_piece.data) {
+  //   traj->current_piece.t_begin_relative -= duration;
+  //   return;
+  // }
 
   piecewise_compressed_update_current_poly4d(traj, &end_of_previous_piece);
 }
