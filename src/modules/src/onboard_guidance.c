@@ -1,7 +1,6 @@
 #define DEBUG_MODULE "ONBOARD_GUIDANCE"
 #include "debug.h"
 
-#include "cfassert.h"
 #include "autoconf.h"
 #include "onboard_guidance.h"
 
@@ -76,7 +75,7 @@ void onboardGuidanceInit(OnboardGuidanceType type) {
     #elif defined(CONFIG_ONBOARD_GUIDANCE_HLC_ENABLE)
       selected = DEFAULT_GUIDANCE;
     #else
-      ASSERT_FAILED();
+      #error "Auto-select requested but no onboard guidance is compiled in. Enable an onboard guidance backend via Kconfig."
     #endif
   }
 
