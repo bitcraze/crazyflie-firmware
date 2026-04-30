@@ -112,6 +112,12 @@ static StaticSemaphore_t lockTrajBuffer;
 static float defaultTakeoffVelocity = 0.5f;
 static float defaultLandingVelocity = 0.5f;
 
+static float landingPosKp = 5.123533f;     
+static float landingPosKi = 1.905738f;
+static float landingPosKd = 1.0f;
+static float landing_hover_offset = 0.08f; // how much above the landing point we want to hover to control out disturbances
+static float landing_hover_duration = 3.0f; // how long we want to hover above the landing point
+
 // Trajectory memory handling from the memory module
 static uint32_t handleMemGetSize(const uint8_t internal_id) { return crtpCommanderHighLevelTrajectoryMemSize(); }
 static bool handleMemRead(const uint8_t internal_id, const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer);
@@ -570,7 +576,7 @@ int land(const struct data_land* data)
   if (isInGroup(data->groupMask)) {
     xSemaphoreTake(lockTraj, portMAX_DELAY);
     float t = usecTimestamp() / 1e6;
-    result = plan_land(&planner, pos, yaw, data->height, 0.0f, data->duration, t);
+    result = plan_land(&planner, pos, yaw, data->height, landing_hover_offset, landing_hover_duration, 0.0f, data->duration, landingPosKp, landingPosKi, landingPosKd, t);
     xSemaphoreGive(lockTraj);
   }
   return result;
@@ -592,7 +598,7 @@ int land2(const struct data_land_2* data)
       hover_yaw = yaw;
     }
 
-    result = plan_land(&planner, pos, yaw, data->height, hover_yaw, data->duration, t);
+    result = plan_land(&planner, pos, yaw, data->height, landing_hover_offset, landing_hover_duration, 0.0f, data->duration, landingPosKp, landingPosKi, landingPosKd, t);
     xSemaphoreGive(lockTraj);
   }
   return result;
@@ -621,7 +627,7 @@ int land_with_velocity(const struct data_land_with_velocity* data)
 
     float velocity = data->velocity > 0 ? data->velocity : defaultLandingVelocity;
     float duration = fabsf(height - pos.z) / velocity;
-    result = plan_land(&planner, pos, yaw, height, hover_yaw, duration, t);
+    result = plan_land(&planner, pos, yaw, height, landing_hover_offset, landing_hover_duration, hover_yaw, duration, landingPosKp, landingPosKi, landingPosKd, t);
     xSemaphoreGive(lockTraj);
   }
   return result;
@@ -1103,3 +1109,36 @@ PARAM_ADD_CORE(PARAM_FLOAT, vland, &defaultLandingVelocity)
 PARAM_ADD_CORE(PARAM_UINT8, groupmask, &group_mask)
 
 PARAM_GROUP_STOP(hlCommander)
+
+
+/**
+ * landing controller PID gains
+ */
+PARAM_GROUP_START(landingCrtl)
+
+/**
+ * @brief Landing position proportional gain
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, kp, &landingPosKp)
+
+/**
+ * @brief Landing position integral gain
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, ki, &landingPosKi)
+
+/**
+ * @brief Landing position derivative gain
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, kd, &landingPosKd)
+
+/**
+ * @brief Height above the landing target to control the horizontal position during landing (m)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, hOffset, &landing_hover_offset)
+
+/**
+ * @brief Duration to hover over the landing target to control the horizontal position during landing (s)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, hDuration, &landing_hover_duration)
+
+PARAM_GROUP_STOP(landingCrtl)
