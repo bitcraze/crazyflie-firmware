@@ -32,11 +32,13 @@ landing when possible, instead of free falling, but that is currently not implem
 
 ## Emergency stops
 
-The supervisor supports an emergency stop watchdog that can be used to implement an emergency stop command with a periodic keepalive.
+The supervisor supports two emergency stop mechanisms: an immediate emergency stop command and an emergency stop watchdog.
 
-The emergency stop watchdog is disabled at startup. It becomes active when the first watchdog keepalive packet is received. After that, a new keepalive must be received at least once every 1000 ms. If the source stops sending keepalive packets and the timeout expires, the Crazyflie enters emergency stop and the motors are stopped.
+The immediate emergency stop command stops the motors as soon as the command is handled by the supervisor. It puts the supervisor in the locked state, which is latching and requires a reboot to recover.
 
-This mechanism can be used by external control or safety integrations that want the Crazyflie to default to emergency stop if communication is lost. For packet-level details, see the [Supervisor CRTP port](/docs/functional-areas/crtp/crtp_supervisor/).
+The emergency stop watchdog can be used to implement an emergency stop command with a periodic keepalive. It is disabled at startup and becomes active when the first watchdog keepalive packet is received. After that, a new keepalive must be received at least once every 1000 ms. If the source stops sending keepalive packets and the timeout expires, the Crazyflie enters emergency stop, stops the motors and enters the locked state.
+
+The watchdog mechanism can be used by external control or safety integrations that want the Crazyflie to default to emergency stop if communication is lost. For packet-level details, see the [Supervisor CRTP port](/docs/functional-areas/crtp/crtp_supervisor.md).
 
 ## Sub pages
 
