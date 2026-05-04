@@ -163,6 +163,45 @@ static struct this_s this = {
 };
 #endif
 
+static uint8_t resetVelI;
+static volatile bool resetVelIRequested;
+static uint8_t resetPosI;
+static volatile bool resetPosIRequested;
+
+static void resetPidIntegral(PidObject *pid)
+{
+  pid->integ = 0.0f;
+  pid->outI = 0.0f;
+}
+
+static void resetHorizontalPositionPidIntegrals(void)
+{
+  resetPidIntegral(&this.pidX.pid);
+  resetPidIntegral(&this.pidY.pid);
+}
+
+static void resetHorizontalVelocityPidIntegrals(void)
+{
+  resetPidIntegral(&this.pidVX.pid);
+  resetPidIntegral(&this.pidVY.pid);
+}
+
+static void resetPositionPidIntegralsParamCallback(void)
+{
+  if (resetPosI) {
+    resetPosIRequested = true;
+    resetPosI = 0;
+  }
+}
+
+static void resetVelocityPidIntegralsParamCallback(void)
+{
+  if (resetVelI) {
+    resetVelIRequested = true;
+    resetVelI = 0;
+  }
+}
+
 void positionControllerInit()
 {
   pidInit(&this.pidX.pid, this.pidX.setpoint, this.pidX.pid.kp, this.pidX.pid.ki, this.pidX.pid.kd,
@@ -193,6 +232,11 @@ float state_body_x, state_body_y, state_body_vx, state_body_vy;
 void positionController(float* thrust, attitude_t *attitude, const setpoint_t *setpoint,
                                                              const state_t *state)
 {
+  if (resetPosIRequested) {
+    resetPosIRequested = false;
+    resetHorizontalPositionPidIntegrals();
+  }
+
   this.pidX.pid.outputLimit = xVelMax * velMaxOverhead;
   this.pidY.pid.outputLimit = yVelMax * velMaxOverhead;
   // The ROS landing detector will prematurely trip if
@@ -236,6 +280,11 @@ void positionController(float* thrust, attitude_t *attitude, const setpoint_t *s
 void velocityController(float* thrust, attitude_t *attitude, const Axis3f* setpoint_velocity,
                                                              const state_t *state)
 {
+  if (resetVelIRequested) {
+    resetVelIRequested = false;
+    resetHorizontalVelocityPidIntegrals();
+  }
+
   this.pidVX.pid.outputLimit = pLimit * rpLimitOverhead;
   this.pidVY.pid.outputLimit = rLimit * rpLimitOverhead;
   // Set the output limit to the maximum thrust range
@@ -461,6 +510,12 @@ LOG_GROUP_STOP(posCtl)
  */
 PARAM_GROUP_START(velCtlPid)
 /**
+ * @brief Set to 1 to reset the horizontal velocity PID integral terms
+ */
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, resetI, &resetVelI,
+                        &resetVelocityPidIntegralsParamCallback)
+
+/**
  * @brief Proportional gain for the velocity PID in the body-yaw-aligned X direction
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, vxKp, &this.pidVX.pid.kp)
@@ -519,6 +574,12 @@ PARAM_GROUP_STOP(velCtlPid)
  * in the body-yaw-aligned X & Y and global Z directions.
  */
 PARAM_GROUP_START(posCtlPid)
+/**
+ * @brief Set to 1 to reset the horizontal position PID integral terms
+ */
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, resetI, &resetPosI,
+                        &resetPositionPidIntegralsParamCallback)
+
 /**
  * @brief Proportional gain for the position PID in the body-yaw-aligned X direction
  */
