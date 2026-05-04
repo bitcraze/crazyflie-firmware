@@ -78,7 +78,7 @@ No response is sent.
 
 ### Emergency stop watchdog
 
-Keepalive packet that must be sent at least once per second after the first packet is received. If the timeout expires, all motors are stopped. The watchdog is disabled at startup and activates on the first received packet.
+Keepalive packet that must be sent at least once per second after the first packet is received. If the timeout expires, all motors are stopped. The watchdog is disabled at startup and activates on the first received packet. For the supervisor-level safety behavior, see the [supervisor documentation](/docs/functional-areas/supervisor/).
 
 Command:
 
