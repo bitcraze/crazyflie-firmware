@@ -13,9 +13,10 @@ detect in the next time step.
  * [Sensors](#sensors)
  * [State Estimation](state_estimators.md)
  * [State Controller](controllers.md)
+ * [Onboard Guidance](onboard_guidance.md)
  * [Commander Framework](commanders_setpoints.md)
  * [Power Distribution](#power-distribution)
- * [Configure estimators and control](configure_estimator_controller.md)
+
 
 
 
@@ -71,8 +72,13 @@ There are 3 controllers in the Crazyflie
 Go to the [controllers page](controllers.md), for more in-depth information.
 
 
+### Onboard Guidance
+When the Crazyflie needs to fly autonomously (trajectory following, go-to waypoints, etc.), onboard guidance generates the setpoints locally instead of receiving them from a ground station. The built-in implementation is the High-Level Commander, which plans smooth trajectories using 7th order polynomials. It can be replaced with a custom out-of-tree implementation.
+
+Go to the [Onboard Guidance page](onboard_guidance.md) for more in-depth information.
+
 ### Commander Framework
-A desired state can be handled by the set-point structure in position or attitude, which can be set by the [cflib](https://www.bitcraze.io/documentation/repository/crazyflie-lib-python/master/) or the High Level commander.
+The commander module acts as a setpoint multiplexer: it receives setpoints from several sources (CRTP, EXTRX, onboard guidance, app layer) and selects the active one based on priority.
 
 Go to the [Commander page](commanders_setpoints.md), for more in-depth information.
 
@@ -86,4 +92,4 @@ How the motors should respond in order to adhere these attitude based commands d
     * Brushless: The Crazyflie 2.1 Brushless and the Crazyflie Bolt support brushless motor control. Battery compensation is also available for the Crazyflie 2.1 Brushless, but it not on the Crazyflie Bolt, since the settings depend on the user’s motor configuration. For more information, check out the [product page of the Bolt](https://www.bitcraze.io/products/crazyflie-bolt-1-1/).
 
 ## Configuring Controllers and Estimators
-Go to this [configuration page](configure_estimator_controller.md), if you would like to configure different controllers and estimators.
+See the [controllers page](controllers.md) and the [state estimation page](state_estimators.md) for configuration options.
