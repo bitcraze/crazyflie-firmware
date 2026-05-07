@@ -92,7 +92,7 @@ $ make cf21bl_defconfig
 $ make bolt_defconfig
 ```
 
-**Note:** For the Crazyflie 2.0 and the thrust upgrade kit, you need to create a custom configuration with additional `CONFIG_CRAZYFLIE_LEGACY_PROPELLERS=y` or `CONFIG_CRAZYFLIE_THRUST_UPGRADE_KIT=y`, respectively.
+**Note:** For the Crazyflie 2.0 and the thrust upgrade kit, you need to expand the `cf2_defconfig` with `CONFIG_CRAZYFLIE_LEGACY_PROPELLERS=y` or `CONFIG_CRAZYFLIE_THRUST_UPGRADE_KIT=y`, respectively.
 
 ### Building the firmware
 Then build the firmware with:
