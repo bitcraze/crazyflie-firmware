@@ -22,7 +22,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *
- * bccam_deck.c - Deck driver for the bcCam deck (QCC744)
+ * bccam_deck.c - Deck driver for the WiFi camera deck
  */
 
 #include <string.h>
@@ -38,7 +38,6 @@
 #include "deckctrl_gpio.h"
 #include "uart1.h"
 #include "console.h"
-#include "bccam_deck.h"
 
 #define DEBUG_MODULE "BCCAM"
 #include "debug.h"
@@ -85,6 +84,16 @@ static bool isInFirmware = true;
 static uint32_t newFwSize = 0;
 static bool flashErased = false;
 static DeckInfo *deckInfoG;
+
+// Coalesce host's small CRTP-sized writes into bigger FLASH_WRITE batches.
+// QCC744 ROM rejects sequences of tiny writes (returns NACK 0x0006 after
+// the first couple). Buffering up to 4 KiB matches what the eflash_loader
+// PC tool sends and avoids the small-chunk failure mode.
+#define BCCAM_WRITE_BUF_SIZE 1024
+static uint8_t writeBuf[BCCAM_WRITE_BUF_SIZE];
+static uint16_t writeBufUsed = 0;
+static uint32_t writeBufBase = 0;
+static uint32_t bytesWritten = 0;
 // static TaskHandle_t consoleTaskHandle = NULL;
 
 // ---------------------------------------------------------------------------
@@ -115,14 +124,16 @@ static bool ispSendCmd(uint8_t cmdId, const uint8_t *payload, uint16_t payloadLe
   uint8_t header[4];
   header[0] = cmdId;
 
-  // Compute checksum over payload
-  uint8_t checksum = 0;
+  header[2] = (uint8_t)(payloadLen & 0xFF);
+  header[3] = (uint8_t)((payloadLen >> 8) & 0xFF);
+
+  // Checksum = sum of len bytes + payload bytes (low byte). The chip is
+  // lenient on some commands (e.g. 0x23) but strict on CLK_SET/FLASH_*.
+  uint8_t checksum = header[2] + header[3];
   for (uint16_t i = 0; i < payloadLen; i++) {
     checksum += payload[i];
   }
-  header[1] = payloadLen > 0 ? checksum : 0;
-  header[2] = (uint8_t)(payloadLen & 0xFF);
-  header[3] = (uint8_t)((payloadLen >> 8) & 0xFF);
+  header[1] = checksum;
 
   uart1SendData(4, header);
   if (payloadLen > 0 && payload != NULL) {
@@ -132,22 +143,41 @@ static bool ispSendCmd(uint8_t cmdId, const uint8_t *payload, uint16_t payloadLe
   return true;
 }
 
+// Scan up to ISP_ACK_SCAN_MAX bytes looking for an "OK" or "FL" marker.
+// FLASH_ERASE prefixes the response with progress bytes (0x50 0x44 = "PD")
+// — about 2 bytes per sector — before the final OK/FL marker. Cap is set
+// high enough for a full firmware-region erase.
+#define ISP_ACK_SCAN_MAX 2048
+
 static bool ispWaitAck(void) {
-  uint8_t resp[2];
-  if (!ispRecvBytes(resp, 2, ISP_CMD_TIMEOUT)) {
-    DEBUG_PRINT("ISP: No ACK received\n");
-    return false;
+  uint8_t prev = 0;
+  bool havePrev = false;
+  uint32_t scanned = 0;
+
+  for (uint32_t i = 0; i < ISP_ACK_SCAN_MAX; i++) {
+    uint8_t b;
+    if (!uart1GetDataWithTimeout(&b, ISP_CMD_TIMEOUT)) {
+      DEBUG_PRINT("ISP: No ACK after %lu bytes\n", (unsigned long)scanned);
+      return false;
+    }
+    scanned++;
+
+    if (havePrev && prev == ISP_ACK_OK_L && b == ISP_ACK_OK_H) {
+      return true;
+    }
+    if (havePrev && prev == 0x46 /*F*/ && b == 0x4C /*L*/) {
+      uint8_t errBytes[2];
+      ispRecvBytes(errBytes, 2, M2T(100));
+      uint16_t errCode = (uint16_t)errBytes[0] | ((uint16_t)errBytes[1] << 8);
+      DEBUG_PRINT("ISP: NACK 0x%04X (after %lu skipped)\n",
+                  errCode, (unsigned long)(scanned - 2));
+      return false;
+    }
+    prev = b;
+    havePrev = true;
   }
 
-  if (resp[0] == ISP_ACK_OK_L && resp[1] == ISP_ACK_OK_H) {
-    return true;
-  }
-
-  // Error response: read 2 more bytes for error code
-  uint8_t errBytes[2];
-  ispRecvBytes(errBytes, 2, M2T(100));
-  uint16_t errCode = (uint16_t)errBytes[0] | ((uint16_t)errBytes[1] << 8);
-  DEBUG_PRINT("ISP: NACK error 0x%04X\n", errCode);
+  DEBUG_PRINT("ISP: ACK scan exhausted\n");
   return false;
 }
 
@@ -161,15 +191,23 @@ static bool ispFlashErase(uint32_t startAddr, uint32_t endAddr) {
 }
 
 static bool ispFlashWrite(uint32_t addr, const uint8_t *data, uint16_t len) {
-  // Payload: [address(4)] [data(len)]
-  uint8_t payload[4 + 256];  // Max write chunk from memory subsystem is 256
-  if (len > 256) {
-    return false;
-  }
-  memcpy(&payload[0], &addr, 4);
-  memcpy(&payload[4], data, len);
+  // Stream header then payload — no large stack copy. ROM accepts up to
+  // ~16 KiB per FLASH_WRITE, and we batch up to 4 KiB at the caller.
+  uint16_t totalLen = 4 + len;  // addr + data
+  uint8_t header[8];
+  header[0] = ISP_CMD_FLASH_WRITE;
+  header[2] = (uint8_t)(totalLen & 0xFF);
+  header[3] = (uint8_t)((totalLen >> 8) & 0xFF);
+  memcpy(&header[4], &addr, 4);
 
-  ispSendCmd(ISP_CMD_FLASH_WRITE, payload, 4 + len);
+  uint8_t cs = header[2] + header[3];
+  for (int i = 4; i < 8; i++) cs += header[i];
+  for (uint16_t i = 0; i < len; i++) cs += data[i];
+  header[1] = cs;
+
+  uart1SendData(sizeof(header), header);
+  uart1SendDmaIfAvailable(len, (uint8_t *)data);
+
   return ispWaitAck();
 }
 
@@ -210,9 +248,9 @@ static bool bcCamWriteFlash(const uint32_t memAddr, const uint8_t writeLen,
     return false;
   }
 
-  // Auto-erase: on first write, erase the region that will be written
+  // Auto-erase: on first write, erase the entire region that will be written
   if (!flashErased && newFwSize > 0) {
-    uint32_t eraseEnd = memAddr + newFwSize;
+    uint32_t eraseEnd = memAddr + newFwSize - 1;
     DEBUG_PRINT("ISP: Erasing 0x%08lX - 0x%08lX\n",
                 (unsigned long)memAddr, (unsigned long)eraseEnd);
     if (!ispFlashErase(memAddr, eraseEnd)) {
@@ -220,9 +258,44 @@ static bool bcCamWriteFlash(const uint32_t memAddr, const uint8_t writeLen,
       return false;
     }
     flashErased = true;
+    writeBufBase = memAddr;
+    writeBufUsed = 0;
+    bytesWritten = 0;
   }
 
-  return ispFlashWrite(memAddr, buffer, writeLen);
+  // Non-contiguous write — flush what we have, restart at the new base.
+  if (writeBufUsed > 0 && memAddr != writeBufBase + writeBufUsed) {
+    if (!ispFlashWrite(writeBufBase, writeBuf, writeBufUsed)) {
+      DEBUG_PRINT("ISP: Flush write failed\n");
+      return false;
+    }
+    writeBufBase = memAddr;
+    writeBufUsed = 0;
+  }
+  if (writeBufUsed == 0) {
+    writeBufBase = memAddr;
+  }
+
+  memcpy(&writeBuf[writeBufUsed], buffer, writeLen);
+  writeBufUsed += writeLen;
+  bytesWritten += writeLen;
+
+  bool isLast = (newFwSize > 0 && bytesWritten >= newFwSize);
+  if (writeBufUsed >= BCCAM_WRITE_BUF_SIZE - 256 || isLast) {
+    if (!ispFlashWrite(writeBufBase, writeBuf, writeBufUsed)) {
+      DEBUG_PRINT("ISP: write failed @ 0x%08lX (%u B)\n",
+                  (unsigned long)writeBufBase, (unsigned)writeBufUsed);
+      return false;
+    }
+    if (isLast) {
+      DEBUG_PRINT("ISP: Wrote %lu bytes (full image)\n",
+                  (unsigned long)bytesWritten);
+    }
+    writeBufBase += writeBufUsed;
+    writeBufUsed = 0;
+  }
+
+  return true;
 }
 
 static bool bcCamReadFlash(const uint32_t memAddr, const uint8_t readLen,
@@ -256,11 +329,16 @@ static void bcCamBootloaderTask(void *arg) {
   deckctrl_gpio_write(deckInfoG, GPIO_QCC_EN, LOW);
   vTaskDelay(M2T(50));
 
+  // Select ROM bootloader (BOOT pin HIGH) before re-enabling
+  deckctrl_gpio_write(deckInfoG, GPIO_QCC_BOOT, HIGH);
+  vTaskDelay(M2T(10));
+
   // Switch UART to ROM bootloader baudrate (500000)
   uart1Init(BCCAM_ISP_BAUDRATE);
 
   // Re-enable QCC744 — it will enter ROM bootloader
   deckctrl_gpio_write(deckInfoG, GPIO_QCC_EN, HIGH);
+  vTaskDelay(M2T(50));
 
   // Flood 0x55 and look for "OK" response from ROM bootloader
   bool gotOk = false;
@@ -292,38 +370,24 @@ static void bcCamBootloaderTask(void *arg) {
   ispDrainRx(50);
   DEBUG_PRINT("ISP: ROM handshake OK\n");
 
-  // Get boot info (required before changing baud rate)
   ispSendCmd(ISP_CMD_GET_BOOTINFO, NULL, 0);
   if (!ispWaitAck()) {
     DEBUG_PRINT("ISP: GET_BOOTINFO failed\n");
     uart1Init(BCCAM_UART_BAUDRATE);
     goto done;
   }
-  // Drain bootinfo response data
   ispDrainRx(100);
   DEBUG_PRINT("ISP: Got boot info\n");
 
-  // Change baud rate to 2Mbaud
-  // Payload: [uart_clk(4)] [baudrate(4)]
-  uint8_t ratePayload[8];
-  uint32_t uartClk = 1;  // PLL clock source
-  uint32_t newBaud = BCCAM_UART_BAUDRATE;
-  memcpy(&ratePayload[0], &uartClk, 4);
-  memcpy(&ratePayload[4], &newBaud, 4);
-  ispSendCmd(ISP_CMD_CLK_SET, ratePayload, 8);
+  // Configure flash SPI pin mux at 500k. Required before any flash op —
+  // pin cfg bytes match "set flash cfg: 1014124" from eflash_loader
+  // (LE 0x01014124).
+  static const uint8_t flashPinCfg[4] = { 0x24, 0x41, 0x01, 0x01 };
+  ispSendCmd(ISP_CMD_FLASH_SET_PARA, flashPinCfg, sizeof(flashPinCfg));
   if (!ispWaitAck()) {
-    DEBUG_PRINT("ISP: CLK_SET failed\n");
-    uart1Init(BCCAM_UART_BAUDRATE);
+    DEBUG_PRINT("ISP: FLASH_SET_PARA NACK at 500k\n");
     goto done;
   }
-
-  // Switch our UART to 2Mbaud
-  vTaskDelay(M2T(20));
-  uart1Init(BCCAM_UART_BAUDRATE);
-  vTaskDelay(M2T(20));
-  ispDrainRx(50);
-
-  DEBUG_PRINT("ISP: Switched to %d baud\n", BCCAM_UART_BAUDRATE);
 
   isInBootloader = true;
   DEBUG_PRINT("ISP: ROM bootloader ready\n");
