@@ -55,17 +55,16 @@
 NO_DMA_CCM_SAFE_ZERO_INIT __ALIGN_BEGIN USB_OTG_CORE_HANDLE    USB_OTG_dev __ALIGN_END ;
 
 static bool isInit = false;
-static bool doingTransfer = false;
-static bool doingVcpTransfer = false;
+static volatile bool doingTransfer = false;
+static volatile bool doingVcpTransfer = false;
 static bool rxStopped = true;
 static uint16_t command = 0xFF;
 
 
-// This should probably be reduced to a CRTP packet size
-static xQueueHandle usbDataRx;
-STATIC_MEM_QUEUE_ALLOC(usbDataRx, 5, sizeof(USBPacket)); /* Buffer USB packets (max 64 bytes) */
+// Owned by usblink.c; cached at init for the DataOut ISR to write into.
+static xQueueHandle crtpRxQueue = NULL;
 static xQueueHandle usbDataTx;
-STATIC_MEM_QUEUE_ALLOC(usbDataTx, 1, sizeof(USBPacket)); /* Buffer USB packets (max 64 bytes) */
+STATIC_MEM_QUEUE_ALLOC(usbDataTx, 8, sizeof(USBPacket)); /* Buffer USB packets (max 64 bytes) */
 
 #define USB_CDC_CONFIG_DESC_SIZ     98
 
@@ -282,6 +281,7 @@ static uint8_t  usbd_cdc_EP0_RxReady(void *pdev);
 static USBPacket inPacket;
 static USBPacket outPacket;
 static USBPacket outVcpPacket;
+static CRTPPacket rxCrtp;
 
 /* CDC interface class callbacks structure */
 USBD_Class_cb_TypeDef cf_usb_cb =
@@ -337,7 +337,7 @@ static uint8_t usbd_cf_Setup(void *pdev , USB_SETUP_REQ  *req)
     {
       crtpSetLink(usblinkGetLink());
 
-      if (rxStopped && !xQueueIsQueueFullFromISR(usbDataRx))
+      if (rxStopped && crtpRxQueue && !xQueueIsQueueFullFromISR(crtpRxQueue))
       {
         DCD_EP_PrepareRx(&USB_OTG_dev,
                         CF_OUT_EP,
@@ -630,21 +630,24 @@ static uint8_t  usbd_cf_SOF (void *pdev)
   */
 static uint8_t  usbd_cf_DataOut (void *pdev, uint8_t epnum)
 {
-  uint8_t result;
+  uint8_t result = USBD_OK;
   if (epnum == CF_OUT_EP)
   {
     portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
 
     /* Get the received data buffer and update the counter */
-    inPacket.size = ((USB_OTG_CORE_HANDLE*)pdev)->dev.out_ep[epnum].xfer_count;
+    uint16_t rxLen = ((USB_OTG_CORE_HANDLE*)pdev)->dev.out_ep[epnum].xfer_count;
 
-    if (xQueueSendFromISR(usbDataRx, &inPacket, &xHigherPriorityTaskWoken) == pdTRUE) {
-      result = USBD_OK;
-    } else {
-      result = USBD_BUSY;
+    // Drop oversized packets (rxCrtp.raw is 31 B; host shouldn't send more).
+    if (rxLen > 0 && rxLen <= sizeof(rxCrtp.raw) && crtpRxQueue) {
+      rxCrtp.size = rxLen - 1;
+      memcpy(rxCrtp.raw, inPacket.data, rxLen);
+      if (xQueueSendFromISR(crtpRxQueue, &rxCrtp, &xHigherPriorityTaskWoken) != pdTRUE) {
+        result = USBD_BUSY;
+      }
     }
 
-    if (!xQueueIsQueueFullFromISR(usbDataRx)) {
+    if (crtpRxQueue && !xQueueIsQueueFullFromISR(crtpRxQueue)) {
       /* Prepare Out endpoint to receive next packet */
       DCD_EP_PrepareRx(pdev,
                        CF_OUT_EP,
@@ -654,6 +657,9 @@ static uint8_t  usbd_cf_DataOut (void *pdev, uint8_t epnum)
     } else {
       rxStopped = true;
     }
+
+    // Don't yield from here — measured ~0.6 ms ping RTT regression when we did.
+    (void)xHigherPriorityTaskWoken;
   }
   else // VCP
   {
@@ -760,16 +766,36 @@ void USBD_USR_DeviceDisconnected(void)
   resetUSB();
 }
 
+// Called by the link-layer consumer after dequeuing a packet, to re-arm
+// the OUT EP if the ISR halted RX because the queue was full.
+void usbResumeRx(void)
+{
+  if (!isInit) {
+    return;
+  }
+  NVIC_DisableIRQ(OTG_FS_IRQn);
+  if (rxStopped && crtpRxQueue && uxQueueSpacesAvailable(crtpRxQueue) > 0) {
+    DCD_EP_PrepareRx(&USB_OTG_dev,
+                     CF_OUT_EP,
+                     (uint8_t*)(inPacket.data),
+                     USB_RX_TX_PACKET_SIZE);
+    rxStopped = false;
+  }
+  NVIC_EnableIRQ(OTG_FS_IRQn);
+}
+
 void usbInit(void)
 {
+  // usblinkInit creates the queue before calling us, so this is non-NULL
+  // from the first ISR.
+  crtpRxQueue = usblinkGetCrtpDeliveryQueue();
+
   USBD_Init(&USB_OTG_dev,
             USB_OTG_FS_CORE_ID,
             &USR_desc,
             &cf_usb_cb,
             &USR_cb);
 
-  usbDataRx = STATIC_MEM_QUEUE_CREATE(usbDataRx);
-  DEBUG_QUEUE_MONITOR_REGISTER(usbDataRx);
   usbDataTx = STATIC_MEM_QUEUE_CREATE(usbDataTx);
   DEBUG_QUEUE_MONITOR_REGISTER(usbDataTx);
 
@@ -781,32 +807,19 @@ bool usbTest(void)
   return isInit;
 }
 
-bool usbGetDataBlocking(USBPacket *in)
+bool usbSendData(USBPacket *pkt)
 {
-  while (xQueueReceive(usbDataRx, in, portMAX_DELAY) != pdTRUE)
-    ; // Don't return until we get some data on the USB
-
-  // Disabling USB interrupt to make sure we can check and re-enable the endpoint
-  // if it is not currently accepting data (ie. can happen if the RX queue was full)
-  NVIC_DisableIRQ(OTG_FS_IRQn);
-  if (rxStopped) {
-    DCD_EP_PrepareRx(&USB_OTG_dev,
-                    CF_OUT_EP,
-                    (uint8_t*)(inPacket.data),
-                    USB_RX_TX_PACKET_SIZE);
-    rxStopped = false;
+  bool ok = (xQueueSend(usbDataTx, pkt, M2T(100)) == pdTRUE);
+  if (ok) {
+    // Direct kick — start TX now to skip the ~1 ms SOF wait when idle.
+    NVIC_DisableIRQ(OTG_FS_IRQn);
+    if (!doingTransfer) {
+      if (xQueueReceive(usbDataTx, &outPacket, 0) == pdTRUE) {
+        doingTransfer = true;
+        DCD_EP_Tx(&USB_OTG_dev, CF_IN_EP, (uint8_t*)outPacket.data, outPacket.size);
+      }
+    }
+    NVIC_EnableIRQ(OTG_FS_IRQn);
   }
-  NVIC_EnableIRQ(OTG_FS_IRQn);
-
-  return true;
-}
-
-static USBPacket outStage;
-
-bool usbSendData(uint32_t size, uint8_t* data)
-{
-  outStage.size = size;
-  memcpy(outStage.data, data, size);
-  // Dont' block when sending
-  return (xQueueSend(usbDataTx, &outStage, M2T(100)) == pdTRUE);
+  return ok;
 }
