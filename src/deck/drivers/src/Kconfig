@@ -535,7 +535,7 @@ config DECK_COLORLED
 
 config DECK_BCCAM
     depends on DECK_BACKEND_DECKCTRL
-    bool "Support for bcCam deck (QCC744)"
+    bool "Support for WiFi camera deck"
     default y
     help
-        Enables the support for the bcCam camera deck based on the QCC744.
+        Enables the support for the WiFi camera deck

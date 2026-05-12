@@ -290,6 +290,13 @@ static bool bcCamWriteFlash(const uint32_t memAddr, const uint8_t writeLen,
     if (isLast) {
       DEBUG_PRINT("ISP: Wrote %lu bytes (full image)\n",
                   (unsigned long)bytesWritten);
+      // Drop "in bootloader" so the next flash attempt re-runs the full
+      // bootloader entry (cfcli skips reset_to_bootloader if it sees us
+      // still active, which would leave our session state stale).
+      isInBootloader = false;
+      flashErased = false;
+      bytesWritten = 0;
+      writeBufUsed = 0;
     }
     writeBufBase += writeBufUsed;
     writeBufUsed = 0;
@@ -319,6 +326,12 @@ static uint8_t bcCamPropertiesQuery(void) {
 
 static void bcCamBootloaderTask(void *arg) {
   DEBUG_PRINT("ISP: Bootloader entry starting\n");
+
+  // Reset write-session state — protects against an interrupted previous
+  // flash leaving stale counters.
+  flashErased = false;
+  bytesWritten = 0;
+  writeBufUsed = 0;
 
   uint8_t handshake[ISP_HANDSHAKE_COUNT];
   memset(handshake, ISP_HANDSHAKE_BYTE, ISP_HANDSHAKE_COUNT);

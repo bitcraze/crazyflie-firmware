@@ -131,6 +131,13 @@ void uart1SendData(uint32_t size, uint8_t* data);
 void uart1SendDataDmaBlocking(uint32_t size, uint8_t* data);
 
 /**
+ * Send `size` bytes — DMA when this build has it, polling otherwise.
+ * @param[in] size  Number of bytes to send
+ * @param[in] data  Pointer to data
+ */
+void uart1SendDmaIfAvailable(uint32_t size, uint8_t* data);
+
+/**
  * Send a single character to the serial port using the uartSendData function.
  * @param[in] ch Character to print. Only the 8 LSB are used.
  *
