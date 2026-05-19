@@ -57,7 +57,7 @@ NO_DMA_CCM_SAFE_ZERO_INIT __ALIGN_BEGIN USB_OTG_CORE_HANDLE    USB_OTG_dev __ALI
 static bool isInit = false;
 static volatile bool doingTransfer = false;
 static volatile bool doingVcpTransfer = false;
-static bool rxStopped = true;
+static volatile bool rxStopped = true;
 static uint16_t command = 0xFF;
 
 
@@ -766,14 +766,14 @@ void USBD_USR_DeviceDisconnected(void)
   resetUSB();
 }
 
-// Called by the link-layer consumer after dequeuing a packet, to re-arm
-// the OUT EP if the ISR halted RX because the queue was full.
+// Called by usblinkReceivePacket after dequeuing from crtpPacketDelivery,
+// to re-arm the OUT EP if the ISR halted RX because the queue was full.
 void usbResumeRx(void)
 {
   if (!isInit) {
     return;
   }
-  NVIC_DisableIRQ(OTG_FS_IRQn);
+  taskENTER_CRITICAL();
   if (rxStopped && crtpRxQueue && uxQueueSpacesAvailable(crtpRxQueue) > 0) {
     DCD_EP_PrepareRx(&USB_OTG_dev,
                      CF_OUT_EP,
@@ -781,7 +781,7 @@ void usbResumeRx(void)
                      USB_RX_TX_PACKET_SIZE);
     rxStopped = false;
   }
-  NVIC_EnableIRQ(OTG_FS_IRQn);
+  taskEXIT_CRITICAL();
 }
 
 void usbInit(void)
@@ -812,14 +812,14 @@ bool usbSendData(USBPacket *pkt)
   bool ok = (xQueueSend(usbDataTx, pkt, M2T(100)) == pdTRUE);
   if (ok) {
     // Direct kick — start TX now to skip the ~1 ms SOF wait when idle.
-    NVIC_DisableIRQ(OTG_FS_IRQn);
+    taskENTER_CRITICAL();
     if (!doingTransfer) {
       if (xQueueReceive(usbDataTx, &outPacket, 0) == pdTRUE) {
         doingTransfer = true;
         DCD_EP_Tx(&USB_OTG_dev, CF_IN_EP, (uint8_t*)outPacket.data, outPacket.size);
       }
     }
-    NVIC_EnableIRQ(OTG_FS_IRQn);
+    taskEXIT_CRITICAL();
   }
   return ok;
 }
