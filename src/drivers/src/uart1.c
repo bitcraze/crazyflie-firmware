@@ -35,6 +35,7 @@
 /*ST includes */
 #include "stm32fxxx.h"
 
+#include "autoconf.h"
 #include "config.h"
 #include "nvic.h"
 #include "uart1.h"
