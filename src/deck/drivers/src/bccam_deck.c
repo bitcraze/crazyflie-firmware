@@ -44,17 +44,15 @@
 
 #define BCCAM_UART_BAUDRATE       2000000
 #define BCCAM_ISP_BAUDRATE        500000
-#define BCCAM_TASK_STACKSIZE  configMINIMAL_STACK_SIZE
-#define BCCAM_TASK_PRI        tskIDLE_PRIORITY
 
 // Deck controller GPIO pin mapping (STM32 deck-ctrl MCU)
 #define GPIO_UART1_EN   DECKCTRL_GPIO_PIN_0   // PA0 - UART1 enable
 #define GPIO_UART2_EN   DECKCTRL_GPIO_PIN_1   // PA1 - UART2 enable
-#define GPIO_QCC_EN     DECKCTRL_GPIO_PIN_2   // PA2 - QCC744 chip enable
-#define GPIO_QCC_BOOT   DECKCTRL_GPIO_PIN_7   // PA7 - QCC744 boot select
+#define GPIO_QCC_EN     DECKCTRL_GPIO_PIN_2   // PA2 - QCC748 chip enable
+#define GPIO_QCC_BOOT   DECKCTRL_GPIO_PIN_7   // PA7 - QCC748 boot select
 #define GPIO_PWR_EN     DECKCTRL_GPIO_PIN_12  // PC15 - Power enable
 
-// QCC744 UART ISP protocol constants
+// QCC748 UART ISP protocol constants
 #define ISP_HANDSHAKE_BYTE      0x55
 #define ISP_HANDSHAKE_COUNT     32
 #define ISP_HANDSHAKE_RESP_LEN  16   // "Boot2 ISP Ready\0"
@@ -79,22 +77,23 @@
 #define ISP_ACK_OK_H            0x4B  // 'K'
 
 static bool isInit = false;
-static bool isInBootloader = false;
+// Written by the deck-memory callbacks / bootloader entry, read by the worker
+// task to decide whether a flash session owns the UART — keep it volatile.
+static volatile bool isInBootloader = false;
 static bool isInFirmware = true;
 static uint32_t newFwSize = 0;
 static bool flashErased = false;
 static DeckInfo *deckInfoG;
 
 // Coalesce host's small CRTP-sized writes into bigger FLASH_WRITE batches.
-// QCC744 ROM rejects sequences of tiny writes (returns NACK 0x0006 after
-// the first couple). Buffering up to 4 KiB matches what the eflash_loader
-// PC tool sends and avoids the small-chunk failure mode.
+// QCC748 ROM rejects sequences of tiny writes (returns NACK 0x0006 after
+// the first couple). Buffering up to ~1 KiB per FLASH_WRITE avoids that
+// small-chunk failure mode.
 #define BCCAM_WRITE_BUF_SIZE 1024
 static uint8_t writeBuf[BCCAM_WRITE_BUF_SIZE];
 static uint16_t writeBufUsed = 0;
 static uint32_t writeBufBase = 0;
 static uint32_t bytesWritten = 0;
-// static TaskHandle_t consoleTaskHandle = NULL;
 
 // ---------------------------------------------------------------------------
 // UART ISP protocol helpers
@@ -192,7 +191,8 @@ static bool ispFlashErase(uint32_t startAddr, uint32_t endAddr) {
 
 static bool ispFlashWrite(uint32_t addr, const uint8_t *data, uint16_t len) {
   // Stream header then payload — no large stack copy. ROM accepts up to
-  // ~16 KiB per FLASH_WRITE, and we batch up to 4 KiB at the caller.
+  // ~16 KiB per FLASH_WRITE, and we batch up to BCCAM_WRITE_BUF_SIZE
+  // (~1 KiB) at the caller.
   uint16_t totalLen = 4 + len;  // addr + data
   uint8_t header[8];
   header[0] = ISP_CMD_FLASH_WRITE;
@@ -232,6 +232,9 @@ static bool ispFlashRead(uint32_t addr, uint8_t *data, uint16_t len) {
   uint16_t respLen = (uint16_t)lenBytes[0] | ((uint16_t)lenBytes[1] << 8);
   if (respLen != len) {
     DEBUG_PRINT("ISP: Read length mismatch (%u vs %u)\n", respLen, len);
+    // Drain the announced payload so the queue isn't left desynced for the
+    // next command.
+    ispDrainRx(100);
     return false;
   }
 
@@ -324,7 +327,7 @@ static uint8_t bcCamPropertiesQuery(void) {
   return result;
 }
 
-static void bcCamBootloaderTask(void *arg) {
+static void bcCamEnterBootloader(void) {
   DEBUG_PRINT("ISP: Bootloader entry starting\n");
 
   // Reset write-session state — protects against an interrupted previous
@@ -338,7 +341,7 @@ static void bcCamBootloaderTask(void *arg) {
 
   ispDrainRx(50);
 
-  // Disable QCC744
+  // Disable QCC748
   deckctrl_gpio_write(deckInfoG, GPIO_QCC_EN, LOW);
   vTaskDelay(M2T(50));
 
@@ -349,7 +352,7 @@ static void bcCamBootloaderTask(void *arg) {
   // Switch UART to ROM bootloader baudrate (500000)
   uart1Init(BCCAM_ISP_BAUDRATE);
 
-  // Re-enable QCC744 — it will enter ROM bootloader
+  // Re-enable QCC748 — it will enter ROM bootloader
   deckctrl_gpio_write(deckInfoG, GPIO_QCC_EN, HIGH);
   vTaskDelay(M2T(50));
 
@@ -419,8 +422,8 @@ static void bcCamResetToBootloader(void) {
   bootloaderRequested = true;
 }
 
-static void bcCamFwTask(void *arg) {
-  // Disable QCC744
+static void bcCamEnterFw(void) {
+  // Disable QCC748
   deckctrl_gpio_write(deckInfoG, GPIO_QCC_EN, LOW);
   vTaskDelay(M2T(10));
 
@@ -431,14 +434,14 @@ static void bcCamFwTask(void *arg) {
   // Switch back to firmware baudrate
   uart1Init(BCCAM_UART_BAUDRATE);
 
-  // Re-enable QCC744 - it will boot firmware
+  // Re-enable QCC748 - it will boot firmware
   deckctrl_gpio_write(deckInfoG, GPIO_QCC_EN, HIGH);
   vTaskDelay(M2T(100));
 
   ispDrainRx(50);
 
   isInFirmware = true;
-  DEBUG_PRINT("QCC744 in firmware mode\n");
+  DEBUG_PRINT("QCC748 in firmware mode\n");
 }
 
 static volatile bool fwResetRequested = false;
@@ -462,7 +465,8 @@ static const DeckMemDef_t bcCamMemoryDef = {
 };
 
 // ---------------------------------------------------------------------------
-// Console forwarding task
+// Worker task — drives bootloader/firmware transitions off the deck-memory
+// callback context and keeps the UART RX queue drained when idle.
 // ---------------------------------------------------------------------------
 
 static void bcCamWorkerTask(void *arg) {
@@ -474,10 +478,16 @@ static void bcCamWorkerTask(void *arg) {
     if (bootloaderRequested) {
       DEBUG_PRINT("Bootloader requested!\n");
       bootloaderRequested = false;
-      bcCamBootloaderTask(NULL);
+      bcCamEnterBootloader();
     } else if (fwResetRequested) {
       fwResetRequested = false;
-      bcCamFwTask(NULL);
+      bcCamEnterFw();
+    } else if (isInBootloader) {
+      // A flash session is active and the deck-memory callbacks (running on
+      // another task) own the UART — they consume the ISP responses. Stay off
+      // the RX queue here so we don't steal their bytes, but keep polling the
+      // request flags frequently.
+      vTaskDelay(M2T(10));
     } else {
       // Drain UART RX to prevent overflow, but check flags frequently
       uint8_t c;
@@ -521,9 +531,9 @@ static void bcCamDeckInit(DeckInfo *info) {
     return;
   }
 
-  // Enable QCC744
+  // Enable QCC748
   if (!gpioSetup(info, GPIO_QCC_EN, OUTPUT, HIGH)) {
-    DEBUG_PRINT("Failed to enable QCC744\n");
+    DEBUG_PRINT("Failed to enable QCC748\n");
     return;
   }
 
@@ -535,7 +545,7 @@ static void bcCamDeckInit(DeckInfo *info) {
     return;
   }
 
-  // Initialize UART1 for QCC744 communication
+  // Initialize UART1 for QCC748 communication
   uart1Init(BCCAM_UART_BAUDRATE);
 
   xTaskCreate(bcCamWorkerTask, "bcCam", configMINIMAL_STACK_SIZE * 4,
