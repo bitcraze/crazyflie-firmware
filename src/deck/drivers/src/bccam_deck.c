@@ -108,6 +108,12 @@ static bool ispRecvBytes(uint8_t *buf, uint32_t len, uint32_t timeoutTicks) {
   return true;
 }
 
+// Drain the RX queue until the line goes idle. This is not a fixed-time wait:
+// it returns as soon as no byte arrives within a 5 ms poll window, and only
+// uses timeoutMs as an upper bound. At the baudrates used here a byte takes
+// well under 20 us, so 5 ms of silence reliably means the sender has stopped —
+// which makes it robust against varying response lengths (boot banners, erase
+// progress bytes, etc.) without having to predict the exact byte count.
 static void ispDrainRx(uint32_t timeoutMs) {
   uint8_t dummy;
   TickType_t end = xTaskGetTickCount() + M2T(timeoutMs);
@@ -118,7 +124,7 @@ static void ispDrainRx(uint32_t timeoutMs) {
   }
 }
 
-static bool ispSendCmd(uint8_t cmdId, const uint8_t *payload, uint16_t payloadLen) {
+static void ispSendCmd(uint8_t cmdId, const uint8_t *payload, uint16_t payloadLen) {
   // Packet: [CMD_ID(1)] [CHECKSUM(1)] [LEN_L(1)] [LEN_H(1)] [PAYLOAD...]
   uint8_t header[4];
   header[0] = cmdId;
@@ -138,8 +144,6 @@ static bool ispSendCmd(uint8_t cmdId, const uint8_t *payload, uint16_t payloadLe
   if (payloadLen > 0 && payload != NULL) {
     uart1SendData(payloadLen, (uint8_t *)payload);
   }
-
-  return true;
 }
 
 // Scan up to ISP_ACK_SCAN_MAX bytes looking for an "OK" or "FL" marker.
@@ -327,6 +331,8 @@ static uint8_t bcCamPropertiesQuery(void) {
   return result;
 }
 
+static void bcCamEnterFw(void);
+
 static void bcCamEnterBootloader(void) {
   DEBUG_PRINT("ISP: Bootloader entry starting\n");
 
@@ -350,7 +356,7 @@ static void bcCamEnterBootloader(void) {
   vTaskDelay(M2T(10));
 
   // Switch UART to ROM bootloader baudrate (500000)
-  uart1Init(BCCAM_ISP_BAUDRATE);
+  uart1SetBaudrate(BCCAM_ISP_BAUDRATE);
 
   // Re-enable QCC748 — it will enter ROM bootloader
   deckctrl_gpio_write(deckInfoG, GPIO_QCC_EN, HIGH);
@@ -379,8 +385,7 @@ static void bcCamEnterBootloader(void) {
 
   if (!gotOk) {
     DEBUG_PRINT("ISP: Handshake timeout (no OK from ROM)\n");
-    uart1Init(BCCAM_UART_BAUDRATE);
-    goto done;
+    goto recover;
   }
 
   ispDrainRx(50);
@@ -389,8 +394,7 @@ static void bcCamEnterBootloader(void) {
   ispSendCmd(ISP_CMD_GET_BOOTINFO, NULL, 0);
   if (!ispWaitAck()) {
     DEBUG_PRINT("ISP: GET_BOOTINFO failed\n");
-    uart1Init(BCCAM_UART_BAUDRATE);
-    goto done;
+    goto recover;
   }
   ispDrainRx(100);
   DEBUG_PRINT("ISP: Got boot info\n");
@@ -402,14 +406,19 @@ static void bcCamEnterBootloader(void) {
   ispSendCmd(ISP_CMD_FLASH_SET_PARA, flashPinCfg, sizeof(flashPinCfg));
   if (!ispWaitAck()) {
     DEBUG_PRINT("ISP: FLASH_SET_PARA NACK at 500k\n");
-    goto done;
+    goto recover;
   }
 
   isInBootloader = true;
   DEBUG_PRINT("ISP: ROM bootloader ready\n");
-
-done:
   return;
+
+recover:
+  // Couldn't reach the ROM bootloader. Don't leave the deck half-configured
+  // (QCC held in reset / BOOT pin high / UART at the ISP baudrate) — drive it
+  // back to a known firmware-running state.
+  DEBUG_PRINT("ISP: Bootloader entry failed, returning to firmware mode\n");
+  bcCamEnterFw();
 }
 
 static volatile bool bootloaderRequested = false;
@@ -432,7 +441,7 @@ static void bcCamEnterFw(void) {
   vTaskDelay(M2T(10));
 
   // Switch back to firmware baudrate
-  uart1Init(BCCAM_UART_BAUDRATE);
+  uart1SetBaudrate(BCCAM_UART_BAUDRATE);
 
   // Re-enable QCC748 - it will boot firmware
   deckctrl_gpio_write(deckInfoG, GPIO_QCC_EN, HIGH);
@@ -566,7 +575,7 @@ static bool bcCamDeckTest(void) {
 
 static const DeckDriver bccam_deck = {
   .vid = 0xBC,
-  .pid = 0x21,
+  .pid = 0x15,
   .name = "bcCam",
 
   .usedPeriph = DECK_USING_UART1,

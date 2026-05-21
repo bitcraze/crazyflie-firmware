@@ -182,6 +182,27 @@ void uart1InitWithParity(const uint32_t baudrate, const uart1Parity_t parity)
   isInit = true;
 }
 
+void uart1SetBaudrate(const uint32_t baudrate)
+{
+  if (!isInit) {
+    return;
+  }
+
+  USART_InitTypeDef USART_InitStructure;
+
+  USART_Cmd(UART1_TYPE, DISABLE);
+
+  USART_InitStructure.USART_BaudRate            = baudrate;
+  USART_InitStructure.USART_Mode                = USART_Mode_Rx | USART_Mode_Tx;
+  USART_InitStructure.USART_WordLength          = USART_WordLength_8b;
+  USART_InitStructure.USART_StopBits            = USART_StopBits_1;
+  USART_InitStructure.USART_Parity              = USART_Parity_No;
+  USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+  USART_Init(UART1_TYPE, &USART_InitStructure);
+
+  USART_Cmd(UART1_TYPE, ENABLE);
+}
+
 bool uart1Test(void)
 {
   return isInit;

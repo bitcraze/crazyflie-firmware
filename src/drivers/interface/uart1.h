@@ -68,6 +68,19 @@ void uart1Init(const uint32_t baudrate);
 void uart1InitWithParity(const uint32_t baudrate, const uart1Parity_t parity);
 
 /**
+ * Change the baudrate of an already-initialized UART.
+ *
+ * Only reprograms the USART baudrate (parity None, 8N1); the RX queue, DMA and
+ * interrupt configuration set up by uart1Init() are left intact. Use this to
+ * switch baudrate mid-session instead of re-running uart1Init(), which would
+ * tear down and recreate the RX queue. Any bytes in flight across the switch
+ * should be drained by the caller.
+ *
+ * @param[in] baudrate  The new baudrate
+ */
+void uart1SetBaudrate(const uint32_t baudrate);
+
+/**
  * Test the UART status.
  *
  * @return true if the UART is initialized
