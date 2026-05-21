@@ -253,6 +253,7 @@ void uart1SendDataDmaBlocking(uint32_t size, uint8_t* data)
 void uart1SendDmaIfAvailable(uint32_t size, uint8_t* data)
 {
 #ifdef ENABLE_UART1_DMA
+  ASSERT_DMA_SAFE(data);
   uart1SendDataDmaBlocking(size, data);
 #else
   uart1SendData(size, data);

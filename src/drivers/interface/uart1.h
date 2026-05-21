@@ -132,8 +132,15 @@ void uart1SendDataDmaBlocking(uint32_t size, uint8_t* data);
 
 /**
  * Send `size` bytes — DMA when this build has it, polling otherwise.
+ *
+ * When the DMA path is taken the transfer reads directly from `data`, so on
+ * STM32F4 the buffer must reside in DMA-reachable memory (Flash or regular
+ * RAM); CCM RAM (0x10000000-0x1000FFFF) is not accessible by DMA and will
+ * trip an assert (see ASSERT_DMA_SAFE). The buffer must also stay valid until
+ * this call returns (the DMA path blocks until the transfer completes).
+ *
  * @param[in] size  Number of bytes to send
- * @param[in] data  Pointer to data
+ * @param[in] data  Pointer to data (must be DMA-safe, see above)
  */
 void uart1SendDmaIfAvailable(uint32_t size, uint8_t* data);
 
