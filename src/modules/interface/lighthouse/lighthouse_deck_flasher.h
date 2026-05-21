@@ -39,3 +39,8 @@ bool lighthouseDeckFlasherRead(const uint32_t memAddr, const uint8_t readLen, ui
 bool lighthouseDeckFlasherWrite(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer, const DeckMemDef_t* memDef);
 
 uint8_t lighthouseDeckFlasherPropertiesQuery();
+
+#ifdef CONFIG_DECK_LIGHTHOUSE_DEV_FLASH
+void lighthouseDeckFlasherResetToBootloader();
+void lighthouseDeckFlasherResetToFw();
+#endif

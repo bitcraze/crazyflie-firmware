@@ -47,6 +47,16 @@
 #include "lh_flasher.h"
 #endif
 
+#ifdef CONFIG_DECK_LIGHTHOUSE_DEV_FLASH
+#include "uart1.h"
+
+// FPGA application UART command to reconfigure the FPGA into its bootloader.
+// This is the same "reset to bootloader" command that tools/reboot.py sends,
+// see the lighthouse-fpga UART protocol (RESET = 0xBC, TO_BOOTLOADER = 0xCF).
+#define LH_FPGA_CMD_RESET           0xBC
+#define LH_FPGA_CMD_RESET_TO_BL     0xCF
+#endif
+
 #define READ_BUFFER_LENGTH 64
 // We read the version string in the read buffer and we need one byte for null termination
 #define VERSION_STRING_MAX_LENGTH (READ_BUFFER_LENGTH - 1)
@@ -93,6 +103,16 @@ bool lighthouseDeckFlasherCheckVersionAndBoot() {
   uint32_t crc = crc32Out(&crcContext);
   bool pass = crc == LIGHTHOUSE_BITSTREAM_CRC;
   DEBUG_PRINT("Bitstream CRC32: %x %s\n", (int)crc, pass?"[PASS]":"[FAIL]");
+
+#ifdef CONFIG_DECK_LIGHTHOUSE_DEV_FLASH
+  // In dev-flash mode we boot whatever bitstream is in flash, regardless of the
+  // CRC. This allows iterating on custom bitstreams over the air without having
+  // to recompute LIGHTHOUSE_BITSTREAM_CRC and rebuild the firmware for each one.
+  if (!pass) {
+    DEBUG_PRINT("DEV_FLASH: CRC mismatch ignored, booting deck anyway!\n");
+    pass = true;
+  }
+#endif
 
   // Launch LH deck FW
   if (pass) {
@@ -172,3 +192,41 @@ uint8_t lighthouseDeckFlasherPropertiesQuery() {
 
   return result;
 }
+
+#ifdef CONFIG_DECK_LIGHTHOUSE_DEV_FLASH
+void lighthouseDeckFlasherResetToBootloader() {
+  // Command the running FPGA application to reconfigure into its bootloader.
+  // Without this the FPGA only enters the bootloader after a power cycle, which
+  // is why over-the-air flashing normally relies on a CRC mismatch at boot.
+  uint8_t commandBuffer[2] = {LH_FPGA_CMD_RESET, LH_FPGA_CMD_RESET_TO_BL};
+  uart1SendData(2, commandBuffer);
+
+  // Give the FPGA time to reconfigure from flash and bring up the I2C bootloader.
+  vTaskDelay(M2T(50));
+
+  // Re-establish communication with the bootloader and wake the flash up.
+  lhblInit();
+
+  uint8_t bootloaderVersion = 0;
+  for (int i = 0; i < 10; i++) {
+    if (lhblGetVersion(&bootloaderVersion)) {
+      break;
+    }
+    vTaskDelay(M2T(10));
+  }
+  lhblFlashWakeup();
+  vTaskDelay(M2T(1));
+
+  inBootloaderMode = true;
+  DEBUG_PRINT("DEV_FLASH: reset deck to bootloader (version %d)\n", bootloaderVersion);
+}
+
+void lighthouseDeckFlasherResetToFw() {
+  // Boot the bitstream currently in flash. Note this bypasses the CRC check, so
+  // the freshly flashed bitstream runs immediately; on the next power cycle the
+  // boot-time check applies (and is also skipped in dev-flash mode).
+  lhblBootToFW();
+  inBootloaderMode = false;
+  DEBUG_PRINT("DEV_FLASH: booting deck firmware\n");
+}
+#endif

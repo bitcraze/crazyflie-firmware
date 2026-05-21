@@ -82,6 +82,13 @@ static const DeckMemDef_t memoryDef = {
 
   .requiredSize = LIGHTHOUSE_BITSTREAM_SIZE,
   .requiredHash = LIGHTHOUSE_BITSTREAM_CRC,
+
+#ifdef CONFIG_DECK_LIGHTHOUSE_DEV_FLASH
+  // Advertise on-demand bootloader entry so clients can flash over the air
+  // without a power cycle or a CRC mismatch (see lighthouse_deck_flasher.c).
+  .commandResetToFw = lighthouseDeckFlasherResetToFw,
+  .commandResetToBootloader = lighthouseDeckFlasherResetToBootloader,
+#endif
 };
 
 static const DeckDriver lighthouse_deck = {

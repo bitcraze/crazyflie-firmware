@@ -277,6 +277,23 @@ config DECK_LIGHTHOUSE_MAX_N_BS
       Set the max number of base stations supported. NOTE: This is only
       valid for Lighthouse V2.
 
+config DECK_LIGHTHOUSE_DEV_FLASH
+    bool "Lighthouse deck developer flashing mode"
+    depends on DECK_LIGHTHOUSE
+    default n
+    help
+        Developer option for iterating on custom Lighthouse deck FPGA
+        bitstreams over the air. Enables two behaviours:
+
+          * On-demand bootloader entry: the deck advertises reset-to-bootloader
+            so clients (cfclient/cflib, cfcli) can drop it into the bootloader
+            without a power cycle or relying on a firmware CRC mismatch.
+          * The boot-time bitstream CRC check is bypassed, so any flashed
+            bitstream is booted regardless of LIGHTHOUSE_BITSTREAM_CRC.
+
+        This boots unverified bitstreams and should NOT be enabled in
+        production firmware.
+
 config DECK_LOCO
     bool "Support the Loco positioning deck"
     default y
