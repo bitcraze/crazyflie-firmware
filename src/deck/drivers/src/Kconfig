@@ -280,7 +280,7 @@ config DECK_LIGHTHOUSE_MAX_N_BS
 config DECK_LIGHTHOUSE_DEV_FLASH
     bool "Lighthouse deck developer flashing mode"
     depends on DECK_LIGHTHOUSE
-    default n
+    default y
     help
         Developer option for iterating on custom Lighthouse deck FPGA
         bitstreams over the air. Enables two behaviours:
@@ -293,6 +293,19 @@ config DECK_LIGHTHOUSE_DEV_FLASH
 
         This boots unverified bitstreams and should NOT be enabled in
         production firmware.
+
+config DECK_LIGHTHOUSE_RAW_FRAME_DEBUG
+    bool "Lighthouse raw per-pulse frame console dump"
+    depends on DECK_LIGHTHOUSE
+    default n
+    help
+        Developer option for debugging FPGA decoding. Prints every raw per-pulse
+        frame received from the deck to the console as
+        "s:<sensor> t:<timestamp> b:<beamData> o:<offset> c:<channelFound>".
+
+        This floods the console (hundreds of frames per second) and will drop
+        lines over the radio link - capture over USB. Off by default; enable only
+        while collecting decode data, then turn it back off.
 
 config DECK_LOCO
     bool "Support the Loco positioning deck"
