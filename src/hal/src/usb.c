@@ -809,6 +809,10 @@ bool usbTest(void)
 
 bool usbSendData(USBPacket *pkt)
 {
+  if (pkt == NULL || pkt->size > USB_RX_TX_PACKET_SIZE) {
+    return false;
+  }
+
   bool ok = (xQueueSend(usbDataTx, pkt, M2T(100)) == pdTRUE);
   if (ok) {
     // Direct kick — start TX now to skip the ~1 ms SOF wait when idle.
