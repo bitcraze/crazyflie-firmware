@@ -578,12 +578,13 @@ void lighthouseCoreTask(void *param) {
         // Raw per-pulse frame dump for FPGA decode analysis. Floods the console
         // (hundreds of frames/s); enable via CONFIG_DECK_LIGHTHOUSE_RAW_FRAME_DEBUG
         // and capture over USB. c = channelFound (0/1), NOT the channel value.
-        DEBUG_PRINT("s:%u t:%u b:%u o:%u c:%u\n",
+        DEBUG_PRINT("s:%u t:%u b:%u o:%u c:%u ch:%u\n",
                     frame.data.sensor,
                     (unsigned)frame.data.timestamp,
                     (unsigned)frame.data.beamData,
                     (unsigned)frame.data.offset,
-                    frame.data.channelFound);
+                    frame.data.channelFound,
+                    frame.data.channel);
 #endif
         STATS_CNT_RATE_EVENT_DEBUG(&frameRate);
 	lighthouseTransmitProcessFrame(&frame);
