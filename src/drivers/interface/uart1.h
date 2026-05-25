@@ -68,6 +68,19 @@ void uart1Init(const uint32_t baudrate);
 void uart1InitWithParity(const uint32_t baudrate, const uart1Parity_t parity);
 
 /**
+ * Change the baudrate of an already-initialized UART.
+ *
+ * Only reprograms the USART baudrate (parity None, 8N1); the RX queue, DMA and
+ * interrupt configuration set up by uart1Init() are left intact. Use this to
+ * switch baudrate mid-session instead of re-running uart1Init(), which would
+ * tear down and recreate the RX queue. Any bytes in flight across the switch
+ * should be drained by the caller.
+ *
+ * @param[in] baudrate  The new baudrate
+ */
+void uart1SetBaudrate(const uint32_t baudrate);
+
+/**
  * Test the UART status.
  *
  * @return true if the UART is initialized
@@ -129,6 +142,20 @@ void uart1SendData(uint32_t size, uint8_t* data);
  * @param[in] data  Pointer to data
  */
 void uart1SendDataDmaBlocking(uint32_t size, uint8_t* data);
+
+/**
+ * Send `size` bytes — DMA when this build has it, polling otherwise.
+ *
+ * When the DMA path is taken the transfer reads directly from `data`, so on
+ * STM32F4 the buffer must reside in DMA-reachable memory (Flash or regular
+ * RAM); CCM RAM (0x10000000-0x1000FFFF) is not accessible by DMA and will
+ * trip an assert (see ASSERT_DMA_SAFE). The buffer must also stay valid until
+ * this call returns (the DMA path blocks until the transfer completes).
+ *
+ * @param[in] size  Number of bytes to send
+ * @param[in] data  Pointer to data (must be DMA-safe, see above)
+ */
+void uart1SendDmaIfAvailable(uint32_t size, uint8_t* data);
 
 /**
  * Send a single character to the serial port using the uartSendData function.

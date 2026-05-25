@@ -35,6 +35,7 @@
 /*ST includes */
 #include "stm32fxxx.h"
 
+#include "autoconf.h"
 #include "config.h"
 #include "nvic.h"
 #include "uart1.h"
@@ -46,7 +47,9 @@
 /** This uart is conflicting with SPI2 DMA used in sensors_bmi088_spi_bmp3xx.c
  *  which is used in CF-Bolt. So for other products this can be enabled.
  */
-//#define ENABLE_UART1_DMA
+#if !defined(CONFIG_SENSORS_BMI088_SPI)
+#define ENABLE_UART1_DMA
+#endif
 
 #define QUEUE_LENGTH 64
 static xQueueHandle uart1queue;
@@ -61,9 +64,7 @@ static StaticSemaphore_t uartBusyBuffer;
 static xSemaphoreHandle waitUntilSendDone;
 static StaticSemaphore_t waitUntilSendDoneBuffer;
 static DMA_InitTypeDef DMA_InitStructureShare;
-static uint8_t dmaBuffer[64];
 static bool    isUartDmaInitialized;
-static uint32_t initialDMACount;
 #endif
 
 /**
@@ -82,9 +83,8 @@ static void uart1DmaInit(void)
 
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
 
-  // USART TX DMA Channel Config
+  // USART TX DMA Channel Config. DMA_Memory0BaseAddr is set per call.
   DMA_InitStructureShare.DMA_PeripheralBaseAddr = (uint32_t)&UART1_TYPE->DR;
-  DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)dmaBuffer;
   DMA_InitStructureShare.DMA_MemoryInc = DMA_MemoryInc_Enable;
   DMA_InitStructureShare.DMA_MemoryBurst = DMA_MemoryBurst_Single;
   DMA_InitStructureShare.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
@@ -182,6 +182,27 @@ void uart1InitWithParity(const uint32_t baudrate, const uart1Parity_t parity)
   isInit = true;
 }
 
+void uart1SetBaudrate(const uint32_t baudrate)
+{
+  if (!isInit) {
+    return;
+  }
+
+  USART_InitTypeDef USART_InitStructure;
+
+  USART_Cmd(UART1_TYPE, DISABLE);
+
+  USART_InitStructure.USART_BaudRate            = baudrate;
+  USART_InitStructure.USART_Mode                = USART_Mode_Rx | USART_Mode_Tx;
+  USART_InitStructure.USART_WordLength          = USART_WordLength_8b;
+  USART_InitStructure.USART_StopBits            = USART_StopBits_1;
+  USART_InitStructure.USART_Parity              = USART_Parity_No;
+  USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+  USART_Init(UART1_TYPE, &USART_InitStructure);
+
+  USART_Cmd(UART1_TYPE, ENABLE);
+}
+
 bool uart1Test(void)
 {
   return isInit;
@@ -232,10 +253,8 @@ void uart1SendDataDmaBlocking(uint32_t size, uint8_t* data)
     xSemaphoreTake(uartBusy, portMAX_DELAY);
     // Wait for DMA to be free
     while(DMA_GetCmdStatus(UART1_DMA_STREAM) != DISABLE);
-    //Copy data in DMA buffer
-    memcpy(dmaBuffer, data, size);
+    DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)data;
     DMA_InitStructureShare.DMA_BufferSize = size;
-    initialDMACount = size;
     // Init new DMA stream
     DMA_Init(UART1_DMA_STREAM, &DMA_InitStructureShare);
     // Enable the Transfer Complete interrupt
@@ -251,6 +270,16 @@ void uart1SendDataDmaBlocking(uint32_t size, uint8_t* data)
   }
 }
 #endif
+
+void uart1SendDmaIfAvailable(uint32_t size, uint8_t* data)
+{
+#ifdef ENABLE_UART1_DMA
+  ASSERT_DMA_SAFE(data);
+  uart1SendDataDmaBlocking(size, data);
+#else
+  uart1SendData(size, data);
+#endif
+}
 
 int uart1Putchar(int ch)
 {
