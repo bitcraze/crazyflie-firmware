@@ -120,7 +120,6 @@ void appMain() {
     current_state.position.x = logGetFloat(idX)*1000;
     current_state.position.y = logGetFloat(idY)*1000;
     current_state.position.z = logGetFloat(idZ)*1000;
-    DEBUG_PRINT("Current state: %f %f %f\n", (double)current_state.position.x, (double)current_state.position.y, (double)current_state.position.z);
     forwardState(&current_state);
 
   }
