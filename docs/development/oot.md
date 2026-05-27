@@ -90,5 +90,27 @@ in [your_controller_out_of_tree].c in the src folder you will just need to make 
 * ```test = controllerOutOfTreeTest```
 * ```update = controllerOutOfTree```
 
+## OOT Onboard Guidance
+
+The `config` file needs to enable ONBOARD_GUIDANCE_OOT:
+
+```
+CONFIG_ONBOARD_GUIDANCE_OOT=y
+```
+
+In your source file, implement the following functions:
+
+* `onboardGuidanceOutOfTreeInit`
+* `onboardGuidanceOutOfTreeTest`
+* `onboardGuidanceOutOfTreeGetSetpoint`
+* `onboardGuidanceOutOfTreeStop`
+* `onboardGuidanceOutOfTreeTellState`
+* `onboardGuidanceOutOfTreeBlock`
+* `onboardGuidanceOutOfTreeIsDone`
+
+See `examples/app_out_of_tree_onboard_guidance/` for a working example and the
+[Onboard Guidance documentation](/docs/functional-areas/sensor-to-control/onboard_guidance.md)
+for details on each function.
+
 ## App layer
 Technically the app layer is an example of an out of tree build. Follow the [app layer instructions](/docs/userguides/app_layer.md) for this.
