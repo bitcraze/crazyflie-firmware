@@ -45,6 +45,11 @@
 #define BCCAM_UART_BAUDRATE       2000000
 #define BCCAM_ISP_BAUDRATE        500000
 
+#define BCCAM_FW_RESET_HOLD_MS    50
+#define BCCAM_FW_BOOT_SETUP_MS    50
+#define BCCAM_FW_BOOT_WAIT_MS     500
+#define BCCAM_FW_RX_DRAIN_MS      100
+
 // Deck controller GPIO pin mapping (STM32 deck-ctrl MCU)
 #define GPIO_UART1_EN   DECKCTRL_GPIO_PIN_0   // PA0 - UART1 enable
 #define GPIO_UART2_EN   DECKCTRL_GPIO_PIN_1   // PA1 - UART2 enable
@@ -434,20 +439,20 @@ static void bcCamResetToBootloader(void) {
 static void bcCamEnterFw(void) {
   // Disable QCC748
   deckctrl_gpio_write(deckInfoG, GPIO_QCC_EN, LOW);
-  vTaskDelay(M2T(10));
+  vTaskDelay(M2T(BCCAM_FW_RESET_HOLD_MS));
 
   // Set boot select LOW for normal boot
   deckctrl_gpio_write(deckInfoG, GPIO_QCC_BOOT, LOW);
-  vTaskDelay(M2T(10));
+  vTaskDelay(M2T(BCCAM_FW_BOOT_SETUP_MS));
 
   // Switch back to firmware baudrate
   uart1SetBaudrate(BCCAM_UART_BAUDRATE);
 
   // Re-enable QCC748 - it will boot firmware
   deckctrl_gpio_write(deckInfoG, GPIO_QCC_EN, HIGH);
-  vTaskDelay(M2T(100));
+  vTaskDelay(M2T(BCCAM_FW_BOOT_WAIT_MS));
 
-  ispDrainRx(50);
+  ispDrainRx(BCCAM_FW_RX_DRAIN_MS);
 
   isInFirmware = true;
   DEBUG_PRINT("QCC748 in firmware mode\n");
