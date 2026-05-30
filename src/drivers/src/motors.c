@@ -592,6 +592,13 @@ static uint16_t dshotDecodeTelemetryERPM(uint16_t valueGCR)
   rpm = (uint16_t)((1000000UL * 60 * 2 / period) / (motorNbrOfPoles ));
   return rpm;
 }
+
+uint16_t motorsGetRPM(uint32_t motorId) {
+  if (motorId >= NBR_OF_MOTORS) {
+    return DSHOT_ERPM_INVALID;
+  }
+  return motorRPMs[motorId];
+}
 #endif
 
 static void motorsPrepareDshot(uint32_t id, uint16_t ratio)

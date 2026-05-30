@@ -326,15 +326,19 @@ static void stabilizerTask(void* param)
 
       stateEstimator(&state, stabilizerStep);
 
-      const bool areMotorsAllowedToRun = supervisorAreMotorsAllowedToRun();
-
       // Critical for safety, be careful if you modify this code!
-      crtpCommanderBlock(! areMotorsAllowedToRun);
+      const bool canFly = supervisorCanFly();
+      crtpCommanderBlock(!canFly);
 
-      if (crtpCommanderHighLevelGetSetpoint(&tempSetpoint, &state, stabilizerStep)) {
+      if (canFly && crtpCommanderHighLevelGetSetpoint(&tempSetpoint, &state, stabilizerStep)) {
         commanderSetSetpoint(&tempSetpoint, COMMANDER_PRIORITY_HIGHLEVEL);
       }
       commanderGetSetpoint(&setpoint, &state);
+
+      if (!canFly) {
+        // Keep commander state fresh, but do not execute flight setpoints when flying is not allowed.
+        setpoint = (setpoint_t){0};
+      }
 
       // Critical for safety, be careful if you modify this code!
       // Let the supervisor update it's view of the current situation
@@ -351,7 +355,7 @@ static void stabilizerTask(void* param)
 
       // Critical for safety, be careful if you modify this code!
       // The supervisor will already set thrust to 0 in the setpoint if needed, but to be extra sure prevent motors from running.
-      if (areMotorsAllowedToRun) {
+      if (supervisorAreMotorsAllowedToRun()) {
         controlMotors(&control);
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
         motorsBurstDshot();

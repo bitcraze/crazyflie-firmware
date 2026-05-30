@@ -40,6 +40,7 @@ static const char* const stateNames[] = {
   "Not initialized",
   "Pre-flight checks not passed",
   "Pre-flight checks passed",
+  "Arming",
   "Ready to fly",
   "Flying",
   "Landed",
@@ -62,6 +63,8 @@ static const char* const conditionNames[] = {
   "preflightTimeout",
   "landingTimeout",
   "deckFault",
+  "rpmTelemetryValid",
+  "spinupTimeout",
 };
 static_assert(sizeof(conditionNames) / sizeof(conditionNames[0]) == supervisorCondition_NrOfConditions);
 
@@ -115,7 +118,7 @@ static SupervisorStateTransition_t transitionsPreFlChecksPassed[] = {
     .blockerCombiner = supervisorNever,
   },
   {
-    .newState = supervisorStateReadyToFly,
+    .newState = supervisorStateArming,
 
     .triggers = SUPERVISOR_CB_ARMED,
     .negatedTriggers = SUPERVISOR_CB_NONE,
@@ -124,6 +127,36 @@ static SupervisorStateTransition_t transitionsPreFlChecksPassed[] = {
     .blockers = SUPERVISOR_CB_IS_TUMBLED,
     .negatedBlockers = SUPERVISOR_CB_NONE,
     .blockerCombiner = supervisorAny,
+  },
+};
+
+static SupervisorStateTransition_t transitionsMotorsSpinup[] = {
+  {
+    .newState = supervisorStateExceptFreeFall,
+
+    .triggers = SUPERVISOR_CB_EMERGENCY_STOP,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAny,
+
+    .blockerCombiner = supervisorNever,
+  },
+  {
+    .newState = supervisorStatePreFlChecksNotPassed,
+
+    .triggers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_SPINUP_TIMEOUT,
+    .negatedTriggers = SUPERVISOR_CB_ARMED,
+    .triggerCombiner = supervisorAny,
+
+    .blockerCombiner = supervisorNever,
+  },
+  {
+    .newState = supervisorStateReadyToFly,
+
+    .triggers = SUPERVISOR_CB_RPM_TELEMETRY_VALID,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAll,
+
+    .blockerCombiner = supervisorNever,
   },
 };
 
@@ -303,6 +336,7 @@ SupervisorStateTransitionList_t transitionLists[] = {
   {SUPERVISOR_TRANSITION_ENTRY(transitionsNotInitialized)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsPreFlChecksNotPassed)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsPreFlChecksPassed)},
+  {SUPERVISOR_TRANSITION_ENTRY(transitionsMotorsSpinup)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsReadyToFly)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsFlying)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsLanded)},

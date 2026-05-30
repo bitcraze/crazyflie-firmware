@@ -66,6 +66,10 @@
 
 static uint16_t preflightTimeoutDuration = PREFLIGHT_TIMEOUT_MS;
 static uint16_t landingTimeoutDuration = LANDING_TIMEOUT_MS;
+static uint16_t armingSpinupTimeoutDuration = ARMING_SPINUP_TIMEOUT_MS;
+static uint16_t rpmCheckMin = 2500;
+static uint16_t rpmCheckMax = 3500;
+static uint16_t rpmCheckDurationMs = 100;
 
 typedef struct {
   bool canFly;
@@ -84,6 +88,12 @@ typedef struct {
 
   // The time (in ticks) of the latest arming event. 0=no arming event yet
   uint32_t latestArmingTick;
+
+  // The time (in ticks) when the Arming state was entered. 0=not in Arming state
+  uint32_t armingSpinupStartTick;
+
+  // The time (in ticks) when all motors first entered the valid RPM range. 0=not in range
+  uint32_t allMotorsInRangeStartTick;
 
   // The time (in ticks) of the latest landing event. 0=no landing event yet
   uint32_t latestLandingTick;
@@ -105,6 +115,12 @@ const static setpoint_t nullSetpoint;
 void infoDump(const SupervisorMem_t* this);
 
 bool supervisorCanFly() {
+  supervisorMem.canFly = 
+    (supervisorMem.state == supervisorStateReadyToFly) ||
+    (supervisorMem.state == supervisorStateFlying) ||
+    (supervisorMem.state == supervisorStateWarningLevelOut) ||
+    (supervisorMem.state == supervisorStateLanded);
+
   return supervisorMem.canFly;
 }
 
@@ -172,6 +188,24 @@ bool supervisorRequestCrashRecovery(const bool doRecovery) {
 
   return false;
 }
+
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+static bool isRPMTelemetryValid(SupervisorMem_t* this, const uint32_t currentTick) {
+  for (int i = 0; i < NBR_OF_MOTORS; i++) {
+    const uint16_t rpm = motorsGetRPM(i);
+    if (rpm < rpmCheckMin || rpm > rpmCheckMax) {
+      this->allMotorsInRangeStartTick = 0;
+      return false;
+    }
+  }
+
+  if (this->allMotorsInRangeStartTick == 0) {
+    this->allMotorsInRangeStartTick = currentTick;
+  }
+
+  return (currentTick - this->allMotorsInRangeStartTick) >= M2T(rpmCheckDurationMs);
+}
+#endif
 
 bool supervisorRequestArming(const bool doArm) {
   if (doArm == supervisorMem.isArmingActivated) {
@@ -276,6 +310,14 @@ static bool checkEmergencyStopWatchdog(const uint32_t tick) {
 static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t previousState, const uint32_t currentTick) {
   const supervisorState_t newState = this->state;
 
+  if (newState == supervisorStateArming) {
+    this->armingSpinupStartTick = currentTick;
+    this->allMotorsInRangeStartTick = 0;
+  } else {
+    this->armingSpinupStartTick = 0;
+    this->allMotorsInRangeStartTick = 0;
+  }
+
   if (newState == supervisorStateReadyToFly) {
     if (!AUTO_ARMING){
       DEBUG_PRINT("Ready to fly\n");
@@ -288,7 +330,8 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
   }
 
   if (((previousState == supervisorStateFlying || previousState == supervisorStateLanded) && (newState == supervisorStateReset))
-       || (previousState == supervisorStateReadyToFly && newState == supervisorStatePreFlChecksPassed)) {
+       || (previousState == supervisorStateReadyToFly && newState == supervisorStatePreFlChecksPassed)
+       || (previousState == supervisorStateArming && newState == supervisorStatePreFlChecksNotPassed)) {
     if (!AUTO_ARMING){
       DEBUG_PRINT("Disarming\n");
     }
@@ -303,7 +346,8 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
     supervisorRequestCrashRecovery(false);
   }
 
-  if (newState != supervisorStateReadyToFly &&
+  if (newState != supervisorStateArming &&
+      newState != supervisorStateReadyToFly &&
       newState != supervisorStateFlying &&
       newState != supervisorStateWarningLevelOut &&
       newState != supervisorStateLanded) {
@@ -378,11 +422,29 @@ static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* th
   }
 #endif
 
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+#include "led.h"
+  if (isRPMTelemetryValid(this, currentTick)) {
+    conditions |= SUPERVISOR_CB_RPM_TELEMETRY_VALID;
+    ledSet(LED_BLUE_L, true);
+  } else {
+    ledSet(LED_BLUE_L, false);
+  }
+#else
+  conditions |= SUPERVISOR_CB_RPM_TELEMETRY_VALID;
+#endif
+
+  if (this->state == supervisorStateArming && this->armingSpinupStartTick != 0) {
+    if ((currentTick - this->armingSpinupStartTick) > M2T(armingSpinupTimeoutDuration)) {
+      conditions |= SUPERVISOR_CB_SPINUP_TIMEOUT;
+    }
+  }
+
   return conditions;
 }
 
 static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t conditions) {
-  this->canFly = supervisorAreMotorsAllowedToRun();
+  this->canFly = supervisorCanFly();
   this->isFlying = (this->state == supervisorStateFlying) || (this->state == supervisorStateWarningLevelOut);
   this->isTumbled = (conditions & SUPERVISOR_CB_IS_TUMBLED) != 0;
 
@@ -457,6 +519,8 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, s
 void supervisorOverrideSetpoint(setpoint_t* setpoint) {
   SupervisorMem_t* this = &supervisorMem;
   switch(this->state){
+    case supervisorStateArming:
+      // Fall through
     case supervisorStateReadyToFly:
       // Fall through
     case supervisorStateLanded:
@@ -486,7 +550,8 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint) {
 
 bool supervisorAreMotorsAllowedToRun() {
   SupervisorMem_t* this = &supervisorMem;
-  return (this->state == supervisorStateReadyToFly) ||
+  return (this->state == supervisorStateArming) ||
+         (this->state == supervisorStateReadyToFly) ||
          (this->state == supervisorStateFlying) ||
          (this->state == supervisorStateWarningLevelOut) ||
          (this->state == supervisorStateLanded);
@@ -567,7 +632,7 @@ LOG_GROUP_STOP(supervisor)
 
 
 /**
- * The purpose of the supervisor is to monitor the system and its state. Depending on the situation, the supervisor
+ * The purpose of the supervisor is to monitorma the system and its state. Depending on the situation, the supervisor
  * can enable/disable functionality as well as take action to protect the system or humans close by.
  */
 PARAM_GROUP_START(supervisor)
@@ -591,5 +656,25 @@ PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, landedTimeout, &landingTimeoutDuratio
  * @brief Set to zero to disable tumble check
  */
 PARAM_ADD(PARAM_UINT8 | PARAM_PERSISTENT, tmblChckEn, &tumbleCheckEnabled)
+
+/**
+ * @brief Motor spin-up wait timeout (ms) before arming is aborted
+ */
+PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, spinupTimeout, &armingSpinupTimeoutDuration)
+
+/**
+ * @brief Minimum RPM for all motors to be considered valid during arming
+ */
+PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, rpmCheckMin, &rpmCheckMin)
+
+/**
+ * @brief Maximum RPM for all motors to be considered valid during arming
+ */
+PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, rpmCheckMax, &rpmCheckMax)
+
+/**
+ * @brief Duration (ms) all motors must stay within RPM range to pass arming check
+ */
+PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, rpmCheckDur, &rpmCheckDurationMs)
 
 PARAM_GROUP_STOP(supervisor)
