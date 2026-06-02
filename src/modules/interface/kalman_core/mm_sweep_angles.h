@@ -25,8 +25,13 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include "kalman_core.h"
 #include "outlierFilterLighthouse.h"
+
+// When false, kalmanCoreUpdateWithSweepAngles only corrects position (legacy
+// model); when true (default) it also corrects orientation. See mm_sweep_angles.c.
+extern bool sweepAngleEstimateOrientation;
 
 // Measurement of sweep angles from a Lighthouse base station
 void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasurement_t *angles, const uint32_t nowMs, OutlierFilterLhState_t* sweepOutlierFilterState);

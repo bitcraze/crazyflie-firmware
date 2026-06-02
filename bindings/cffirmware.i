@@ -68,6 +68,13 @@ void set_calibration_model(sweepAngleMeasurement_t *sweep, lighthouseCalibration
     sweep->calibrationMeasurementModel = lighthouseCalibrationMeasurementModelLh2;
     sweep->calib = calib_in;
 }
+// Toggle orientation estimation in the sweep-angle measurement model so the
+// emulator can reproduce the legacy position-only model (false) or the new
+// full-orientation model (true).
+void set_estimate_orientation_from_sweep(bool enable)
+{
+    sweepAngleEstimateOrientation = enable;
+}
 struct poly4d* piecewise_get(struct piecewise_traj *pp, int i)
 {
     return &pp->pieces[i];

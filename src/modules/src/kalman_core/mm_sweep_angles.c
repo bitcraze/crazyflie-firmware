@@ -25,6 +25,13 @@
 
 #include "mm_sweep_angles.h"
 
+// Runtime switch for whether the sweep-angle update corrects orientation in
+// addition to position. Defaults to true (full orientation estimation inside
+// the EKF). It is exposed so the offboard Python bindings can disable it and
+// reproduce the legacy position-only measurement model for comparison against
+// the deprecated crossing-beams yaw method. The firmware never flips it.
+bool sweepAngleEstimateOrientation = true;
+
 
 void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasurement_t *sweepInfo, const uint32_t nowMs, OutlierFilterLhState_t* sweepOutlierFilterState) {
   // In order to find the sensor's position in the global reference frame, we first calculate the
@@ -107,6 +114,9 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
       h[KC_STATE_Y] = g[1]; // ∂α/∂Y
       h[KC_STATE_Z] = g[2]; // ∂α/∂Z
 
+      // Orientation update (skipped for the legacy position-only model, see
+      // sweepAngleEstimateOrientation).
+      if (sweepAngleEstimateOrientation) {
       // Let δφ, δθ, δψ be the orientation error states (KC_STATE_D0/D1/D2).
       // Then, our orientation Jacobians are: ∂α/∂(δφ), ∂α/∂(δθ), ∂α/∂(δψ)
       //
@@ -150,6 +160,7 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
       h[KC_STATE_D0] = g[0]*dps_droll[0]  + g[1]*dps_droll[1]  + g[2]*dps_droll[2];
       h[KC_STATE_D1] = g[0]*dps_dpitch[0] + g[1]*dps_dpitch[1] + g[2]*dps_dpitch[2];
       h[KC_STATE_D2] = g[0]*dps_dyaw[0]   + g[1]*dps_dyaw[1]   + g[2]*dps_dyaw[2];
+      }
 
       arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
       kalmanCoreScalarUpdate(this, &H, error, sweepInfo->stdDev);
