@@ -22,23 +22,11 @@ class EstimatorKalmanEmulator:
         anchor_positions=None,
         basestation_poses=None,
         basestation_calibration=None,
-        estimate_orientation_from_sweep=True,
-        replay_yaw_error=False,
     ) -> None:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.anchor_positions = anchor_positions
         self.basestation_poses = basestation_poses
         self.basestation_calibration = basestation_calibration
-        # Measurement-model selection, used to compare the new in-EKF orientation
-        # estimation (this PR) against the legacy method:
-        #   - estimate_orientation_from_sweep: when False the sweep-angle update
-        #     only corrects position (legacy model).
-        #   - replay_yaw_error: when True the logged estYawError samples (produced
-        #     by the deprecated crossing-beams method on the recording firmware)
-        #     are fed to kalmanCoreUpdateWithYawError to reproduce the legacy yaw.
-        # PR run: (True, False). Legacy/master run: (False, True).
-        self.estimate_orientation_from_sweep = estimate_orientation_from_sweep
-        self.replay_yaw_error = replay_yaw_error
         self.accSubSampler = cffirmware.Axis3fSubSampler_t()
         self.gyroSubSampler = cffirmware.Axis3fSubSampler_t()
         self.coreData = cffirmware.kalmanCoreData_t()
@@ -120,11 +108,6 @@ class EstimatorKalmanEmulator:
         self.now_ms = sample_time_ms
         self.next_prediction_ms = self.now_ms + self.PREDICT_STEP_MS
 
-        # Select the sweep-angle measurement model for this run. The switch is a
-        # process-global in the firmware, so it is (re)applied here at the start
-        # of each run; runs are executed sequentially, never interleaved.
-        cffirmware.set_estimate_orientation_from_sweep(self.estimate_orientation_from_sweep)
-
         GRAVITY_MAGNITUDE = 9.81
         DEG_TO_RAD = math.pi / 180.0
         cffirmware.axis3fSubSamplerInit(self.accSubSampler, GRAVITY_MAGNITUDE)
@@ -202,24 +185,19 @@ class EstimatorKalmanEmulator:
             cffirmware.axis3fSubSamplerAccumulate(self.gyroSubSampler, gyro)
 
         elif sample[0] == 'estYawError':
-            # Legacy yaw baseline. The yawError values were computed on the
-            # recording firmware by the (now removed) crossing-beams method and
-            # logged. Replaying them through the unchanged kalmanCoreUpdateWithYawError
-            # reproduces exactly the yaw corrections the legacy method applied, with
-            # the legacy position-only sweep model (replay_yaw_error is paired with
-            # estimate_orientation_from_sweep=False). The deltas were computed against
-            # the onboard estimate at record time, so this reproduces the legacy
-            # baseline rather than recomputing the crossing-beams geometry offboard.
-            # Only active for the legacy run; the PR run estimates yaw in the EKF.
-            if not self.replay_yaw_error:
-                return
-
-            yaw_error_data  = sample[1]
-            yaw_error = cffirmware.yawErrorMeasurement_t()
-            yaw_error.yawError = float(yaw_error_data['yawError'])
-            yaw_error.stdDev = 0.01
-
-            cffirmware.kalmanCoreUpdateWithYawError(self.coreData, yaw_error)
+            # estYawError samples are only logged by the deprecated "crossing
+            # beams" method, which estimated yaw outside the EKF. The sweep-angle
+            # measurement model now estimates full orientation (roll, pitch, yaw)
+            # inside the EKF, so these samples are obsolete and are ignored. Their
+            # presence means this log is old data recorded with the legacy method.
+            if self.yaw_sample_cnt == 0:
+                self.logger.warning(
+                    'Log contains estYawError samples from the deprecated '
+                    'crossing-beams yaw estimation; ignoring them. Orientation is '
+                    'now estimated in the EKF from the sweep angles. This log '
+                    'appears to be old data recorded with the legacy method.'
+                )
+            self.yaw_sample_cnt += 1
 
         elif sample[0] == 'estSweepAngle':
             self.logger.debug('Processing a sweep angle sample')
