@@ -58,6 +58,8 @@ typedef struct {
   uint16_t age;     // Time since last heard [ms], TDOA_QUALITY_EMPTY_AGE if slot empty
   float resRms;     // RMS of residual (measurement - predicted) over the window [m]
   float rejRate;    // Fraction of measurements rejected by the outlier filter (0..1)
+  uint32_t accCount; // Cumulative accepted measurement count (raw, monotonic)
+  uint32_t rejCount; // Cumulative rejected measurement count (raw, monotonic)
 } qualityAnchorLog_t;
 
 // Per-anchor accumulator for residual / reject statistics, keyed by anchor id.
@@ -179,6 +181,11 @@ static void refreshSlot(tdoaEngineState_t* state, const int s, const uint8_t id,
       const float windowRej = (float)a->rejCount / (float)a->totalCount;
       qLog[s].rejRate += TDOA_QUALITY_EMA_ALPHA * (windowRej - qLog[s].rejRate);
     }
+    // Carry the raw window counts into the slot's cumulative (monotonic)
+    // accepted/rejected counters before the window accumulators are reset.
+    // accCount uses resCount (accepted only); rejCount uses rejCount.
+    qLog[s].accCount += a->resCount;
+    qLog[s].rejCount += a->rejCount;
     a->resSumSq = 0.0f;
     a->resCount = 0;
     a->rejCount = 0;
@@ -250,7 +257,9 @@ void tdoaQualityUpdate(tdoaEngineState_t* state, const uint32_t now_ms) {
   LOG_ADD(LOG_FLOAT, cc##i, &qLog[i].cc) \
   LOG_ADD(LOG_UINT16, age##i, &qLog[i].age) \
   LOG_ADD(LOG_FLOAT, res##i, &qLog[i].resRms) \
-  LOG_ADD(LOG_FLOAT, rej##i, &qLog[i].rejRate)
+  LOG_ADD(LOG_FLOAT, rej##i, &qLog[i].rejRate) \
+  LOG_ADD(LOG_UINT32, accCount##i, &qLog[i].accCount) \
+  LOG_ADD(LOG_UINT32, rejCount##i, &qLog[i].rejCount)
 
 LOG_GROUP_START(tdoaQuality)
 QLOG_ANCHOR(0)

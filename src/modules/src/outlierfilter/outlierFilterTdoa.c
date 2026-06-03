@@ -25,11 +25,25 @@
  */
 
 #include <math.h>
+#include "autoconf.h"
 #include "outlierFilterTdoa.h"
 #include "stabilizer_types.h"
 
+#ifdef CONFIG_DEBUG_TDOA_QUALITY
+#include "log.h"
+#endif
+
 
 static bool isDistanceDiffSmallerThanDistanceBetweenAnchors(const tdoaMeasurement_t* tdoa);
+
+#ifdef CONFIG_DEBUG_TDOA_QUALITY
+// Static mirror of the most recently validated filter state, for logging only.
+// The actual state lives in the active estimator's OutlierFilterTdoaState_t
+// instance; this captures a snapshot in the validate function so it can be
+// surfaced as cheap LOG vars without changing the filter API or behavior.
+static uint8_t logFilterOpen = 1;
+static float logIntegrator = 0.0f;
+#endif
 
 // This filter uses an "integrator" to track the ratio of good/samples. Samples with an errors (measurement - predicted)
 // larger than the acceptance level will be discarded. The acceptance level is based on the integrator, with a
@@ -101,6 +115,12 @@ bool outlierFilterTdoaValidateIntegrator(OutlierFilterTdoaState_t* this, const t
     this->latestUpdateMs = nowMs;
   }
 
+#ifdef CONFIG_DEBUG_TDOA_QUALITY
+  // Snapshot current state for logging (D6 divergence diagnostics).
+  logFilterOpen = this->isFilterOpen ? 1 : 0;
+  logIntegrator = this->integrator;
+#endif
+
   return sampleIsGood;
 }
 
@@ -115,3 +135,25 @@ static bool isDistanceDiffSmallerThanDistanceBetweenAnchors(const tdoaMeasuremen
   float distanceDiffSq = sq(tdoa->distanceDiff);
   return (distanceDiffSq < anchorDistanceSq);
 }
+
+#ifdef CONFIG_DEBUG_TDOA_QUALITY
+/**
+ * TDoA outlier-filter integrator state, a live snapshot for divergence
+ * diagnostics (D6). The integrator tracks the recent ratio of good samples
+ * (0..INTEGRATOR_SIZE, ~0..300); the filter opens to let all samples through
+ * when the estimate may have diverged and closes once it has converged again.
+ * Enabled by CONFIG_DEBUG_TDOA_QUALITY.
+ */
+LOG_GROUP_START(tdoaFilter)
+  /**
+   * @brief Outlier filter open (1) / closed (0) state. Open means all samples
+   *        pass; a sustained open state indicates possible divergence.
+   */
+  LOG_ADD(LOG_UINT8, filterOpen, &logFilterOpen)
+  /**
+   * @brief Outlier filter integrator level (~0..300). Low values trend toward
+   *        opening the filter, high values toward closing it.
+   */
+  LOG_ADD(LOG_FLOAT, integ, &logIntegrator)
+LOG_GROUP_STOP(tdoaFilter)
+#endif
