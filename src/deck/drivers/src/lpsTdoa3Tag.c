@@ -59,6 +59,9 @@ for improved position estimation.
 #include "lpsTdoa3Tag.h"
 #include "tdoaEngineInstance.h"
 #include "tdoaStats.h"
+#ifdef CONFIG_DEBUG_TDOA_QUALITY
+#include "tdoaQuality.h"
+#endif
 #include "estimator.h"
 
 #include "libdw1000.h"
@@ -610,6 +613,9 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
 
   uint32_t now = xTaskGetTickCount();
   tdoaStatsUpdate(&tdoaEngineState.stats, T2M(now));
+  #ifdef CONFIG_DEBUG_TDOA_QUALITY
+  tdoaQualityUpdate(&tdoaEngineState, T2M(now));
+  #endif
 
   uint32_t timeout = startNextEvent(dev, now);
   return timeout;

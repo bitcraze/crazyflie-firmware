@@ -23,11 +23,16 @@
  *
  */
 
+#include "autoconf.h"
 #include "mm_tdoa.h"
 #include "test_support.h"
 
 #if CONFIG_ESTIMATOR_KALMAN_TDOA_OUTLIERFILTER_FALLBACK
 #include "outlierFilterTdoaSteps.h"
+#endif
+
+#ifdef CONFIG_DEBUG_TDOA_QUALITY
+#include "tdoaQuality.h"
 #endif
 
 void kalmanCoreUpdateWithTdoa(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa, const uint32_t nowMs, OutlierFilterTdoaState_t* outlierFilterState)
@@ -85,6 +90,10 @@ void kalmanCoreUpdateWithTdoa(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa, c
     bool sampleIsGood = outlierFilterTdoaValidateSteps(tdoa, error, &jacobian, &estimatedPosition);
     #else
     bool sampleIsGood = outlierFilterTdoaValidateIntegrator(outlierFilterState, tdoa, error, nowMs);
+    #endif
+
+    #ifdef CONFIG_DEBUG_TDOA_QUALITY
+    tdoaQualityReportResidual(tdoa->anchorIds[0], tdoa->anchorIds[1], error, sampleIsGood);
     #endif
 
     if (sampleIsGood) {

@@ -1,3 +1,4 @@
 obj-$(CONFIG_DECK_LOCO) += tdoaEngine.o
 obj-$(CONFIG_DECK_LOCO) += tdoaStats.o
 obj-$(CONFIG_DECK_LOCO) += tdoaStorage.o
+obj-$(CONFIG_DEBUG_TDOA_QUALITY) += tdoaQuality.o

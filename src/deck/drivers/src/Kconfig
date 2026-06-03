@@ -345,6 +345,17 @@ config DECK_LOCO_LONGER_RANGE
     help
         Note that anchors need to be built with support for this as well
 
+config DEBUG_TDOA_QUALITY
+    bool "Enable per-anchor TDoA quality logging"
+    depends on DECK_LOCO
+    default n
+    help
+        Adds the "tdoaQuality" log group with a live snapshot of all tracked
+        anchors at once (position, clock correction, age, residual RMS and
+        outlier reject rate), plus position cross-covariance terms in the
+        "kalman" group. Intended for debugging a TDoA3 setup with a host tool.
+        Off by default; has no footprint when disabled.
+
 config DECK_LOCO_TDOA3_HYBRID_MODE
     bool "Support TDoA3 hybrid mode"
     depends on DECK_LOCO

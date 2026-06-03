@@ -468,6 +468,22 @@ LOG_GROUP_START(kalman)
   * @brief Covariance matrix position z
   */
   LOG_ADD(LOG_FLOAT, varZ, &coreData.P[KC_STATE_Z][KC_STATE_Z])
+#ifdef CONFIG_DEBUG_TDOA_QUALITY
+  /**
+  * @brief Position covariance cross term x-y. Together with varX/Y/Z these give
+  *        the full position covariance block, needed to draw an oriented (not
+  *        just axis-aligned) uncertainty ellipsoid.
+  */
+  LOG_ADD(LOG_FLOAT, varXY, &coreData.P[KC_STATE_X][KC_STATE_Y])
+  /**
+  * @brief Position covariance cross term x-z.
+  */
+  LOG_ADD(LOG_FLOAT, varXZ, &coreData.P[KC_STATE_X][KC_STATE_Z])
+  /**
+  * @brief Position covariance cross term y-z.
+  */
+  LOG_ADD(LOG_FLOAT, varYZ, &coreData.P[KC_STATE_Y][KC_STATE_Z])
+#endif
   /**
   * @brief Covariance matrix velocity x
   */
