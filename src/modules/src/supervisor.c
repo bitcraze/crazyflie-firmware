@@ -67,10 +67,13 @@
 static uint16_t preflightTimeoutDuration = PREFLIGHT_TIMEOUT_MS;
 static uint16_t landingTimeoutDuration = LANDING_TIMEOUT_MS;
 static uint16_t armingSpinupTimeoutDuration = ARMING_SPINUP_TIMEOUT_MS;
+
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
 static uint16_t rpmCheckMin = 1000;
 static uint16_t rpmCheckMax = 3500;
 static uint16_t rpmCheckDurationMs = 100;
 static uint16_t motorsNotRespondingRpmThreshold = 1000;
+#endif
 
 typedef struct {
   bool canFly;
@@ -698,6 +701,7 @@ PARAM_ADD(PARAM_UINT8 | PARAM_PERSISTENT, tmblChckEn, &tumbleCheckEnabled)
  */
 PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, spinupTimeout, &armingSpinupTimeoutDuration)
 
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
 /**
  * @brief Minimum RPM for all motors to be considered valid during arming
  */
@@ -712,5 +716,6 @@ PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, rpmCheckMax, &rpmCheckMax)
  * @brief Duration (ms) all motors must stay within RPM range to pass arming check
  */
 PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, rpmCheckDur, &rpmCheckDurationMs)
+#endif
 
 PARAM_GROUP_STOP(supervisor)

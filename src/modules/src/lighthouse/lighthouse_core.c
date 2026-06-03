@@ -336,12 +336,12 @@ TESTABLE_STATIC void waitForUartSynchFrame() {
 
 void lighthouseCoreSetLeds(lighthouseCoreLedState_t red, lighthouseCoreLedState_t orange, lighthouseCoreLedState_t green)
 {
-  uint8_t commandBuffer[2];
+  static uint8_t commandBuffer[2];
 
   commandBuffer[0] = 0x01;
   commandBuffer[1] = (green<<4) | (orange<<2) | red;
 
-  uart1SendData(2, commandBuffer);
+  uart1SendDmaIfAvailable(2, commandBuffer);
 }
 
 bool findOtherBaseStation(const pulseProcessorResult_t* angles, const int baseStation, int* otherBaseStation) {
