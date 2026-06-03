@@ -56,6 +56,7 @@ typedef enum {
   supervisorConditionDeckFault,
   supervisorConditionRPMTelemetryValid,
   supervisorConditionSpinupTimeout,
+  supervisorConditionMotorsNotResponding,
   supervisorCondition_NrOfConditions,
 } supervisorConditions_t;
 
@@ -75,6 +76,7 @@ typedef uint32_t supervisorConditionBits_t;
 #define SUPERVISOR_CB_DECK_FAULT (1 << supervisorConditionDeckFault)
 #define SUPERVISOR_CB_RPM_TELEMETRY_VALID (1 << supervisorConditionRPMTelemetryValid)
 #define SUPERVISOR_CB_SPINUP_TIMEOUT (1 << supervisorConditionSpinupTimeout)
+#define SUPERVISOR_CB_MOTORS_NOT_RESPONDING (1 << supervisorConditionMotorsNotResponding)
 
 
 // Enum that is used to describe how to combine the bits in the required field

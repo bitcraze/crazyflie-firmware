@@ -615,6 +615,7 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
   while(DMA_GetCmdStatus(motorMap[id]->DMA_stream) != DISABLE)
   {
     dmaWait++;
+    vTaskDelay(M2T(1));
   }
 
   // Scale 16 -> 11 bits

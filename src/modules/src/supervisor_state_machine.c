@@ -65,6 +65,7 @@ static const char* const conditionNames[] = {
   "deckFault",
   "rpmTelemetryValid",
   "spinupTimeout",
+  "motorsNotResponding",
 };
 static_assert(sizeof(conditionNames) / sizeof(conditionNames[0]) == supervisorCondition_NrOfConditions);
 
@@ -164,7 +165,8 @@ static SupervisorStateTransition_t transitionsReadyToFly[] = {
   {
     .newState = supervisorStateExceptFreeFall,
 
-    .triggers = SUPERVISOR_CB_EMERGENCY_STOP,
+    .triggers = SUPERVISOR_CB_EMERGENCY_STOP |
+                SUPERVISOR_CB_MOTORS_NOT_RESPONDING,
     .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAny,
 
@@ -194,7 +196,10 @@ static SupervisorStateTransition_t transitionsFlying[] = {
   {
     .newState = supervisorStateExceptFreeFall,
 
-    .triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_EMERGENCY_STOP | SUPERVISOR_CB_DECK_FAULT,
+    .triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | 
+                SUPERVISOR_CB_EMERGENCY_STOP |
+                SUPERVISOR_CB_DECK_FAULT |
+                SUPERVISOR_CB_MOTORS_NOT_RESPONDING,
     .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAny,
 
@@ -249,6 +254,15 @@ static SupervisorStateTransition_t transitionsLanded[] = {
     .blockerCombiner = supervisorNever,
   },
   {
+    .newState = supervisorStateExceptFreeFall,
+
+    .triggers = SUPERVISOR_CB_MOTORS_NOT_RESPONDING,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAll,
+
+    .blockerCombiner = supervisorNever,
+  },
+  {
     .newState = supervisorStateFlying,
 
     .triggers = SUPERVISOR_CB_IS_FLYING,
@@ -276,6 +290,15 @@ static SupervisorStateTransition_t transitionsWarningLevelOut[] = {
     .triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP | SUPERVISOR_CB_DECK_FAULT,
     .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAny,
+
+    .blockerCombiner = supervisorNever,
+  },
+  {
+    .newState = supervisorStateExceptFreeFall,
+
+    .triggers = SUPERVISOR_CB_MOTORS_NOT_RESPONDING,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAll,
 
     .blockerCombiner = supervisorNever,
   },

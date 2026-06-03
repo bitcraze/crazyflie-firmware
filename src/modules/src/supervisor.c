@@ -67,9 +67,10 @@
 static uint16_t preflightTimeoutDuration = PREFLIGHT_TIMEOUT_MS;
 static uint16_t landingTimeoutDuration = LANDING_TIMEOUT_MS;
 static uint16_t armingSpinupTimeoutDuration = ARMING_SPINUP_TIMEOUT_MS;
-static uint16_t rpmCheckMin = 2500;
+static uint16_t rpmCheckMin = 1000;
 static uint16_t rpmCheckMax = 3500;
 static uint16_t rpmCheckDurationMs = 100;
+static uint16_t motorsNotRespondingRpmThreshold = 1000;
 
 typedef struct {
   bool canFly;
@@ -94,6 +95,9 @@ typedef struct {
 
   // The time (in ticks) when all motors first entered the valid RPM range. 0=not in range
   uint32_t allMotorsInRangeStartTick;
+
+  // The time (in ticks) when any motor first reported low non-zero RPM while arming. 0=no fault
+  uint32_t motorsNotRespondingStartTick;
 
   // The time (in ticks) of the latest landing event. 0=no landing event yet
   uint32_t latestLandingTick;
@@ -205,6 +209,33 @@ static bool isRPMTelemetryValid(SupervisorMem_t* this, const uint32_t currentTic
 
   return (currentTick - this->allMotorsInRangeStartTick) >= M2T(rpmCheckDurationMs);
 }
+
+static bool isMotorsNotResponding(SupervisorMem_t* this, const uint32_t currentTick) {
+  if (!supervisorCanFly()) {
+    this->motorsNotRespondingStartTick = 0;
+    return false;
+  }
+
+  bool hasLowNonZeroRpm = false;
+  for (int i = 0; i < NBR_OF_MOTORS; i++) {
+    const uint16_t rpm = motorsGetRPM(i);
+    if (rpm != 0 && rpm != MOTORS_RPM_INVALID && rpm < motorsNotRespondingRpmThreshold) {
+      hasLowNonZeroRpm = true;
+      break;
+    }
+  }
+
+  if (!hasLowNonZeroRpm) {
+    this->motorsNotRespondingStartTick = 0;
+    return false;
+  }
+
+  if (this->motorsNotRespondingStartTick == 0) {
+    this->motorsNotRespondingStartTick = currentTick;
+  }
+
+  return (currentTick - this->motorsNotRespondingStartTick) >= M2T(rpmCheckDurationMs);
+}
 #endif
 
 bool supervisorRequestArming(const bool doArm) {
@@ -313,9 +344,11 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
   if (newState == supervisorStateArming) {
     this->armingSpinupStartTick = currentTick;
     this->allMotorsInRangeStartTick = 0;
+    this->motorsNotRespondingStartTick = 0;
   } else {
     this->armingSpinupStartTick = 0;
     this->allMotorsInRangeStartTick = 0;
+    this->motorsNotRespondingStartTick = 0;
   }
 
   if (newState == supervisorStateReadyToFly) {
@@ -335,6 +368,10 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
     if (!AUTO_ARMING){
       DEBUG_PRINT("Disarming\n");
     }
+  }
+
+  if (newState == supervisorStateExceptFreeFall) {
+    DEBUG_PRINT("free falling!\n");
   }
 
   if (newState == supervisorStateLocked) {
@@ -423,12 +460,12 @@ static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* th
 #endif
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
-#include "led.h"
   if (isRPMTelemetryValid(this, currentTick)) {
     conditions |= SUPERVISOR_CB_RPM_TELEMETRY_VALID;
-    ledSet(LED_BLUE_L, true);
-  } else {
-    ledSet(LED_BLUE_L, false);
+  }
+
+  if (isMotorsNotResponding(this, currentTick)) {
+    conditions |= SUPERVISOR_CB_MOTORS_NOT_RESPONDING;
   }
 #else
   conditions |= SUPERVISOR_CB_RPM_TELEMETRY_VALID;
@@ -473,7 +510,6 @@ static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t
   if (this->isCrashed) {
     this->infoBitfield |= 0x0080;
   }
-
   enum trajectory_state traj_state =  crtpCommanderHighLevelGetPlannerState();
 
   if ((traj_state & TRAJECTORY_STATE_FLYING) == TRAJECTORY_STATE_FLYING) {
