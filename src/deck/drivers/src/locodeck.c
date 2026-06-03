@@ -51,6 +51,7 @@
 #include "estimator.h"
 #include "statsCnt.h"
 #include "mem.h"
+#include "positioning_watchdog.h"
 
 #include "locodeck.h"
 
@@ -84,6 +85,9 @@
 
 
 #define DEFAULT_RX_TIMEOUT 10000
+
+// Time (ms) without received packets after which we probe the chip over SPI
+static const uint32_t locoHealthProbeMs = 2000;
 
 // The anchor position can be set using parameters
 // As an option you can set a static position in this file and set
@@ -128,6 +132,14 @@ static uwbAlgorithm_t *algorithm = &uwbTwrTagAlgorithm;
 static bool isInit = false;
 static TaskHandle_t uwbTaskHandle = 0;
 static SemaphoreHandle_t algoSemaphore;
+
+// Liveness tracking for the positioning watchdog
+static bool chipResponding = false;
+static uint32_t lastUwbActivityTick = 0;
+// CHAN_CTRL value captured at init. It survives mode switches but reverts to
+// default on a chip reset (e.g. power glitch), so a mismatch means the chip
+// has lost its configuration even though it still answers over SPI.
+static uint32_t expectedChanCtrl = 0;
 
 // Event counters for mode-switch diagnostics
 static uint32_t dbgRxCount = 0;
@@ -392,16 +404,35 @@ static void uwbTask(void* parameters) {
     handleModeSwitch();
     xSemaphoreGive(algoSemaphore);
 
-    if (ulTaskNotifyTake(pdTRUE, timeout / portTICK_PERIOD_MS) > 0) {
+    // Bound the wait so the health probe runs even when the algorithm requests a
+    // very long (TDoA2 uses portMAX_DELAY) timeout
+    uint32_t waitTicks = timeout / portTICK_PERIOD_MS;
+    const uint32_t probeTicks = M2T(locoHealthProbeMs);
+    if (waitTicks > probeTicks) {
+      waitTicks = probeTicks;
+    }
+
+    if (ulTaskNotifyTake(pdTRUE, waitTicks) > 0) {
+      lastUwbActivityTick = xTaskGetTickCount();
+      chipResponding = true;
       do{
         xSemaphoreTake(algoSemaphore, portMAX_DELAY);
         dwHandleInterrupt(dwm);
         xSemaphoreGive(algoSemaphore);
       } while(digitalRead(GPIO_PIN_IRQ) != 0);
     } else {
+      bool probeFailed = false;
       xSemaphoreTake(algoSemaphore, portMAX_DELAY);
       timeout = algorithm->onEvent(dwm, eventTimeout);
+      if ((xTaskGetTickCount() - lastUwbActivityTick) > M2T(locoHealthProbeMs)) {
+        const bool wasResponding = chipResponding;
+        chipResponding = (dwSpiRead32(dwm, CHAN_CTRL, NO_SUB) == expectedChanCtrl);
+        probeFailed = wasResponding && !chipResponding;
+      }
       xSemaphoreGive(algoSemaphore);
+      if (probeFailed) {
+        DEBUG_PRINT("Watchdog: DW1000 lost its configuration (CHAN_CTRL mismatch)\n");
+      }
     }
   }
 }
@@ -504,6 +535,15 @@ static dwOps_t dwOps = {
   .delayms = delayms,
 };
 
+bool locoDeckIsAlive() {
+  return isInit && chipResponding;
+}
+
+static const positioningSource_t locoSource = {
+  .name = "loco",
+  .isAlive = locoDeckIsAlive,
+};
+
 /*********** Deck driver initialization ***************/
 
 static void dwm1000Init(DeckInfo *info)
@@ -573,6 +613,8 @@ static void dwm1000Init(DeckInfo *info)
     isInit = false;
     return;
   }
+  expectedChanCtrl = dwSpiRead32(dwm, CHAN_CTRL, NO_SUB);
+  chipResponding = true;
 
   memoryRegisterHandler(&memDef);
 
@@ -589,6 +631,8 @@ static void dwm1000Init(DeckInfo *info)
   EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
   EXTI_InitStructure.EXTI_LineCmd = ENABLE;
   EXTI_Init(&EXTI_InitStructure);
+
+  positioningWatchdogRegister(&locoSource);
 
   isInit = true;
 }

@@ -64,7 +64,13 @@
 
 #include "lighthouse_transmit.h"
 
+#include "positioning_watchdog.h"
+
 static const uint32_t MAX_WAIT_TIME_FOR_HEALTH_MS = 4000;
+
+// The deck sends a frame (sweep data or a sync frame) at least every second, so
+// a longer silence means the deck/FPGA has stopped working or been disconnected.
+static const uint32_t maxTimeSinceLastFrameMs = 1500;
 
 static pulseProcessorResult_t angles;
 static lighthouseUartFrame_t frame;
@@ -138,6 +144,26 @@ static pulseProcessorProcessPulse_t pulseProcessorProcessPulse = pulseProcessorV
 
 static bool deckIsFlashed = false;
 
+// The time (in ms) of the latest received UART frame, sync frames included
+static uint32_t lastFrameTs = 0;
+
+bool lighthouseCoreDeckIsAlive() {
+  static bool wasAlive = false;
+
+  const bool alive = deckIsFlashed && ((T2M(xTaskGetTickCount()) - lastFrameTs) < maxTimeSinceLastFrameMs);
+  if (wasAlive && !alive) {
+    DEBUG_PRINT("Watchdog: no frames received from deck\n");
+  }
+  wasAlive = alive;
+
+  return alive;
+}
+
+static const positioningSource_t lighthouseSource = {
+  .name = "lighthouse",
+  .isAlive = lighthouseCoreDeckIsAlive,
+};
+
 static void modifyBit(uint16_t *bitmap, const int index, const bool value) {
   const uint16_t mask = (1 << index);
 
@@ -155,6 +181,8 @@ void lighthouseCoreInit() {
   for (int i = 0; i < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; i++) {
     modifyBit(&baseStationAvailabledMap, i, true);
   }
+
+  positioningWatchdogRegister(&lighthouseSource);
 }
 
 void lighthouseCoreLedTimer()
@@ -567,6 +595,7 @@ void lighthouseCoreTask(void *param) {
 
     while((isUartFrameValid = getUartFrameRaw(&frame))) {
       const uint32_t now_ms = T2M(xTaskGetTickCount());
+      lastFrameTs = now_ms;
 
       // If a sync frame is getting through, we are only receiving sync frames. So nothing else. Reset state
       if(frame.isSyncFrame && previousWasSyncFrame) {
