@@ -142,21 +142,14 @@ static pulseProcessorProcessPulse_t pulseProcessorProcessPulse = pulseProcessorV
 #define UART_FRAME_LENGTH 12
 
 
-static bool deckIsFlashed = false;
+// Written by lighthouseCoreTask(), read by lighthouseCoreDeckIsAlive() from the supervisor task
+static volatile bool deckIsFlashed = false;
 
 // The time (in ms) of the latest received UART frame, sync frames included
-static uint32_t lastFrameTs = 0;
+static volatile uint32_t lastFrameTs = 0;
 
-bool lighthouseCoreDeckIsAlive() {
-  static bool wasAlive = false;
-
-  const bool alive = deckIsFlashed && ((T2M(xTaskGetTickCount()) - lastFrameTs) < maxTimeSinceLastFrameMs);
-  if (wasAlive && !alive) {
-    DEBUG_PRINT("Watchdog: no frames received from deck\n");
-  }
-  wasAlive = alive;
-
-  return alive;
+static bool lighthouseCoreDeckIsAlive() {
+  return deckIsFlashed && ((T2M(xTaskGetTickCount()) - lastFrameTs) < maxTimeSinceLastFrameMs);
 }
 
 static const positioningSource_t lighthouseSource = {
@@ -187,6 +180,14 @@ void lighthouseCoreInit() {
 
 void lighthouseCoreLedTimer()
 {
+  // Log the watchdog fault edge here (timer task) to keep it off the supervisor path
+  static bool wasAlive = false;
+  const bool alive = lighthouseCoreDeckIsAlive();
+  if (wasAlive && !alive) {
+    DEBUG_PRINT("Watchdog: no frames received from deck\n");
+  }
+  wasAlive = alive;
+
   if (deckIsFlashed){
     switch (systemStatus)
     {

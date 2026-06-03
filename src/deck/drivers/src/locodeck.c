@@ -133,8 +133,9 @@ static bool isInit = false;
 static TaskHandle_t uwbTaskHandle = 0;
 static SemaphoreHandle_t algoSemaphore;
 
-// Liveness tracking for the positioning watchdog
-static bool chipResponding = false;
+// Liveness tracking for the positioning watchdog. chipResponding is written by
+// uwbTask() and read by locoDeckIsAlive() from the supervisor task.
+static volatile bool chipResponding = false;
 static uint32_t lastUwbActivityTick = 0;
 // CHAN_CTRL value captured at init. It survives mode switches but reverts to
 // default on a chip reset (e.g. power glitch), so a mismatch means the chip
@@ -535,7 +536,7 @@ static dwOps_t dwOps = {
   .delayms = delayms,
 };
 
-bool locoDeckIsAlive() {
+static bool locoDeckIsAlive() {
   return isInit && chipResponding;
 }
 
