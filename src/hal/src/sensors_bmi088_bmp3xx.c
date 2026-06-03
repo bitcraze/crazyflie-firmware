@@ -594,8 +594,8 @@ static void sensorsBmi088Bmp3xxInit(void)
 {
   sensorsBiasObjInit(&gyroBiasRunning);
   sensorsDeviceInit();
-  sensorsInterruptInit();
   sensorsTaskInit();
+  sensorsInterruptInit();
 }
 
 void sensorsBmi088Bmp3xxInit_SPI(void)
