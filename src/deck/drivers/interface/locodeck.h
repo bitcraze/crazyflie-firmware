@@ -120,6 +120,8 @@ bool lpsGetLppShort(lpsLppShortPacket_t* shortPacket);
 uint16_t locoDeckGetRangingState();
 void locoDeckSetRangingState(const uint16_t newState);
 
+extern uint8_t locoEnableEstimator;
+
 // LPP Packet types and format
 #define LPP_HEADER_SHORT_PACKET 0xF0
 
