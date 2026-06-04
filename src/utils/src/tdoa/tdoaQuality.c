@@ -37,8 +37,10 @@
 #include "log.h"
 
 // Number of anchors exposed in the snapshot / log group. Slot index is stable:
-// an anchor keeps its slot for as long as it stays active.
-#define TDOA_QUALITY_ANCHOR_COUNT 8
+// an anchor keeps its slot for as long as it stays active. Matches TDOA3's
+// ANCHOR_STORAGE_COUNT (16) so every tracked anchor gets a stable slot — with
+// fewer slots than physical anchors, the surplus anchors thrash a shared slot.
+#define TDOA_QUALITY_ANCHOR_COUNT 16
 
 // How often the loggable snapshot is refreshed from storage. The residual /
 // reject statistics are therefore an RMS / rate over this window.
@@ -194,6 +196,20 @@ static void refreshSlot(tdoaEngineState_t* state, const int s, const uint8_t id,
 }
 
 void tdoaQualityUpdate(tdoaEngineState_t* state, const uint32_t now_ms) {
+  // One-time slot init. qLog/slotUsed are zero-initialised (BSS), so a slot that
+  // is never assigned an anchor would otherwise report id=0 / age=0 — decoded
+  // off-board as a phantom "anchor 0" at the origin. Marking every slot empty
+  // (age = EMPTY_AGE) up front makes never-used slots unambiguously empty. This
+  // matters whenever there are fewer active anchors than slots (e.g. 9 anchors
+  // in 16 slots); clearSlot() alone only fires on used→inactive transitions.
+  static bool slotsInitialised = false;
+  if (!slotsInitialised) {
+    for (int s = 0; s < TDOA_QUALITY_ANCHOR_COUNT; s++) {
+      clearSlot(s);
+    }
+    slotsInitialised = true;
+  }
+
   if (now_ms < nextUpdate_ms) {
     return;
   }
@@ -270,4 +286,12 @@ QLOG_ANCHOR(4)
 QLOG_ANCHOR(5)
 QLOG_ANCHOR(6)
 QLOG_ANCHOR(7)
+QLOG_ANCHOR(8)
+QLOG_ANCHOR(9)
+QLOG_ANCHOR(10)
+QLOG_ANCHOR(11)
+QLOG_ANCHOR(12)
+QLOG_ANCHOR(13)
+QLOG_ANCHOR(14)
+QLOG_ANCHOR(15)
 LOG_GROUP_STOP(tdoaQuality)

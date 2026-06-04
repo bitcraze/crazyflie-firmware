@@ -49,6 +49,9 @@
 #include "cfassert.h"
 #include "debug.h"
 #include "static_mem.h"
+// Needed so CONFIG_DEBUG_TDOA_QUALITY is visible here (otherwise the gated
+// capacity bump below silently no-ops — see the autoconf.h gotcha).
+#include "autoconf.h"
 
 #if 0
 #define LOG_DEBUG(fmt, ...) DEBUG_PRINT("D/log " fmt, ## __VA_ARGS__)
@@ -87,9 +90,20 @@ typedef enum {
 // Maximum log payload length (4 bytes are used for block id and timestamp)
 #define LOG_MAX_LEN 26
 
-/* Log packet parameters storage */
+/* Log packet parameters storage.
+ *
+ * The TDOA debug tool streams every per-anchor quality slot at once: with 16
+ * anchors that is up to ~138 active log variables across ~27 blocks, which
+ * overflows the stock 128-op / 16-block budget. Raise both, but ONLY when the
+ * TDOA-quality debug feature is built in, so a normal firmware is byte-for-byte
+ * unaffected (gated like the rest of CONFIG_DEBUG_TDOA_QUALITY). */
+#ifdef CONFIG_DEBUG_TDOA_QUALITY
+#define LOG_MAX_OPS 192
+#define LOG_MAX_BLOCKS 32
+#else
 #define LOG_MAX_OPS 128
 #define LOG_MAX_BLOCKS 16
+#endif
 struct log_ops {
   struct log_ops * next;
   uint8_t storageType : 4;
