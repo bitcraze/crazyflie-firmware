@@ -751,6 +751,6 @@ PARAM_ADD_CORE(PARAM_UINT8, mode, &algoOptions.userRequestedMode)
  * measurements into the Kalman filter, while keeping the loco system otherwise
  * running.
  */
-PARAM_ADD_CORE(PARAM_UINT8 | PARAM_PERSISTENT, enableEst, &locoEnableEstimator)
+PARAM_ADD_CORE(PARAM_UINT8, fwdToEstimator, &locoEnableEstimator)
 
 PARAM_GROUP_STOP(loco)

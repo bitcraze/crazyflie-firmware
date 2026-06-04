@@ -521,5 +521,5 @@ PARAM_ADD_CORE(PARAM_FLOAT, sweepStd2, &sweepStdLh2)
  * Set to 0 to stop pushing lighthouse position/sweep measurements into the
  * Kalman filter, while keeping the lighthouse system otherwise running.
  */
-PARAM_ADD_CORE(PARAM_UINT8 | PARAM_PERSISTENT, enableEst, &enableEstimator)
+PARAM_ADD_CORE(PARAM_UINT8, fwdToEstimator, &enableEstimator)
 PARAM_GROUP_STOP(lighthouse)
