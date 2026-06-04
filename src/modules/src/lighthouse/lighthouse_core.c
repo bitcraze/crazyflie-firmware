@@ -64,7 +64,6 @@
 
 #include "lighthouse_transmit.h"
 
-#include "positioning_watchdog.h"
 
 static const uint32_t MAX_WAIT_TIME_FOR_HEALTH_MS = 4000;
 
@@ -148,14 +147,14 @@ static volatile bool deckIsFlashed = false;
 // The time (in ms) of the latest received UART frame, sync frames included
 static volatile uint32_t lastFrameTs = 0;
 
-static bool lighthouseCoreDeckIsAlive() {
-  return deckIsFlashed && ((T2M(xTaskGetTickCount()) - lastFrameTs) < maxTimeSinceLastFrameMs);
-}
+bool lighthouseCoreDeckIsAlive() {
+  // If the deck never flashed/booted we can't trust its state to probe it
+  if (!deckIsFlashed) {
+    return false;
+  }
 
-static const positioningSource_t lighthouseSource = {
-  .name = "lighthouse",
-  .isAlive = lighthouseCoreDeckIsAlive,
-};
+  return (T2M(xTaskGetTickCount()) - lastFrameTs) < maxTimeSinceLastFrameMs;
+}
 
 static void modifyBit(uint16_t *bitmap, const int index, const bool value) {
   const uint16_t mask = (1 << index);
@@ -174,8 +173,6 @@ void lighthouseCoreInit() {
   for (int i = 0; i < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; i++) {
     modifyBit(&baseStationAvailabledMap, i, true);
   }
-
-  positioningWatchdogRegister(&lighthouseSource);
 }
 
 void lighthouseCoreLedTimer()

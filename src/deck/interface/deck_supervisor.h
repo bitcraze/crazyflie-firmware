@@ -21,33 +21,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * positioning_watchdog.h - Liveness monitoring of positioning decks
+ * deck_supervisor.h - Monitor deck hardware health via the deck isAlive probe
  */
 
 #pragma once
 
 #include <stdbool.h>
 
-// A positioning source (a deck) that can be monitored for liveness. The deck
-// registers itself when it has been detected and provides a function that
-// reports whether it is currently delivering data.
-typedef struct positioningSource_s {
-  const char* name;
-  bool (*isAlive)(void);
-} positioningSource_t;
-
 /**
- * @brief Register a positioning source to be monitored. Should be called by a
- * deck driver once the deck has been detected.
+ * @brief Query if any installed deck reports a hardware fault.
  *
- * @param source Pointer to a source description with static lifetime
- */
-void positioningWatchdogRegister(const positioningSource_t* source);
-
-/**
- * @brief Query if any registered positioning source has stopped delivering data
+ * Iterates the detected decks and calls the isAlive probe of each deck that
+ * provides one. A deck that has not initialized correctly reports not alive.
  *
- * @return true  At least one source is faulty (disconnected/malfunctioning)
- * @return false All registered sources are alive (or none are registered)
+ * @return true  At least one deck is not alive
+ * @return false All probed decks are alive (or none provide a probe)
  */
-bool positioningWatchdogHasFault(void);
+bool deckSupervisorHasFault(void);

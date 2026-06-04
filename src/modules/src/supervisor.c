@@ -39,7 +39,7 @@
 #include "supervisor.h"
 #include "supervisor_state_machine.h"
 #include "platform_defaults.h"
-#include "positioning_watchdog.h"
+#include "deck_supervisor.h"
 #include "crtp_supervisor.h"
 #include "system.h"
 #include "autoconf.h"
@@ -372,9 +372,11 @@ static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* th
     conditions |= SUPERVISOR_CB_LANDING_TIMEOUT;
   }
 
-  if (positioningWatchdogHasFault()) {
-    conditions |= SUPERVISOR_CB_POSITIONING_FAULT;
+#ifdef CONFIG_DECK_SUPERVISOR
+  if (deckSupervisorHasFault()) {
+    conditions |= SUPERVISOR_CB_DECK_FAULT;
   }
+#endif
 
   return conditions;
 }
@@ -422,8 +424,8 @@ static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t
       this->infoBitfield |= 0x0400;  // high level control is not producing setpoints
   }
 
-  if (conditions & SUPERVISOR_CB_POSITIONING_FAULT) {
-      this->infoBitfield |= 0x0800;  // a positioning deck has stopped delivering data
+  if (conditions & SUPERVISOR_CB_DECK_FAULT) {
+      this->infoBitfield |= 0x0800;  // a deck has reported a hardware fault
   }
 
 }
@@ -558,7 +560,7 @@ LOG_GROUP_START(supervisor)
  * Bit 8 = high level control is actively flying the drone
  * Bit 9 = high level trajectory has finished
  * Bit 10 = high level control is disabled and not producing setpoints
- * Bit 11 = positioning deck fault - a positioning deck has stopped delivering data
+ * Bit 11 = deck fault - a deck has reported a hardware fault
  */
 LOG_ADD(LOG_UINT16, info, &supervisorMem.infoBitfield)
 LOG_GROUP_STOP(supervisor)

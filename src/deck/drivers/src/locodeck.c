@@ -51,7 +51,6 @@
 #include "estimator.h"
 #include "statsCnt.h"
 #include "mem.h"
-#include "positioning_watchdog.h"
 
 #include "locodeck.h"
 
@@ -537,13 +536,13 @@ static dwOps_t dwOps = {
 };
 
 static bool locoDeckIsAlive() {
-  return isInit && chipResponding;
-}
+  // If init failed we can't trust the chip state to probe it
+  if (!isInit) {
+    return false;
+  }
 
-static const positioningSource_t locoSource = {
-  .name = "loco",
-  .isAlive = locoDeckIsAlive,
-};
+  return chipResponding;
+}
 
 /*********** Deck driver initialization ***************/
 
@@ -633,8 +632,6 @@ static void dwm1000Init(DeckInfo *info)
   EXTI_InitStructure.EXTI_LineCmd = ENABLE;
   EXTI_Init(&EXTI_InitStructure);
 
-  positioningWatchdogRegister(&locoSource);
-
   isInit = true;
 }
 
@@ -682,6 +679,7 @@ static const DeckDriver dwm1000_deck = {
 
   .init = dwm1000Init,
   .test = dwm1000Test,
+  .isAlive = locoDeckIsAlive,
 };
 
 DECK_DRIVER(dwm1000_deck);
@@ -701,6 +699,21 @@ PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcDWM1000, &isInit)
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcLoco, &isInit)
 
 PARAM_GROUP_STOP(deck)
+
+
+static uint8_t locoAliveLogger(uint32_t timestamp, void* data) {
+  return locoDeckIsAlive() ? 1 : 0;
+}
+static logByFunction_t locoAliveLoggerDef = {.acquireUInt8 = locoAliveLogger, .data = 0};
+
+LOG_GROUP_START(deck)
+
+/**
+ * @brief Nonzero if the Loco deck is alive and delivering data
+ */
+LOG_ADD_BY_FUNCTION(LOG_UINT8, bcLoco, &locoAliveLoggerDef)
+
+LOG_GROUP_STOP(deck)
 
 LOG_GROUP_START(ranging)
 LOG_ADD(LOG_UINT16, state, &algoOptions.rangingState)

@@ -61,7 +61,7 @@ static const char* const conditionNames[] = {
   "isCrashed",
   "preflightTimeout",
   "landingTimeout",
-  "positioningFault",
+  "deckFault",
 };
 static_assert(sizeof(conditionNames) / sizeof(conditionNames[0]) == supervisorCondition_NrOfConditions);
 
@@ -89,7 +89,7 @@ static SupervisorStateTransition_t transitionsPreFlChecksNotPassed[] = {
 
     .triggerCombiner = supervisorAlways,
 
-    .blockers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_POSITIONING_FAULT,
+    .blockers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_DECK_FAULT,
     .negatedBlockers = SUPERVISOR_CB_NONE,
     .blockerCombiner = supervisorAny,
   }
@@ -108,7 +108,7 @@ static SupervisorStateTransition_t transitionsPreFlChecksPassed[] = {
   {
     .newState = supervisorStatePreFlChecksNotPassed,
 
-    .triggers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_POSITIONING_FAULT,
+    .triggers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_DECK_FAULT,
     .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAny,
 
@@ -140,7 +140,7 @@ static SupervisorStateTransition_t transitionsReadyToFly[] = {
   {
     .newState = supervisorStatePreFlChecksNotPassed,
 
-    .triggers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_PREFLIGHT_TIMEOUT | SUPERVISOR_CB_POSITIONING_FAULT,
+    .triggers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_PREFLIGHT_TIMEOUT | SUPERVISOR_CB_DECK_FAULT,
     .negatedTriggers = SUPERVISOR_CB_ARMED,
     .triggerCombiner = supervisorAny,
 
@@ -161,7 +161,7 @@ static SupervisorStateTransition_t transitionsFlying[] = {
   {
     .newState = supervisorStateExceptFreeFall,
 
-    .triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_EMERGENCY_STOP | SUPERVISOR_CB_POSITIONING_FAULT,
+    .triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_EMERGENCY_STOP | SUPERVISOR_CB_DECK_FAULT,
     .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAny,
 
