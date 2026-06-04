@@ -276,7 +276,7 @@ void rateSupervisorTask(void *pvParameters) {
       if (isSensorsSuspended() == false) {
         // Handle the case where the semaphore was not given within the timeout
         DEBUG_PRINT("ERROR: stabilizerTask is blocking\n");
-        ASSERT(false); // For safety, assert if the stabilizer task is blocking to ensure motor shutdown
+        ASSERT(false);  // For safety, assert if the stabilizer task is blocking to ensure motor shutdown
       }
     }
   }
@@ -311,6 +311,8 @@ static void stabilizerTask(void* param)
   STATIC_MEM_TASK_CREATE(rateSupervisorTask, rateSupervisorTask, RATE_SUPERVISOR_TASK_NAME, NULL, RATE_SUPERVISOR_TASK_PRI);
 
   motorsResetESCs();
+  // Sync to the first sensor data ready interrupt to ensure correct timing from the start of the loop
+  sensorsWaitDataReady(); 
 
   while(1) {
     // The sensor should unlock at 1kHz
