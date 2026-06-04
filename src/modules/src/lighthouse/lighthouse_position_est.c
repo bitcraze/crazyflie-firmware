@@ -252,7 +252,9 @@ static void estimatePositionCrossingBeams(const pulseProcessor_t *state, pulsePr
         ext_pos.z += position[2];
         sensorsUsed++;
 
-        STATS_CNT_RATE_EVENT(&positionRate);
+        if (enableEstimator) {
+          STATS_CNT_RATE_EVENT(&positionRate);
+        }
       }
     }
   }
@@ -309,10 +311,10 @@ static void estimatePositionSweepsLh1(const pulseProcessor_t* appState, pulsePro
         #ifndef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
           if (enableEstimator) {
             estimatorEnqueueSweepAngles(&sweepInfo);
-          }
 
-          STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
-          STATS_CNT_RATE_EVENT(&positionRate);
+            STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
+            STATS_CNT_RATE_EVENT(&positionRate);
+          }
         #endif
       }
 
@@ -326,10 +328,10 @@ static void estimatePositionSweepsLh1(const pulseProcessor_t* appState, pulsePro
         #ifndef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
           if (enableEstimator) {
             estimatorEnqueueSweepAngles(&sweepInfo);
-          }
 
-          STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
-          STATS_CNT_RATE_EVENT(&positionRate);
+            STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
+            STATS_CNT_RATE_EVENT(&positionRate);
+          }
         #endif
       }
     }
@@ -360,10 +362,10 @@ static void estimatePositionSweepsLh2(const pulseProcessor_t* appState, pulsePro
         #ifndef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
           if (enableEstimator) {
             estimatorEnqueueSweepAngles(&sweepInfo);
-          }
 
-          STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
-          STATS_CNT_RATE_EVENT(&positionRate);
+            STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
+            STATS_CNT_RATE_EVENT(&positionRate);
+          }
         #endif
       }
 
@@ -375,10 +377,10 @@ static void estimatePositionSweepsLh2(const pulseProcessor_t* appState, pulsePro
         #ifndef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
           if (enableEstimator) {
             estimatorEnqueueSweepAngles(&sweepInfo);
-          }
 
-          STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
-          STATS_CNT_RATE_EVENT(&positionRate);
+            STATS_CNT_RATE_EVENT(bsEstRates[baseStation]);
+            STATS_CNT_RATE_EVENT(&positionRate);
+          }
         #endif
       }
     }
