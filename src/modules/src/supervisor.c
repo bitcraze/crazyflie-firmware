@@ -69,10 +69,10 @@ static uint16_t landingTimeoutDuration = LANDING_TIMEOUT_MS;
 static uint16_t armingSpinupTimeoutDuration = ARMING_SPINUP_TIMEOUT_MS;
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
-static uint16_t rpmCheckMin = 1000;
-static uint16_t rpmCheckMax = 3500;
-static uint16_t rpmCheckDurationMs = 100;
-static uint16_t motorsNotRespondingRpmThreshold = 1000;
+static uint16_t rpmCheckMin = CONFIG_MOTORS_ARMING_RPM_MIN;
+static uint16_t rpmCheckMax = CONFIG_MOTORS_ARMING_RPM_MAX;
+static uint16_t rpmCheckDurationMs = CONFIG_MOTORS_ARMING_RPM_DURATION_MS;
+static uint16_t motorsNotRespondingRpmThreshold = CONFIG_MOTORS_RPM_NOT_RESPONDING_THRESHOLD;
 #endif
 
 typedef struct {
@@ -101,6 +101,12 @@ typedef struct {
 
   // The time (in ticks) when any motor first reported low non-zero RPM while arming. 0=no fault
   uint32_t motorsNotRespondingStartTick;
+
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+  // Bit masks of motors that currently fail RPM checks, used for transition feedback.
+  uint32_t rpmAtArmingFailMask;
+  uint32_t motorsNotRespondingMask;
+#endif
 
   // The time (in ticks) of the latest landing event. 0=no landing event yet
   uint32_t latestLandingTick;
@@ -197,13 +203,20 @@ bool supervisorRequestCrashRecovery(const bool doRecovery) {
 }
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
-static bool isRPMTelemetryValid(SupervisorMem_t* this, const uint32_t currentTick) {
+static bool isRPMatArmingValid(SupervisorMem_t* this, const uint32_t currentTick) {
+  uint32_t failingMask = 0;
+
   for (int i = 0; i < NBR_OF_MOTORS; i++) {
     const uint16_t rpm = motorsGetRPM(i);
     if (rpm < rpmCheckMin || rpm > rpmCheckMax) {
-      this->allMotorsInRangeStartTick = 0;
-      return false;
+      failingMask |= (1u << i);
     }
+  }
+
+  if (failingMask != 0) {
+    this->rpmAtArmingFailMask = failingMask;
+    this->allMotorsInRangeStartTick = 0;
+    return false;
   }
 
   if (this->allMotorsInRangeStartTick == 0) {
@@ -216,22 +229,25 @@ static bool isRPMTelemetryValid(SupervisorMem_t* this, const uint32_t currentTic
 static bool isMotorsNotResponding(SupervisorMem_t* this, const uint32_t currentTick) {
   if (!supervisorCanFly()) {
     this->motorsNotRespondingStartTick = 0;
+    this->motorsNotRespondingMask = 0;
     return false;
   }
 
-  bool hasLowNonZeroRpm = false;
+  uint32_t failingMask = 0;
   for (int i = 0; i < NBR_OF_MOTORS; i++) {
     const uint16_t rpm = motorsGetRPM(i);
     if (rpm != 0 && rpm != MOTORS_RPM_INVALID && rpm < motorsNotRespondingRpmThreshold) {
-      hasLowNonZeroRpm = true;
-      break;
+      failingMask |= (1u << i);
     }
   }
 
-  if (!hasLowNonZeroRpm) {
+  if (failingMask == 0) {
+    this->motorsNotRespondingMask = 0;
     this->motorsNotRespondingStartTick = 0;
     return false;
   }
+
+  this->motorsNotRespondingMask = failingMask;
 
   if (this->motorsNotRespondingStartTick == 0) {
     this->motorsNotRespondingStartTick = currentTick;
@@ -348,6 +364,10 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
     this->armingSpinupStartTick = currentTick;
     this->allMotorsInRangeStartTick = 0;
     this->motorsNotRespondingStartTick = 0;
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+    this->rpmAtArmingFailMask = 0;
+    this->motorsNotRespondingMask = 0;
+#endif
   } else {
     this->armingSpinupStartTick = 0;
     this->allMotorsInRangeStartTick = 0;
@@ -373,7 +393,26 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
     }
   }
 
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+  if (newState == supervisorStatePreFlChecksNotPassed && this->rpmAtArmingFailMask != 0) {
+    for (int i = 0; i < NBR_OF_MOTORS; i++) {
+      if (this->rpmAtArmingFailMask & (1u << i)) {
+        DEBUG_PRINT("M%d arming RPM check (%u-%urpm) [FAIL]\n", i+1, rpmCheckMin, rpmCheckMax);
+      }
+    }
+  }
+
+#endif
+
   if (newState == supervisorStateExceptFreeFall) {
+    if (this->motorsNotRespondingMask != 0) {
+      for (int i = 0; i < NBR_OF_MOTORS; i++) {
+        if (this->motorsNotRespondingMask & (1u << i)) {
+          DEBUG_PRINT("M%d not responding [FAIL]\n", i+1);
+        }
+      }
+    }
+    
     DEBUG_PRINT("free falling!\n");
   }
 
@@ -463,15 +502,15 @@ static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* th
 #endif
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
-  if (isRPMTelemetryValid(this, currentTick)) {
-    conditions |= SUPERVISOR_CB_RPM_TELEMETRY_VALID;
+  if (this->state == supervisorStateArming && isRPMatArmingValid(this, currentTick)) {
+    conditions |= SUPERVISOR_CB_RPM_AT_ARMING_VALID;
   }
 
   if (isMotorsNotResponding(this, currentTick)) {
     conditions |= SUPERVISOR_CB_MOTORS_NOT_RESPONDING;
   }
 #else
-  conditions |= SUPERVISOR_CB_RPM_TELEMETRY_VALID;
+  conditions |= SUPERVISOR_CB_RPM_AT_ARMING_VALID;
 #endif
 
   if (this->state == supervisorStateArming && this->armingSpinupStartTick != 0) {
@@ -700,22 +739,5 @@ PARAM_ADD(PARAM_UINT8 | PARAM_PERSISTENT, tmblChckEn, &tumbleCheckEnabled)
  * @brief Motor spin-up wait timeout (ms) before arming is aborted
  */
 PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, spinupTimeout, &armingSpinupTimeoutDuration)
-
-#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
-/**
- * @brief Minimum RPM for all motors to be considered valid during arming
- */
-PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, rpmCheckMin, &rpmCheckMin)
-
-/**
- * @brief Maximum RPM for all motors to be considered valid during arming
- */
-PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, rpmCheckMax, &rpmCheckMax)
-
-/**
- * @brief Duration (ms) all motors must stay within RPM range to pass arming check
- */
-PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, rpmCheckDur, &rpmCheckDurationMs)
-#endif
 
 PARAM_GROUP_STOP(supervisor)

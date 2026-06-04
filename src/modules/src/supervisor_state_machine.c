@@ -64,6 +64,7 @@ static const char* const conditionNames[] = {
   "landingTimeout",
   "deckFault",
   "rpmTelemetryValid",
+  "rpmAtArmingValid",
   "spinupTimeout",
   "motorsNotResponding",
 };
@@ -153,7 +154,7 @@ static SupervisorStateTransition_t transitionsMotorsSpinup[] = {
   {
     .newState = supervisorStateReadyToFly,
 
-    .triggers = SUPERVISOR_CB_RPM_TELEMETRY_VALID,
+    .triggers = SUPERVISOR_CB_RPM_AT_ARMING_VALID,
     .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAll,
 

@@ -54,7 +54,7 @@ typedef enum {
   supervisorConditionPreflightTimeout,
   supervisorConditionLandingTimeout,
   supervisorConditionDeckFault,
-  supervisorConditionRPMTelemetryValid,
+  supervisorConditionRPMatArmingValid,
   supervisorConditionSpinupTimeout,
   supervisorConditionMotorsNotResponding,
   supervisorCondition_NrOfConditions,
@@ -74,7 +74,7 @@ typedef uint32_t supervisorConditionBits_t;
 #define SUPERVISOR_CB_PREFLIGHT_TIMEOUT (1 << supervisorConditionPreflightTimeout)
 #define SUPERVISOR_CB_LANDING_TIMEOUT (1 << supervisorConditionLandingTimeout)
 #define SUPERVISOR_CB_DECK_FAULT (1 << supervisorConditionDeckFault)
-#define SUPERVISOR_CB_RPM_TELEMETRY_VALID (1 << supervisorConditionRPMTelemetryValid)
+#define SUPERVISOR_CB_RPM_AT_ARMING_VALID (1 << supervisorConditionRPMatArmingValid)
 #define SUPERVISOR_CB_SPINUP_TIMEOUT (1 << supervisorConditionSpinupTimeout)
 #define SUPERVISOR_CB_MOTORS_NOT_RESPONDING (1 << supervisorConditionMotorsNotResponding)
 
