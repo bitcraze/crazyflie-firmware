@@ -386,7 +386,7 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
   }
 
   if (((previousState == supervisorStateFlying || previousState == supervisorStateLanded) && (newState == supervisorStateReset))
-       || (previousState == supervisorStateReadyToFly && newState == supervisorStatePreFlChecksPassed)
+       || (previousState == supervisorStateReadyToFly && newState == supervisorStatePreFlChecksNotPassed)
        || (previousState == supervisorStateArming && newState == supervisorStatePreFlChecksNotPassed)) {
     if (!AUTO_ARMING){
       DEBUG_PRINT("Disarming\n");
