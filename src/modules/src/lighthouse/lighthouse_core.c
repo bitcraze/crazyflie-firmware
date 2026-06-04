@@ -153,7 +153,15 @@ bool lighthouseCoreDeckIsAlive() {
     return false;
   }
 
-  return (T2M(xTaskGetTickCount()) - lastFrameTs) < maxTimeSinceLastFrameMs;
+  const uint32_t now = T2M(xTaskGetTickCount());
+  const uint32_t lastFrame = lastFrameTs;
+  // A concurrent update can make lastFrame "newer" than now; that means a frame
+  // just arrived, so treat as alive (and avoid the unsigned subtraction underflowing).
+  if (now < lastFrame) {
+    return true;
+  }
+
+  return (now - lastFrame) < maxTimeSinceLastFrameMs;
 }
 
 static void modifyBit(uint16_t *bitmap, const int index, const bool value) {
