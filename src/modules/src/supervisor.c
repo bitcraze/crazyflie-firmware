@@ -394,7 +394,9 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
   }
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
-  if (newState == supervisorStatePreFlChecksNotPassed && this->rpmAtArmingFailMask != 0) {
+  if (previousState == supervisorStateArming && 
+      newState == supervisorStatePreFlChecksNotPassed && 
+      this->rpmAtArmingFailMask != 0) {
     for (int i = 0; i < NBR_OF_MOTORS; i++) {
       if (this->rpmAtArmingFailMask & (1u << i)) {
         DEBUG_PRINT("M%d arming RPM check (%u-%urpm) [FAIL]\n", i+1, rpmCheckMin, rpmCheckMax);
@@ -408,7 +410,7 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
     if (this->motorsNotRespondingMask != 0) {
       for (int i = 0; i < NBR_OF_MOTORS; i++) {
         if (this->motorsNotRespondingMask & (1u << i)) {
-          DEBUG_PRINT("M%d not responding [FAIL]\n", i+1);
+          DEBUG_PRINT("M%d blocked or not responding [FAIL]\n", i+1);
         }
       }
     }
