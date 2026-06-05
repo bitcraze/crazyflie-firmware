@@ -153,13 +153,11 @@ bool lighthouseCoreDeckIsAlive() {
     return false;
   }
 
-  const uint32_t now = T2M(xTaskGetTickCount());
+  // Read lastFrameTs before now, so now is always >= the captured timestamp
+  // (a concurrent update can't make it "newer"). The unsigned difference is then
+  // both free of underflow and correct across a systick wrap.
   const uint32_t lastFrame = lastFrameTs;
-  // A concurrent update can make lastFrame "newer" than now; that means a frame
-  // just arrived, so treat as alive (and avoid the unsigned subtraction underflowing).
-  if (now < lastFrame) {
-    return true;
-  }
+  const uint32_t now = T2M(xTaskGetTickCount());
 
   return (now - lastFrame) < maxTimeSinceLastFrameMs;
 }
