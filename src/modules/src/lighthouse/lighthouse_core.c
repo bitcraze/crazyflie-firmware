@@ -69,7 +69,7 @@ static const uint32_t MAX_WAIT_TIME_FOR_HEALTH_MS = 4000;
 
 // The deck sends a frame (sweep data or a sync frame) at least every second, so
 // a longer silence means the deck/FPGA has stopped working or been disconnected.
-static const uint32_t maxTimeSinceLastFrameMs = 1500;
+static const uint32_t MAX_TIME_SINCE_LAST_FRAME_MS = 1500;
 
 static pulseProcessorResult_t angles;
 static lighthouseUartFrame_t frame;
@@ -159,7 +159,7 @@ uint8_t lighthouseCoreDeckStatus() {
   const uint32_t lastFrame = lastFrameTs;
   const uint32_t now = T2M(xTaskGetTickCount());
 
-  if ((now - lastFrame) < maxTimeSinceLastFrameMs) {
+  if ((now - lastFrame) < MAX_TIME_SINCE_LAST_FRAME_MS) {
     return 0;
   }
 
