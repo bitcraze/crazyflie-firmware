@@ -244,6 +244,18 @@ endmenu
 
 menu "Expansion deck configuration"
 
+config DECK_SUPERVISOR
+    bool "Propagate deck faults to the system supervisor"
+    default y
+    help
+      Monitor decks that provide a status probe (the status function in the
+      deck driver) and report a fault to the system supervisor when a deck
+      stops working - blocking arming and cutting the motors in flight.
+
+      Deck status is always published through the deckStatus.* log variables.
+      Disable this option to handle deck faults manually (from an app or the
+      client) without the supervisor taking action.
+
 menu "Deck discovery backends"
     source "src/deck/backends/Kconfig"
 endmenu

@@ -64,7 +64,12 @@
 
 #include "lighthouse_transmit.h"
 
+
 static const uint32_t MAX_WAIT_TIME_FOR_HEALTH_MS = 4000;
+
+// The deck sends a frame (sweep data or a sync frame) at least every second, so
+// a longer silence means the deck/FPGA has stopped working or been disconnected.
+static const uint32_t MAX_TIME_SINCE_LAST_FRAME_MS = 1500;
 
 static pulseProcessorResult_t angles;
 static lighthouseUartFrame_t frame;
@@ -136,7 +141,30 @@ static pulseProcessorProcessPulse_t pulseProcessorProcessPulse = pulseProcessorV
 #define UART_FRAME_LENGTH 12
 
 
-static bool deckIsFlashed = false;
+// Written by lighthouseCoreTask(), read by lighthouseCoreDeckStatus() from the supervisor task
+static volatile bool deckIsFlashed = false;
+
+// The time (in ms) of the latest received UART frame, sync frames included
+static volatile uint32_t lastFrameTs = 0;
+
+uint8_t lighthouseCoreDeckStatus() {
+  // If the deck never flashed/booted we can't trust its state to probe it
+  if (!deckIsFlashed) {
+    return 1;
+  }
+
+  // Read lastFrameTs before now, so now is always >= the captured timestamp
+  // (a concurrent update can't make it "newer"). The unsigned difference is then
+  // both free of underflow and correct across a systick wrap.
+  const uint32_t lastFrame = lastFrameTs;
+  const uint32_t now = T2M(xTaskGetTickCount());
+
+  if ((now - lastFrame) < MAX_TIME_SINCE_LAST_FRAME_MS) {
+    return 0;
+  }
+
+  return 1;
+}
 
 static void modifyBit(uint16_t *bitmap, const int index, const bool value) {
   const uint16_t mask = (1 << index);
@@ -159,6 +187,14 @@ void lighthouseCoreInit() {
 
 void lighthouseCoreLedTimer()
 {
+  // Log the watchdog fault edge here (timer task) to keep it off the supervisor path
+  static bool wasOk = false;
+  const bool ok = (lighthouseCoreDeckStatus() == 0);
+  if (wasOk && !ok) {
+    DEBUG_PRINT("Watchdog: no frames received from deck\n");
+  }
+  wasOk = ok;
+
   if (deckIsFlashed){
     switch (systemStatus)
     {
@@ -567,6 +603,7 @@ void lighthouseCoreTask(void *param) {
 
     while((isUartFrameValid = getUartFrameRaw(&frame))) {
       const uint32_t now_ms = T2M(xTaskGetTickCount());
+      lastFrameTs = now_ms;
 
       // If a sync frame is getting through, we are only receiving sync frames. So nothing else. Reset state
       if(frame.isSyncFrame && previousWasSyncFrame) {
