@@ -181,6 +181,11 @@
     #define LANDING_TIMEOUT_MS 3000
 #endif
 
+// Motor spin-up wait timeout during arming
+#ifndef ARMING_SPINUP_TIMEOUT_MS
+    #define ARMING_SPINUP_TIMEOUT_MS 2000
+#endif
+
 
 // Health test parameters
 #ifndef HEALTH_BRUSHED_ON_PERIOD_MSEC

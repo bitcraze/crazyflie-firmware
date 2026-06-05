@@ -40,6 +40,7 @@ static const char* const stateNames[] = {
   "Not initialized",
   "Pre-flight checks not passed",
   "Pre-flight checks passed",
+  "Arming",
   "Ready to fly",
   "Flying",
   "Landed",
@@ -62,6 +63,9 @@ static const char* const conditionNames[] = {
   "preflightTimeout",
   "landingTimeout",
   "deckFault",
+  "rpmAtArmingValid",
+  "spinupTimeout",
+  "motorsNotResponding",
 };
 static_assert(sizeof(conditionNames) / sizeof(conditionNames[0]) == supervisorCondition_NrOfConditions);
 
@@ -115,7 +119,7 @@ static SupervisorStateTransition_t transitionsPreFlChecksPassed[] = {
     .blockerCombiner = supervisorNever,
   },
   {
-    .newState = supervisorStateReadyToFly,
+    .newState = supervisorStateArming,
 
     .triggers = SUPERVISOR_CB_ARMED,
     .negatedTriggers = SUPERVISOR_CB_NONE,
@@ -127,11 +131,42 @@ static SupervisorStateTransition_t transitionsPreFlChecksPassed[] = {
   },
 };
 
-static SupervisorStateTransition_t transitionsReadyToFly[] = {
+static SupervisorStateTransition_t transitionsMotorsSpinup[] = {
   {
     .newState = supervisorStateExceptFreeFall,
 
     .triggers = SUPERVISOR_CB_EMERGENCY_STOP,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAny,
+
+    .blockerCombiner = supervisorNever,
+  },
+  {
+    .newState = supervisorStatePreFlChecksNotPassed,
+
+    .triggers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_SPINUP_TIMEOUT,
+    .negatedTriggers = SUPERVISOR_CB_ARMED,
+    .triggerCombiner = supervisorAny,
+
+    .blockerCombiner = supervisorNever,
+  },
+  {
+    .newState = supervisorStateReadyToFly,
+
+    .triggers = SUPERVISOR_CB_RPM_AT_ARMING_VALID,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAll,
+
+    .blockerCombiner = supervisorNever,
+  },
+};
+
+static SupervisorStateTransition_t transitionsReadyToFly[] = {
+  {
+    .newState = supervisorStateExceptFreeFall,
+
+    .triggers = SUPERVISOR_CB_EMERGENCY_STOP |
+                SUPERVISOR_CB_MOTORS_NOT_RESPONDING,
     .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAny,
 
@@ -161,7 +196,10 @@ static SupervisorStateTransition_t transitionsFlying[] = {
   {
     .newState = supervisorStateExceptFreeFall,
 
-    .triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_EMERGENCY_STOP | SUPERVISOR_CB_DECK_FAULT,
+    .triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | 
+                SUPERVISOR_CB_EMERGENCY_STOP |
+                SUPERVISOR_CB_DECK_FAULT |
+                SUPERVISOR_CB_MOTORS_NOT_RESPONDING,
     .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAny,
 
@@ -216,6 +254,15 @@ static SupervisorStateTransition_t transitionsLanded[] = {
     .blockerCombiner = supervisorNever,
   },
   {
+    .newState = supervisorStateExceptFreeFall,
+
+    .triggers = SUPERVISOR_CB_MOTORS_NOT_RESPONDING,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAll,
+
+    .blockerCombiner = supervisorNever,
+  },
+  {
     .newState = supervisorStateFlying,
 
     .triggers = SUPERVISOR_CB_IS_FLYING,
@@ -243,6 +290,15 @@ static SupervisorStateTransition_t transitionsWarningLevelOut[] = {
     .triggers = SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT | SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_EMERGENCY_STOP | SUPERVISOR_CB_DECK_FAULT,
     .negatedTriggers = SUPERVISOR_CB_NONE,
     .triggerCombiner = supervisorAny,
+
+    .blockerCombiner = supervisorNever,
+  },
+  {
+    .newState = supervisorStateExceptFreeFall,
+
+    .triggers = SUPERVISOR_CB_MOTORS_NOT_RESPONDING,
+    .negatedTriggers = SUPERVISOR_CB_NONE,
+    .triggerCombiner = supervisorAll,
 
     .blockerCombiner = supervisorNever,
   },
@@ -303,6 +359,7 @@ SupervisorStateTransitionList_t transitionLists[] = {
   {SUPERVISOR_TRANSITION_ENTRY(transitionsNotInitialized)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsPreFlChecksNotPassed)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsPreFlChecksPassed)},
+  {SUPERVISOR_TRANSITION_ENTRY(transitionsMotorsSpinup)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsReadyToFly)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsFlying)},
   {SUPERVISOR_TRANSITION_ENTRY(transitionsLanded)},

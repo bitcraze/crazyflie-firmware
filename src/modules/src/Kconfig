@@ -173,6 +173,42 @@ config MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
   default y
     help
         This requires 300 kHz DHOT PWM to work with Bluejay ESC FW.
+
+config MOTORS_ARMING_RPM_MIN
+    int "Minimum valid motor RPM during arming"
+    depends on MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+    range 0 65535
+    default 1000
+        help
+                Minimum RPM that each motor must report to be considered valid
+                during arming.
+
+config MOTORS_ARMING_RPM_MAX
+    int "Maximum valid motor RPM during arming"
+    depends on MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+    range 0 65535
+    default 3500
+        help
+                Maximum RPM that each motor may report to be considered valid
+                during arming.
+
+config MOTORS_ARMING_RPM_DURATION_MS
+    int "RPM validation duration during arming (ms)"
+    depends on MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+    range 0 10000
+    default 200
+        help
+                Time in milliseconds that all motors must stay in the configured
+                valid RPM range before arming can continue.
+
+config MOTORS_RPM_NOT_RESPONDING_THRESHOLD
+    int "Motor-not-responding RPM threshold"
+    depends on MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+    range 0 65535
+    default 500
+        help
+                If a motor reports non-zero RPM below this threshold for long enough,
+                it is considered not responding.
         
 config MOTORS_NBR_OF_POLES
   int "Number of poles on the brushless motors"
