@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * deck_supervisor.c - Monitor deck hardware health via the deck isAlive probe
+ * deck_supervisor.c - Monitor deck hardware health via the deck status probe
  */
 
 #include "deck_supervisor.h"
@@ -32,7 +32,7 @@ bool deckSupervisorHasFault(void) {
 
   for (int i = 0; i < nDecks; i++) {
     const DeckDriver* driver = deckInfo(i)->driver;
-    if (driver->isAlive && !driver->isAlive()) {
+    if (driver->status && driver->status() != 0) {
       return true;
     }
   }

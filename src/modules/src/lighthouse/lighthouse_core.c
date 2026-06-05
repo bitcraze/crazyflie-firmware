@@ -141,16 +141,16 @@ static pulseProcessorProcessPulse_t pulseProcessorProcessPulse = pulseProcessorV
 #define UART_FRAME_LENGTH 12
 
 
-// Written by lighthouseCoreTask(), read by lighthouseCoreDeckIsAlive() from the supervisor task
+// Written by lighthouseCoreTask(), read by lighthouseCoreDeckStatus() from the supervisor task
 static volatile bool deckIsFlashed = false;
 
 // The time (in ms) of the latest received UART frame, sync frames included
 static volatile uint32_t lastFrameTs = 0;
 
-bool lighthouseCoreDeckIsAlive() {
+uint8_t lighthouseCoreDeckStatus() {
   // If the deck never flashed/booted we can't trust its state to probe it
   if (!deckIsFlashed) {
-    return false;
+    return 1;
   }
 
   // Read lastFrameTs before now, so now is always >= the captured timestamp
@@ -159,7 +159,11 @@ bool lighthouseCoreDeckIsAlive() {
   const uint32_t lastFrame = lastFrameTs;
   const uint32_t now = T2M(xTaskGetTickCount());
 
-  return (now - lastFrame) < maxTimeSinceLastFrameMs;
+  if ((now - lastFrame) < maxTimeSinceLastFrameMs) {
+    return 0;
+  }
+
+  return 1;
 }
 
 static void modifyBit(uint16_t *bitmap, const int index, const bool value) {
@@ -184,12 +188,12 @@ void lighthouseCoreInit() {
 void lighthouseCoreLedTimer()
 {
   // Log the watchdog fault edge here (timer task) to keep it off the supervisor path
-  static bool wasAlive = false;
-  const bool alive = lighthouseCoreDeckIsAlive();
-  if (wasAlive && !alive) {
+  static bool wasOk = false;
+  const bool ok = (lighthouseCoreDeckStatus() == 0);
+  if (wasOk && !ok) {
     DEBUG_PRINT("Watchdog: no frames received from deck\n");
   }
-  wasAlive = alive;
+  wasOk = ok;
 
   if (deckIsFlashed){
     switch (systemStatus)

@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * deck_supervisor.h - Monitor deck hardware health via the deck isAlive probe
+ * deck_supervisor.h - Monitor deck hardware health via the deck status probe
  */
 
 #pragma once
@@ -31,10 +31,11 @@
 /**
  * @brief Query if any installed deck reports a hardware fault.
  *
- * Iterates the detected decks and calls the isAlive probe of each deck that
- * provides one. A deck that has not initialized correctly reports not alive.
+ * Iterates the detected decks and calls the status probe of each deck that
+ * provides one. A non-zero status is treated as a fault. A deck that has not
+ * initialized correctly reports a non-zero status.
  *
- * @return true  At least one deck is not alive
- * @return false All probed decks are alive (or none provide a probe)
+ * @return true  At least one deck reports a non-zero status
+ * @return false All probed decks report status 0 (or none provide a probe)
  */
 bool deckSupervisorHasFault(void);

@@ -133,7 +133,7 @@ static TaskHandle_t uwbTaskHandle = 0;
 static SemaphoreHandle_t algoSemaphore;
 
 // Liveness tracking for the positioning watchdog. chipResponding is written by
-// uwbTask() and read by locoDeckIsAlive() from the supervisor task.
+// uwbTask() and read by locoDeckStatus() from the supervisor task.
 static volatile bool chipResponding = false;
 static uint32_t lastUwbActivityTick = 0;
 // CHAN_CTRL value captured at init. It survives mode switches but reverts to
@@ -535,13 +535,13 @@ static dwOps_t dwOps = {
   .delayms = delayms,
 };
 
-static bool locoDeckIsAlive() {
+static uint8_t locoDeckStatus() {
   // If init failed we can't trust the chip state to probe it
   if (!isInit) {
-    return false;
+    return 1;
   }
 
-  return chipResponding;
+  return chipResponding ? 0 : 1;
 }
 
 /*********** Deck driver initialization ***************/
@@ -679,7 +679,7 @@ static const DeckDriver dwm1000_deck = {
 
   .init = dwm1000Init,
   .test = dwm1000Test,
-  .isAlive = locoDeckIsAlive,
+  .status = locoDeckStatus,
 };
 
 DECK_DRIVER(dwm1000_deck);
@@ -701,19 +701,19 @@ PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcLoco, &isInit)
 PARAM_GROUP_STOP(deck)
 
 
-static uint8_t locoAliveLogger(uint32_t timestamp, void* data) {
-  return locoDeckIsAlive() ? 1 : 0;
+static uint8_t locoStatusLogger(uint32_t timestamp, void* data) {
+  return locoDeckStatus();
 }
-static logByFunction_t locoAliveLoggerDef = {.acquireUInt8 = locoAliveLogger, .data = 0};
+static logByFunction_t locoStatusLoggerDef = {.acquireUInt8 = locoStatusLogger, .data = 0};
 
-LOG_GROUP_START(deck)
+LOG_GROUP_START(deckStatus)
 
 /**
- * @brief Nonzero if the Loco deck is alive and delivering data
+ * @brief Loco deck status: 0 = ok, non-zero = error
  */
-LOG_ADD_BY_FUNCTION(LOG_UINT8, bcLoco, &locoAliveLoggerDef)
+LOG_ADD_BY_FUNCTION(LOG_UINT8, bcLoco, &locoStatusLoggerDef)
 
-LOG_GROUP_STOP(deck)
+LOG_GROUP_STOP(deckStatus)
 
 LOG_GROUP_START(ranging)
 LOG_ADD(LOG_UINT16, state, &algoOptions.rangingState)

@@ -98,7 +98,7 @@ static const DeckDriver lighthouse_deck = {
   .memoryDef = &memoryDef,
 
   .init = lighthouseInit,
-  .isAlive = lighthouseCoreDeckIsAlive,
+  .status = lighthouseCoreDeckStatus,
 };
 
 
@@ -114,16 +114,16 @@ PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcLighthouse4, &isInit)
 PARAM_GROUP_STOP(deck)
 
 
-static uint8_t lighthouseAliveLogger(uint32_t timestamp, void* data) {
-  return lighthouseCoreDeckIsAlive() ? 1 : 0;
+static uint8_t lighthouseStatusLogger(uint32_t timestamp, void* data) {
+  return lighthouseCoreDeckStatus();
 }
-static logByFunction_t lighthouseAliveLoggerDef = {.acquireUInt8 = lighthouseAliveLogger, .data = 0};
+static logByFunction_t lighthouseStatusLoggerDef = {.acquireUInt8 = lighthouseStatusLogger, .data = 0};
 
-LOG_GROUP_START(deck)
+LOG_GROUP_START(deckStatus)
 
 /**
- * @brief Nonzero if the Lighthouse deck is alive and delivering data
+ * @brief Lighthouse deck status: 0 = ok, non-zero = error
  */
-LOG_ADD_BY_FUNCTION(LOG_UINT8, bcLighthouse4, &lighthouseAliveLoggerDef)
+LOG_ADD_BY_FUNCTION(LOG_UINT8, bcLighthouse4, &lighthouseStatusLoggerDef)
 
-LOG_GROUP_STOP(deck)
+LOG_GROUP_STOP(deckStatus)

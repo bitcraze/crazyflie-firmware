@@ -46,12 +46,12 @@ void lighthouseCoreInit();
 void lighthouseCoreTask(void *param);
 
 /**
- * @brief Query if the lighthouse deck is delivering data (deck health probe)
+ * @brief Deck status probe for the deck supervisor
  *
- * @return true  The deck is flashed and frames are arriving
- * @return false The deck has not booted or has stopped sending frames
+ * @return 0        The deck is flashed and frames are arriving
+ * @return non-zero The deck has not booted or has stopped sending frames
  */
-bool lighthouseCoreDeckIsAlive();
+uint8_t lighthouseCoreDeckStatus();
 
 /**
  * @brief Set calibration data for one base station of the system
