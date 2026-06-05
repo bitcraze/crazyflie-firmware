@@ -63,7 +63,6 @@ static const char* const conditionNames[] = {
   "preflightTimeout",
   "landingTimeout",
   "deckFault",
-  "rpmTelemetryValid",
   "rpmAtArmingValid",
   "spinupTimeout",
   "motorsNotResponding",
