@@ -576,9 +576,7 @@ static uint16_t dshotDecodeTelemetryRPM(uint16_t valueGCR)
     
   // eRPM range
   if (valueGCR == 0x0fff) {
-    return DSHOT_RPM_INVALID;
-  } else if (valueGCR == 0x0fff) {
-      return 0;
+    return 0;
   }
 
   // Convert value to 16 bit period from the GCR telemetry format (eeem mmmm mmmm)
