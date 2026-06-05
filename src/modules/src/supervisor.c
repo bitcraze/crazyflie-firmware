@@ -713,7 +713,7 @@ LOG_GROUP_STOP(supervisor)
 
 
 /**
- * The purpose of the supervisor is to monitorma the system and its state. Depending on the situation, the supervisor
+ * The purpose of the supervisor is to monitor the system and its state. Depending on the situation, the supervisor
  * can enable/disable functionality as well as take action to protect the system or humans close by.
  */
 PARAM_GROUP_START(supervisor)
