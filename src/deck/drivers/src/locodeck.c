@@ -129,6 +129,9 @@ static uwbAlgorithm_t *algorithm = &uwbTwrTagAlgorithm;
 #endif
 
 static bool isInit = false;
+
+uint8_t locoEnableEstimator = 1;
+
 static TaskHandle_t uwbTaskHandle = 0;
 static SemaphoreHandle_t algoSemaphore;
 
@@ -798,5 +801,14 @@ PARAM_GROUP_START(loco)
  * |   3   | TDoA 3 |\n
  */
 PARAM_ADD_CORE(PARAM_UINT8, mode, &algoOptions.userRequestedMode)
+
+/**
+ * @brief Feed loco measurements into the state estimator (default: 1)
+ *
+ * Set to 0 to stop pushing loco (TWR/TDoA distance, TDoA and absolute height)
+ * measurements into the Kalman filter, while keeping the loco system otherwise
+ * running.
+ */
+PARAM_ADD_CORE(PARAM_UINT8, fwdToEstimator, &locoEnableEstimator)
 
 PARAM_GROUP_STOP(loco)
