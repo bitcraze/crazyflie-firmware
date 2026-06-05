@@ -403,10 +403,10 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
       }
     }
   }
-
 #endif
 
   if (newState == supervisorStateExceptFreeFall) {
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
     if (this->motorsNotRespondingMask != 0) {
       for (int i = 0; i < NBR_OF_MOTORS; i++) {
         if (this->motorsNotRespondingMask & (1u << i)) {
@@ -414,6 +414,7 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
         }
       }
     }
+#endif
     
     DEBUG_PRINT("free falling!\n");
   }
