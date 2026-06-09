@@ -79,7 +79,7 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
     const float qDen = r2 - z_tan_t * z_tan_t;
     // Avoid singularity
     if (qDen > 0.0001f) {
-      // Position Jacobians: ∂α/∂x, ∂α/∂y, ∂α/∂z, where x y and z are the sensor position in the global reference frame
+      // Position Jacobians: ∂α/∂x, ∂α/∂y, ∂α/∂z, where x y and z are the sensor position in the rotor reference frame
 
       const float q = tan_t / arm_sqrt(qDen);
 
