@@ -1,7 +1,12 @@
 """Compiles the cffirmware C extension."""
 
 from setuptools import setup, Extension
-from setuptools.command.build import build
+try:
+    # setuptools >= 62.4 (e.g. local Python 3.13 where distutils is gone)
+    from setuptools.command.build import build
+except ImportError:
+    # Older setuptools (e.g. the CI builder image on Python 3.10)
+    from distutils.command.build import build
 import os
 
 include = [
