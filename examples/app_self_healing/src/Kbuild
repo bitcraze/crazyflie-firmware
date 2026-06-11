@@ -1,0 +1,3 @@
+obj-y += self_healing.o
+obj-y += self_healing_math/
+obj-y += self_healing_state/
