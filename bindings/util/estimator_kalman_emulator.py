@@ -3,6 +3,20 @@ import cffirmware
 import logging
 
 
+# Photodiode positions on the Lighthouse deck, in the CF reference frame
+# (meters), indexed by sensorId. These mirror sensorDeckPositions in the
+# firmware (src/modules/src/lighthouse/lighthouse_position_est.c); keep them in
+# sync so the emulator feeds the estimator the same geometry as the Crazyflie.
+SENSOR_POS_W = 0.015 / 2.0
+SENSOR_POS_L = 0.030 / 2.0
+SENSOR_POSITIONS = (
+    (-SENSOR_POS_L, SENSOR_POS_W, 0.0),
+    (-SENSOR_POS_L, -SENSOR_POS_W, 0.0),
+    (SENSOR_POS_L, SENSOR_POS_W, 0.0),
+    (SENSOR_POS_L, -SENSOR_POS_W, 0.0),
+)
+
+
 class EstimatorKalmanEmulator:
     """
     This class emulates the behavior of estimator_kalman.c and is used as a helper to enable testing of the kalman
@@ -34,6 +48,13 @@ class EstimatorKalmanEmulator:
         self.outlierFilterLH = cffirmware.OutlierFilterLhState_t()
         self.onboard_state_estimate = []
         self.yaw_sample_cnt = 0
+
+        # The sweepAngleMeasurement_t geometry fields are pointers into C memory
+        # allocated by make_vec3d/make_mat3d. The geometry is constant per sensor
+        # and per base station, so allocate each once and reuse it, rather than
+        # leaking a fresh allocation on every sweep sample.
+        self._sensor_pos_cache = {}
+        self._rotor_geometry_cache = {}
 
         # Simplification, assume always flying
         self.logger.warning(
@@ -124,6 +145,38 @@ class EstimatorKalmanEmulator:
         cffirmware.kalmanCoreInit(self.coreData, self.coreParams, self.now_ms)
 
         self._is_initialized = True
+
+    def _sensor_pos(self, sensor_id):
+        """Return a cached vec3d of a deck sensor position in the CF frame."""
+        sensor_id = int(sensor_id)
+        vec = self._sensor_pos_cache.get(sensor_id)
+        if vec is None:
+            vec = cffirmware.make_vec3d(*SENSOR_POSITIONS[sensor_id])
+            self._sensor_pos_cache[sensor_id] = vec
+        return vec
+
+    def _rotor_geometry(self, base_station_id):
+        """Return cached (rotorPos, rotorRot, rotorRotInv) for a base station."""
+        base_station_id = int(base_station_id)
+        geometry = self._rotor_geometry_cache.get(base_station_id)
+        if geometry is None:
+            pose = self.basestation_poses[base_station_id]
+            origin = pose['origin']
+            r = pose['rotation_matrix']
+            rotor_pos = cffirmware.make_vec3d(origin.x, origin.y, origin.z)
+            rotor_rot = cffirmware.make_mat3d(
+                r.i11, r.i12, r.i13,
+                r.i21, r.i22, r.i23,
+                r.i31, r.i32, r.i33,
+            )
+            rotor_rot_inv = cffirmware.make_mat3d(
+                r.i11, r.i21, r.i31,
+                r.i12, r.i22, r.i32,
+                r.i13, r.i23, r.i33,
+            )
+            geometry = (rotor_pos, rotor_rot, rotor_rot_inv)
+            self._rotor_geometry_cache[base_station_id] = geometry
+        return geometry
 
     def _update_queued_measurements(self, now_ms: int, sensor_samples):
         # Continue processing as long as there is data
@@ -218,52 +271,12 @@ class EstimatorKalmanEmulator:
                 sweep, self.basestation_calibration[sweep.baseStationId][sweep.sweepId]
             )
 
-            sensor_pos_w = 0.015 / 2.0
-            sensor_pos_l = 0.030 / 2.0
-            sensor_position = {}
-            sensor_position[0] = [-sensor_pos_w, sensor_pos_l, 0.0]
-            sensor_position[1] = [-sensor_pos_w, -sensor_pos_l, 0.0]
-            sensor_position[2] = [sensor_pos_w, sensor_pos_l, 0.0]
-            sensor_position[3] = [sensor_pos_w, -sensor_pos_l, 0.0]
-
-            sensorPos = cffirmware.make_vec3d(
-                sensor_position[int(sweep.sensorId)][0],
-                sensor_position[int(sweep.sensorId)][1],
-                sensor_position[int(sweep.sensorId)][2],
-            )
-            sweep.sensorPos = sensorPos
-
-            rotorPos = cffirmware.make_vec3d(
-                self.basestation_poses[sweep.baseStationId]['origin'].x,
-                self.basestation_poses[sweep.baseStationId]['origin'].y,
-                self.basestation_poses[sweep.baseStationId]['origin'].z,
+            sweep.sensorPos = self._sensor_pos(sweep.sensorId)
+            rotorPos, rotorRot, rotorRotInv = self._rotor_geometry(
+                sweep.baseStationId
             )
             sweep.rotorPos = rotorPos
-
-            rotorRot = cffirmware.make_mat3d(
-                self.basestation_poses[sweep.baseStationId]['rotation_matrix'].i11,
-                self.basestation_poses[sweep.baseStationId]['rotation_matrix'].i12,
-                self.basestation_poses[sweep.baseStationId]['rotation_matrix'].i13,
-                self.basestation_poses[sweep.baseStationId]['rotation_matrix'].i21,
-                self.basestation_poses[sweep.baseStationId]['rotation_matrix'].i22,
-                self.basestation_poses[sweep.baseStationId]['rotation_matrix'].i23,
-                self.basestation_poses[sweep.baseStationId]['rotation_matrix'].i31,
-                self.basestation_poses[sweep.baseStationId]['rotation_matrix'].i32,
-                self.basestation_poses[sweep.baseStationId]['rotation_matrix'].i33,
-            )
             sweep.rotorRot = rotorRot
-
-            rotorRotInv = cffirmware.make_mat3d(
-                self.basestation_poses[sweep.baseStationId]['rotation_matrix'].i11,
-                self.basestation_poses[sweep.baseStationId]['rotation_matrix'].i21,
-                self.basestation_poses[sweep.baseStationId]['rotation_matrix'].i31,
-                self.basestation_poses[sweep.baseStationId]['rotation_matrix'].i12,
-                self.basestation_poses[sweep.baseStationId]['rotation_matrix'].i22,
-                self.basestation_poses[sweep.baseStationId]['rotation_matrix'].i32,
-                self.basestation_poses[sweep.baseStationId]['rotation_matrix'].i13,
-                self.basestation_poses[sweep.baseStationId]['rotation_matrix'].i23,
-                self.basestation_poses[sweep.baseStationId]['rotation_matrix'].i33,
-            )
             sweep.rotorRotInv = rotorRotInv
 
             self.logger.debug(
