@@ -93,6 +93,7 @@ static const DeckDriver lighthouse_deck = {
   .usedPeriph = DECK_USING_UART1,
   .requiredEstimator = StateEstimatorTypeKalman,
   .requiredKalmanEstimatorAttitudeReversionOff = true,
+  .observesAbsoluteYawAtRest = true,
 
   .memoryDef = &memoryDef,
 

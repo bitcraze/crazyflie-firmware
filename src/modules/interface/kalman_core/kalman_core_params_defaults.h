@@ -48,20 +48,14 @@
   .procNoiseAcc_z = 1.0f
 #endif
 
-#define USE_EXTERNAL_POSITIONING
-
-#ifdef USE_EXTERNAL_POSITIONING
-// For a uniform distribution over a range [−a,a], the standard deviation is:
-// σ= a/√3​
-// We are completely uncertain, could be anywhere in [−π,π]:
-// σ=π/√3≈1.81 rad
-#define KALMAN_INITIAL_YAW_STD 1.81f
-#else
+// Default assumes the drone starts at a known yaw (its configured initialYaw).
+// Decks that observe absolute yaw while stationary (e.g. Lighthouse) widen this
+// at runtime in estimatorKalmanInit() so the filter can converge from an
+// arbitrary heading.
 #ifdef CONFIG_ESTIMATOR_KALMAN_INITIAL_YAW_STD
 #define KALMAN_INITIAL_YAW_STD (CONFIG_ESTIMATOR_KALMAN_INITIAL_YAW_STD / 1000.0f)
 #else
 #define KALMAN_INITIAL_YAW_STD 0.01f
-#endif
 #endif
 
 /**
@@ -106,4 +100,3 @@
   .cop_x = CENTER_OF_PRESSURE_X, \
   .cop_y = CENTER_OF_PRESSURE_Y, \
   .cop_z = CENTER_OF_PRESSURE_Z
-

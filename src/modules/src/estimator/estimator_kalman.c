@@ -379,6 +379,15 @@ void estimatorKalmanInit(void)
   }
   #endif
 
+  // A deck that observes absolute yaw while stationary (e.g. Lighthouse) lets
+  // the filter converge from an arbitrary initial heading. Start with a wide
+  // yaw prior: σ = π/√3 ≈ 1.81 rad, a uniform distribution over [-π, π].
+  if (deckGetObservesAbsoluteYawAtRest())
+  {
+    coreParams.stdDevInitialAttitude_yaw = 1.81f;
+    DEBUG_PRINT("Deck observes absolute yaw, converging from any heading\n");
+  }
+
   axis3fSubSamplerInit(&accSubSampler, GRAVITY_MAGNITUDE);
   axis3fSubSamplerInit(&gyroSubSampler, DEG_TO_RAD);
 
