@@ -657,7 +657,7 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t *setpoint, c
   }
 }
 
-void supervisorOverrideSetpoint(setpoint_t* setpoint) {
+void supervisorOverrideSetpoint(setpoint_t* setpoint, const state_t *state) {
   SupervisorMem_t* this = &supervisorMem;
   switch(this->state){
     case supervisorStateArming:
@@ -716,6 +716,30 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint) {
           setpoint->position.z = geofenceZmax;
         }
       }
+
+      // If setpoint is velocity, return to geofence by overiding velocity setpoints
+      if (setpoint->mode.x == modeVelocity) {
+        if (state->position.x < geofenceXmin) {
+          setpoint->velocity.x = fabs(setpoint->velocity.x);
+        } else if (state->position.x > geofenceXmax) {
+          setpoint->velocity.x = -fabs(setpoint->velocity.x);
+        }
+      }
+      if (setpoint->mode.y == modeVelocity) {
+        if (state->position.y < geofenceYmin) {
+          setpoint->velocity.y = fabs(setpoint->velocity.y);
+        } else if (state->position.y > geofenceYmax) {
+          setpoint->velocity.y = -fabs(setpoint->velocity.y);
+        }
+      }
+      if (setpoint->mode.z == modeVelocity) {
+        if (state->position.z < geofenceZmin) {
+          setpoint->velocity.z = fabs(setpoint->velocity.z);
+        } else if (state->position.z > geofenceZmax) {
+          setpoint->velocity.z = -fabs(setpoint->velocity.z);
+        }
+      }
+
       break;
       
     case supervisorStateWarningLevelOut:

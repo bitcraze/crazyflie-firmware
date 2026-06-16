@@ -51,8 +51,9 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t *setpoint, c
  * if may replace values in the current setpoint.
  *
  * @param setpoint The current setpoint
+ * @param state    Latest state estimate
  */
-void supervisorOverrideSetpoint(setpoint_t* setpoint);
+void supervisorOverrideSetpoint(setpoint_t* setpoint, const state_t *state);
 
 /**
  * @brief Check if it is OK to spin the motors
