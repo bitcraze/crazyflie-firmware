@@ -67,6 +67,8 @@
 static uint16_t preflightTimeoutDuration = PREFLIGHT_TIMEOUT_MS;
 static uint16_t landingTimeoutDuration = LANDING_TIMEOUT_MS;
 static uint16_t armingSpinupTimeoutDuration = ARMING_SPINUP_TIMEOUT_MS;
+static float crashDetectionGs = CONFIG_SUPERVISOR_CRASH_DETECTION_G;
+static float crashDetectionAccNorm;
 
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
 static uint16_t rpmCheckMin = CONFIG_MOTORS_ARMING_RPM_MIN;
@@ -308,12 +310,22 @@ static bool isFlyingCheck(SupervisorMem_t* this, const uint32_t tick) {
 //
 static bool isTumbledCheck(SupervisorMem_t* this, const sensorData_t *data, const uint32_t tick) {
   const float freeFallThreshold = 0.1;
+  const float oneG = 1.0f;
 
   const float acceptedTiltAccZ = SUPERVISOR_TUMBLE_CHECK_ACCEPTED_TILT_ACCZ;  // 60 degrees tilt (when stationary)
   const uint32_t maxTiltTime = M2T(SUPERVISOR_TUMBLE_CHECK_ACCEPTED_TILT_TIME);
 
   const float acceptedUpsideDownAccZ = SUPERVISOR_TUMBLE_CHECK_ACCEPTED_UPSIDEDOWN_ACCZ;
   const uint32_t maxUpsideDownTime = M2T(SUPERVISOR_TUMBLE_CHECK_ACCEPTED_UPSIDEDOWN_TIME);
+
+  crashDetectionAccNorm = sqrtf((data->acc.x * data->acc.x) + (data->acc.y * data->acc.y) + (data->acc.z * data->acc.z));
+
+  if (crashDetectionGs > 0.0f) {
+    if (fabsf(crashDetectionAccNorm - oneG) > crashDetectionGs) {
+      DEBUG_PRINT("Crash detected @ %.2f Gs (max %.2f)\n", (double)crashDetectionAccNorm, (double)crashDetectionGs);
+      return true;
+    }
+  }
 
   const bool isFreeFalling = (fabsf(data->acc.z) < freeFallThreshold && fabsf(data->acc.y) < freeFallThreshold && fabsf(data->acc.x) < freeFallThreshold);
   if (isFreeFalling) {
@@ -709,6 +721,10 @@ LOG_GROUP_START(supervisor)
  * Bit 11 = deck fault - a deck has reported a hardware fault
  */
 LOG_ADD(LOG_UINT16, info, &supervisorMem.infoBitfield)
+/**
+ * @brief Acceleration norm in Gs used by crash/tumble detection.
+ */
+LOG_ADD(LOG_FLOAT, accNorm, &crashDetectionAccNorm)
 LOG_GROUP_STOP(supervisor)
 
 
@@ -742,5 +758,11 @@ PARAM_ADD(PARAM_UINT8 | PARAM_PERSISTENT, tmblChckEn, &tumbleCheckEnabled)
  * @brief Motor spin-up wait timeout (ms) before arming is aborted
  */
 PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, spinupTimeout, &armingSpinupTimeoutDuration)
+
+/**
+ * @brief Crash detection threshold (Gs)
+ * Maximum allowed | |acc| - 1G | for tumble/crash detection. Set to 0 to disable.
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, crashDetectGs, &crashDetectionGs)
 
 PARAM_GROUP_STOP(supervisor)
