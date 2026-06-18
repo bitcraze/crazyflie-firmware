@@ -293,6 +293,18 @@ config LOG_MOTOR_CAP_WARNING
 
 endmenu
 
+menu "Supervisor configuration"
+
+config SUPERVISOR_CRASH_DETECTION_G
+    int "Crash detection (Gs)"
+    range 0 20
+    default 0
+    help
+        Maximum allowed deviation from 1 G when evaluating tumble/crash
+        detection. A value of 0 disables the detection.
+
+endmenu
+
 menu "Parameter subsystem"
 
 config PARAM_SILENT_UPDATES
