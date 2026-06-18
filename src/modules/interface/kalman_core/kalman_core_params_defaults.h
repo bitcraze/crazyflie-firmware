@@ -48,8 +48,12 @@
   .procNoiseAcc_z = 1.0f
 #endif
 
-#ifdef CONFIG_STIMATOR_KALMAN_INITIAL_YAW_STD
-#define KALMAN_INITIAL_YAW_STD (CONFIG_STIMATOR_KALMAN_INITIAL_YAW_STD / 1000.0f)
+// Default assumes the drone starts at a known yaw (its configured initialYaw).
+// Decks that observe absolute yaw while stationary (e.g. Lighthouse) widen this
+// at runtime in estimatorKalmanInit() so the filter can converge from an
+// arbitrary heading.
+#ifdef CONFIG_ESTIMATOR_KALMAN_INITIAL_YAW_STD
+#define KALMAN_INITIAL_YAW_STD (CONFIG_ESTIMATOR_KALMAN_INITIAL_YAW_STD / 1000.0f)
 #else
 #define KALMAN_INITIAL_YAW_STD 0.01f
 #endif
@@ -62,8 +66,8 @@
  */
 #define KALMAN_CORE_DEFAULT_PARAMS_INIT \
   /* Initial variances, uncertain of position, but know we're stationary and roughly flat */ \
-  .stdDevInitialPosition_xy = 100, \
-  .stdDevInitialPosition_z = 1, \
+  .stdDevInitialPosition_xy = 2.3, /* meters, could be anywhere in ~8x8m room */ \
+  .stdDevInitialPosition_z = 0.2, /* meters, expect on floor or very low platform */ \
   .stdDevInitialVelocity = 0.01, \
   .stdDevInitialAttitude_rollpitch = 0.01, \
   .stdDevInitialAttitude_yaw = KALMAN_INITIAL_YAW_STD, \
@@ -96,4 +100,3 @@
   .cop_x = CENTER_OF_PRESSURE_X, \
   .cop_y = CENTER_OF_PRESSURE_Y, \
   .cop_z = CENTER_OF_PRESSURE_Z
-

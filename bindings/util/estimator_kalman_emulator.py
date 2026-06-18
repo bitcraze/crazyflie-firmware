@@ -1,5 +1,21 @@
 import math
 import cffirmware
+import logging
+
+
+# Photodiode positions on the Lighthouse deck, in the CF reference frame
+# (meters), indexed by sensorId. These mirror sensorDeckPositions in the
+# firmware (src/modules/src/lighthouse/lighthouse_position_est.c); keep them in
+# sync so the emulator feeds the estimator the same geometry as the Crazyflie.
+SENSOR_POS_W = 0.015 / 2.0
+SENSOR_POS_L = 0.030 / 2.0
+SENSOR_POSITIONS = (
+    (-SENSOR_POS_L, SENSOR_POS_W, 0.0),
+    (-SENSOR_POS_L, -SENSOR_POS_W, 0.0),
+    (SENSOR_POS_L, SENSOR_POS_W, 0.0),
+    (SENSOR_POS_L, -SENSOR_POS_W, 0.0),
+)
+
 
 class EstimatorKalmanEmulator:
     """
@@ -14,12 +30,40 @@ class EstimatorKalmanEmulator:
     how they are connected.
 
     """
-    def __init__(self, anchor_positions) -> None:
+
+    def __init__(
+        self,
+        anchor_positions=None,
+        basestation_poses=None,
+        basestation_calibration=None,
+    ) -> None:
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.anchor_positions = anchor_positions
+        self.basestation_poses = basestation_poses
+        self.basestation_calibration = basestation_calibration
         self.accSubSampler = cffirmware.Axis3fSubSampler_t()
         self.gyroSubSampler = cffirmware.Axis3fSubSampler_t()
         self.coreData = cffirmware.kalmanCoreData_t()
-        self.outlierFilterState = cffirmware.OutlierFilterTdoaState_t()
+        self.outlierFilterTDOA = cffirmware.OutlierFilterTdoaState_t()
+        self.outlierFilterLH = cffirmware.OutlierFilterLhState_t()
+        self.onboard_state_estimate = []
+        self.yaw_sample_cnt = 0
+
+        # The sweepAngleMeasurement_t geometry fields are pointers into C memory
+        # allocated by make_vec3d/make_mat3d. The geometry is constant per sensor
+        # and per base station, so allocate each once and reuse it, rather than
+        # leaking a fresh allocation on every sweep sample.
+        self._sensor_pos_cache = {}
+        self._rotor_geometry_cache = {}
+
+        # Simplification, assume always flying
+        self.logger.warning(
+            'Assuming the quad is always flying. This simplification must be considered '
+            'as it can affect the results. If you need to handle both flying and non-flying '
+            'states, ensure this matches your recorded data. Automatic handling is not '
+            'currently implemented.'
+        )
+        self.quad_is_flying = False
 
         self.TDOA_ENGINE_MEASUREMENT_NOISE_STD = 0.30
         self.PREDICT_RATE = 100
@@ -30,7 +74,9 @@ class EstimatorKalmanEmulator:
 
         self._is_initialized = False
 
-    def run_one_1khz_iteration(self, sensor_samples) -> tuple[float, cffirmware.state_t]:
+    def run_one_1khz_iteration(
+        self, sensor_samples
+    ) -> tuple[float, cffirmware.state_t]:
         """
         Run one iteration of the estimation loop (runs at 1kHz)
 
@@ -47,19 +93,24 @@ class EstimatorKalmanEmulator:
             time_ms = int(first_sample[1]['timestamp'])
             self._lazy_init(time_ms)
 
-        # Simplification, assume always flying
-        quad_is_flying = True
-
         if self.now_ms > self.next_prediction_ms:
             cffirmware.axis3fSubSamplerFinalize(self.accSubSampler)
             cffirmware.axis3fSubSamplerFinalize(self.gyroSubSampler)
 
-            cffirmware.kalmanCorePredict(self.coreData, self.coreParams, self.accSubSampler.subSample,
-                                         self.gyroSubSampler.subSample, self.now_ms, quad_is_flying)
+            cffirmware.kalmanCorePredict(
+                self.coreData,
+                self.coreParams,
+                self.accSubSampler.subSample,
+                self.gyroSubSampler.subSample,
+                self.now_ms,
+                self.quad_is_flying,
+            )
 
             self.next_prediction_ms += self.PREDICT_STEP_MS
 
-        cffirmware.kalmanCoreAddProcessNoise(self.coreData, self.coreParams, self.now_ms)
+        cffirmware.kalmanCoreAddProcessNoise(
+            self.coreData, self.coreParams, self.now_ms
+        )
 
         self._update_queued_measurements(self.now_ms, sensor_samples)
 
@@ -89,10 +140,43 @@ class EstimatorKalmanEmulator:
         # set to a non-zero value to behave like the CF. See estimatorKalmanInit() in estimator_kalman.c
         # self.coreParams.AttitudeReversion = 0.001
 
-        cffirmware.outlierFilterTdoaReset(self.outlierFilterState)
+        cffirmware.outlierFilterTdoaReset(self.outlierFilterTDOA)
+        cffirmware.outlierFilterLighthouseReset(self.outlierFilterLH, self.now_ms)
         cffirmware.kalmanCoreInit(self.coreData, self.coreParams, self.now_ms)
 
         self._is_initialized = True
+
+    def _sensor_pos(self, sensor_id):
+        """Return a cached vec3d of a deck sensor position in the CF frame."""
+        sensor_id = int(sensor_id)
+        vec = self._sensor_pos_cache.get(sensor_id)
+        if vec is None:
+            vec = cffirmware.make_vec3d(*SENSOR_POSITIONS[sensor_id])
+            self._sensor_pos_cache[sensor_id] = vec
+        return vec
+
+    def _rotor_geometry(self, base_station_id):
+        """Return cached (rotorPos, rotorRot, rotorRotInv) for a base station."""
+        base_station_id = int(base_station_id)
+        geometry = self._rotor_geometry_cache.get(base_station_id)
+        if geometry is None:
+            pose = self.basestation_poses[base_station_id]
+            origin = pose['origin']
+            r = pose['rotation_matrix']
+            rotor_pos = cffirmware.make_vec3d(origin.x, origin.y, origin.z)
+            rotor_rot = cffirmware.make_mat3d(
+                r.i11, r.i12, r.i13,
+                r.i21, r.i22, r.i23,
+                r.i31, r.i32, r.i33,
+            )
+            rotor_rot_inv = cffirmware.make_mat3d(
+                r.i11, r.i21, r.i31,
+                r.i12, r.i22, r.i32,
+                r.i13, r.i23, r.i33,
+            )
+            geometry = (rotor_pos, rotor_rot, rotor_rot_inv)
+            self._rotor_geometry_cache[base_station_id] = geometry
+        return geometry
 
     def _update_queued_measurements(self, now_ms: int, sensor_samples):
         # Continue processing as long as there is data
@@ -111,6 +195,7 @@ class EstimatorKalmanEmulator:
 
     def _update_with_sample(self, sample, now_ms):
         if sample[0] == 'estTDOA':
+            self.logger.debug('Processing a TDOA sample')
             tdoa_data = sample[1]
             tdoa = cffirmware.tdoaMeasurement_t()
 
@@ -121,19 +206,28 @@ class EstimatorKalmanEmulator:
             tdoa.distanceDiff = float(tdoa_data['distanceDiff'])
             tdoa.stdDev = self.TDOA_ENGINE_MEASUREMENT_NOISE_STD
 
-            cffirmware.kalmanCoreUpdateWithTdoa(self.coreData, tdoa, now_ms, self.outlierFilterState)
+            cffirmware.kalmanCoreUpdateWithTdoa(
+                self.coreData, tdoa, now_ms, self.outlierFilterTDOA
+            )
 
         elif sample[0] == 'estAcceleration':
+            self.logger.debug('Processing an acceleration sample')
             acc_data = sample[1]
+
 
             acc = cffirmware.Axis3f()
             acc.x = float(acc_data['acc.x'])
             acc.y = float(acc_data['acc.y'])
             acc.z = float(acc_data['acc.z'])
+            if not self.quad_is_flying:
+                if (acc.z > 1.1):
+                    self.quad_is_flying = True
+                    print("Quad estimated to start flying at time: ", self.now_ms)
 
             cffirmware.axis3fSubSamplerAccumulate(self.accSubSampler, acc)
 
         elif sample[0] == 'estGyroscope':
+            self.logger.debug('Processing a gyroscope sample')
             gyro_data = sample[1]
 
             gyro = cffirmware.Axis3f()
@@ -142,6 +236,61 @@ class EstimatorKalmanEmulator:
             gyro.z = float(gyro_data['gyro.z'])
 
             cffirmware.axis3fSubSamplerAccumulate(self.gyroSubSampler, gyro)
+
+        elif sample[0] == 'estYawError':
+            # estYawError samples are only logged by the deprecated "crossing
+            # beams" method, which estimated yaw outside the EKF. The sweep-angle
+            # measurement model now estimates full orientation (roll, pitch, yaw)
+            # inside the EKF, so these samples are obsolete and are ignored. Their
+            # presence means this log is old data recorded with the legacy method.
+            if self.yaw_sample_cnt == 0:
+                self.logger.warning(
+                    'Log contains estYawError samples from the deprecated '
+                    'crossing-beams yaw estimation; ignoring them. Orientation is '
+                    'now estimated in the EKF from the sweep angles. This log '
+                    'appears to be old data recorded with the legacy method.'
+                )
+            self.yaw_sample_cnt += 1
+
+        elif sample[0] == 'estSweepAngle':
+            self.logger.debug('Processing a sweep angle sample')
+            # print('Processing a sweep angle sample')
+            sweep_data = sample[1]
+
+            sweep = cffirmware.sweepAngleMeasurement_t()
+
+            sweep.timestamp = int(sweep_data['timestamp'])
+            sweep.sensorId = int(sweep_data['sensorId'])
+            sweep.baseStationId = int(sweep_data['baseStationId'])
+            sweep.sweepId = int(sweep_data['sweepId'])
+            sweep.t = float(sweep_data['t'])
+            sweep.measuredSweepAngle = float(sweep_data['sweepAngle'])
+            sweep.stdDev = 0.001  # fixed in firmware
+
+            cffirmware.set_calibration_model(
+                sweep, self.basestation_calibration[sweep.baseStationId][sweep.sweepId]
+            )
+
+            sweep.sensorPos = self._sensor_pos(sweep.sensorId)
+            rotorPos, rotorRot, rotorRotInv = self._rotor_geometry(
+                sweep.baseStationId
+            )
+            sweep.rotorPos = rotorPos
+            sweep.rotorRot = rotorRot
+            sweep.rotorRotInv = rotorRotInv
+
+            self.logger.debug(
+                f'\nProcessing Sweep Angle Sample:\n'
+                f'{"Sensor ID":<15}: {sweep.sensorId}\n'
+                f'{"Base Station ID":<15}: {sweep.baseStationId}\n'
+                f'{"Sweep ID":<15}: {sweep.sweepId}\n'
+                f'{"Time (t)":<15}: {sweep.t:.3f}\n'
+                f'{"Sweep Angle":<15}: {sweep.measuredSweepAngle:.3f}'
+            )
+
+            cffirmware.kalmanCoreUpdateWithSweepAngles(
+                self.coreData, sweep, now_ms, self.outlierFilterLH
+            )
 
         elif sample[0] == 'estExtPose':
             ext_pose = cffirmware.poseMeasurement_t()
