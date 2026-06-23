@@ -83,6 +83,17 @@ void appMain(){
         uint32_t current_time = xTaskGetTickCount();
         //Pulizia tabella vicini
         state_remove_dead(current_time,(uint32_t)M2T(1500));
+        
+        if (my_id != 0) {
+            uint8_t neighbors_count_tmp = 0;
+            Neighbor_t* nt = state_get_table(&neighbors_count_tmp);
+            uint8_t min_hop = 254;
+            for (uint8_t i = 0; i < neighbors_count_tmp; i++) {
+                if (nt[i].hop_count < min_hop)
+                    min_hop = nt[i].hop_count;
+            }
+            if (min_hop < 254) my_hop_count = min_hop + 1;
+        }
 
         // Se è passato più di 1.5s dall'ultimo ACK della Base Station entro in mission_mode.
         if (my_id != 0){

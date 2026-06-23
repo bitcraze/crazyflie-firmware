@@ -28,7 +28,7 @@ void compute_force_vector(Neighbor_t* neighbors, uint8_t count, uint8_t my_hop, 
         float force_magnitude = 0.0f;
         // Forza attrattiva verso hop precedenti e successivi. Segno positivo quindi la molla è troppo tirata e deve avvicinarsi.
         if (neighbors[i].hop_count == (my_hop - 1) || neighbors[i].hop_count == (my_hop + 1)) {
-            force_magnitude += K_ATT * d;
+            force_magnitude += K_ATT * (d - D_TARGET);
         }
 
         // Forza repulsiva verso tutti i vicini troppo vicini. Segno negativo, molla troppo rilassata.
