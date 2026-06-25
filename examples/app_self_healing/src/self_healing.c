@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <math.h>
 
 #include "app.h"
 
@@ -14,6 +15,7 @@
 
 #define DEBUG_MODULE "P2P"
 #include "debug.h"
+#include "led.h"
 
 #include "commander.h"
 
@@ -23,7 +25,8 @@
 static bool mission_mode = false;
 static uint8_t my_hop_count = 255;
 static uint32_t last_ack_timestamp = 0;
-
+static uint32_t last_print_time = 0;
+static bool equilibrium_reached = false; //flag per stampare quando ho raggiunto l'equilibrio
 static uint8_t force_signal_loss = 0; // 0 = Segnale Ok, 1 = Interferenza finta per provare algoritmo
 
 #define POSITION_UPDATE 0
@@ -59,7 +62,7 @@ void p2pcallbackHandler(P2PPacket *p) {
     uint32_t current_timestamp = xTaskGetTickCount(); 
     state_update_neighbor(other_id, rssi, other_hop, current_timestamp);
 
-  DEBUG_PRINT("[RSSI: -%d dBm] Message from CF nr. %d (Hop %d): %s\n", rssi, other_id, other_hop, (type == HELP_PROXY) ? "AIUTO" : "AGGIORNAMENTO");
+  DEBUG_PRINT("[RSSI: -%d dBm] Messaggio da CF nr. %d (Hop %d): %s\n", rssi, other_id, other_hop, (type == HELP_PROXY) ? "AIUTO" : "AGGIORNAMENTO");
 }
 
 void appMain(){
@@ -122,14 +125,49 @@ void appMain(){
             //Calcolo forze
             compute_force_vector(neighbor_table, neighbors_count, my_hop_count, &fx, &fy);
             force_to_velocity(fx, fy, &vx, &vy);
+
+            if ((current_time - last_print_time) > M2T(2000)) {
+                // Cerchiamo il nodo verso cui mi sto spostando
+                for (uint8_t i = 0; i < neighbors_count; i++) {
+                    if (neighbor_table[i].hop_count == (my_hop_count - 1)) {
+                        
+                        // Calcolo distanza
+                        float d = rssi_to_distance(neighbor_table[i].rssi);
+                        float errore_metri = d - D_TARGET; 
+                        
+                        if (fabsf(errore_metri) > 0.05f) { 
+                            equilibrium_reached = false;
+                            DEBUG_PRINT("MISSION MODE: Mi sto spostando di %.2f metri verso il CF nr. %d\n", (double)fabsf(errore_metri), neighbor_table[i].id);
+                        } else if (!equilibrium_reached){
+                            equilibrium_reached = true;
+                            DEBUG_PRINT("EQUILIBRIO RAGGIUNTO: Posizione stabile verso CF nr. %d\n", neighbor_table[i].id);
+                        }
+                        break; 
+                    }
+                }
+                last_print_time = current_time;
+            }
+
             setpoint_t sp;
             memset(&sp, 0, sizeof(sp));
-            sp.mode.x = modeVelocity;
-            sp.mode.y = modeVelocity;
-            sp.mode.z = modeDisable;
+            sp.mode.z   = modeAbs;
+            sp.position.z = TARGET_HEIGHT;
 
-            sp.velocity.x = vx;
-            sp.velocity.y = vy;
+            if (mission_mode) {
+                sp.mode.x     = modeVelocity;
+                sp.mode.y     = modeVelocity;
+                sp.velocity.x = vx;
+                sp.velocity.y = vy;
+                ledSet(LED_RED_R, true);   // rosso fisso = in mission mode
+                ledSet(LED_GREEN_R, false);
+            } else {
+                ledSet(LED_GREEN_R, true); // verde fisso = normale
+                ledSet(LED_RED_R, false);
+                sp.mode.x     = modeVelocity;
+                sp.mode.y     = modeVelocity;
+                sp.velocity.x = 0.0f;
+                sp.velocity.y = 0.0f;
+            }
 
             commanderSetSetpoint(&sp, 3);
         }

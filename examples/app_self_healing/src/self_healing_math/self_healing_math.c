@@ -9,13 +9,16 @@ float rssi_to_distance(int8_t rssi){
     return powf(10.0f, exponent);
 }
 
-// Funzione helper per l'esperimento: assegno un angolo finto in base all'ID.
-// Moltiplichiamo l'ID per un valore in radianti per "sparpagliare" i droni 
-// in direzioni diverse (es. ID 1 = 2 rad, ID 2 = 4 rad, ecc ecc)
-static float get_fake_angle_for_id(uint8_t id) {
-    return (float)id * 2.0f;
-}
 
+static float get_angle_for_neighbor(uint8_t my_id, uint8_t neighbor_id) {
+    // Configurazione a linea: Base -- Drone1 -- Drone2
+    // Verso la base = 0 rad, verso la coda = PI rad
+    if (neighbor_id < my_id) {
+        return 0.0f;        // il vicino è verso la base
+    } else {
+        return 3.14159f;    // il vicino è dall'altra parte
+    }
+}
 void compute_force_vector(Neighbor_t* neighbors, uint8_t count, uint8_t my_hop, float* fx, float* fy){
 
     *fx = 0.0f;
@@ -38,7 +41,7 @@ void compute_force_vector(Neighbor_t* neighbors, uint8_t count, uint8_t my_hop, 
         }
 
         // Calcolo dell'angolo finto per il vicino.
-        float theta = get_fake_angle_for_id(neighbors[i].id);
+        float theta = get_angle_for_neighbor(my_hop, neighbors[i].id);
 
         // Scompongo la magnitudo della forza sugli assi x e y
         *fx += force_magnitude * cosf(theta);
