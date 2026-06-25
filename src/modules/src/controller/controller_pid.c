@@ -57,6 +57,7 @@ static float capAngle(float angle) {
 static void controllerResetAllPids(const state_t *state)
 {
   positionControllerResetAllPID(state->position.x, state->position.y, state->position.z);
+  positionControllerResetAllfilters();
   attitudeControllerResetAllPID(state->attitude.roll, state->attitude.pitch, state->attitude.yaw);
   attitudeDesired.roll  = state->attitude.roll;
   attitudeDesired.pitch = state->attitude.pitch;
