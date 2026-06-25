@@ -116,7 +116,7 @@ Build artifacts, including binaries, will end up in the `build` directory.
 ### Customize the firmware with kbuild (Advanced)
 
 
-**Please note** that these instructions are only meant for you if you want to build an custom firmware for a custom platform than the ones we have listed above. You can still configure and change the firmware without kbuild.
+**Please note** that these instructions are only meant for you if you want to build an custom firmware for a custom platform than the ones we have listed above, e.g., the legacy propellers or thrust upgrade kit, see [battery compensation](/docs/functional-areas/battery_compensation.md). You can still configure and change the firmware without kbuild.
 
 Please go to [these instructions](/docs/development/kbuild.md) to learn how to use the menuconfig.
 
