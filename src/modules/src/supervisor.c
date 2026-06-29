@@ -77,7 +77,7 @@ static uint16_t rpmCheckDurationMs = CONFIG_MOTORS_ARMING_RPM_DURATION_MS;
 static uint16_t motorsNotRespondingRpmThreshold = CONFIG_MOTORS_RPM_NOT_RESPONDING_THRESHOLD;
 #endif
 
-static float geofenceWarningZone = 1.0f;
+static float geofenceWarningZone = 0.5f;
 static float geofenceXmin = -10.0f;
 static float geofenceXmax = 10.0f;
 static float geofenceYmin = -10.0f;
@@ -745,12 +745,12 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint, const state_t *state) {
       if (setpoint->mode.x == modeVelocity) {
         if (state->position.x < geofenceXmin) {
           setpoint->mode.x = modeAbs;
-          setpoint->position.x = geofenceXmin;
+          setpoint->position.x = geofenceXmin+geofenceWarningZone/2;
           setpoint->velocity.x = 0;
           geofenceActivated = true;
         } else if (state->position.x > geofenceXmax) {
           setpoint->mode.x = modeAbs;
-          setpoint->position.x = geofenceXmax;
+          setpoint->position.x = geofenceXmax-geofenceWarningZone/2;
           setpoint->velocity.x = 0;
           geofenceActivated = true;
         }
@@ -758,12 +758,12 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint, const state_t *state) {
       if (setpoint->mode.y == modeVelocity) {
         if (state->position.y < geofenceYmin) {
           setpoint->mode.y = modeAbs;
-          setpoint->position.y = geofenceYmin;
+          setpoint->position.y = geofenceYmin+geofenceWarningZone/2;
           setpoint->velocity.y = 0;
           geofenceActivated = true;
         } else if (state->position.y > geofenceYmax) {
           setpoint->mode.y = modeAbs;
-          setpoint->position.y = geofenceYmax;
+          setpoint->position.y = geofenceYmax-geofenceWarningZone/2;
           setpoint->velocity.y = 0;
           geofenceActivated = true;
         }
@@ -771,12 +771,12 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint, const state_t *state) {
       if (setpoint->mode.z == modeVelocity) {
         if (state->position.z < geofenceZmin) {
           setpoint->mode.z = modeAbs;
-          setpoint->position.z = geofenceZmin;
+          setpoint->position.z = geofenceZmin+geofenceWarningZone/2;
           setpoint->velocity.z = 0;
           geofenceActivated = true;
         } else if (state->position.z > geofenceZmax) {
           setpoint->mode.z = modeAbs;
-          setpoint->position.z = geofenceZmax;
+          setpoint->position.z = geofenceZmax-geofenceWarningZone;
           setpoint->velocity.z = 0;
           geofenceActivated = true;
         }
