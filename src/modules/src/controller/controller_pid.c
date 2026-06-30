@@ -79,7 +79,7 @@ void controllerPid(control_t *control, const setpoint_t *setpoint,
   control->controlMode = controlModeLegacy;
 
   if (setpointModeChanged(setpoint)) {
-    controllerPidReinitialize(state);
+    controllerPidReinitialize(state); // To prevent control bump
   }
 
   if (RATE_DO_EXECUTE(ATTITUDE_RATE, stabilizerStep)) {
