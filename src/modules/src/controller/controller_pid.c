@@ -40,6 +40,15 @@ bool controllerPidTest(void)
   return pass;
 }
 
+static void controllerPidReinitialize(const state_t *state)
+{
+  positionControllerResetAllPID(state->position.x, state->position.y, state->position.z);
+  positionControllerResetAllfilters();
+  attitudeControllerResetAllPID(state->attitude.roll, state->attitude.pitch, state->attitude.yaw);
+  attitudeDesired.roll  = state->attitude.roll;
+  attitudeDesired.pitch = state->attitude.pitch;
+}
+
 static float capAngle(float angle) {
   float result = angle;
 
@@ -52,15 +61,6 @@ static float capAngle(float angle) {
   }
 
   return result;
-}
-
-static void controllerPidReinitialize(const state_t *state)
-{
-  positionControllerResetAllPID(state->position.x, state->position.y, state->position.z);
-  positionControllerResetAllfilters();
-  attitudeControllerResetAllPID(state->attitude.roll, state->attitude.pitch, state->attitude.yaw);
-  attitudeDesired.roll  = state->attitude.roll;
-  attitudeDesired.pitch = state->attitude.pitch;
 }
 
 static bool setpointModeChanged(const setpoint_t *setpoint)
