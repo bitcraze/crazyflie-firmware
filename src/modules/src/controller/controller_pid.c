@@ -65,10 +65,10 @@ static float capAngle(float angle) {
 
 static bool setpointModeChanged(const setpoint_t *setpoint)
 {
-  static setpoint_t prev; // only .mode is used; zero-init triggers reset on first tick
-  bool changed = (memcmp(&setpoint->mode, &prev.mode, sizeof(setpoint->mode)) != 0);
-  prev.mode = setpoint->mode;
-  return changed;
+  static setpoint_mode_t previous_mode; // zero-init triggers reset on first tick
+  bool is_mode_changed = (memcmp(&setpoint->mode, &previous_mode, sizeof(previous_mode)) != 0);
+  previous_mode = setpoint->mode;
+  return is_mode_changed;
 }
 
 void controllerPid(control_t *control, const setpoint_t *setpoint,
