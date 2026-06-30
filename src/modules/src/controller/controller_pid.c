@@ -54,7 +54,7 @@ static float capAngle(float angle) {
   return result;
 }
 
-static void controllerResetAllPids(const state_t *state)
+static void controllerPidReinitialize(const state_t *state)
 {
   positionControllerResetAllPID(state->position.x, state->position.y, state->position.z);
   positionControllerResetAllfilters();
@@ -79,7 +79,7 @@ void controllerPid(control_t *control, const setpoint_t *setpoint,
   control->controlMode = controlModeLegacy;
 
   if (setpointModeChanged(setpoint)) {
-    controllerResetAllPids(state);
+    controllerPidReinitialize(state);
   }
 
   if (RATE_DO_EXECUTE(ATTITUDE_RATE, stabilizerStep)) {
@@ -172,7 +172,7 @@ void controllerPid(control_t *control, const setpoint_t *setpoint,
     cmd_pitch = control->pitch;
     cmd_yaw = control->yaw;
 
-    controllerResetAllPids(state);
+    controllerPidReinitialize(state);
 
     // Reset the calculated YAW angle for rate control
     attitudeDesired.yaw = state->attitude.yaw;
