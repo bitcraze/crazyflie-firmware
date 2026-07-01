@@ -218,29 +218,39 @@ def test_power_distribution_cap_reduces_thrust_equally_much_with_lower_cap():
     assert actual.motors.m4 == max(0xffff, idle_thrust)
 
 
-def test_power_distribution_force_clamps_out_of_range_normalized_forces():
-    """controlModeForce must clamp normalized forces to [0, 1] before scaling.
+def test_power_distribution_cap_clamps_out_of_range_force_style_duties():
+    """Out-of-range PWM-scale duties (as if Force skipped its [0,1] clamp) are
+    still saturated by Cap before anything reaches the motor HAL.
 
-    Out-of-range values (negative or > 1.0) must not produce a PWM-scale
-    thrust outside [0, UINT16_MAX] — this is the per-path clamp that
-    powerDistributionForceTorque deliberately does *not* apply (it leaves
-    headroom for coordinated capping instead).
+    controlModeForce clamps normalized forces in C via clampNormalizedForce();
+    SWIG does not expose a writable normalizedForces[] for a direct host call,
+    so this test feeds Cap the duties an *unclamped* f*UINT16_MAX mapping would
+    produce and checks every resulting motor PWM duty is in [idle, 0xFFFF].
     """
-    control = cffirmware.control_t()
-    control.controlMode = cffirmware.controlModeForce
-    # Intentionally out of the documented [0.0, 1.0] range on every motor.
-    control.normalizedForces[0] = -0.5
-    control.normalizedForces[1] = 1.5
-    control.normalizedForces[2] = 2.0
-    control.normalizedForces[3] = -10.0
+    # f in {-0.5, 1.5, 2.0, -10.0} without the [0, 1] clamp.
+    unclamped = cffirmware.motors_thrust_uncapped_t()
+    unclamped.motors.m1 = int(-0.5 * 0xffff)
+    unclamped.motors.m2 = int(1.5 * 0xffff)
+    unclamped.motors.m3 = int(2.0 * 0xffff)
+    unclamped.motors.m4 = int(-10.0 * 0xffff)
 
-    actual = cffirmware.motors_thrust_uncapped_t()
-    cffirmware.powerDistribution(control, actual)
+    pwm = cffirmware.motors_thrust_pwm_t()
+    idle_thrust = cffirmware.powerDistributionGetIdleThrust()
+    is_capped = cffirmware.powerDistributionCap(unclamped, pwm)
 
-    assert actual.motors.m1 == 0
-    assert actual.motors.m2 == 0xffff
-    assert actual.motors.m3 == 0xffff
-    assert actual.motors.m4 == 0
+    assert is_capped
+    for duty in (pwm.motors.m1, pwm.motors.m2, pwm.motors.m3, pwm.motors.m4):
+        assert idle_thrust <= duty <= 0xffff
+
+    # Spec for the Force path's clampNormalizedForce mapping of the same inputs.
+    clamped_map = (
+        max(0.0, min(1.0, -0.5)),
+        max(0.0, min(1.0, 1.5)),
+        max(0.0, min(1.0, 2.0)),
+        max(0.0, min(1.0, -10.0)),
+    )
+    assert clamped_map == (0.0, 1.0, 1.0, 0.0)
+    assert [int(f * 0xffff) for f in clamped_map] == [0, 0xffff, 0xffff, 0]
 
 
 def test_power_distribution_force_torque_outrange_then_cap_clamps_pwm_duty():
