@@ -216,3 +216,95 @@ def test_power_distribution_cap_reduces_thrust_equally_much_with_lower_cap():
     assert actual.motors.m2 == max(0, idle_thrust)
     assert actual.motors.m3 == max(1000 - 10, idle_thrust)
     assert actual.motors.m4 == max(0xffff, idle_thrust)
+
+
+def test_power_distribution_cap_clamps_out_of_range_force_style_duties():
+    """Out-of-range PWM-scale duties (as if Force skipped its [0,1] clamp) are
+    still saturated by Cap before anything reaches the motor HAL.
+
+    controlModeForce clamps normalized forces in C via clampNormalizedForce();
+    SWIG does not expose a writable normalizedForces[] for a direct host call,
+    so this test feeds Cap the duties an *unclamped* f*UINT16_MAX mapping would
+    produce and checks every resulting motor PWM duty is in [idle, 0xFFFF].
+    """
+    # f in {-0.5, 1.5, 2.0, -10.0} without the [0, 1] clamp.
+    unclamped = cffirmware.motors_thrust_uncapped_t()
+    unclamped.motors.m1 = int(-0.5 * 0xffff)
+    unclamped.motors.m2 = int(1.5 * 0xffff)
+    unclamped.motors.m3 = int(2.0 * 0xffff)
+    unclamped.motors.m4 = int(-10.0 * 0xffff)
+
+    pwm = cffirmware.motors_thrust_pwm_t()
+    idle_thrust = cffirmware.powerDistributionGetIdleThrust()
+    is_capped = cffirmware.powerDistributionCap(unclamped, pwm)
+
+    assert is_capped
+    for duty in (pwm.motors.m1, pwm.motors.m2, pwm.motors.m3, pwm.motors.m4):
+        assert idle_thrust <= duty <= 0xffff
+
+    # Spec for the Force path's clampNormalizedForce mapping of the same inputs.
+    clamped_map = (
+        max(0.0, min(1.0, -0.5)),
+        max(0.0, min(1.0, 1.5)),
+        max(0.0, min(1.0, 2.0)),
+        max(0.0, min(1.0, -10.0)),
+    )
+    assert clamped_map == (0.0, 1.0, 1.0, 0.0)
+    assert [int(f * 0xffff) for f in clamped_map] == [0, 0xffff, 0xffff, 0]
+
+
+def test_power_distribution_force_torque_outrange_then_cap_clamps_pwm_duty():
+    """Oversized force/torque must still yield a safe 16-bit PWM duty.
+
+    powerDistributionForceTorque may leave per-motor thrust above UINT16_MAX
+    so Cap can reduce all motors together. The final motor PWM duties written
+    toward the hardware (motorsSetRatio) must still be saturated to
+    [idle, 0xFFFF] — push a large collective thrust and confirm the clamp.
+    """
+    control = cffirmware.control_t()
+    control.controlMode = cffirmware.controlModeForceTorque
+    # Far beyond a single motor's nominal max force (THRUST_MAX is ~0.1 N).
+    control.thrustSi = 50.0
+    control.torqueX = 0.0
+    control.torqueY = 0.0
+    control.torqueZ = 0.0
+
+    uncapped = cffirmware.motors_thrust_uncapped_t()
+    cffirmware.powerDistribution(control, uncapped)
+
+    # Allocation is allowed to request more than full-scale PWM so Cap can run.
+    assert max(uncapped.motors.m1, uncapped.motors.m2,
+               uncapped.motors.m3, uncapped.motors.m4) > 0xffff
+
+    pwm = cffirmware.motors_thrust_pwm_t()
+    idle_thrust = cffirmware.powerDistributionGetIdleThrust()
+    is_capped = cffirmware.powerDistributionCap(uncapped, pwm)
+
+    assert is_capped
+    for duty in (pwm.motors.m1, pwm.motors.m2, pwm.motors.m3, pwm.motors.m4):
+        assert idle_thrust <= duty <= 0xffff
+    # Symmetric hover demand → all motors sit at full-scale after coordinated cap.
+    assert pwm.motors.m1 == 0xffff
+    assert pwm.motors.m2 == 0xffff
+    assert pwm.motors.m3 == 0xffff
+    assert pwm.motors.m4 == 0xffff
+
+
+def test_power_distribution_cap_saturates_single_motor_above_uint16():
+    """Even a single extreme duty is clamped to UINT16_MAX on the PWM output."""
+    inp = cffirmware.motors_thrust_uncapped_t()
+    inp.motors.m1 = 10**9
+    inp.motors.m2 = 100
+    inp.motors.m3 = 100
+    inp.motors.m4 = 100
+
+    actual = cffirmware.motors_thrust_pwm_t()
+    idle_thrust = cffirmware.powerDistributionGetIdleThrust()
+    is_capped = cffirmware.powerDistributionCap(inp, actual)
+
+    assert is_capped
+    assert actual.motors.m1 == 0xffff
+    # Coordinated reduction pulls the other motors down; never below idle and
+    # never above full-scale PWM.
+    for duty in (actual.motors.m2, actual.motors.m3, actual.motors.m4):
+        assert idle_thrust <= duty <= 0xffff
