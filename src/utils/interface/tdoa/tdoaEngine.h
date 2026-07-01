@@ -35,6 +35,17 @@ typedef struct {
     uint8_t id[REMOTE_ANCHOR_DATA_COUNT];
     uint8_t offset;
   } matching;
+
+  // Candidate logging. When candidateLogMaxCount > 0, every processed packet
+  // emits an "estTdoaCand" event trigger for up to candidateLogMaxCount of the
+  // valid anchor-pair candidates (before selection collapses them to one). This
+  // is used to record all candidate pairs to the uSD deck for offline analysis
+  // and A/B testing of the anchor-pair selection policy. 0 disables logging.
+  uint8_t candidateLogMaxCount;
+  // Monotonic counter, incremented once per packet for which candidates are
+  // logged. Used offline to group candidates that belong to the same packet
+  // (the uSD timestamp is applied per event at write time, not at the source).
+  uint32_t candidateLogGroup;
 } tdoaEngineState_t;
 
 void tdoaEngineInit(tdoaEngineState_t* state, const uint32_t now_ms, tdoaEngineSendTdoaToEstimator sendTdoaToEstimator, const double locodeckTsFreq, const tdoaEngineMatchingAlgorithm_t matchingAlgorithm);

@@ -1,0 +1,30 @@
+1        # config format version (must be 1)
+4096     # ring buffer size in bytes
+log      # log file name prefix
+0        # enable logging on startup (0/1); 0 -> start with: param set usd.logging 1
+
+# Lean variant: only what is strictly needed to replay TDoA candidate selection
+# against ground truth. Drop the baseline estTDOA and the live stateEstimate to
+# reduce the uSD event rate if the superset config drops events.
+
+# Ground truth position, time-based (see config_tdoa_candidates.txt for why).
+on:fixedFrequency
+100      # Hz
+1        # mode: 1 = synchronous with stabilizer loop
+lighthouse.x
+lighthouse.y
+lighthouse.z
+lighthouse.delta
+
+# All TDoA anchor-pair candidates (needs param tdoaEngine.logCand > 0).
+on:estTdoaCand
+
+# IMU, needed to drive the Kalman replay offline.
+on:estAcceleration
+acc.x
+acc.y
+acc.z
+on:estGyroscope
+gyro.x
+gyro.y
+gyro.z

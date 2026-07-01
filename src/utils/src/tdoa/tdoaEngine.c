@@ -52,6 +52,19 @@ The implementation must handle
 #include "tdoaStats.h"
 #include "clockCorrectionEngine.h"
 #include "physicalConstants.h"
+#include "eventtrigger.h"
+
+// Emitted (when engineState->candidateLogMaxCount > 0) for every valid
+// anchor-pair candidate of a processed packet, before the matching algorithm
+// collapses the candidates to a single pair. Together the events with the same
+// "group" describe all pairs that were available for one received packet, which
+// allows offline replay and A/B testing of the anchor-pair selection policy.
+//   group       : per-packet counter, groups candidates of the same packet
+//   idA         : id of the anchor that transmitted the processed packet
+//   idB         : id of the candidate (remote) anchor
+//   distanceDiff: the TDoA measurement [m] for the (idA, idB) pair
+//   isSelected  : 1 if the live matching algorithm picked this pair, else 0
+EVENTTRIGGER(estTdoaCand, uint32, group, uint8, idA, uint8, idB, float, distanceDiff, uint8, isSelected)
 
 void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms, tdoaEngineSendTdoaToEstimator sendTdoaToEstimator, const double locodeckTsFreq, const tdoaEngineMatchingAlgorithm_t matchingAlgorithm) {
   tdoaStorageInitialize(engineState->anchorInfoArray);
@@ -61,6 +74,9 @@ void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms, tdoaE
   engineState->matchingAlgorithm = matchingAlgorithm;
 
   engineState->matching.offset = 0;
+
+  engineState->candidateLogMaxCount = 0;
+  engineState->candidateLogGroup = 0;
 }
 
 static void enqueueTDOA(const tdoaAnchorContext_t* anchorACtx, const tdoaAnchorContext_t* anchorBCtx, double distanceDiff, tdoaEngineState_t* engineState) {
@@ -128,6 +144,52 @@ static int64_t calcTDoA(const tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnc
 static double calcDistanceDiff(const tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T, const double locodeckTsFreq) {
   const int64_t tdoa = calcTDoA(otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T);
   return SPEED_OF_LIGHT * tdoa / locodeckTsFreq;
+}
+
+// Emit an estTdoaCand event for up to candidateLogMaxCount of the valid
+// anchor-pair candidates of this packet. A candidate (idA, idB) is considered
+// valid using the same criteria as the matching algorithms: idA must have a
+// known time-of-flight to idB and the cached sequence number must match. The
+// selected pair (as chosen by the live matching algorithm) is flagged so that
+// offline analysis can compare against alternative selection policies.
+static void logTdoaCandidates(tdoaEngineState_t* engineState, const tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T, const uint8_t selectedId) {
+  int remoteCount = 0;
+  uint8_t seqNr[REMOTE_ANCHOR_DATA_COUNT];
+  uint8_t id[REMOTE_ANCHOR_DATA_COUNT];
+  tdoaStorageGetRemoteSeqNrList(anchorCtx, &remoteCount, seqNr, id);
+
+  const uint32_t now_ms = anchorCtx->currentTime_ms;
+  const uint8_t idA = tdoaStorageGetId(anchorCtx);
+  const uint32_t group = engineState->candidateLogGroup++;
+  uint8_t loggedCount = 0;
+
+  for (int index = 0; index < remoteCount && loggedCount < engineState->candidateLogMaxCount; index++) {
+    const uint8_t candidateAnchorId = id[index];
+
+    if (!tdoaStorageGetRemoteTimeOfFlight(anchorCtx, candidateAnchorId)) {
+      continue;
+    }
+
+    tdoaAnchorContext_t otherAnchorCtx;
+    if (!tdoaStorageGetCreateAnchorCtx(engineState->anchorInfoArray, candidateAnchorId, now_ms, &otherAnchorCtx)) {
+      continue;
+    }
+
+    if (seqNr[index] != tdoaStorageGetSeqNr(&otherAnchorCtx)) {
+      continue;
+    }
+
+    const double distanceDiff = calcDistanceDiff(&otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, engineState->locodeckTsFreq);
+
+    eventTrigger_estTdoaCand_payload.group = group;
+    eventTrigger_estTdoaCand_payload.idA = idA;
+    eventTrigger_estTdoaCand_payload.idB = candidateAnchorId;
+    eventTrigger_estTdoaCand_payload.distanceDiff = (float)distanceDiff;
+    eventTrigger_estTdoaCand_payload.isSelected = (candidateAnchorId == selectedId) ? 1 : 0;
+    eventTrigger(&eventTrigger_estTdoaCand);
+
+    loggedCount++;
+  }
 }
 
 static bool matchRandomAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx, const bool doExcludeId, const uint8_t excludedId) {
@@ -230,7 +292,17 @@ bool tdoaEngineProcessPacketFiltered(tdoaEngineState_t* engineState, tdoaAnchorC
     STATS_CNT_RATE_EVENT(&engineState->stats.timeIsGood);
 
     tdoaAnchorContext_t otherAnchorCtx;
-    if (findSuitableAnchor(engineState, &otherAnchorCtx, anchorCtx, doExcludeId, excludedId)) {
+    bool suitableAnchorFound = findSuitableAnchor(engineState, &otherAnchorCtx, anchorCtx, doExcludeId, excludedId);
+
+    // Log all candidate pairs (not just the selected one) when enabled. Gated on
+    // a valid clock correction, matching the condition under which the matching
+    // algorithm runs, so that the logged distanceDiff values are meaningful.
+    if (engineState->candidateLogMaxCount > 0 && tdoaStorageGetClockCorrection(anchorCtx) > 0.0) {
+      const uint8_t selectedId = suitableAnchorFound ? tdoaStorageGetId(&otherAnchorCtx) : 0xFF;
+      logTdoaCandidates(engineState, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, selectedId);
+    }
+
+    if (suitableAnchorFound) {
       STATS_CNT_RATE_EVENT(&engineState->stats.suitableDataFound);
       double tdoaDistDiff = calcDistanceDiff(&otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, engineState->locodeckTsFreq);
       enqueueTDOA(&otherAnchorCtx, anchorCtx, tdoaDistDiff, engineState);
