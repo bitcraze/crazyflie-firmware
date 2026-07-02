@@ -52,6 +52,16 @@ The implementation must handle
 #include "tdoaStats.h"
 #include "clockCorrectionEngine.h"
 #include "physicalConstants.h"
+#include "test_support.h"
+#include "param.h"
+
+// Default limit for the measured/anchor-distance ratio used by matchRandomAnchor(), needs
+// tuning against field data. Exposed as the tdoaEngine.distRatio parameter.
+#define TDOA_ENGINE_DEFAULT_DISTANCE_RATIO_LIMIT 0.85f
+
+// Candidates with a measured/anchor-distance ratio at or above this limit are
+// rejected as bad geometry (matchRandomAnchor/TDoA3 only), see isGeometryGoodEnough()
+static float distanceRatioLimit = TDOA_ENGINE_DEFAULT_DISTANCE_RATIO_LIMIT;
 
 void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms, tdoaEngineSendTdoaToEstimator sendTdoaToEstimator, const double locodeckTsFreq, const tdoaEngineMatchingAlgorithm_t matchingAlgorithm) {
   tdoaStorageInitialize(engineState->anchorInfoArray);
@@ -130,12 +140,38 @@ static double calcDistanceDiff(const tdoaAnchorContext_t* otherAnchorCtx, const 
   return SPEED_OF_LIGHT * tdoa / locodeckTsFreq;
 }
 
-static bool matchRandomAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx, const bool doExcludeId, const uint8_t excludedId) {
+static float sq(float a) { return a * a; }
+
+static float distanceBetweenAnchorsSquared(const point_t* a, const point_t* b) {
+  return sq(a->x - b->x) + sq(a->y - b->y) + sq(a->z - b->z);
+}
+
+// Returns false (candidate rejected) if
+// either anchor position is unknown.
+static bool isGeometryGoodEnough(const tdoaAnchorContext_t* anchorCtx, const tdoaAnchorContext_t* otherAnchorCtx, const double candidateDistanceDiff) {
+  // A candidate is rejected if the ratio between the measured distance diff and the distance
+  // between the anchors is at or above distanceRatioLimit - this indicates bad pair geometry.
+  // This is a rough estimation of the measurement sensitivity.
+
+  point_t anchorPosition;
+  point_t otherAnchorPosition;
+  if (!tdoaStorageGetAnchorPosition(anchorCtx, &anchorPosition) || !tdoaStorageGetAnchorPosition(otherAnchorCtx, &otherAnchorPosition)) {
+    return false;
+  }
+
+  const float anchorDistanceSquared = distanceBetweenAnchorsSquared(&anchorPosition, &otherAnchorPosition);
+  const float distanceDiffSquared = sq((float)candidateDistanceDiff);
+  const float ratioSquared = distanceDiffSquared / anchorDistanceSquared;
+  return ratioSquared < sq(distanceRatioLimit);
+}
+
+TESTABLE_STATIC bool matchRandomAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx, const bool doExcludeId, const uint8_t excludedId, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T, const double locodeckTsFreq, double* distanceDiff) {
   engineState->matching.offset++;
   int remoteCount = 0;
   tdoaStorageGetRemoteSeqNrList(anchorCtx, &remoteCount, engineState->matching.seqNr, engineState->matching.id);
 
   uint32_t now_ms = anchorCtx->currentTime_ms;
+  bool wasRejectedByGeometry = false; // TEST stat only
 
   // Loop over the candidates and pick the first one that is useful
   // An offset (updated for each call) is added to make sure we start at
@@ -146,17 +182,31 @@ static bool matchRandomAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_
     if (!doExcludeId || (excludedId != candidateAnchorId)) {
       if (tdoaStorageGetCreateAnchorCtx(engineState->anchorInfoArray, candidateAnchorId, now_ms, otherAnchorCtx)) {
         if (engineState->matching.seqNr[index] == tdoaStorageGetSeqNr(otherAnchorCtx) && tdoaStorageGetRemoteTimeOfFlight(anchorCtx, candidateAnchorId)) {
+          const double candidateDistanceDiff = calcDistanceDiff(otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, locodeckTsFreq);
+
+          if (!isGeometryGoodEnough(anchorCtx, otherAnchorCtx, candidateDistanceDiff)) {
+            wasRejectedByGeometry = true; // TEST stat only
+            continue;
+          }
+
+          *distanceDiff = candidateDistanceDiff;
           return true;
         }
       }
     }
   }
 
+  // TEST stat only, from here...
+  if (wasRejectedByGeometry) {
+    STATS_CNT_RATE_EVENT(&engineState->stats.geometryRejectedTEST);
+  }
+  // ...to here
+
   otherAnchorCtx->anchorInfo = 0;
   return false;
 }
 
-static bool matchYoungestAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx, const bool doExcludeId, const uint8_t excludedId) {
+static bool matchYoungestAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx, const bool doExcludeId, const uint8_t excludedId, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T, const double locodeckTsFreq, double* distanceDiff) {
     int remoteCount = 0;
     tdoaStorageGetRemoteSeqNrList(anchorCtx, &remoteCount, engineState->matching.seqNr, engineState->matching.id);
 
@@ -183,6 +233,7 @@ static bool matchYoungestAnchor(tdoaEngineState_t* engineState, tdoaAnchorContex
 
     if (bestId >= 0) {
       tdoaStorageGetCreateAnchorCtx(engineState->anchorInfoArray, bestId, now_ms, otherAnchorCtx);
+      *distanceDiff = calcDistanceDiff(otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, locodeckTsFreq);
       return true;
     }
 
@@ -190,17 +241,17 @@ static bool matchYoungestAnchor(tdoaEngineState_t* engineState, tdoaAnchorContex
     return false;
 }
 
-static bool findSuitableAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx, const bool doExcludeId, const uint8_t excludedId) {
+static bool findSuitableAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx, const bool doExcludeId, const uint8_t excludedId, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T, const double locodeckTsFreq, double* distanceDiff) {
   bool result = false;
 
   if (tdoaStorageGetClockCorrection(anchorCtx) > 0.0) {
     switch(engineState->matchingAlgorithm) {
       case TdoaEngineMatchingAlgorithmRandom:
-        result = matchRandomAnchor(engineState, otherAnchorCtx, anchorCtx, doExcludeId, excludedId);
+        result = matchRandomAnchor(engineState, otherAnchorCtx, anchorCtx, doExcludeId, excludedId, txAn_in_cl_An, rxAn_by_T_in_cl_T, locodeckTsFreq, distanceDiff);
         break;
 
       case TdoaEngineMatchingAlgorithmYoungest:
-        result = matchYoungestAnchor(engineState, otherAnchorCtx, anchorCtx, doExcludeId, excludedId);
+        result = matchYoungestAnchor(engineState, otherAnchorCtx, anchorCtx, doExcludeId, excludedId, txAn_in_cl_An, rxAn_by_T_in_cl_T, locodeckTsFreq, distanceDiff);
         break;
 
       default:
@@ -230,11 +281,19 @@ bool tdoaEngineProcessPacketFiltered(tdoaEngineState_t* engineState, tdoaAnchorC
     STATS_CNT_RATE_EVENT(&engineState->stats.timeIsGood);
 
     tdoaAnchorContext_t otherAnchorCtx;
-    if (findSuitableAnchor(engineState, &otherAnchorCtx, anchorCtx, doExcludeId, excludedId)) {
+    double tdoaDistDiff = 0.0;
+    if (findSuitableAnchor(engineState, &otherAnchorCtx, anchorCtx, doExcludeId, excludedId, txAn_in_cl_An, rxAn_by_T_in_cl_T, engineState->locodeckTsFreq, &tdoaDistDiff)) {
       STATS_CNT_RATE_EVENT(&engineState->stats.suitableDataFound);
-      double tdoaDistDiff = calcDistanceDiff(&otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, engineState->locodeckTsFreq);
       enqueueTDOA(&otherAnchorCtx, anchorCtx, tdoaDistDiff, engineState);
     }
   }
   return timeIsGood;
 }
+
+PARAM_GROUP_START(tdoaEngine)
+/**
+ * @brief Anchor pair candidates with a measured-distance / anchor-distance ratio at or
+ * above this limit are rejected as bad geometry (TDoA3/matchRandomAnchor only).
+ */
+PARAM_ADD(PARAM_FLOAT, distRatio, &distanceRatioLimit)
+PARAM_GROUP_STOP(tdoaEngine)
