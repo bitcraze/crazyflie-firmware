@@ -17,8 +17,10 @@ Firmware:
 - `EVENTTRIGGER(estTdoaCand, uint32 group, uint8 idA, uint8 idB, float distanceDiff, uint8 isSelected)`
   emitted at the matching stage in `src/utils/src/tdoa/tdoaEngine.c`. All
   candidates of one received packet share the same `group` value.
-- Param `tdoaEngine.logCand` (default `0` = off). Set to `N` to log up to `N`
-  candidates per packet. Doubles as a rate cap; set to `16` to log all.
+- Param `tdoaEngine.logCand` (default `0` = off). Set to any non-zero value
+  (use `1`) to log **all** valid candidate pairs of every processed packet.
+  There is no partial mode: the log is always a complete record of what the
+  matcher saw, so the selected pair is always included.
 - Build fragment `configs/tdoa3_lh_groundtruth.conf` (TDoA3 + Lighthouse as
   ground truth + uSD).
 
@@ -68,7 +70,7 @@ cfcli -u radio://0/100/2M/F00D2BEFED --csv loco display \
    against (over a brief connection, before the run):
 
    ```
-   cfcli -u radio://0/100/2M/F00D2BEFED param set tdoaEngine.logCand 16
+   cfcli -u radio://0/100/2M/F00D2BEFED param set tdoaEngine.logCand 1
    cfcli -u radio://0/100/2M/F00D2BEFED param set usd.logging 1
    ```
 
@@ -114,16 +116,45 @@ cfcli -u radio://0/100/2M/F00D2BEFED --csv loco display \
 
 Add your own in `bindings/util/tdoa_selection.py` (subclass `SelectionPolicy`).
 
-## Watch for dropped uSD events (important)
+## Dropped uSD events are checked automatically
 
 The uSD ring buffer silently drops events if the SD write task can't keep up,
-which breaks lossless replay. Candidate logging multiplies the event rate, so
-verify no drops after a run by logging the `usd` group and comparing
-`usd.eventsRequested` vs `usd.eventsWritten` (and watching `usd.fatWrBps`). If
-you see drops:
-- lower `tdoaEngine.logCand`,
-- increase the buffer size (line 2 of `config.txt`),
-- or switch to `config_tdoa_candidates_lean.txt`.
+which breaks lossless replay. The firmware counts `usd.eventsRequested` vs
+`usd.eventsWritten` (log variables, reset at each log start), and
+`read_usd_log.sh` compares them after stopping the log on every readback:
+it fails loudly (exit 1) if any events were dropped.
+
+If drops are reported:
+- increase the ring buffer size (line 2 of `config.txt`), or
+- switch to `config_tdoa_candidates_lean.txt`.
+
+Do not use a log with drops for replay conclusions; the holes are unflagged.
+
+## Hardware validation checklist
+
+Run this end-to-end check whenever the capture/readback/replay chain changes.
+Collected logs stay local (do not commit them).
+
+1. **Build** with the ground-truth config (see One-time setup) and **flash**.
+2. **Arm logging**: `param set tdoaEngine.logCand 1`, `param set usd.logging 1`.
+3. **Collect**: disconnect the radio; move the drone by hand (or fly, with
+   explicit permission) for at least 60 s inside loco + Lighthouse coverage.
+4. **Read back**: `tools/usdlog/read_usd_log.sh <uri> run.bin`
+   - PASS requires: the automatic drop check prints
+     `OK: no dropped events` (R1) and the file decodes
+     (`replay_tdoa.py` reads it) with a plausible size (R2).
+5. **Verify capture faithfulness**:
+   `python3 -m tools.usdlog.replay_tdoa run.bin --anchors anchors.yaml --policies baseline`
+   - PASS requires: `baseline reconstruction: OK (... 0 mismatched ...)` —
+     the selected candidates reproduce the logged `estTDOA` stream exactly
+     (F1, measurement level).
+6. **Quantify replay fidelity**: the same command prints
+   `baseline vs live stateEstimate: rms ... m, max ... m`.
+   - Record the numbers here. Documented tolerance (F1, trajectory level):
+     **rms ≤ TBD m** — fill in after the first validated run and treat
+     regressions beyond it as failures.
+
+Latest validated run: _(date, firmware commit, rms/max)_ — not yet performed.
 
 ## Notes / limitations
 
