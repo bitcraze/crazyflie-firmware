@@ -163,3 +163,50 @@ def make_policy(name):
         raise ValueError(
             f"Unknown selection policy '{name}'. "
             f"Available: {', '.join(sorted(POLICY_FACTORIES))}")
+
+
+def verify_baseline_reconstruction(log_data):
+    """F1 measurement-level check: baseline reconstruction == logged estTDOA.
+
+    The candidate flagged ``isSelected`` and the ``estTDOA`` event of the same
+    packet both originate from the same ``calcDistanceDiff`` double in the
+    firmware and are stored as float32, so matching entries must be *exactly*
+    equal.
+
+    The comparison is a strict in-order 1:1 zip of the two streams, which is
+    only meaningful for drop-free logs -- verify losslessness (the
+    usd.eventsRequested / usd.eventsWritten check) first.
+
+    Returns a dict of counts; a faithful, drop-free log has
+    ``n_mismatched == 0`` and ``n_baseline == n_est_tdoa == n_compared``.
+    """
+    groups = build_candidate_groups(log_data)
+    policy = BaselinePolicy()
+    baseline = []
+    n_selectionless = 0
+    for group in groups:
+        measurements = policy.select(group)
+        if measurements:
+            baseline.extend(measurements)
+        else:
+            n_selectionless += 1
+
+    est = log_data.get('estTDOA') or {}
+    n_est_tdoa = len(est.get('timestamp', []))
+    n_compared = min(len(baseline), n_est_tdoa)
+    n_mismatched = 0
+    for i in range(n_compared):
+        m = baseline[i]
+        if (int(est['idA'][i]) != m['idA']
+                or int(est['idB'][i]) != m['idB']
+                or float(est['distanceDiff'][i]) != m['distanceDiff']):
+            n_mismatched += 1
+
+    return {
+        'n_groups': len(groups),
+        'n_selectionless': n_selectionless,
+        'n_baseline': len(baseline),
+        'n_est_tdoa': n_est_tdoa,
+        'n_compared': n_compared,
+        'n_mismatched': n_mismatched,
+    }
