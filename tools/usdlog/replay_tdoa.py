@@ -24,23 +24,17 @@ import math
 import os
 
 import tools.usdlog.cfusdlog as cfusdlog
-from bindings.util.estimator_kalman_emulator import EstimatorKalmanEmulator
-from bindings.util.loco_utils import read_loco_anchor_positions
-from bindings.util.tdoa_selection import build_candidate_groups, make_policy
-
-
-def extract_imu_samples(log_data):
-    """Return IMU samples in the (log_type, sample_dict) form the emulator wants."""
-    samples = []
-    for log_type in ('estAcceleration', 'estGyroscope'):
-        data = log_data.get(log_type)
-        if not data or 'timestamp' not in data:
-            continue
-        n = len(data['timestamp'])
-        for i in range(n):
-            sample = {name: values[i] for name, values in data.items()}
-            samples.append((log_type, sample))
-    return samples
+from bindings.util.tdoa_replay import (
+    apply_policy,
+    extract_imu_samples,
+    extract_state_estimate,
+    replay,
+)
+from bindings.util.tdoa_selection import (
+    build_candidate_groups,
+    make_policy,
+    verify_baseline_reconstruction,
+)
 
 
 def extract_ground_truth(log_data):
@@ -71,30 +65,8 @@ def extract_ground_truth(log_data):
 
 def run_policy(policy, anchor_positions, imu_samples, groups, tdoa_std):
     """Run the Kalman replay for one selection policy. Returns [(t_ms, (x,y,z))]."""
-    policy.reset()
-
-    samples = list(imu_samples)
-    for group in groups:
-        for m in policy.select(group):
-            samples.append(('estTDOA', {
-                'idA': m['idA'],
-                'idB': m['idB'],
-                'distanceDiff': m['distanceDiff'],
-                'timestamp': group['t_ms'],
-            }))
-    samples.sort(key=lambda s: s[1]['timestamp'])
-
-    if not samples:
-        return []
-
-    emulator = EstimatorKalmanEmulator(anchor_positions)
-    emulator.TDOA_ENGINE_MEASUREMENT_NOISE_STD = tdoa_std
-
-    trajectory = []
-    while len(samples):
-        now_ms, state = emulator.run_one_1khz_iteration(samples)
-        trajectory.append((now_ms, (state.position.x, state.position.y, state.position.z)))
-    return trajectory
+    tdoa_samples = apply_policy(policy, groups)
+    return replay(anchor_positions, imu_samples, tdoa_samples, {'tdoa_std': tdoa_std})
 
 
 def _interp_ground_truth(gt, t_ms):
@@ -178,11 +150,15 @@ def main():
     args = parser.parse_args()
 
     log_data = cfusdlog.decode(args.logfile)
+    # Imported here: loco_utils needs the cffirmware bindings, which the pure
+    # helpers in this module (tested without bindings) must not depend on
+    from bindings.util.loco_utils import read_loco_anchor_positions
     anchor_positions = read_loco_anchor_positions(args.anchors)
 
     groups = build_candidate_groups(log_data)
     imu_samples = extract_imu_samples(log_data)
     gt = extract_ground_truth(log_data)
+    live = extract_state_estimate(log_data)
 
     n_candidates = sum(len(g['candidates']) for g in groups)
     print(f'Log: {args.logfile}')
@@ -191,6 +167,13 @@ def main():
           + (f'  (avg {n_candidates / len(groups):.1f}/packet)' if groups else ''))
     print(f'  IMU samples:                {len(imu_samples)}')
     print(f'  ground-truth samples:       {len(gt)}')
+    check = verify_baseline_reconstruction(log_data)
+    if check['n_est_tdoa']:
+        status = 'OK' if (check['n_mismatched'] == 0
+                          and check['n_baseline'] == check['n_est_tdoa']) else 'MISMATCH'
+        print(f"  baseline reconstruction:    {status} "
+              f"({check['n_compared']} compared, {check['n_mismatched']} mismatched, "
+              f"{check['n_selectionless']} groups without selection)")
     if not groups:
         print('No estTdoaCand data found. Was tdoaEngine.logCand > 0 during logging?')
         return
@@ -208,6 +191,12 @@ def main():
         policy = make_policy(name)
         trajectory = run_policy(policy, anchor_positions, imu_samples, groups, args.tdoa_std)
         metrics, _ = score_trajectory(trajectory, gt, args.flyaway_threshold)
+        if name == 'baseline' and live:
+            live_metrics, _ = score_trajectory(trajectory, live, args.flyaway_threshold)
+            if live_metrics['n']:
+                print(f'{"":12} baseline vs live stateEstimate: '
+                      f'rms {live_metrics["rms"]:.3f} m, max {live_metrics["max"]:.3f} m '
+                      f'(replay-vs-onboard divergence, spec F1)')
         if args.csv_dir:
             write_csv(os.path.join(args.csv_dir, f'replay_{name}.csv'), trajectory, gt)
         if metrics['n'] == 0:
