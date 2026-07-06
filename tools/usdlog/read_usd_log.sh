@@ -44,8 +44,12 @@ echo ">> Checking for dropped uSD events (usd.eventsRequested vs usd.eventsWritt
 # stop. `log print` streams one CSV line per sample; bound it with --timeout
 # and take the last complete sample.
 DROP_LINE="$("$CFCLI" -u "$URI" --timeout 3000 --csv log print usd.eventsRequested,usd.eventsWritten 2>/dev/null | tail -n 1 || true)"
-EVT_REQ="$(echo "$DROP_LINE" | awk -F',' '{print $(NF-1)}')"
-EVT_WR="$(echo "$DROP_LINE" | awk -F',' '{print $NF}')"
+EVT_REQ=""
+EVT_WR=""
+if [[ -n "$DROP_LINE" ]]; then
+  EVT_REQ="$(echo "$DROP_LINE" | awk -F',' '{print $(NF-1)}' || true)"
+  EVT_WR="$(echo "$DROP_LINE" | awk -F',' '{print $NF}' || true)"
+fi
 
 if [[ ! "$EVT_REQ" =~ ^[0-9]+$ || ! "$EVT_WR" =~ ^[0-9]+$ ]]; then
   echo "!! WARNING: could not read usd.eventsRequested/usd.eventsWritten." >&2
