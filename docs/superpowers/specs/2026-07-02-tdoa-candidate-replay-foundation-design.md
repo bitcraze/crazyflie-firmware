@@ -1,6 +1,6 @@
 # TDoA candidate capture + offline-replay foundation — design
 
-- **Status:** design approved (Sections 1–6), pending final written-spec review by user
+- **Status:** in review — spec re-reviewed against the code and open decisions resolved 2026-07-06; not yet approved by user
 - **Branch:** `tdoa-candidate-logging`
 - **Author:** Rik Bouwmeester (with Claude Code)
 - **Date:** 2026-07-02
@@ -50,7 +50,7 @@ exercises the seam.
 | Layer | Piece | Role |
 |---|---|---|
 | Firmware | `tdoaEngine.c` `logTdoaCandidates()` + `EVENTTRIGGER(estTdoaCand, …)` | Emit up to `logCand` candidate pairs/packet at the matching stage |
-| Firmware | param `tdoaEngine.logCand`, state `candidateLogMaxCount` / `candidateLogGroup` | Gate + per-packet rate cap + per-packet grouping counter |
+| Firmware | param `tdoaEngine.logCand`, state `candidateLogMaxCount` / `candidateLogGroup` | Enable gate + per-packet grouping counter (draft also truncates per packet; truncation is removed by C1) |
 | Build | `configs/tdoa3_lh_groundtruth.conf` | TDoA3 + Lighthouse-as-groundtruth + uSD |
 | Record | `tools/usdlog/config_tdoa_candidates{,_lean}.txt` | uSD what-to-log (candidates + IMU + ground truth + baseline `estTDOA`) |
 | Host | `bindings/util/tdoa_selection.py` | Regroup candidates per packet; pluggable selection policies |
@@ -73,32 +73,60 @@ Each item below becomes a test and, where it fails, a fix in the plan.
 
 ### Capture faithfulness (firmware)
 
-- **C1 — Selected pair is always logged.** With `logCand < 16` (i.e.
-  `< REMOTE_ANCHOR_DATA_COUNT`), the per-packet truncation must never drop the
-  live-selected pair; otherwise the group has no `isSelected` candidate and the
-  baseline is silently wrong for that packet. Today only `logCand = 16`
-  (log-all) is guaranteed faithful. **Fix direction:** log the selected pair
-  first (or otherwise guarantee its inclusion), or explicitly restrict faithful
-  operation to `logCand = 16` and document it. Decision to be made in the plan.
+- **C1 — Groups are never truncated (decided 2026-07-06).** `logCand` becomes a
+  plain enable flag: 0 = off, any non-zero value = emit *every* valid candidate
+  pair. The draft's per-packet truncation (stop after `logCand` events, walking
+  the remote list in storage order while the matcher picks from a rotating
+  offset) could silently drop the live-selected pair, leaving a group with no
+  `isSelected` candidate and a corrupt baseline for that packet. The cap was an
+  arbitrary bandwidth guess, not a requirement. **Fix:** drop the
+  `loggedCount < candidateLogMaxCount` loop condition in `logTdoaCandidates` and
+  rewrite the `logCand` param docs (including removing the incorrect claim that
+  drops can be checked via existing `usd.*` log variables — see R1). With no
+  truncation, the selected pair is present by construction whenever the matcher
+  selected one; uSD bandwidth pressure is handled by detection (R1), not by
+  truncation.
 - **C2 — Candidate set = matcher's feasible set.** The validity predicate in
   `logTdoaCandidates` (`tdoaStorageGetRemoteTimeOfFlight != 0` + cached seqNr
   match) must match exactly what the real matchers (`matchRandomAnchor`,
   `matchYoungestAnchor`) consider selectable — no phantom pairs the firmware
   could never pick, and no missing feasible pairs. Any intentional difference
-  must be documented.
+  must be documented. **Scope note:** in hybrid mode
+  (`CONFIG_DECK_LOCO_TDOA3_HYBRID_MODE`) the matcher excludes an anchor id that
+  `logTdoaCandidates` does not know about, so parity does not hold there; C2 is
+  scoped to the non-hybrid build used by this project
+  (`tdoa3_lh_groundtruth.conf`) and hybrid mode is documented as out of scope.
+  A group may also legitimately lack an `isSelected` candidate (e.g. no
+  matching algorithm configured → `selectedId = 0xFF`); the offline baseline
+  policy must skip and count such groups rather than fail.
 - **C3 — Grouping is exact.** Every emitted event of one packet shares one
-  `group` value; groups never merge or split across packets, including under the
-  rate cap. The `candidateLogGroup` counter increments once per gated packet
-  (even when zero candidates are emitted) — confirm this cannot cause offline
-  mis-grouping.
+  `group` value; groups never merge or split across packets. The
+  `candidateLogGroup` counter increments once per enabled, clock-correction-gated
+  packet (even when zero candidates are emitted) — confirm this cannot cause
+  offline mis-grouping.
+- **C4 — Logging never mutates live state.** `logTdoaCandidates` currently uses
+  `tdoaStorageGetCreateAnchorCtx`, which on a miss *creates* a context slot by
+  evicting (memset) the oldest stored anchor — so enabling logging can perturb
+  the very pipeline being observed (bites when active anchors exceed
+  `ANCHOR_STORAGE_COUNT`). **Fix:** use the non-creating
+  `tdoaStorageGetAnchorCtx` in the logging path. This strengthens the non-goal
+  below: capture must be side-effect-free on the live estimator when enabled,
+  not only when disabled.
 
 ### Readback reliability (plumbing)
 
-- **R1 — Losslessness is checkable.** The uSD ring buffer silently drops events
-  if the SD write task cannot keep up. A run must surface whether drops occurred
-  (compare `usd.eventsRequested` vs `usd.eventsWritten`, watch `usd.fatWrBps`),
-  so replay never silently runs on a holey log. This may be a documented
-  procedure and/or a helper that reads those logs.
+- **R1 — Losslessness is checked automatically (decided 2026-07-06).** The uSD
+  ring buffer silently drops events if the SD write task cannot keep up. The
+  firmware already counts `eventsRequested` vs `eventsWritten` (reset at each
+  log start), but today these are only DEBUG_PRINTed to the console at log stop
+  — they are **not** exposed as log variables (the `usd` log group only carries
+  byte-rate stats), so the check is currently impossible over the log framework.
+  **Fix:** expose both counters as `usd.*` log variables, and make
+  `read_usd_log.sh` (already connected to the drone at readback time) read them
+  after stopping the log and fail loudly on mismatch. Losslessness is
+  machine-checked on every readback rather than left to a manual procedure —
+  which matters more now that C1 removes the bandwidth cap, making detection the
+  only guard against silent holes.
 - **R2 — `read_usd_log.sh` size/offset logic is correct** against a real card
   (stop-logging → find MicroSD size → `mem read` at offset 0, full length).
 
@@ -145,8 +173,9 @@ Layered, hardware-light where possible:
    (F2), ground-truth interpolation + scoring. Synthetic fixtures, no hardware.
 2. **Firmware Ceedling test**
    (`test/utils/src/tdoa/test_tdoa_engine_candidates.c` or similar) — mocked
-   `eventtrigger` / `tdoaStorage`, asserting C1 (selected always logged), C2
-   (feasible-set parity), C3 (grouping), and the clock-correction gate. Run via
+   `eventtrigger` / `tdoaStorage`, asserting C1 (no truncation — all valid
+   candidates emitted, selected pair flagged), C2 (feasible-set parity), C3
+   (grouping), C4 (no storage mutation), and the clock-correction gate. Run via
    `rake unit`. Follows the pattern of the existing
    `test/utils/src/tdoa/test_tdoa_storage.c`.
 3. **Replay smoke test** — a tiny synthetic log through the real `cffirmware`
@@ -157,8 +186,10 @@ Layered, hardware-light where possible:
    (movement or flight — **flight only with the user's explicit go-ahead each
    time**), read it back, verify R1 losslessness + R2 readback, then replay and
    compare the baseline trajectory against the on-drone `stateEstimate` to
-   quantify F1 divergence. Result: a documented checklist and, if useful, a real
-   log committed as a replay fixture.
+   quantify F1 divergence. Result: a documented checklist. Hardware logs stay
+   **local** for now — committing one as a replay fixture (following the
+   `test_python/fixtures/kalman_core` precedent) was considered and deferred
+   (decided 2026-07-06).
 
 ### Hardware loop roles
 
@@ -177,13 +208,19 @@ Layered, hardware-light where possible:
   would support them).
 - New selection policies beyond the existing four
   (`baseline`, `all`, `median`, `round_robin`).
-- Any change to the live estimator's behavior. Candidate logging must remain
-  side-effect-free on the flight path when `logCand = 0`.
+- Any change to the live estimator's behavior. Candidate logging must be
+  side-effect-free on the flight path both when disabled and when enabled (C4);
+  the only permitted effect of enabling it is event emission.
 
-## Open decisions for the plan
+## Resolved decisions (2026-07-06)
 
-- **C1 resolution:** guarantee the selected pair is logged under truncation, vs.
-  restrict faithful operation to `logCand = 16` and document it.
-- **R1 mechanism:** documented manual procedure vs. a small drop-detection
-  helper.
-- Whether to commit a real hardware log as a checked-in replay fixture.
+- **C1:** remove per-packet truncation entirely; `logCand` is an enable flag
+  (0 = off, non-zero = log all valid candidates). The bandwidth cap was an
+  arbitrary guess; completeness of the record wins, and R1 detection covers uSD
+  pressure.
+- **R1:** expose `eventsRequested` / `eventsWritten` as `usd.*` log variables
+  and have `read_usd_log.sh` verify them automatically after every readback,
+  failing loudly on drops.
+- **Replay fixture:** hardware logs stay local for now; committing a fixture
+  (per the `test_python/fixtures/kalman_core` precedent) is deferred and may be
+  revisited once the foundation is proven.
