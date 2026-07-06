@@ -166,19 +166,31 @@ def make_policy(name):
 
 
 def verify_baseline_reconstruction(log_data):
-    """F1 measurement-level check: baseline reconstruction == logged estTDOA.
+    """F1 measurement-level check: baseline reconstruction covers logged estTDOA.
 
     The candidate flagged ``isSelected`` and the ``estTDOA`` event of the same
     packet both originate from the same ``calcDistanceDiff`` double in the
-    firmware and are stored as float32, so matching entries must be *exactly*
-    equal.
+    firmware and are stored as float32, so a matching pair must still be
+    *exactly* equal.
 
-    The comparison is a strict in-order 1:1 zip of the two streams, which is
-    only meaningful for drop-free logs -- verify losslessness (the
-    usd.eventsRequested / usd.eventsWritten check) first.
+    The two streams are not expected to be a strict 1:1 zip, though: candidate
+    logging is gated only on clock correction, while the live estimator
+    measurement additionally requires both anchor positions to be valid (and
+    the loco deck enabled). The baseline (selected-candidate) stream is
+    therefore a superset of the ``estTDOA`` stream -- every ``estTDOA`` entry
+    must appear among the selected candidates, in order, but a selected
+    candidate lacking a matching ``estTDOA`` entry is expected
+    (position-gated) and not a fault.
 
-    Returns a dict of counts; a faithful, drop-free log has
-    ``n_mismatched == 0`` and ``n_baseline == n_est_tdoa == n_compared``.
+    This matches each ``estTDOA`` entry against the baseline stream as an
+    in-order subsequence (estTDOA is the reference). A healthy, drop-free log
+    has ``n_unmatched_est == 0``; ``n_unmatched_baseline > 0`` is normal on
+    real logs. ``first_unmatched_est`` (index into the estTDOA stream, or
+    None if everything matched) is the entry point for debugging a genuine
+    capture/reconstruction fault.
+
+    Verify losslessness (the usd.eventsRequested / usd.eventsWritten check)
+    first -- this function does not account for dropped uSD events.
     """
     groups = build_candidate_groups(log_data)
     policy = BaselinePolicy()
@@ -193,20 +205,35 @@ def verify_baseline_reconstruction(log_data):
 
     est = log_data.get('estTDOA') or {}
     n_est_tdoa = len(est.get('timestamp', []))
-    n_compared = min(len(baseline), n_est_tdoa)
-    n_mismatched = 0
-    for i in range(n_compared):
-        m = baseline[i]
-        if (int(est['idA'][i]) != m['idA']
-                or int(est['idB'][i]) != m['idB']
-                or float(est['distanceDiff'][i]) != m['distanceDiff']):
-            n_mismatched += 1
+
+    # The baseline stream is a superset of the estTDOA stream: the firmware
+    # additionally gates estimator measurements on valid anchor positions, so
+    # selected candidates without a matching estTDOA entry are expected
+    # (position-gated). Match estTDOA entries against the baseline stream in
+    # order; an estTDOA entry that cannot be matched indicates a real
+    # capture/reconstruction fault.
+    bi = 0
+    n_matched = 0
+    first_unmatched_est = None
+    for i in range(n_est_tdoa):
+        target = (int(est['idA'][i]), int(est['idB'][i]), float(est['distanceDiff'][i]))
+        j = bi
+        while j < len(baseline) and (
+                (baseline[j]['idA'], baseline[j]['idB'], baseline[j]['distanceDiff']) != target):
+            j += 1
+        if j < len(baseline):
+            n_matched += 1
+            bi = j + 1
+        elif first_unmatched_est is None:
+            first_unmatched_est = i
 
     return {
         'n_groups': len(groups),
         'n_selectionless': n_selectionless,
         'n_baseline': len(baseline),
         'n_est_tdoa': n_est_tdoa,
-        'n_compared': n_compared,
-        'n_mismatched': n_mismatched,
+        'n_matched': n_matched,
+        'n_unmatched_est': n_est_tdoa - n_matched,
+        'n_unmatched_baseline': len(baseline) - n_matched,
+        'first_unmatched_est': first_unmatched_est,
     }

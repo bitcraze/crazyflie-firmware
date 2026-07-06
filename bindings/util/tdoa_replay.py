@@ -75,6 +75,19 @@ def apply_policy(policy, groups):
     return samples
 
 
+def filter_known_anchors(tdoa_samples, anchor_positions):
+    """Split TDoA samples into (kept, n_skipped) by anchor-position availability.
+
+    The live firmware only feeds the estimator measurements whose anchor
+    positions are known and valid; replay mirrors that by skipping samples
+    that reference an anchor id missing from anchors.yaml, instead of
+    crashing on it.
+    """
+    kept = [s for s in tdoa_samples
+            if s[1]['idA'] in anchor_positions and s[1]['idB'] in anchor_positions]
+    return kept, len(tdoa_samples) - len(kept)
+
+
 def merge_samples(*sample_lists):
     """Merge sample streams into one, ordered by timestamp.
 
@@ -103,6 +116,10 @@ def replay(anchor_positions, imu_samples, tdoa_samples, params=None):
     from bindings.util.estimator_kalman_emulator import EstimatorKalmanEmulator
 
     params = params or {}
+    tdoa_samples, n_skipped = filter_known_anchors(tdoa_samples, anchor_positions)
+    if n_skipped:
+        print(f'WARNING: skipped {n_skipped} TDoA samples referencing anchors '
+              f'not in the anchors file')
     samples = merge_samples(imu_samples, tdoa_samples)
     if not samples:
         return []

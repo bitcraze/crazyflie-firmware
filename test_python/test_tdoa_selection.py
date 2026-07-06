@@ -109,8 +109,10 @@ def test_verify_baseline_reconstruction_clean_log():
     assert result['n_selectionless'] == 0
     assert result['n_baseline'] == 2
     assert result['n_est_tdoa'] == 2
-    assert result['n_compared'] == 2
-    assert result['n_mismatched'] == 0
+    assert result['n_matched'] == 2
+    assert result['n_unmatched_est'] == 0
+    assert result['n_unmatched_baseline'] == 0
+    assert result['first_unmatched_est'] is None
 
 
 def test_verify_baseline_reconstruction_detects_mismatch():
@@ -122,4 +124,27 @@ def test_verify_baseline_reconstruction_detects_mismatch():
         'distanceDiff': [0.7],  # differs from the flagged candidate
     }
     result = verify_baseline_reconstruction(log)
-    assert result['n_mismatched'] == 1
+    assert result['n_unmatched_est'] == 1
+    assert result['first_unmatched_est'] == 0
+
+
+def test_verify_baseline_reconstruction_tolerates_position_gated_gaps():
+    # Three packets each with a selected candidate, but the 2nd measurement
+    # was position-gated on the drone (one of its anchors had no valid
+    # position) and never made it into the estTDOA stream.
+    log = _cand_log([
+        (100.0, 7, 1, 2, 0.5, 1),
+        (110.0, 8, 3, 4, 0.6, 1),
+        (120.0, 9, 5, 6, -0.1, 1),
+    ])
+    log['estTDOA'] = {
+        'timestamp': [100.0, 120.0],
+        'idA': [1, 5],
+        'idB': [2, 6],
+        'distanceDiff': [0.5, -0.1],
+    }
+    result = verify_baseline_reconstruction(log)
+    assert result['n_matched'] == 2
+    assert result['n_unmatched_est'] == 0
+    assert result['n_unmatched_baseline'] == 1
+    assert result['first_unmatched_est'] is None

@@ -138,8 +138,11 @@ Each item below becomes a test and, where it fails, a fix in the plan.
   values, which is realistic). The replayed *trajectory* should track the live
   `stateEstimate` within a **documented tolerance**; exact match is an
   aspiration, not a gate. Known divergence sources to characterize: estimator
-  initialization, timestamp quantization (see F2), uSD drops, and runtime
-  measurement-std overrides by the loco tag vs the replay `--tdoa-std`.
+  initialization, timestamp quantization (see F2), uSD drops, runtime
+  measurement-std overrides by the loco tag vs the replay `--tdoa-std`, and the
+  anchor-position gate (the live estimator only consumes measurements whose
+  anchor positions are valid; replay may feed the Kalman core additional
+  position-gated candidates the on-drone estimator never saw).
 - **F2 — Sample ordering / timestamp model is sound.** uSD stamps events at
   write time, so replay uses the group's *min* timestamp for all candidates of a
   packet. Confirm this heuristic plus the IMU/TDOA interleaving produces a

@@ -145,9 +145,11 @@ Collected logs stay local (do not commit them).
      (`replay_tdoa.py` reads it) with a plausible size (R2).
 5. **Verify capture faithfulness**:
    `python3 -m tools.usdlog.replay_tdoa run.bin --anchors anchors.yaml --policies baseline`
-   - PASS requires: `baseline reconstruction: OK (... 0 mismatched ...)` —
-     the selected candidates reproduce the logged `estTDOA` stream exactly
-     (F1, measurement level).
+   - PASS requires: `baseline reconstruction: OK (... 0 unmatched live
+     measurements ...)` — every logged `estTDOA` entry is explained by a
+     selected candidate, in order (F1, measurement level). Position-gated
+     extra candidates (`n_unmatched_baseline > 0`) are reported alongside and
+     are expected, not a failure.
 6. **Quantify replay fidelity**: the same command prints
    `baseline vs live stateEstimate: rms ... m, max ... m`.
    - Record the numbers here. Documented tolerance (F1, trajectory level):
@@ -166,3 +168,12 @@ Latest validated run: _(date, firmware commit, rms/max)_ — not yet performed.
 - The firmware "youngest" matcher can't be reproduced exactly offline (it needs
   per-candidate last-update time, which is not in the event); `round_robin` and
   the data-driven policies above are the offline equivalents.
+- Candidate logging is gated only on clock correction, but the live estimator
+  measurement (`estTDOA`) additionally requires both anchor positions to be
+  valid (and the loco deck enabled). Two consequences: (a) selected candidates
+  without a matching `estTDOA` entry are normal -- the drop-check and
+  `verify_baseline_reconstruction` account for this (`n_unmatched_baseline`
+  can be > 0; only `n_unmatched_est` gates PASS/FAIL); (b) replay feeds the
+  Kalman core some measurements the on-drone estimator never consumed, which
+  is a known, bounded fidelity limitation quantified by the step-6 divergence
+  numbers below.

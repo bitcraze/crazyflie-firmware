@@ -169,11 +169,14 @@ def main():
     print(f'  ground-truth samples:       {len(gt)}')
     check = verify_baseline_reconstruction(log_data)
     if check['n_est_tdoa']:
-        status = 'OK' if (check['n_mismatched'] == 0
-                          and check['n_baseline'] == check['n_est_tdoa']) else 'MISMATCH'
+        status = 'OK' if check['n_unmatched_est'] == 0 else 'MISMATCH'
         print(f"  baseline reconstruction:    {status} "
-              f"({check['n_compared']} compared, {check['n_mismatched']} mismatched, "
-              f"{check['n_selectionless']} groups without selection)")
+              f"({check['n_matched']}/{check['n_est_tdoa']} live measurements matched, "
+              f"{check['n_unmatched_baseline']} position-gated candidates, "
+              f"{check['n_selectionless']} groups without selection"
+              + (f", first unmatched estTDOA index {check['first_unmatched_est']}"
+                 if check['first_unmatched_est'] is not None else "")
+              + ")")
     if not groups:
         print('No estTdoaCand data found. Was tdoaEngine.logCand > 0 during logging?')
         return

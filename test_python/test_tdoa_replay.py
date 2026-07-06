@@ -8,6 +8,7 @@ from bindings.util.tdoa_replay import (
     apply_policy,
     extract_imu_samples,
     extract_state_estimate,
+    filter_known_anchors,
     merge_samples,
 )
 from bindings.util.tdoa_selection import build_candidate_groups, make_policy
@@ -73,6 +74,28 @@ def test_extract_state_estimate_reads_the_fixed_frequency_block():
 def test_extract_state_estimate_handles_missing_block():
     assert extract_state_estimate({}) == []
     assert extract_state_estimate({'fixedFrequency': {'timestamp': [1.0]}}) == []
+
+
+def test_filter_known_anchors_keeps_samples_with_both_ids_known():
+    anchor_positions = {1: object(), 2: object()}
+    samples = [
+        ('estTDOA', {'idA': 1, 'idB': 2, 'distanceDiff': 0.5, 'timestamp': 100.0}),
+    ]
+    kept, n_skipped = filter_known_anchors(samples, anchor_positions)
+    assert kept == samples
+    assert n_skipped == 0
+
+
+def test_filter_known_anchors_drops_samples_referencing_unknown_anchors():
+    anchor_positions = {1: object(), 2: object()}
+    samples = [
+        ('estTDOA', {'idA': 1, 'idB': 2, 'distanceDiff': 0.5, 'timestamp': 100.0}),
+        ('estTDOA', {'idA': 1, 'idB': 9, 'distanceDiff': 0.6, 'timestamp': 101.0}),
+        ('estTDOA', {'idA': 9, 'idB': 2, 'distanceDiff': 0.7, 'timestamp': 102.0}),
+    ]
+    kept, n_skipped = filter_known_anchors(samples, anchor_positions)
+    assert kept == [samples[0]]
+    assert n_skipped == 2
 
 
 def test_ground_truth_interpolation_and_scoring():
