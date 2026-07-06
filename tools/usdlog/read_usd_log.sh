@@ -39,6 +39,27 @@ fi
 echo ">> Stopping logging (usd.logging = 0) so the file becomes readable..."
 "$CFCLI" -u "$URI" param set usd.logging 0
 
+echo ">> Checking for dropped uSD events (usd.eventsRequested vs usd.eventsWritten)..."
+# The counters are reset when logging starts and keep their final values after
+# stop. `log print` streams one CSV line per sample; bound it with --timeout
+# and take the last complete sample.
+DROP_LINE="$("$CFCLI" -u "$URI" --timeout 3000 --csv log print usd.eventsRequested,usd.eventsWritten 2>/dev/null | tail -n 1 || true)"
+EVT_REQ="$(echo "$DROP_LINE" | awk -F',' '{print $(NF-1)}')"
+EVT_WR="$(echo "$DROP_LINE" | awk -F',' '{print $NF}')"
+
+if [[ ! "$EVT_REQ" =~ ^[0-9]+$ || ! "$EVT_WR" =~ ^[0-9]+$ ]]; then
+  echo "!! WARNING: could not read usd.eventsRequested/usd.eventsWritten." >&2
+  echo "   Firmware without the drop counters? Losslessness NOT verified." >&2
+elif [[ "$EVT_REQ" != "$EVT_WR" ]]; then
+  echo "!! DROPPED EVENTS: eventsRequested=$EVT_REQ eventsWritten=$EVT_WR ($((EVT_REQ - EVT_WR)) lost)." >&2
+  echo "   The log has holes; do NOT trust replay results from it." >&2
+  echo "   Mitigations: increase the ring buffer size (line 2 of config.txt)" >&2
+  echo "   or switch to config_tdoa_candidates_lean.txt." >&2
+  exit 1
+else
+  echo ">> OK: no dropped events (eventsRequested = eventsWritten = $EVT_REQ)."
+fi
+
 echo ">> Listing memories to find the microSD file size..."
 # mem list --csv is machine readable; find the MicroSD row and take its size.
 # The size column is the last numeric field of the MicroSD line. If auto-detect
