@@ -54,7 +54,7 @@ The implementation must handle
 #include "physicalConstants.h"
 #include "eventtrigger.h"
 
-// Emitted (when engineState->candidateLogMaxCount > 0) for every valid
+// Emitted (when engineState->candidateLogEnable is non-zero) for every valid
 // anchor-pair candidate of a processed packet, before the matching algorithm
 // collapses the candidates to a single pair. Together the events with the same
 // "group" describe all pairs that were available for one received packet, which
@@ -75,7 +75,7 @@ void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms, tdoaE
 
   engineState->matching.offset = 0;
 
-  engineState->candidateLogMaxCount = 0;
+  engineState->candidateLogEnable = 0;
   engineState->candidateLogGroup = 0;
 }
 
@@ -146,12 +146,12 @@ static double calcDistanceDiff(const tdoaAnchorContext_t* otherAnchorCtx, const 
   return SPEED_OF_LIGHT * tdoa / locodeckTsFreq;
 }
 
-// Emit an estTdoaCand event for up to candidateLogMaxCount of the valid
-// anchor-pair candidates of this packet. A candidate (idA, idB) is considered
-// valid using the same criteria as the matching algorithms: idA must have a
-// known time-of-flight to idB and the cached sequence number must match. The
-// selected pair (as chosen by the live matching algorithm) is flagged so that
-// offline analysis can compare against alternative selection policies.
+// Emit an estTdoaCand event for every valid anchor-pair candidate of this
+// packet. A candidate (idA, idB) is considered valid using the same criteria
+// as the matching algorithms: idA must have a known time-of-flight to idB and
+// the cached sequence number must match. All valid candidates are always
+// emitted (no truncation) so that the log is a complete record; the pair
+// chosen by the live matching algorithm is flagged with isSelected.
 static void logTdoaCandidates(tdoaEngineState_t* engineState, const tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T, const uint8_t selectedId) {
   int remoteCount = 0;
   uint8_t seqNr[REMOTE_ANCHOR_DATA_COUNT];
@@ -161,9 +161,8 @@ static void logTdoaCandidates(tdoaEngineState_t* engineState, const tdoaAnchorCo
   const uint32_t now_ms = anchorCtx->currentTime_ms;
   const uint8_t idA = tdoaStorageGetId(anchorCtx);
   const uint32_t group = engineState->candidateLogGroup++;
-  uint8_t loggedCount = 0;
 
-  for (int index = 0; index < remoteCount && loggedCount < engineState->candidateLogMaxCount; index++) {
+  for (int index = 0; index < remoteCount; index++) {
     const uint8_t candidateAnchorId = id[index];
 
     if (!tdoaStorageGetRemoteTimeOfFlight(anchorCtx, candidateAnchorId)) {
@@ -187,8 +186,6 @@ static void logTdoaCandidates(tdoaEngineState_t* engineState, const tdoaAnchorCo
     eventTrigger_estTdoaCand_payload.distanceDiff = (float)distanceDiff;
     eventTrigger_estTdoaCand_payload.isSelected = (candidateAnchorId == selectedId) ? 1 : 0;
     eventTrigger(&eventTrigger_estTdoaCand);
-
-    loggedCount++;
   }
 }
 
@@ -297,7 +294,7 @@ bool tdoaEngineProcessPacketFiltered(tdoaEngineState_t* engineState, tdoaAnchorC
     // Log all candidate pairs (not just the selected one) when enabled. Gated on
     // a valid clock correction, matching the condition under which the matching
     // algorithm runs, so that the logged distanceDiff values are meaningful.
-    if (engineState->candidateLogMaxCount > 0 && tdoaStorageGetClockCorrection(anchorCtx) > 0.0) {
+    if (engineState->candidateLogEnable > 0 && tdoaStorageGetClockCorrection(anchorCtx) > 0.0) {
       const uint8_t selectedId = suitableAnchorFound ? tdoaStorageGetId(&otherAnchorCtx) : 0xFF;
       logTdoaCandidates(engineState, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, selectedId);
     }

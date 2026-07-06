@@ -116,16 +116,17 @@ PARAM_ADD_CORE(PARAM_UINT8, logOthrId, &tdoaEngineState.stats.newRemoteAnchorId)
 PARAM_ADD(PARAM_UINT8, matchAlgo, &tdoaEngineState.matchingAlgorithm)
 
 /**
- * @brief Max number of anchor-pair candidates to log per packet (0 = disabled).
+ * @brief Enable logging of all TDoA anchor-pair candidates (0 = off, non-zero = on).
  *
- * When set to a non-zero value N, every processed packet emits up to N
- * "estTdoaCand" event triggers, one per valid candidate pair, before the
- * matching algorithm collapses the candidates to a single pair. This records
- * all candidate pairs (typically discarded) to the uSD deck for offline
- * analysis and A/B testing of the selection policy. It also increases the event
- * rate to the uSD deck by up to N times the packet rate, so use lower values if
- * the uSD logging can not keep up (check the usd.* logs for dropped events).
- * Set to REMOTE_ANCHOR_DATA_COUNT (16) to log all candidates.
+ * When enabled, every processed packet emits one "estTdoaCand" event trigger
+ * per valid candidate pair, before the matching algorithm collapses the
+ * candidates to a single pair. This records all candidate pairs (normally
+ * discarded) to the uSD deck for offline replay and A/B testing of the
+ * selection policy. All valid candidates are always logged so the log is a
+ * complete record; there is no partial mode. Note that this increases the
+ * event rate to the uSD deck considerably. Check for dropped events after a
+ * run by comparing the usd.eventsRequested and usd.eventsWritten log
+ * variables (tools/usdlog/read_usd_log.sh does this automatically).
  */
-PARAM_ADD(PARAM_UINT8, logCand, &tdoaEngineState.candidateLogMaxCount)
+PARAM_ADD(PARAM_UINT8, logCand, &tdoaEngineState.candidateLogEnable)
 PARAM_GROUP_STOP(tdoaEngine)

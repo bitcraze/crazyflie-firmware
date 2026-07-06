@@ -100,3 +100,62 @@ void testThatNoCandidatesAreLoggedWhenLoggingIsDisabled(void) {
   // Assert
   TEST_ASSERT_EQUAL_INT(0, capturedCount);
 }
+
+static int countCandidatesWithIdB(const uint8_t idB) {
+  int n = 0;
+  for (int i = 0; i < capturedCount; i++) {
+    if (captured[i].idB == idB) {
+      n++;
+    }
+  }
+  return n;
+}
+
+static int countSelected(void) {
+  int n = 0;
+  for (int i = 0; i < capturedCount; i++) {
+    if (captured[i].isSelected) {
+      n++;
+    }
+  }
+  return n;
+}
+
+void testThatAllValidCandidatesAreLoggedWhenEnabled(void) {
+  // Fixture: three valid candidates for packets from anchor 1
+  fixtureAddValidCandidate(1, 2, 42);
+  fixtureAddValidCandidate(1, 3, 43);
+  fixtureAddValidCandidate(1, 4, 44);
+  state.candidateLogEnable = 1;
+
+  // Test
+  fixtureProcessPacket(1);
+
+  // Assert: no truncation - every valid candidate is emitted exactly once
+  TEST_ASSERT_EQUAL_INT(3, capturedCount);
+  TEST_ASSERT_EQUAL_INT(1, countCandidatesWithIdB(2));
+  TEST_ASSERT_EQUAL_INT(1, countCandidatesWithIdB(3));
+  TEST_ASSERT_EQUAL_INT(1, countCandidatesWithIdB(4));
+  for (int i = 0; i < capturedCount; i++) {
+    TEST_ASSERT_EQUAL_UINT8(1, captured[i].idA);
+  }
+}
+
+void testThatTheSelectedPairIsAlwaysInTheLog(void) {
+  // Fixture
+  fixtureAddValidCandidate(1, 2, 42);
+  fixtureAddValidCandidate(1, 3, 43);
+  fixtureAddValidCandidate(1, 4, 44);
+  state.candidateLogEnable = 1;
+
+  // Test: process several packets; the random matcher's rotating offset
+  // varies which pair is selected
+  for (int packet = 0; packet < 10; packet++) {
+    capturedCount = 0;
+    fixtureProcessPacket(1);
+
+    // Assert: complete group with exactly one selected pair, every time
+    TEST_ASSERT_EQUAL_INT(3, capturedCount);
+    TEST_ASSERT_EQUAL_INT(1, countSelected());
+  }
+}
