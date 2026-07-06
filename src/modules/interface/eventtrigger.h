@@ -94,7 +94,14 @@ and then execute "gcc -E etdbg.c":
 EVENTTRIGGER(myEvent, uint8, var1, uint32, var2)
 */
 
+// In unit test builds there is no .eventtrigger linker section, but the full
+// payload/trigger definitions are still needed so that files using
+// EVENTTRIGGER payloads compile and can be tested.
 #ifndef UNIT_TEST_MODE
+#define _EVENTTRIGGER_ATTRIBUTES(NAME) __attribute__((section(".eventtrigger." #NAME), used))
+#else
+#define _EVENTTRIGGER_ATTRIBUTES(NAME)
+#endif
 
 /* Macro magic, see https://codecraft.co/2014/11/25/variadic-macros-tricks/ */
 #define _GET_NTH_ARG(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, N, ...) N
@@ -139,7 +146,7 @@ EVENTTRIGGER(myEvent, uint8, var1, uint32, var2)
     static const eventtriggerPayloadDesc __eventTriggerPayloadDesc__##NAME##__[] =                              \
         {                                                                                                       \
             CALL_MACRO_FOR_EACH_PAIR(_EVENTTRIGGER_ENTRY_DESCRIPTION, ##__VA_ARGS__)};                          \
-    static const eventtrigger eventTrigger_##NAME __attribute__((section(".eventtrigger." #NAME), used)) = {    \
+    static const eventtrigger eventTrigger_##NAME _EVENTTRIGGER_ATTRIBUTES(NAME) = {                            \
         .name = #NAME,                                                                                          \
         .payloadDesc = __eventTriggerPayloadDesc__##NAME##__,                                                   \
         .numPayloadVariables = sizeof(__eventTriggerPayloadDesc__##NAME##__) /                                  \
@@ -149,7 +156,7 @@ EVENTTRIGGER(myEvent, uint8, var1, uint32, var2)
     };
 
 #define _EVENTTRIGGER_EMPTY(NAME)                                                                               \
-    static const eventtrigger eventTrigger_##NAME __attribute__((section(".eventtrigger." #NAME), used)) = {    \
+    static const eventtrigger eventTrigger_##NAME _EVENTTRIGGER_ATTRIBUTES(NAME) = {                            \
         .name = #NAME,                                                                                          \
         .payloadDesc = NULL,                                                                                    \
         .numPayloadVariables = 0,                                                                               \
@@ -159,13 +166,6 @@ EVENTTRIGGER(myEvent, uint8, var1, uint32, var2)
 
 #define EVENTTRIGGER(NAME, ...) \
     CALL_MACRO_IF_EMPTY(_EVENTTRIGGER_NON_EMPTY, _EVENTTRIGGER_EMPTY, NAME, ##__VA_ARGS__)
-
-#else // UNIT_TEST_MODE
-
-// Empty defines when running unit tests
-#define EVENTTRIGGER(NAME, ...)
-
-#endif // UNIT_TEST_MODE
 
 /* Functions and associated data structures */
 
