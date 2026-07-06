@@ -187,3 +187,99 @@ void testThatLoggingDoesNotCreateAnchorContexts(void) {
   TEST_ASSERT_EQUAL_UINT8(0, captured[0].isSelected);
   TEST_ASSERT_FALSE(tdoaStorageIsAnchorInStorage(state.anchorInfoArray, 9));
 }
+
+void testThatCandidateWithoutTimeOfFlightIsNotLogged(void) {
+  // Fixture: anchor 3 has a remote rx time but no time-of-flight, which makes
+  // it unselectable for the matcher - it must not appear in the log either
+  fixtureAddValidCandidate(1, 2, 42);
+  tdoaAnchorContext_t ctx;
+  tdoaStorageGetCreateAnchorCtx(state.anchorInfoArray, 1, NOW_MS, &ctx);
+  tdoaStorageSetRemoteRxTime(&ctx, 3, 4711, 43);
+  tdoaStorageGetCreateAnchorCtx(state.anchorInfoArray, 3, NOW_MS, &ctx);
+  tdoaStorageSetRxTxData(&ctx, 1111, 2222, 43);
+  state.candidateLogEnable = 1;
+
+  // Test
+  fixtureProcessPacket(1);
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT(1, capturedCount);
+  TEST_ASSERT_EQUAL_UINT8(2, captured[0].idB);
+}
+
+void testThatCandidateWithStaleSeqNrIsNotLogged(void) {
+  // Fixture: remote data for anchor 3 was cached at seqNr 50, but anchor 3
+  // has since transmitted seqNr 51 - stale, unselectable, must not be logged
+  fixtureAddValidCandidate(1, 2, 42);
+  tdoaAnchorContext_t ctx;
+  tdoaStorageGetCreateAnchorCtx(state.anchorInfoArray, 1, NOW_MS, &ctx);
+  tdoaStorageSetRemoteRxTime(&ctx, 3, 4711, 50);
+  tdoaStorageSetRemoteTimeOfFlight(&ctx, 3, 1000);
+  tdoaStorageGetCreateAnchorCtx(state.anchorInfoArray, 3, NOW_MS, &ctx);
+  tdoaStorageSetRxTxData(&ctx, 1111, 2222, 51);
+  state.candidateLogEnable = 1;
+
+  // Test
+  fixtureProcessPacket(1);
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT(1, capturedCount);
+  TEST_ASSERT_EQUAL_UINT8(2, captured[0].idB);
+}
+
+void testThatNoCandidatesAreLoggedWhenClockCorrectionIsInvalid(void) {
+  // Fixture: clock correction gate closed (Get returns 0.0); note setUp()
+  // already queued IgnoreAndReturn(1.0), so re-init the mock expectations
+  mock_clockCorrectionEngine_Init();
+  clockCorrectionEngineCalculate_IgnoreAndReturn(1.0);
+  clockCorrectionEngineUpdate_IgnoreAndReturn(true);
+  clockCorrectionEngineGet_IgnoreAndReturn(0.0);
+
+  fixtureAddValidCandidate(1, 2, 42);
+  state.candidateLogEnable = 1;
+
+  // Test
+  fixtureProcessPacket(1);
+
+  // Assert: gate matches the matcher's clock-correction condition
+  TEST_ASSERT_EQUAL_INT(0, capturedCount);
+}
+
+void testThatEventsOfOnePacketShareOneGroupAndGroupsDiffer(void) {
+  // Fixture
+  fixtureAddValidCandidate(1, 2, 42);
+  fixtureAddValidCandidate(1, 3, 43);
+  fixtureAddValidCandidate(1, 4, 44);
+  state.candidateLogEnable = 1;
+
+  // Test: two packets
+  fixtureProcessPacket(1);
+  fixtureProcessPacket(1);
+
+  // Assert: 3 + 3 events; first three share one group, last three share
+  // another, and the two groups differ
+  TEST_ASSERT_EQUAL_INT(6, capturedCount);
+  TEST_ASSERT_EQUAL_UINT32(captured[0].group, captured[1].group);
+  TEST_ASSERT_EQUAL_UINT32(captured[0].group, captured[2].group);
+  TEST_ASSERT_EQUAL_UINT32(captured[3].group, captured[4].group);
+  TEST_ASSERT_EQUAL_UINT32(captured[3].group, captured[5].group);
+  TEST_ASSERT_NOT_EQUAL(captured[0].group, captured[3].group);
+}
+
+void testThatGroupCounterAdvancesForPacketsWithZeroCandidates(void) {
+  // Fixture: anchor 1 has candidates, anchor 5 has none
+  fixtureAddValidCandidate(1, 2, 42);
+  state.candidateLogEnable = 1;
+
+  // Test: packet from 1, packet from 5 (zero candidates), packet from 1
+  fixtureProcessPacket(1);
+  uint32_t firstGroup = captured[0].group;
+  fixtureProcessPacket(5);
+  fixtureProcessPacket(1);
+
+  // Assert: the empty packet consumed a group number; groups never merge.
+  // Offline, a gap in group numbers is therefore benign (empty packet), and
+  // events of different packets can never share a group value.
+  TEST_ASSERT_EQUAL_INT(2, capturedCount);
+  TEST_ASSERT_EQUAL_UINT32(firstGroup + 2, captured[1].group);
+}
