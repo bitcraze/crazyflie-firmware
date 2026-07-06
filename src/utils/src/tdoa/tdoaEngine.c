@@ -169,8 +169,10 @@ static void logTdoaCandidates(tdoaEngineState_t* engineState, const tdoaAnchorCo
       continue;
     }
 
+    // Non-creating accessor: observing the candidates must never mutate the
+    // anchor storage (a GetCreate miss would evict the oldest stored anchor)
     tdoaAnchorContext_t otherAnchorCtx;
-    if (!tdoaStorageGetCreateAnchorCtx(engineState->anchorInfoArray, candidateAnchorId, now_ms, &otherAnchorCtx)) {
+    if (!tdoaStorageGetAnchorCtx(engineState->anchorInfoArray, candidateAnchorId, now_ms, &otherAnchorCtx)) {
       continue;
     }
 

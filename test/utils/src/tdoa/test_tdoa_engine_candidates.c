@@ -159,3 +159,31 @@ void testThatTheSelectedPairIsAlwaysInTheLog(void) {
     TEST_ASSERT_EQUAL_INT(1, countSelected());
   }
 }
+
+void testThatLoggingDoesNotCreateAnchorContexts(void) {
+  // Fixture: matching disabled so that any storage mutation is attributable
+  // to the logging path alone (the live matchers have their own GetCreate
+  // behavior, which is stock firmware and out of scope)
+  tdoaEngineInit(&state, NOW_MS, stubSendTdoaToEstimator, TS_FREQ, TdoaEngineMatchingAlgorithmNone);
+  state.candidateLogEnable = 1;
+
+  fixtureAddValidCandidate(1, 2, 42);
+
+  // Anchor 9 is in the remote list of anchor 1 (valid ToF + seqNr), but has
+  // no context of its own in storage
+  tdoaAnchorContext_t ctx;
+  tdoaStorageGetCreateAnchorCtx(state.anchorInfoArray, 1, NOW_MS, &ctx);
+  tdoaStorageSetRemoteRxTime(&ctx, 9, 4711, 99);
+  tdoaStorageSetRemoteTimeOfFlight(&ctx, 9, 1000);
+
+  // Test
+  fixtureProcessPacket(1);
+
+  // Assert: only the known candidate is emitted, nothing is flagged selected
+  // (no matcher ran), and - crucially - anchor 9 was NOT created in storage
+  // as a side effect of logging
+  TEST_ASSERT_EQUAL_INT(1, capturedCount);
+  TEST_ASSERT_EQUAL_UINT8(2, captured[0].idB);
+  TEST_ASSERT_EQUAL_UINT8(0, captured[0].isSelected);
+  TEST_ASSERT_FALSE(tdoaStorageIsAnchorInStorage(state.anchorInfoArray, 9));
+}
