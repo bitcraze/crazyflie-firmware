@@ -36,16 +36,21 @@ Kalman state at update time. A seam is needed to externalize that decision.
   Python port, which loses float32 bit-exactness and weakens A/B conclusions).
 - **Filter roster: all six** — `integrator`, `none`, `sanity`, `fixed`,
   `mad_window`, `pair_integrator`.
-- **Amendment (same day): `mm_tdoa_robust` in scope** as an orthogonal second
-  dimension — the *TDoA update method* (`standard` | `robust`) — instead of
-  deferred. Rationale: `kalmanCoreRobustUpdateWithTdoa` is already compiled
-  into the bindings (`bindings/setup.py`, `cffirmware.i`), it *ignores* its
-  `outlierFilterState` parameter (the M-estimator's Geman-McClure weighting is
-  its outlier handling; on-drone `kalman.robustTdoa = 1` runs ungated), and
-  its innovation is computed with the same measurement model as `mm_tdoa.c`,
-  so the Task-1 seam gates it unchanged. No additional C work.
-- **CLI shape for the update method: a single `--tdoa-update` switch per run**
-  (default `standard`) in both tools — not a third grid axis.
+- **Amendment (same day): compose with the existing `tdoa_model` dimension**
+  (`standard` | `robust`, the `mm_tdoa_robust` M-estimator) instead of leaving
+  robust deferred. Robust replay support was implemented on this branch in
+  parallel (commits `448b2cf8` … `aa62c7ad`): the emulator takes
+  `tdoa_model='standard'|'robust'` (unknown value → `ValueError`), `replay`
+  forwards `params['tdoa_model']`, and `plot_tdoa.py` has `--tdoa-model`.
+  This spec does NOT re-add any of that; it (a) makes the outlier filters
+  compose with both models and (b) adds the missing `--tdoa-model` switch to
+  `replay_tdoa.py`. Key enabler: `kalmanCoreRobustUpdateWithTdoa` *ignores*
+  its `outlierFilterState` parameter (Geman-McClure weighting is its outlier
+  handling; on-drone `kalman.robustTdoa = 1` runs ungated), and its innovation
+  uses the same measurement model as `mm_tdoa.c`, so the Task-1 innovation
+  seam gates it unchanged. No additional C work.
+- **CLI shape for the model: a single `--tdoa-model` switch per run** (default
+  `standard`) in both tools — not a third grid axis.
 
 ## 1. Firmware seam (`mm_tdoa.c` / `mm_tdoa.h`)
 
@@ -106,19 +111,20 @@ Roster:
 - `tdoa_replay.replay(...)` grows `params['outlier_filter']` (a name string,
   resolved via `make_outlier_filter`). Absent → legacy path (`None`), which is
   semantically the integrator.
-- **Update method (amendment):** the emulator also takes
-  `tdoa_update='standard' | 'robust'` (invalid value → `ValueError` at
-  construction) and `replay` takes `params['tdoa_update']` (default
-  `standard`). The four combinations of (filter, update):
+- **Composition with `tdoa_model` (amendment):** the emulator's existing
+  `tdoa_model='standard' | 'robust'` stays as is (it already validates and
+  already splits the TDoA branch); the new `outlier_filter` argument composes
+  with it. The four combinations of (filter, model):
   - no filter + `standard` → `kalmanCoreUpdateWithTdoa` (today's path, unchanged);
-  - no filter + `robust` → `kalmanCoreRobustUpdateWithTdoa` directly —
-    matches on-drone `robustTdoa = 1` (which is ungated);
+  - no filter + `robust` → `kalmanCoreRobustUpdateWithTdoa` directly (today's
+    path, unchanged) — matches on-drone `robustTdoa = 1` (which is ungated);
   - filter + `standard` → innovation → `validate` → `kalmanCoreUpdateWithTdoaUnfiltered`;
   - filter + `robust` → innovation → `validate` → `kalmanCoreRobustUpdateWithTdoa`
     (a novel gated-robust combination, only available offline).
-  Note: `mm_tdoa_robust.c` keeps state in `static` locals that carry over
-  between calls (same on the drone) — replay stays deterministic for a given
-  sample sequence, but robust results depend on call history within a run.
+  Note (already documented in the `replay` docstring): `mm_tdoa_robust.c`
+  keeps M-estimation state in a static `x_err` buffer shared process-wide, so
+  back-to-back robust replays in one process are not strictly independent —
+  replay stays deterministic for a given call history.
 
 ## 4. CLI
 
@@ -128,9 +134,11 @@ Roster:
 - `tools/usdlog/replay_tdoa.py`: `--outlier-filters NAME...` (default
   `['integrator']`); evaluation grid is policies × filters with rows labeled
   `policy/filter`. Defaults reproduce today's output exactly.
-- Both tools: `--tdoa-update {standard,robust}` (default `standard`), one
-  value per run applied to the whole grid; echoed in the console output and
-  the plot title.
+- `tools/tdoa_plot/plot_tdoa.py` already has `--tdoa-model {standard,robust}`
+  (default `standard`); `tools/usdlog/replay_tdoa.py` gains the same switch,
+  one value per run applied to the whole grid and echoed above the results
+  table. (Note: `plot_tdoa.py`'s policy option is now named
+  `--selection-policy`.)
 
 ## 5. Testing & validation
 
@@ -142,11 +150,14 @@ Roster:
   `mad_window`, `pair_integrator`, `none`) using stub tdoa objects: gate
   thresholds, warmup, MAD floor, per-pair isolation, reset behavior.
 - **Robust-path equivalence test (amendment):** replaying with
-  `tdoa_update='robust'` and filter `'none'` must exactly equal the direct
+  `tdoa_model='robust'` and filter `'none'` must exactly equal the direct
   (no-filter) robust path — the innovation call is pure and `none` accepts
-  everything, so the seam must be a no-op wrapper there.
+  everything, so the seam must be a no-op wrapper there. Because of the
+  static `x_err` carryover, the two compared replays must start from
+  identical static state (prime each with an identical throwaway robust
+  replay, or isolate per process).
 - **Hardware-validated run:** replay `run_validation.bin` across the filter
-  roster (and a `--tdoa-update robust` row) and record the accuracy table in
+  roster (and a `--tdoa-model robust` row) and record the accuracy table in
   the docs, like the F1 validation runs.
 - `tools/usdlog/README_tdoa_candidates.md` gains an outlier-filter section next
   to the selection-policy one (roster, defaults, how to add a filter).
@@ -167,5 +178,5 @@ Roster:
   exposed from C.
 - Firmware-side adoption of any winning filter — this work is offline-only
   except for the behavior-preserving `mm_tdoa.c` refactor.
-- A `--tdoa-updates` grid axis in `replay_tdoa.py` (single switch chosen
-  instead; revisit if cross-method tables become a frequent need).
+- A `--tdoa-models` grid axis in `replay_tdoa.py` (single switch chosen
+  instead; revisit if cross-model tables become a frequent need).

@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make the TDoA outlier filter swappable in the offline replay the same way selection policies are — six filters (`integrator`, `none`, `sanity`, `fixed`, `mad_window`, `pair_integrator`) — plus a selectable TDoA update method (`standard` | `robust`, the `mm_tdoa_robust` M-estimator), all from the CLI.
+**Goal:** Make the TDoA outlier filter swappable in the offline replay the same way selection policies are — six filters (`integrator`, `none`, `sanity`, `fixed`, `mad_window`, `pair_integrator`) — composing with the *existing* `tdoa_model` dimension (`standard` | `robust`), and add the missing `--tdoa-model` switch to `replay_tdoa.py`.
 
-**Architecture:** A behavior-preserving refactor of `mm_tdoa.c` exposes the innovation and an unconditional update through the SWIG bindings, so Python owns the accept/reject decision while all float32 math stays in C. A new `bindings/util/tdoa_outlier.py` mirrors the `tdoa_selection.py` policy pattern (base class + factories + `make_outlier_filter`). The emulator gets an optional `outlier_filter` and a `tdoa_update` method; defaults keep today's C path byte-for-byte. `kalmanCoreRobustUpdateWithTdoa` is already in the bindings and ignores its `outlierFilterState` argument (on-drone `robustTdoa=1` runs ungated), so the robust method needs no C changes and composes with any filter.
+**Architecture:** A behavior-preserving refactor of `mm_tdoa.c` exposes the innovation and an unconditional update through the SWIG bindings, so Python owns the accept/reject decision while all float32 math stays in C. A new `bindings/util/tdoa_outlier.py` mirrors the `tdoa_selection.py` policy pattern (base class + factories + `make_outlier_filter`). The emulator's existing `tdoa_model='standard'|'robust'` machinery (constructor validation, robust/standard split in the TDoA branch, `params['tdoa_model']` in `replay`, `--tdoa-model` in `plot_tdoa.py`) is ALREADY IMPLEMENTED on this branch — do not re-add it; the new `outlier_filter` argument composes with it. `kalmanCoreRobustUpdateWithTdoa` ignores its `outlierFilterState` argument (on-drone `robustTdoa=1` runs ungated), so gating it externally needs no C changes.
 
 **Tech Stack:** C (firmware, `src/modules/src/kalman_core/mm_tdoa.c`), SWIG bindings (`make bindings_python`), Python 3 + pytest (`make test_python` = `PYTHONPATH=build python3 -m pytest test_python`).
 
@@ -17,8 +17,9 @@
 - Pure-Python filters must not import `cffirmware` at module import time — only `IntegratorFilter` may, lazily (same convention as `tdoa_replay.py`).
 - Unknown filter name raises `ValueError` listing available names, same style as `make_policy` in `bindings/util/tdoa_selection.py:167-173`.
 - Degenerate geometry (d0 or d1 == 0) → sample skipped, filter state untouched (matches current firmware where the filter is not consulted in that case).
-- CLI defaults must reproduce today's output: `plot_tdoa.py --outlier-filter integrator`, `replay_tdoa.py --outlier-filters integrator`, both `--tdoa-update standard`.
-- Robust equivalence requirement: `tdoa_update='robust'` with filter `'none'` must produce a trajectory *exactly equal* to the direct no-filter robust path (the seam must be a transparent wrapper there). Invalid `tdoa_update` value → `ValueError` at emulator construction.
+- CLI defaults must reproduce today's output: `plot_tdoa.py --outlier-filter integrator`, `replay_tdoa.py --outlier-filters integrator`, both `--tdoa-model standard`.
+- Robust equivalence requirement: `tdoa_model='robust'` with filter `'none'` must produce a trajectory *exactly equal* to the direct no-filter robust path (the seam must be a transparent wrapper there), with identical static C state at the start of both compared replays (see the x_err caveat in the `replay` docstring).
+- Do NOT re-implement `tdoa_model`: the emulator already validates it (`TDOA_MODELS` at `bindings/util/estimator_kalman_emulator.py:4`, `ValueError` in the constructor), `replay` already forwards `params['tdoa_model']`, and `plot_tdoa.py` already has `--tdoa-model` and names its policy option `--selection-policy`.
 - Rebuild bindings after any C change: `make bindings_python` (from repo root). Run Python tests with `PYTHONPATH=build python3 -m pytest test_python/<file> -v`.
 - Filter default tunings (from spec): `fixed` gate 2.5·stdDev; `mad_window` window 50, k 5, MAD floor 0.5·stdDev, accept-all warmup until 20 samples, rejected innovations also enter the window; `pair_integrator` same constants as C integrator (size 300, force-open 10%, resume 90%, trigger 2.0·std, accept 2.5·std, dt clamp size/10).
 
@@ -638,10 +639,10 @@ git commit -m "feat: pluggable TDoA outlier filters mirroring the selection-poli
 - Test: `test_python/test_tdoa_outlier_seam.py` (create)
 
 **Interfaces:**
-- Consumes: `kalmanCoreTdoaInnovation` / `kalmanCoreUpdateWithTdoaUnfiltered` (Task 1), `make_outlier_filter` / `OutlierFilter.validate/reset` (Task 2), `cffirmware.kalmanCoreRobustUpdateWithTdoa` (already in the bindings; signature `(coreData, tdoa, outlierFilterState)` — the last argument is accepted but ignored by the C code).
+- Consumes: `kalmanCoreTdoaInnovation` / `kalmanCoreUpdateWithTdoaUnfiltered` (Task 1), `make_outlier_filter` / `OutlierFilter.validate/reset` (Task 2), and the EXISTING `tdoa_model` machinery (`TDOA_MODELS`, constructor validation, robust/standard split at `estimator_kalman_emulator.py:131-138`, `params['tdoa_model']` forwarding at `tdoa_replay.py:128`).
 - Produces (used by Task 4):
-  - `EstimatorKalmanEmulator(anchor_positions, outlier_filter=None, tdoa_update='standard')` — defaults ⇒ legacy `kalmanCoreUpdateWithTdoa` path, unchanged; `tdoa_update` must be `'standard'` or `'robust'` (else `ValueError`).
-  - `replay(anchor_positions, imu_samples, tdoa_samples, params)` accepts `params['outlier_filter']` (name string; absent ⇒ legacy path) and `params['tdoa_update']` (default `'standard'`).
+  - `EstimatorKalmanEmulator(anchor_positions, tdoa_model='standard', outlier_filter=None)` — new keyword `outlier_filter` appended after the existing `tdoa_model`; defaults ⇒ today's paths, unchanged.
+  - `replay(anchor_positions, imu_samples, tdoa_samples, params)` accepts `params['outlier_filter']` (name string; absent ⇒ ungated built-in path) alongside the existing `params['tdoa_model']`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -757,35 +758,39 @@ def test_unknown_filter_name_fails_fast():
                {'outlier_filter': 'nope'})
 
 
-def test_unknown_update_method_fails_fast():
-    with pytest.raises(ValueError, match='tdoa_update'):
-        replay(_anchor_positions(), _synthetic_imu()[:10], [],
-               {'tdoa_update': 'nope'})
-
-
 def test_robust_with_none_filter_equals_direct_robust_path():
     # The innovation call is pure and 'none' accepts everything, so the seam
     # must be a transparent wrapper around the robust update.
     imu, tdoa = _synthetic_imu(), _synthetic_tdoa_with_outliers()
-    direct = replay(_anchor_positions(), list(imu), list(tdoa),
-                    {'tdoa_std': 0.15, 'tdoa_update': 'robust'})
-    seam = replay(_anchor_positions(), list(imu), list(tdoa),
-                  {'tdoa_std': 0.15, 'tdoa_update': 'robust',
-                   'outlier_filter': 'none'})
+
+    def robust_replay(extra_params):
+        # mm_tdoa_robust.c carries M-estimation state across calls in a
+        # static x_err buffer (see the replay docstring caveat). Prime with a
+        # throwaway robust replay so both measured replays start from
+        # identical static state.
+        replay(_anchor_positions(), list(imu), list(tdoa),
+               {'tdoa_std': 0.15, 'tdoa_model': 'robust'})
+        return replay(_anchor_positions(), list(imu), list(tdoa),
+                      {'tdoa_std': 0.15, 'tdoa_model': 'robust', **extra_params})
+
+    direct = robust_replay({})
+    seam = robust_replay({'outlier_filter': 'none'})
     assert seam == direct
 
 
-def test_robust_update_replays_and_converges():
+def test_gated_robust_model_replays_and_converges():
+    # Novel offline-only combination: outlier gate in front of the robust
+    # update.
     imu, tdoa = _synthetic_imu(), _synthetic_tdoa_with_outliers()
     trajectory = replay(_anchor_positions(), list(imu), list(tdoa),
-                        {'tdoa_std': 0.15, 'tdoa_update': 'robust'})
+                        {'tdoa_std': 0.15, 'tdoa_model': 'robust',
+                         'outlier_filter': 'fixed'})
     assert len(trajectory) > 4000
     _, final_pos = trajectory[-1]
-    # The M-estimator downweights the injected outliers on its own.
     assert _dist(final_pos, TRUE_POS) < 1.0
 ```
 
-Caveat for the robust tests: `mm_tdoa_robust.c` keeps state in `static` C locals (`x_err` and friends) that persist across calls within the process, and each call's first iteration reads the previous call's leftovers. Two otherwise identical replays therefore only match if the static state is identical when each starts. If the equivalence test fails with small differences, make it deterministic by *priming*: run one throwaway robust replay (same input) immediately before each of the two measured replays — identical throwaway runs leave identical static state behind. Add a comment in the test explaining the C static-state carryover. Try plain exact equality first; prime only if needed.
+(No unknown-`tdoa_model` test here — `test_emulator_rejects_unknown_tdoa_model` in `test_python/test_kalman_core.py` already covers it.)
 
 Note: `list(imu)` / `list(tdoa)` matter — `replay` consumes the sample list destructively (`samples.pop(0)` in the emulator), so each call gets its own copy.
 
@@ -798,29 +803,27 @@ Expected: FAIL — `replay` currently ignores `params['outlier_filter']`, so `te
 
 In `bindings/util/estimator_kalman_emulator.py`:
 
-1. Change the constructor signature, validate `tdoa_update`, and store both (line 17):
+1. Append the `outlier_filter` keyword to the existing constructor (`bindings/util/estimator_kalman_emulator.py:20-24` — keep the `tdoa_model` validation exactly as it is):
 
 ```python
-    def __init__(self, anchor_positions, outlier_filter=None,
-                 tdoa_update='standard') -> None:
-        if tdoa_update not in ('standard', 'robust'):
+    def __init__(self, anchor_positions, tdoa_model='standard',
+                 outlier_filter=None) -> None:
+        if tdoa_model not in TDOA_MODELS:
             raise ValueError(
-                f"tdoa_update must be 'standard' or 'robust', got '{tdoa_update}'")
-        self.anchor_positions = anchor_positions
+                f"unknown tdoa_model '{tdoa_model}', expected one of {TDOA_MODELS}")
+        self.tdoa_model = tdoa_model
         self.outlier_filter = outlier_filter
-        self.tdoa_update = tdoa_update
 ```
 (keep the rest of `__init__` as is), and extend the class docstring with:
 
 ```
     An optional outlier_filter (see bindings/util/tdoa_outlier.py) externalizes
-    the TDoA outlier decision: None keeps the firmware's built-in path
-    (kalmanCoreUpdateWithTdoa, integrator filter in C), while a filter object
+    the TDoA outlier decision: None keeps the firmware's built-in behavior
+    (standard model: integrator filter in C inside kalmanCoreUpdateWithTdoa;
+    robust model: ungated, like kalman.robustTdoa = 1), while a filter object
     routes each TDoA sample through kalmanCoreTdoaInnovation -> validate ->
-    the chosen update. tdoa_update selects the measurement update:
-    'standard' (mm_tdoa) or 'robust' (mm_tdoa_robust, the M-estimator; the
-    firmware runs it ungated, so tdoa_update='robust' with outlier_filter=None
-    matches the on-drone kalman.robustTdoa=1 path).
+    the tdoa_model's update (kalmanCoreUpdateWithTdoaUnfiltered or
+    kalmanCoreRobustUpdateWithTdoa).
 ```
 
 2. In `_lazy_init`, after `cffirmware.outlierFilterTdoaReset(self.outlierFilterState)` (line 92):
@@ -830,29 +833,32 @@ In `bindings/util/estimator_kalman_emulator.py`:
             self.outlier_filter.reset()
 ```
 
-3. In `_update_with_sample`, replace the single line
-`cffirmware.kalmanCoreUpdateWithTdoa(self.coreData, tdoa, now_ms, self.outlierFilterState)` (line 124) with:
+3. In `_update_with_sample`, the TDoA branch currently splits on the model (`estimator_kalman_emulator.py:131-138`). Wrap that split in the filter decision:
 
 ```python
             if self.outlier_filter is None:
-                if self.tdoa_update == 'robust':
-                    # The robust update ignores the filter state (it is ungated
-                    # in the firmware too: kalman.robustTdoa = 1).
-                    cffirmware.kalmanCoreRobustUpdateWithTdoa(self.coreData, tdoa, self.outlierFilterState)
+                # Built-in behavior: standard is gated by the C integrator
+                # filter inside kalmanCoreUpdateWithTdoa; robust ignores the
+                # filter state (ungated in the firmware too: robustTdoa = 1).
+                if self.tdoa_model == 'robust':
+                    cffirmware.kalmanCoreRobustUpdateWithTdoa(
+                        self.coreData, tdoa, self.outlierFilterState)
                 else:
-                    cffirmware.kalmanCoreUpdateWithTdoa(self.coreData, tdoa, now_ms, self.outlierFilterState)
+                    cffirmware.kalmanCoreUpdateWithTdoa(
+                        self.coreData, tdoa, now_ms, self.outlierFilterState)
             else:
                 error = cffirmware.kalmanCoreTdoaInnovation(self.coreData, tdoa)
                 # NaN = degenerate geometry; firmware skips the sample without
                 # consulting the filter, so neither do we.
                 if not math.isnan(error) and self.outlier_filter.validate(tdoa, error, now_ms):
-                    if self.tdoa_update == 'robust':
-                        cffirmware.kalmanCoreRobustUpdateWithTdoa(self.coreData, tdoa, self.outlierFilterState)
+                    if self.tdoa_model == 'robust':
+                        cffirmware.kalmanCoreRobustUpdateWithTdoa(
+                            self.coreData, tdoa, self.outlierFilterState)
                     else:
                         cffirmware.kalmanCoreUpdateWithTdoaUnfiltered(self.coreData, tdoa)
 ```
 
-(`math` is already imported at the top of the file.)
+(`math` is already imported at the top of the file. Preserve the existing "No now_ms; ignores the outlier filter state..." comment if it reads better than the one above — the code shape is what matters.)
 
 - [ ] **Step 4: Wire `replay()`**
 
@@ -867,27 +873,23 @@ In `bindings/util/tdoa_replay.py`, `replay()` (line 102):
     if filter_name is not None:
         from bindings.util.tdoa_outlier import make_outlier_filter
         outlier_filter = make_outlier_filter(filter_name)
-    tdoa_update = params.get('tdoa_update', 'standard')
 ```
 
-2. Pass both to the emulator (line 127; the emulator constructor validates `tdoa_update` and raises `ValueError` on an unknown value — construct it *before* any sample processing so that failure is fast; with the innovation/merge code between resolution and construction, move the construction up next to the filter resolution if needed to satisfy `test_unknown_update_method_fails_fast`):
+2. Add it to the existing emulator construction (`tdoa_replay.py:127-128`, which already forwards `tdoa_model` — keep that):
 
 ```python
-    emulator = EstimatorKalmanEmulator(anchor_positions, outlier_filter=outlier_filter,
-                                       tdoa_update=tdoa_update)
+    emulator = EstimatorKalmanEmulator(
+        anchor_positions, tdoa_model=params.get('tdoa_model', 'standard'),
+        outlier_filter=outlier_filter)
 ```
 
-3. Update the `params` docstring entry to cover both keys:
+3. Add an `'outlier_filter'` entry to the `params` docstring, next to the existing `'tdoa_std'` and `'tdoa_model'` entries (leave those — including the x_err caveat — untouched):
 
 ```python
-        params: optional dict of tuning parameters. Supported:
-            'tdoa_std' (float, default 0.15): TDoA measurement std dev [m].
             'outlier_filter' (str, optional): outlier filter name (see
                 bindings/util/tdoa_outlier.py). Absent -> the firmware's
-                built-in C path (equivalent to 'integrator').
-            'tdoa_update' (str, default 'standard'): TDoA measurement update:
-                'standard' (mm_tdoa) or 'robust' (mm_tdoa_robust M-estimator;
-                with no outlier_filter this matches kalman.robustTdoa = 1).
+                built-in behavior (standard model: C integrator filter;
+                robust model: ungated).
 ```
 
 and the module docstring's example (line 10):
@@ -900,7 +902,7 @@ and the module docstring's example (line 10):
 - [ ] **Step 5: Run the tests**
 
 Run: `PYTHONPATH=build python3 -m pytest test_python/test_tdoa_outlier_seam.py -v`
-Expected: 7 passed. If the integrator parity test fails, the mm_tdoa.c refactor changed the float op order — diff `measurementModel` against the original math before debugging anything else. If only the robust equivalence test fails (small differences), see the static-state caveat under Step 1.
+Expected: 6 passed. If the integrator parity test fails, the mm_tdoa.c refactor changed the float op order — diff `measurementModel` against the original math before debugging anything else. If only the robust equivalence test fails with small differences, the static-state priming in the test is not doing its job — check that both measured replays are preceded by identical throwaway robust replays.
 
 - [ ] **Step 6: Run the full Python suite**
 
@@ -928,16 +930,16 @@ git commit -m "feat: route replay TDoA updates through pluggable outlier filters
 
 - [ ] **Step 1: Extend `replay_tdoa.py`**
 
-1. `run_policy` (line 66) gains the filter name and update method:
+1. `run_policy` (line 66) gains the filter and model names:
 
 ```python
 def run_policy(policy, anchor_positions, imu_samples, groups, tdoa_std,
-               outlier_filter, tdoa_update):
+               outlier_filter, tdoa_model):
     """Run the Kalman replay for one policy/outlier-filter combination."""
     tdoa_samples = apply_policy(policy, groups)
     return replay(anchor_positions, imu_samples, tdoa_samples,
                   {'tdoa_std': tdoa_std, 'outlier_filter': outlier_filter,
-                   'tdoa_update': tdoa_update})
+                   'tdoa_model': tdoa_model})
 ```
 
 2. Add the arguments after `--policies` (line 142):
@@ -947,18 +949,19 @@ def run_policy(policy, anchor_positions, imu_samples, groups, tdoa_std,
                         help='Outlier filters to evaluate (each policy is '
                              'replayed once per filter; default: integrator, '
                              'the firmware filter)')
-    parser.add_argument('--tdoa-update', choices=['standard', 'robust'],
+    parser.add_argument('--tdoa-model', choices=['standard', 'robust'],
                         default='standard',
-                        help='TDoA measurement update for the whole run: '
+                        help='TDoA measurement model for the whole run: '
                              'standard (mm_tdoa) or robust (mm_tdoa_robust '
                              'M-estimator; with --outlier-filters none this '
-                             'matches the on-drone kalman.robustTdoa=1 path)')
+                             'matches the on-drone kalman.robustTdoa=1 path). '
+                             'Same switch as plot_tdoa.py --tdoa-model')
 ```
 
-Print the chosen method above the results table (just before the `header` line):
+Print the chosen model above the results table (just before the `header` line):
 
 ```python
-    print(f'TDoA update method: {args.tdoa_update}')
+    print(f'TDoA measurement model: {args.tdoa_model}')
 ```
 
 3. Replace the results loop (lines 189–211) with a policies × filters grid; the row label becomes `policy/filter` and the column widens to fit it:
@@ -975,10 +978,10 @@ Print the chosen method above the results table (just before the `header` line):
             policy = make_policy(name)
             trajectory = run_policy(policy, anchor_positions, imu_samples,
                                     groups, args.tdoa_std, filter_name,
-                                    args.tdoa_update)
+                                    args.tdoa_model)
             metrics, _ = score_trajectory(trajectory, gt, args.flyaway_threshold)
             if (name == 'baseline' and filter_name == 'integrator'
-                    and args.tdoa_update == 'standard' and live):
+                    and args.tdoa_model == 'standard' and live):
                 live_metrics, _ = score_trajectory(trajectory, live, args.flyaway_threshold)
                 if live_metrics['n']:
                     print(f'{"":28} baseline vs live stateEstimate: '
@@ -1009,40 +1012,37 @@ Note the CSV name change (`replay_<policy>_<filter>.csv`, was `replay_<policy>.c
 
 - [ ] **Step 2: Extend `plot_tdoa.py`**
 
-1. Add the argument after `--tdoa-std` (`tools/tdoa_plot/plot_tdoa.py:184`):
+`plot_tdoa.py` already has `--tdoa-model` and `--selection-policy` — only the outlier filter is new here.
+
+1. Add the argument after the existing `--tdoa-model` block (`tools/tdoa_plot/plot_tdoa.py:195-200`):
 
 ```python
     parser.add_argument('--outlier-filter', default='integrator',
                         help='TDoA outlier filter for the replay (see '
                              'bindings/util/tdoa_outlier.py; default: '
                              'integrator, the firmware filter)')
-    parser.add_argument('--tdoa-update', choices=['standard', 'robust'],
-                        default='standard',
-                        help='TDoA measurement update: standard (mm_tdoa) or '
-                             'robust (mm_tdoa_robust M-estimator)')
 ```
 
-2. In `load_series` (line 79–84), pass them through and print them:
+2. In `load_series`, extend the existing print and `replay` call (lines 81–87):
 
 ```python
-    policy = make_policy(args.policy)
-    tdoa_samples = apply_policy(policy, groups)
     print(f'Replaying {len(tdoa_samples)} TDoA + {len(imu_samples)} IMU samples '
-          f'through the firmware Kalman core (policy: {args.policy}, '
-          f'outlier filter: {args.outlier_filter}, '
-          f'update: {args.tdoa_update}) ...')
+          f'through the firmware Kalman core '
+          f'(selection policy: {args.selection_policy}, '
+          f'measurement model: {args.tdoa_model}, '
+          f'outlier filter: {args.outlier_filter}) ...')
     replayed = replay(anchor_positions, imu_samples, tdoa_samples,
                       {'tdoa_std': args.tdoa_std,
-                       'outlier_filter': args.outlier_filter,
-                       'tdoa_update': args.tdoa_update})
+                       'tdoa_model': args.tdoa_model,
+                       'outlier_filter': args.outlier_filter})
 ```
 
-3. Include them in the title (line 197):
+3. Extend the existing title (lines 216–218):
 
 ```python
     title = (f'{Path(args.logfile).name}  '
-             f'(policy: {args.policy}, outlier filter: {args.outlier_filter}, '
-             f'update: {args.tdoa_update})')
+             f'(selection policy: {args.selection_policy}, '
+             f'model: {args.tdoa_model}, filter: {args.outlier_filter})')
 ```
 
 - [ ] **Step 3: Verify on the recorded hardware log**
@@ -1063,10 +1063,10 @@ Also exercise the robust update on hardware data:
 ```bash
 PYTHONPATH=build python3 -m tools.usdlog.replay_tdoa run_validation.bin \
     --anchors anchors.yaml --policies baseline \
-    --outlier-filters none integrator --tdoa-update robust
+    --outlier-filters none integrator --tdoa-model robust
 ```
 
-Expected: 2 rows, plausible metrics, "TDoA update method: robust" printed above the table (the `baseline/none` row is the on-drone `robustTdoa=1` equivalent).
+Expected: 2 rows, plausible metrics, "TDoA measurement model: robust" printed above the table (the `baseline/none` row is the on-drone `robustTdoa=1` equivalent).
 
 Also check the defaults reproduce today's output:
 
@@ -1084,7 +1084,7 @@ cd tools/tdoa_plot && uv run plot_tdoa.py ../../run_validation.bin \
     --save /tmp/claude-1000/-home-rik-dev-crazyflie-firmware/89a2dd08-ade1-4bfc-a1a1-28619ef95ad4/scratchpad/plot_mad.png && cd ../..
 ```
 
-Expected: prints "… (policy: baseline, outlier filter: mad_window) …", saves the figure, exit 0.
+Expected: prints "… (selection policy: baseline, measurement model: standard, outlier filter: mad_window) …", saves the figure, exit 0.
 
 - [ ] **Step 4: Run the Python suite once more**
 
@@ -1119,7 +1119,7 @@ PYTHONPATH=build python3 -m tools.usdlog.replay_tdoa run_validation.bin \
 
 PYTHONPATH=build python3 -m tools.usdlog.replay_tdoa run_validation.bin \
     --anchors anchors.yaml --policies baseline \
-    --outlier-filters none integrator --tdoa-update robust \
+    --outlier-filters none integrator --tdoa-model robust \
     | tee /tmp/claude-1000/-home-rik-dev-crazyflie-firmware/89a2dd08-ade1-4bfc-a1a1-28619ef95ad4/scratchpad/filter_validation_robust.txt
 ```
 
@@ -1154,18 +1154,18 @@ innovation against the current Kalman state — whether the update is applied.
 
 Add your own in `bindings/util/tdoa_outlier.py` (subclass `OutlierFilter`).
 
-Orthogonal to both: `--tdoa-update {standard,robust}` selects the measurement
-update itself — `standard` (`mm_tdoa.c`) or `robust` (`mm_tdoa_robust.c`, the
-UTIAS/DSL M-estimator). The firmware runs the robust update *ungated*
-(`kalman.robustTdoa = 1`), so `--tdoa-update robust --outlier-filters none`
-is the on-drone robust equivalent; combining it with a filter is an
-offline-only experiment.
+Orthogonal to both: `--tdoa-model {standard,robust}` selects the measurement
+model itself — `standard` (`mm_tdoa.c`) or `robust` (`mm_tdoa_robust.c`, the
+UTIAS/DSL M-estimator; same switch as `plot_tdoa.py`). The firmware runs the
+robust update *ungated* (`kalman.robustTdoa = 1`), so `--tdoa-model robust
+--outlier-filters none` is the on-drone robust equivalent; combining it with
+a filter is an offline-only experiment.
 
 Validation run (`run_validation.bin`, baseline policy, all filters):
 
 <paste the table from the tee'd run here — replace this line>
 
-Robust update (`--tdoa-update robust`, baseline policy, filters none +
+Robust model (`--tdoa-model robust`, baseline policy, filters none +
 integrator):
 
 <paste the robust table here — replace this line>
