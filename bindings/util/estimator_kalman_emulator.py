@@ -1,6 +1,9 @@
 import math
 import cffirmware
 
+TDOA_MODELS = ('standard', 'robust')
+
+
 class EstimatorKalmanEmulator:
     """
     This class emulates the behavior of estimator_kalman.c and is used as a helper to enable testing of the kalman
@@ -14,7 +17,11 @@ class EstimatorKalmanEmulator:
     how they are connected.
 
     """
-    def __init__(self, anchor_positions) -> None:
+    def __init__(self, anchor_positions, tdoa_model='standard') -> None:
+        if tdoa_model not in TDOA_MODELS:
+            raise ValueError(
+                f"unknown tdoa_model '{tdoa_model}', expected one of {TDOA_MODELS}")
+        self.tdoa_model = tdoa_model
         self.anchor_positions = anchor_positions
         self.accSubSampler = cffirmware.Axis3fSubSampler_t()
         self.gyroSubSampler = cffirmware.Axis3fSubSampler_t()
@@ -121,7 +128,14 @@ class EstimatorKalmanEmulator:
             tdoa.distanceDiff = float(tdoa_data['distanceDiff'])
             tdoa.stdDev = self.TDOA_ENGINE_MEASUREMENT_NOISE_STD
 
-            cffirmware.kalmanCoreUpdateWithTdoa(self.coreData, tdoa, now_ms, self.outlierFilterState)
+            if self.tdoa_model == 'robust':
+                # No now_ms; ignores the outlier filter state, like the
+                # firmware does with kalman.robustTdoa = 1
+                cffirmware.kalmanCoreRobustUpdateWithTdoa(
+                    self.coreData, tdoa, self.outlierFilterState)
+            else:
+                cffirmware.kalmanCoreUpdateWithTdoa(
+                    self.coreData, tdoa, now_ms, self.outlierFilterState)
 
         elif sample[0] == 'estAcceleration':
             acc_data = sample[1]

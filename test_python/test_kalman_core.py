@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import math
+import pytest
 import numpy as np
 from bindings.util.estimator_kalman_emulator import EstimatorKalmanEmulator
 from bindings.util.sd_card_file_runner import SdCardFileRunner
@@ -69,3 +71,34 @@ def test_robust_tdoa_update_is_exposed_and_runs():
 
     # The robust update takes no now_ms (see mm_tdoa_robust.h)
     cffirmware.kalmanCoreRobustUpdateWithTdoa(core, tdoa, outlier_filter_state)
+
+
+def test_emulator_rejects_unknown_tdoa_model():
+    with pytest.raises(ValueError, match='huber'):
+        EstimatorKalmanEmulator(anchor_positions={}, tdoa_model='huber')
+
+
+def test_emulator_robust_model_processes_a_tdoa_sample():
+    import cffirmware
+
+    pos_a = cffirmware.vec3_s()
+    pos_a.x, pos_a.y, pos_a.z = 0.0, 0.0, 0.0
+    pos_b = cffirmware.vec3_s()
+    pos_b.x, pos_b.y, pos_b.z = 4.0, 0.0, 0.0
+    anchor_positions = {0: pos_a, 1: pos_b}
+
+    emulator = EstimatorKalmanEmulator(anchor_positions, tdoa_model='robust')
+    samples = [
+        ('estAcceleration',
+         {'timestamp': 1000.0, 'acc.x': 0.0, 'acc.y': 0.0, 'acc.z': 1.0}),
+        ('estGyroscope',
+         {'timestamp': 1000.0, 'gyro.x': 0.0, 'gyro.y': 0.0, 'gyro.z': 0.0}),
+        ('estTDOA',
+         {'timestamp': 1001.0, 'idA': 0, 'idB': 1, 'distanceDiff': 0.1}),
+    ]
+
+    state = None
+    while len(samples):
+        _, state = emulator.run_one_1khz_iteration(samples)
+
+    assert math.isfinite(state.position.x)
