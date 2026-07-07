@@ -94,6 +94,9 @@ fi
 if [[ -z "$SIZE" || "$SIZE" == "0" ]]; then
   echo "!! Could not determine a non-zero microSD file size." >&2
   echo "   Is a log present and is logging stopped? You can force a size with USD_SIZE=<bytes>." >&2
+  echo "   A size of 0 right after a run usually means the file was never closed:" >&2
+  echo "   power loss / reboot during logging, or an SD write failure (see the" >&2
+  echo "   usd.writeError check above). The file on the card will be 0 bytes too." >&2
   exit 1
 fi
 
