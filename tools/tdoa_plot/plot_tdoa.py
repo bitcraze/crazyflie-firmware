@@ -81,10 +81,12 @@ def load_series(args):
     print(f'Replaying {len(tdoa_samples)} TDoA + {len(imu_samples)} IMU samples '
           f'through the firmware Kalman core '
           f'(selection policy: {args.selection_policy}, '
-          f'measurement model: {args.tdoa_model}) ...')
+          f'measurement model: {args.tdoa_model}, '
+          f'outlier filter: {args.outlier_filter}) ...')
     replayed = replay(anchor_positions, imu_samples, tdoa_samples,
                       {'tdoa_std': args.tdoa_std,
-                       'tdoa_model': args.tdoa_model})
+                       'tdoa_model': args.tdoa_model,
+                       'outlier_filter': args.outlier_filter})
     return replayed, live, gt
 
 
@@ -198,6 +200,10 @@ def main():
                              '(kalmanCoreUpdateWithTdoa) or robust '
                              '(M-estimation, kalman.robustTdoa=1 equivalent) '
                              '(default: standard)')
+    parser.add_argument('--outlier-filter', default='integrator',
+                        help='TDoA outlier filter for the replay (see '
+                             'bindings/util/tdoa_outlier.py; default: '
+                             'integrator, the firmware filter)')
     parser.add_argument('--tdoa-std', type=float, default=0.15,
                         help='TDoA measurement std dev [m] used in the Kalman '
                              'update (default: 0.15)')
@@ -215,7 +221,7 @@ def main():
     print_stats(replayed, live, gt)
     title = (f'{Path(args.logfile).name}  '
              f'(selection policy: {args.selection_policy}, '
-             f'model: {args.tdoa_model})')
+             f'model: {args.tdoa_model}, filter: {args.outlier_filter})')
     plot(replayed, live, gt, title, save_path=args.save)
 
 

@@ -3,8 +3,9 @@ Offline replay + A/B testing of TDoA anchor-pair selection policies.
 
 Feeds a uSD log recorded with ``config_tdoa_candidates.txt`` back through the
 *real* firmware Kalman core (via the ``cffirmware`` SWIG bindings) under several
-anchor-pair selection policies, and scores each resulting trajectory against the
-Lighthouse crossing-beam ground truth logged on the same clock.
+anchor-pair selection policies and TDoA outlier filters, and scores each
+resulting trajectory against the Lighthouse crossing-beam ground truth logged
+on the same clock.
 
 Use it to (a) locate fly-away events (position error spikes vs ground truth) and
 (b) compare selection policies on identical logged candidate data.
@@ -14,6 +15,8 @@ Run from the repository root::
     python3 -m tools.usdlog.replay_tdoa run01.bin --anchors anchors.yaml
     python3 -m tools.usdlog.replay_tdoa run01.bin --anchors anchors.yaml \
         --policies baseline all median --csv-dir replay_out
+    python3 -m tools.usdlog.replay_tdoa run01.bin --anchors anchors.yaml \
+        --policies baseline all --outlier-filters integrator none mad_window
 
 Requires the bindings to be built first (see bindings/README / build_python.sh)
 so that ``import cffirmware`` works.
@@ -63,10 +66,13 @@ def extract_ground_truth(log_data):
     return gt
 
 
-def run_policy(policy, anchor_positions, imu_samples, groups, tdoa_std):
-    """Run the Kalman replay for one selection policy. Returns [(t_ms, (x,y,z))]."""
+def run_policy(policy, anchor_positions, imu_samples, groups, tdoa_std,
+               outlier_filter, tdoa_model):
+    """Run the Kalman replay for one policy/outlier-filter combination."""
     tdoa_samples = apply_policy(policy, groups)
-    return replay(anchor_positions, imu_samples, tdoa_samples, {'tdoa_std': tdoa_std})
+    return replay(anchor_positions, imu_samples, tdoa_samples,
+                  {'tdoa_std': tdoa_std, 'outlier_filter': outlier_filter,
+                   'tdoa_model': tdoa_model})
 
 
 def _interp_ground_truth(gt, t_ms):
@@ -140,6 +146,17 @@ def main():
     parser.add_argument('--policies', nargs='+',
                         default=['baseline', 'all', 'median', 'round_robin'],
                         help='Selection policies to evaluate')
+    parser.add_argument('--outlier-filters', nargs='+', default=['integrator'],
+                        help='Outlier filters to evaluate (each policy is '
+                             'replayed once per filter; default: integrator, '
+                             'the firmware filter)')
+    parser.add_argument('--tdoa-model', choices=['standard', 'robust'],
+                        default='standard',
+                        help='TDoA measurement model for the whole run: '
+                             'standard (mm_tdoa) or robust (mm_tdoa_robust '
+                             'M-estimator; with --outlier-filters none this '
+                             'matches the on-drone kalman.robustTdoa=1 path). '
+                             'Same switch as plot_tdoa.py --tdoa-model')
     parser.add_argument('--tdoa-std', type=float, default=0.15,
                         help='TDoA measurement std dev [m] used in the Kalman update '
                              '(firmware default is 0.15, or 0.30 with DECK_LOCO_LONGER_RANGE)')
@@ -186,29 +203,38 @@ def main():
     if args.csv_dir:
         os.makedirs(args.csv_dir, exist_ok=True)
 
+    print(f'TDoA measurement model: {args.tdoa_model}')
+
     print()
-    header = f'{"policy":<12} {"n":>7} {"rms[m]":>8} {"p95[m]":>8} {"max[m]":>8} {"fly>thr":>8}'
+    header = (f'{"policy/filter":<28} {"n":>7} {"rms[m]":>8} {"p95[m]":>8} '
+              f'{"max[m]":>8} {"fly>thr":>8}')
     print(header)
     print('-' * len(header))
     for name in args.policies:
-        policy = make_policy(name)
-        trajectory = run_policy(policy, anchor_positions, imu_samples, groups, args.tdoa_std)
-        metrics, _ = score_trajectory(trajectory, gt, args.flyaway_threshold)
-        if name == 'baseline' and live:
-            live_metrics, _ = score_trajectory(trajectory, live, args.flyaway_threshold)
-            if live_metrics['n']:
-                print(f'{"":12} baseline vs live stateEstimate: '
-                      f'rms {live_metrics["rms"]:.3f} m, max {live_metrics["max"]:.3f} m '
-                      f'(replay-vs-onboard divergence, spec F1)')
-        if args.csv_dir:
-            write_csv(os.path.join(args.csv_dir, f'replay_{name}.csv'), trajectory, gt)
-        if metrics['n'] == 0:
-            print(f'{name:<12} {"-":>7} {"(no overlap with ground truth)":>0}')
-        else:
-            print(f'{name:<12} {metrics["n"]:>7} {metrics["rms"]:>8.3f} '
-                  f'{metrics["p95"]:>8.3f} {metrics["max"]:>8.3f} '
-                  f'{metrics["flyaway_frac"]:>7.1%}'
-                  f'   peak@{metrics["flyaway_t_ms"] / 1000.0:.1f}s')
+        for filter_name in args.outlier_filters:
+            label = f'{name}/{filter_name}'
+            policy = make_policy(name)
+            trajectory = run_policy(policy, anchor_positions, imu_samples,
+                                    groups, args.tdoa_std, filter_name,
+                                    args.tdoa_model)
+            metrics, _ = score_trajectory(trajectory, gt, args.flyaway_threshold)
+            if (name == 'baseline' and filter_name == 'integrator'
+                    and args.tdoa_model == 'standard' and live):
+                live_metrics, _ = score_trajectory(trajectory, live, args.flyaway_threshold)
+                if live_metrics['n']:
+                    print(f'{"":28} baseline vs live stateEstimate: '
+                          f'rms {live_metrics["rms"]:.3f} m, max {live_metrics["max"]:.3f} m '
+                          f'(replay-vs-onboard divergence, spec F1)')
+            if args.csv_dir:
+                write_csv(os.path.join(args.csv_dir, f'replay_{name}_{filter_name}.csv'),
+                          trajectory, gt)
+            if metrics['n'] == 0:
+                print(f'{label:<28} {"-":>7} {"(no overlap with ground truth)":>0}')
+            else:
+                print(f'{label:<28} {metrics["n"]:>7} {metrics["rms"]:>8.3f} '
+                      f'{metrics["p95"]:>8.3f} {metrics["max"]:>8.3f} '
+                      f'{metrics["flyaway_frac"]:>7.1%}'
+                      f'   peak@{metrics["flyaway_t_ms"] / 1000.0:.1f}s')
 
     print()
     print('Lower rms / p95 / max / fly>thr is better. "peak@" marks the worst fly-away.')
