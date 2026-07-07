@@ -64,6 +64,21 @@ else
   echo ">> OK: no dropped events (eventsRequested = eventsWritten = $EVT_REQ)."
 fi
 
+echo ">> Checking for SD write failures (usd.writeError)..."
+WERR_LINE="$("$CFCLI" -u "$URI" --timeout 3000 --csv log print usd.writeError 2>/dev/null | tail -n 1 || true)"
+WERR="$(echo "$WERR_LINE" | awk -F',' '{print $NF}' || true)"
+if [[ ! "$WERR" =~ ^[0-9]+$ ]]; then
+  echo "!! WARNING: could not read usd.writeError (firmware without it?)." >&2
+  echo "   A silently aborted log cannot be ruled out." >&2
+elif [[ "$WERR" != "0" ]]; then
+  echo "!! SD WRITE FAILURE: usd.writeError=$WERR (FatFS FRESULT)." >&2
+  echo "   Logging stopped mid-run; the log is incomplete. Do NOT use it." >&2
+  echo "   Check the microSD card seating/card health and retry." >&2
+  exit 1
+else
+  echo ">> OK: no SD write failures."
+fi
+
 echo ">> Listing memories to find the microSD file size..."
 # mem list --csv is machine readable; find the MicroSD row and take its size.
 # The size column is the last numeric field of the MicroSD line. If auto-detect

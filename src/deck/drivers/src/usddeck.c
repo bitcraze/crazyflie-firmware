@@ -121,6 +121,11 @@ typedef struct usdLogConfig_s {
 typedef struct usdLogStats_s {
   uint32_t eventsRequested;
   uint32_t eventsWritten;
+  // Sticky FatFS FRESULT of the first failed write of the current/last log
+  // run (0 = no failure). A write failure silently stops logging, and its
+  // one-shot console print is lost when no radio client is attached; this
+  // makes the failure observable after the fact over the log TOC.
+  uint8_t writeError;
 } usdLogStats_t;
 
 // Ring buffer
@@ -813,8 +818,14 @@ static void usdWriteData(const void *data, size_t size)
 {
   UINT bytesWritten;
   FRESULT status = f_write(&logFile, data, size, &bytesWritten);
-  if (status != FR_OK) {
-    DEBUG_PRINT("usd deck write failure %d\n", status);
+  if (status != FR_OK || bytesWritten < size) {
+    DEBUG_PRINT("usd deck write failure %d (%u of %u B)\n",
+                status, (unsigned)bytesWritten, (unsigned)size);
+    if (usdLogStats.writeError == 0) {
+      // FR_OK with a short write means the volume is full; report it as
+      // FR_DENIED (what f_write itself returns for a full volume).
+      usdLogStats.writeError = (status != FR_OK) ? (uint8_t)status : (uint8_t)FR_DENIED;
+    }
     enableLogging = false;
   } else {
     crc32Update(&crcContext, data, size);
@@ -837,6 +848,7 @@ static void usdWriteTask(void* prm)
       // reset stats
       usdLogStats.eventsRequested = 0;
       usdLogStats.eventsWritten = 0;
+      usdLogStats.writeError = 0;
 
       // reset the buffer
       xSemaphoreTake(logBufferMutex, portMAX_DELAY);
@@ -1140,4 +1152,12 @@ LOG_ADD(LOG_UINT32, eventsRequested, &usdLogStats.eventsRequested)
  * holes; do not trust lossless replay of that log.
  */
 LOG_ADD(LOG_UINT32, eventsWritten, &usdLogStats.eventsWritten)
+/**
+ * @brief FatFS error (FRESULT) of the first failed SD write of the current/last
+ *        log run, 0 if none.
+ *
+ * A write failure silently stops the log; a run with a non-zero writeError is
+ * incomplete and must not be used for replay.
+ */
+LOG_ADD(LOG_UINT8, writeError, &usdLogStats.writeError)
 LOG_GROUP_STOP(usd)
