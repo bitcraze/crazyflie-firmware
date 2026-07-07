@@ -37,7 +37,7 @@ if [[ "${1:-}" == "--replay" ]]; then
 fi
 
 echo ">> Stopping logging (usd.logging = 0) so the file becomes readable..."
-"$CFCLI" -u "$URI" param set usd.logging 0
+"$CFCLI" -u "$URI" param set usd.logging=0
 
 echo ">> Checking for dropped uSD events (usd.eventsRequested vs usd.eventsWritten)..."
 # The counters are reset when logging starts and keep their final values after
