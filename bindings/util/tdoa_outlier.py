@@ -128,7 +128,7 @@ class MadWindowFilter(OutlierFilter):
             med = self._median(self._window)
             mad = self._median(abs(e - med) for e in self._window)
             mad = max(mad, self.MAD_FLOOR_STD_MULTIPLIER * tdoa.stdDev)
-            accepted = abs(error - med) <= self.K * mad
+            accepted = abs(error - med) < self.K * mad
         self._window.append(error)
         return accepted
 
@@ -160,7 +160,13 @@ class PairIntegratorFilter(OutlierFilter):
         accepted_distance = tdoa.stdDev * self.ACCEPT_STD_MULTIPLIER
         trigger_distance = tdoa.stdDev * self.TRIGGER_STD_MULTIPLIER
 
-        dt_ms = min(now_ms - s['latest_ms'], self.INTEGRATOR_SIZE / 10.0)
+        dt_ms = now_ms - s['latest_ms']
+        if dt_ms < 0:
+            # The C original computes this in uint32_t: a negative delta wraps
+            # to a huge value and the fminf clamp reduces it to the cap.
+            dt_ms = self.INTEGRATOR_SIZE / 10.0
+        else:
+            dt_ms = min(dt_ms, self.INTEGRATOR_SIZE / 10.0)
         if abs(error) < trigger_distance:
             s['integrator'] = min(s['integrator'] + dt_ms, self.INTEGRATOR_SIZE)
         else:

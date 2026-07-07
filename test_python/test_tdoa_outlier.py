@@ -105,6 +105,16 @@ def test_pair_integrator_reset_reopens_all_pairs():
     assert f.validate(_Tdoa(ids=(0, 1)), error=2.0, now_ms=500)
 
 
+def test_pair_integrator_out_of_order_timestamp_clamps_like_c_uint32():
+    # C computes dt in uint32_t: a negative delta wraps huge and is clamped
+    # to +INTEGRATOR_SIZE/10. The port must not drive the integrator backwards.
+    f = make_outlier_filter('pair_integrator')
+    f.validate(_Tdoa(ids=(0, 1)), error=0.0, now_ms=100)
+    f.validate(_Tdoa(ids=(0, 1)), error=0.0, now_ms=50)  # out of order
+    s = f._pairs[(0, 1)]
+    assert s['integrator'] == 60.0  # 30 + 30, never 30 - 50
+
+
 def test_factories_return_fresh_instances():
     a = make_outlier_filter('mad_window')
     b = make_outlier_filter('mad_window')
