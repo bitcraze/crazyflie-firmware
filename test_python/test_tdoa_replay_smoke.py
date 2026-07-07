@@ -72,3 +72,27 @@ def test_replay_seam_converges_to_the_true_position():
 
     _, final_pos = trajectory[-1]
     assert _dist(final_pos, TRUE_POS) < POSITION_TOLERANCE_M
+
+
+def test_robust_model_converges_and_differs_from_standard():
+    standard = replay(_anchor_positions(), _synthetic_imu(), _synthetic_tdoa(),
+                      {'tdoa_std': 0.15, 'tdoa_model': 'standard'})
+    robust = replay(_anchor_positions(), _synthetic_imu(), _synthetic_tdoa(),
+                    {'tdoa_std': 0.15, 'tdoa_model': 'robust'})
+
+    _, robust_final = robust[-1]
+    assert _dist(robust_final, TRUE_POS) < POSITION_TOLERANCE_M
+    assert robust != standard
+
+
+def test_default_model_is_standard():
+    default = replay(_anchor_positions(), _synthetic_imu(), _synthetic_tdoa(),
+                     {'tdoa_std': 0.15})
+    explicit = replay(_anchor_positions(), _synthetic_imu(), _synthetic_tdoa(),
+                      {'tdoa_std': 0.15, 'tdoa_model': 'standard'})
+    assert default == explicit
+
+
+def test_unknown_model_fails_fast_even_with_empty_input():
+    with pytest.raises(ValueError, match='huber'):
+        replay(_anchor_positions(), [], [], {'tdoa_model': 'huber'})

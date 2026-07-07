@@ -109,6 +109,10 @@ def replay(anchor_positions, imu_samples, tdoa_samples, params=None):
         tdoa_samples: from apply_policy (or synthetic, same shape).
         params: optional dict of tuning parameters. Supported:
             'tdoa_std' (float, default 0.15): TDoA measurement std dev [m].
+            'tdoa_model' (str, default 'standard'): TDoA measurement model.
+                'standard' is kalmanCoreUpdateWithTdoa; 'robust' is the
+                M-estimation kalmanCoreRobustUpdateWithTdoa, which bypasses
+                the outlier filter (firmware behavior with kalman.robustTdoa=1).
 
     Returns:
         [(t_ms, (x, y, z))] trajectory, one entry per 1 kHz iteration.
@@ -116,6 +120,10 @@ def replay(anchor_positions, imu_samples, tdoa_samples, params=None):
     from bindings.util.estimator_kalman_emulator import EstimatorKalmanEmulator
 
     params = params or {}
+    emulator = EstimatorKalmanEmulator(
+        anchor_positions, tdoa_model=params.get('tdoa_model', 'standard'))
+    emulator.TDOA_ENGINE_MEASUREMENT_NOISE_STD = params.get('tdoa_std', DEFAULT_TDOA_STD)
+
     tdoa_samples, n_skipped = filter_known_anchors(tdoa_samples, anchor_positions)
     if n_skipped:
         print(f'WARNING: skipped {n_skipped} TDoA samples referencing anchors '
@@ -123,9 +131,6 @@ def replay(anchor_positions, imu_samples, tdoa_samples, params=None):
     samples = merge_samples(imu_samples, tdoa_samples)
     if not samples:
         return []
-
-    emulator = EstimatorKalmanEmulator(anchor_positions)
-    emulator.TDOA_ENGINE_MEASUREMENT_NOISE_STD = params.get('tdoa_std', DEFAULT_TDOA_STD)
 
     trajectory = []
     while len(samples):
