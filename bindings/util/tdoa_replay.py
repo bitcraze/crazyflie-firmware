@@ -8,7 +8,7 @@ This is the stable, documented interface that analysis scripts build on::
     imu      = tdoa_replay.extract_imu_samples(log_data)
     tdoa     = tdoa_replay.apply_policy(policy, groups)
     traj     = tdoa_replay.replay(anchor_positions, imu, tdoa,
-                                  {'tdoa_std': 0.15})
+                                  {'tdoa_std': 0.15, 'outlier_filter': 'integrator'})
 
 ``replay`` imports cffirmware lazily, so everything else in this module can be
 used (and unit tested) without the SWIG bindings being built.
@@ -117,6 +117,10 @@ def replay(anchor_positions, imu_samples, tdoa_samples, params=None):
                 buffer (x_err), shared process-wide, so back-to-back 'robust'
                 replays in one process are not strictly independent; run one
                 robust replay per process for exact reproducibility.
+            'outlier_filter' (str, optional): outlier filter name (see
+                bindings/util/tdoa_outlier.py). Absent -> the firmware's
+                built-in behavior (standard model: C integrator filter;
+                robust model: ungated).
 
     Returns:
         [(t_ms, (x, y, z))] trajectory, one entry per 1 kHz iteration.
@@ -124,8 +128,15 @@ def replay(anchor_positions, imu_samples, tdoa_samples, params=None):
     from bindings.util.estimator_kalman_emulator import EstimatorKalmanEmulator
 
     params = params or {}
+    outlier_filter = None
+    filter_name = params.get('outlier_filter')
+    if filter_name is not None:
+        from bindings.util.tdoa_outlier import make_outlier_filter
+        outlier_filter = make_outlier_filter(filter_name)
+
     emulator = EstimatorKalmanEmulator(
-        anchor_positions, tdoa_model=params.get('tdoa_model', 'standard'))
+        anchor_positions, tdoa_model=params.get('tdoa_model', 'standard'),
+        outlier_filter=outlier_filter)
     emulator.TDOA_ENGINE_MEASUREMENT_NOISE_STD = params.get('tdoa_std', DEFAULT_TDOA_STD)
 
     tdoa_samples, n_skipped = filter_known_anchors(tdoa_samples, anchor_positions)
