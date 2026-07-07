@@ -1,5 +1,5 @@
 """
-Convert `cfcli loco display --csv` output into the anchors YAML consumed by the
+Convert `cfcli loco display` output into the anchors YAML consumed by the
 replay harness (bindings/util/loco_utils.read_loco_anchor_positions), i.e.::
 
     0: {x: 0.0, y: 0.0, z: 0.0}
@@ -7,14 +7,17 @@ replay harness (bindings/util/loco_utils.read_loco_anchor_positions), i.e.::
     ...
 
 Usage:
-    cfcli -u <uri> --csv loco display | python3 -m tools.usdlog.anchors_from_cfcli > anchors.yaml
+    cfcli -u <uri> loco display | python3 -m tools.usdlog.anchors_from_cfcli > anchors.yaml
 
-The parser is intentionally tolerant about column naming: it looks for an 'id'
-column and x/y/z columns by header name, and falls back to positional parsing
-(first integer = id, last three floats = x, y, z) if there is no usable header.
-Only anchors reported as valid (if a 'valid' column exists) are emitted.
+The parser is intentionally tolerant about the input format: it accepts both
+the human-readable table cfcli prints (`ID Active Valid Position (x, y, z)`,
+verified against cfcli as of 2026-07) and CSV. Lines are tokenized on
+whitespace, commas and parentheses; a header line maps columns by name, any
+other line falls back to positional parsing (first integer = id, last three
+floats = x, y, z). Rows containing a 'no' token (inactive/invalid anchors)
+are skipped.
 """
-import csv
+import re
 import sys
 
 
@@ -23,6 +26,16 @@ def _to_float(s):
         return float(s)
     except (TypeError, ValueError):
         return None
+
+
+def tokenize(lines):
+    """Split each line on whitespace, commas and parentheses."""
+    rows = []
+    for line in lines:
+        tokens = [t for t in re.split(r'[\s,()]+', line) if t]
+        if tokens:
+            rows.append(tokens)
+    return rows
 
 
 def parse(rows):
@@ -49,7 +62,10 @@ def parse(rows):
     result = {}
     for r in data_rows:
         r = [c.strip() for c in r]
-        if has_header and None not in (id_i, x_i, y_i, z_i):
+        # Header-index mapping is only trustworthy when the row has as many
+        # tokens as the header (the human-readable table's "Position (x, y, z)"
+        # header tokenizes wider than its data rows).
+        if has_header and None not in (id_i, x_i, y_i, z_i) and len(r) == len(header):
             if valid_i is not None and r[valid_i].lower() in ('no', 'false', '0'):
                 continue
             try:
@@ -59,6 +75,8 @@ def parse(rows):
             x, y, z = _to_float(r[x_i]), _to_float(r[y_i]), _to_float(r[z_i])
         else:
             # Positional fallback: first int is id, last three floats are x/y/z.
+            if any(c.lower() in ('no', 'false') for c in r):
+                continue  # inactive or invalid anchor
             ints = [int(c) for c in r if c.lstrip('-').isdigit()]
             floats = [f for f in (_to_float(c) for c in r) if f is not None]
             if not ints or len(floats) < 3:
@@ -72,10 +90,9 @@ def parse(rows):
 
 
 def main():
-    reader = csv.reader(sys.stdin)
-    anchors = parse(list(reader))
+    anchors = parse(tokenize(sys.stdin))
     if not anchors:
-        sys.stderr.write('No anchors parsed from input. Check `cfcli loco display --csv` output.\n')
+        sys.stderr.write('No anchors parsed from input. Check `cfcli loco display` output.\n')
         sys.exit(1)
     out = sys.stdout
     for aid in sorted(anchors):
