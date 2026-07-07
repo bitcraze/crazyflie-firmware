@@ -1,0 +1,25 @@
+# tdoa_plot
+
+Plots x/y/z trajectories from a Crazyflie uSD log recorded with
+`tools/usdlog/config_tdoa_candidates.txt`, comparing three sources per axis:
+
+- **bindings estimate**: the log replayed through the real firmware Kalman core
+  (cffirmware SWIG bindings), like `tools/usdlog/replay_tdoa.py`
+- **live estimate**: the onboard `stateEstimate` logged during the flight
+- **ground truth**: the Lighthouse crossing-beam position
+
+## Usage
+
+From this folder (uv sets up the venv and dependencies automatically):
+
+```
+uv run plot_tdoa.py path/to/log.bin --anchors path/to/anchors.yaml
+```
+
+If the cffirmware bindings are missing (or built for a different Python), they
+are built automatically via `make bindings_python` — this needs `swig` and a C
+compiler. Force a rebuild with `--rebuild-bindings`.
+
+Options: `--selection-policy` selects the anchor-pair selection policy for the
+replay (default `baseline`), `--tdoa-std` the measurement noise, and
+`--save out.png` writes the figure to a file instead of opening a window.

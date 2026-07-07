@@ -1,0 +1,12 @@
+[project]
+name = "tdoa-plot"
+version = "0.1.0"
+description = "Plot replayed (cffirmware bindings) vs live vs Lighthouse ground-truth trajectories from a Crazyflie uSD log"
+requires-python = ">=3.10"
+dependencies = [
+    "matplotlib>=3.7",
+    "numpy>=1.24",
+    "pyyaml>=6",
+    # bindings/setup.py still uses distutils, which needs setuptools on Python 3.12+
+    "setuptools>=68",
+]
