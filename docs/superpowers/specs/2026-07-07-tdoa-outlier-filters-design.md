@@ -34,8 +34,12 @@ Kalman state at update time. A seam is needed to externalize that decision.
 - **Seam approach: behavior-preserving firmware refactor** of `mm_tdoa.c`
   (chosen over bindings-only `%inline` duplication, which drifts, and a full
   Python port, which loses float32 bit-exactness and weakens A/B conclusions).
-- **Filter roster: all six** — `integrator`, `none`, `sanity`, `fixed`,
-  `mad_window`, `pair_integrator`.
+- **Filter roster: five** — `integrator`, `none`, `sanity`, `mad_window`,
+  `pair_integrator`. (`fixed` — a static 2.5·std gate with no adaptivity —
+  was in the original roster but dropped during implementation: with the
+  replay always cold-starting the Kalman state far from the truth, a
+  closed-from-t=0 static gate rejects every sample and never converges, so
+  the ablation it was meant to provide is degenerate.)
 - **Amendment (same day): compose with the existing `tdoa_model` dimension**
   (`standard` | `robust`, the `mm_tdoa_robust` M-estimator) instead of leaving
   robust deferred. Robust replay support was implemented on this branch in
@@ -95,7 +99,6 @@ Roster:
 | `integrator` | The real C filter: own `OutlierFilterTdoaState_t`, calls the already-exposed `outlierFilterTdoaValidateIntegrator`. Firmware-parity baseline. |
 | `none` | Accepts everything — control group; shows what filtering buys. |
 | `sanity` | Only the physically-impossible check: `distanceDiff² < |pA − pB|²`. |
-| `fixed` | Static gate `|error| < 2.5·stdDev` — no adaptivity; tests whether the integrator's adaptivity earns its keep. |
 | `mad_window` | Sliding window (default 50) of recent innovations; reject when `|error − median| > k·MAD` (default k = 5). MAD is floored at `0.5·stdDev` so a quiet window cannot collapse the gate, and the filter accepts everything until the window holds 20 samples so it cannot lock itself out at startup. Accepted *and* rejected innovations enter the window (a rejected-but-real position jump must still be able to drag the median). |
 | `pair_integrator` | Python port of the integrator logic with one state per `(idA, idB)` pair, so a single bad anchor cannot force the global filter open. |
 
@@ -146,7 +149,7 @@ Roster:
   `outlier_filter=None` (legacy C path) vs `'integrator'` (new seam) must
   produce *exactly equal* trajectories. Guards both the firmware refactor and
   the seam wiring.
-- **Bindings-free unit tests** for the pure-Python filters (`sanity`, `fixed`,
+- **Bindings-free unit tests** for the pure-Python filters (`sanity`,
   `mad_window`, `pair_integrator`, `none`) using stub tdoa objects: gate
   thresholds, warmup, MAD floor, per-pair isolation, reset behavior.
 - **Robust-path equivalence test (amendment):** replaying with
@@ -172,7 +175,7 @@ Roster:
 
 ## Explicitly deferred (future work)
 
-- Per-filter CLI parameters (e.g. `fixed:k=3` syntax) — constructor defaults
+- Per-filter CLI parameters (e.g. `mad_window:k=3` syntax) — constructor defaults
   only for now.
 - Mahalanobis/chi-squared gate — needs the innovation variance `H·P·Hᵀ + R`
   exposed from C.

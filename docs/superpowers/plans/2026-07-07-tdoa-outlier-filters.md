@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make the TDoA outlier filter swappable in the offline replay the same way selection policies are — six filters (`integrator`, `none`, `sanity`, `fixed`, `mad_window`, `pair_integrator`) — composing with the *existing* `tdoa_model` dimension (`standard` | `robust`), and add the missing `--tdoa-model` switch to `replay_tdoa.py`.
+**Goal:** Make the TDoA outlier filter swappable in the offline replay the same way selection policies are — five filters (`integrator`, `none`, `sanity`, `mad_window`, `pair_integrator`; `fixed` was dropped mid-execution — see the DROP NOTE below the Global Constraints) — composing with the *existing* `tdoa_model` dimension (`standard` | `robust`), and add the missing `--tdoa-model` switch to `replay_tdoa.py`.
 
 **Architecture:** A behavior-preserving refactor of `mm_tdoa.c` exposes the innovation and an unconditional update through the SWIG bindings, so Python owns the accept/reject decision while all float32 math stays in C. A new `bindings/util/tdoa_outlier.py` mirrors the `tdoa_selection.py` policy pattern (base class + factories + `make_outlier_filter`). The emulator's existing `tdoa_model='standard'|'robust'` machinery (constructor validation, robust/standard split in the TDoA branch, `params['tdoa_model']` in `replay`, `--tdoa-model` in `plot_tdoa.py`) is ALREADY IMPLEMENTED on this branch — do not re-add it; the new `outlier_filter` argument composes with it. `kalmanCoreRobustUpdateWithTdoa` ignores its `outlierFilterState` argument (on-drone `robustTdoa=1` runs ungated), so gating it externally needs no C changes.
 
@@ -21,7 +21,10 @@
 - Robust equivalence requirement: `tdoa_model='robust'` with filter `'none'` must produce a trajectory *exactly equal* to the direct no-filter robust path (the seam must be a transparent wrapper there), with identical static C state at the start of both compared replays (see the x_err caveat in the `replay` docstring).
 - Do NOT re-implement `tdoa_model`: the emulator already validates it (`TDOA_MODELS` at `bindings/util/estimator_kalman_emulator.py:4`, `ValueError` in the constructor), `replay` already forwards `params['tdoa_model']`, and `plot_tdoa.py` already has `--tdoa-model` and names its policy option `--selection-policy`.
 - Rebuild bindings after any C change: `make bindings_python` (from repo root). Run Python tests with `PYTHONPATH=build python3 -m pytest test_python/<file> -v`.
-- Filter default tunings (from spec): `fixed` gate 2.5·stdDev; `mad_window` window 50, k 5, MAD floor 0.5·stdDev, accept-all warmup until 20 samples, rejected innovations also enter the window; `pair_integrator` same constants as C integrator (size 300, force-open 10%, resume 90%, trigger 2.0·std, accept 2.5·std, dt clamp size/10).
+- Filter default tunings (from spec): `mad_window` window 50, k 5, MAD floor 0.5·stdDev, accept-all warmup until 20 samples, rejected innovations also enter the window; `pair_integrator` same constants as C integrator (size 300, force-open 10%, resume 90%, trigger 2.0·std, accept 2.5·std, dt clamp size/10).
+
+
+**DROP NOTE (2026-07-07, user decision during Task 3):** the `fixed` filter (static 2.5·std gate, no adaptivity) is REMOVED from the roster: a closed-from-t=0 static gate rejects every sample of a cold-started replay and never converges, making its ablation degenerate. Tasks below that mention `fixed` in code or commands were authored before the drop — implementers/reviewers of Tasks 4-5 must use the five-filter roster (integrator, none, sanity, mad_window, pair_integrator) and ignore `fixed`. Task 2's FixedGateFilter and its tests are removed in a follow-up commit; Task 3's gated-robust test uses 'mad_window' instead of 'fixed'.
 
 ---
 
@@ -283,7 +286,7 @@ git commit -m "refactor: expose TDoA innovation + unfiltered update for replay s
 - Consumes: nothing from other tasks at module-import time. `IntegratorFilter` lazily uses `cffirmware.OutlierFilterTdoaState_t`, `outlierFilterTdoaReset`, `outlierFilterTdoaValidateIntegrator` (already exposed today).
 - Produces (used by Tasks 3–4):
   - `class OutlierFilter`: attributes `name: str`; methods `reset() -> None`, `validate(tdoa, error, now_ms) -> bool`. `tdoa` is any object with `anchorIdA`, `anchorIdB`, `anchorPositionA{.x,.y,.z}`, `anchorPositionB{.x,.y,.z}`, `distanceDiff`, `stdDev` (in practice a `cffirmware.tdoaMeasurement_t`).
-  - `FILTER_FACTORIES: dict[str, type]` with keys `integrator`, `none`, `sanity`, `fixed`, `mad_window`, `pair_integrator`.
+  - `FILTER_FACTORIES: dict[str, type]` with keys `integrator`, `none`, `sanity`, `mad_window`, `pair_integrator` (`fixed` dropped, see DROP NOTE).
   - `make_outlier_filter(name) -> OutlierFilter` — `ValueError` on unknown name.
 
 - [ ] **Step 1: Write the failing tests**
@@ -784,7 +787,7 @@ def test_gated_robust_model_replays_and_converges():
     imu, tdoa = _synthetic_imu(), _synthetic_tdoa_with_outliers()
     trajectory = replay(_anchor_positions(), list(imu), list(tdoa),
                         {'tdoa_std': 0.15, 'tdoa_model': 'robust',
-                         'outlier_filter': 'fixed'})
+                         'outlier_filter': 'mad_window'})
     assert len(trajectory) > 4000
     _, final_pos = trajectory[-1]
     assert _dist(final_pos, TRUE_POS) < 1.0
@@ -1053,10 +1056,10 @@ Run (from repo root):
 PYTHONPATH=build python3 -m tools.usdlog.replay_tdoa run_validation.bin \
     --anchors anchors.yaml \
     --policies baseline all \
-    --outlier-filters integrator none sanity fixed mad_window pair_integrator
+    --outlier-filters integrator none sanity mad_window pair_integrator
 ```
 
-Expected: a 12-row table (`baseline/integrator`, `baseline/none`, …, `all/pair_integrator`) with plausible metrics; the `baseline/integrator` row must match the numbers of the pre-change tool (compare against the validation numbers in `tools/usdlog/README_tdoa_candidates.md`, "replay-vs-live rms 0.672 m / max 2.92 m" for the hand-moved run — the F1 line above the baseline row must be unchanged).
+Expected: a 10-row table (`baseline/integrator`, `baseline/none`, …, `all/pair_integrator`) with plausible metrics; the `baseline/integrator` row must match the numbers of the pre-change tool (compare against the validation numbers in `tools/usdlog/README_tdoa_candidates.md`, "replay-vs-live rms 0.672 m / max 2.92 m" for the hand-moved run — the F1 line above the baseline row must be unchanged).
 
 Also exercise the robust update on hardware data:
 
@@ -1114,7 +1117,7 @@ git commit -m "feat: outlier-filter selection in replay_tdoa and plot_tdoa CLIs"
 ```bash
 PYTHONPATH=build python3 -m tools.usdlog.replay_tdoa run_validation.bin \
     --anchors anchors.yaml --policies baseline \
-    --outlier-filters integrator none sanity fixed mad_window pair_integrator \
+    --outlier-filters integrator none sanity mad_window pair_integrator \
     | tee /tmp/claude-1000/-home-rik-dev-crazyflie-firmware/89a2dd08-ade1-4bfc-a1a1-28619ef95ad4/scratchpad/filter_validation.txt
 
 PYTHONPATH=build python3 -m tools.usdlog.replay_tdoa run_validation.bin \
@@ -1145,7 +1148,6 @@ innovation against the current Kalman state — whether the update is applied.
 - `none` — accept everything (control group).
 - `sanity` — only the physically-impossible check
   (|distanceDiff| < anchor separation).
-- `fixed` — static gate |innovation| < 2.5·std, no adaptivity.
 - `mad_window` — reject innovations > 5·MAD from the running median of the
   last 50 (MAD floored at 0.5·std; accepts all until 20 samples; rejected
   samples still enter the window so a sustained level shift re-opens the gate).
