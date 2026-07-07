@@ -53,17 +53,21 @@ def test_robust_tdoa_update_is_exposed_and_runs():
     cffirmware.kalmanCoreDefaultParams(params)
     cffirmware.kalmanCoreInit(core, params, 0)
 
+    # Anchors off the origin and off-axis: with the state at the origin, an
+    # anchor at (0,0,0) gives d0 == 0 and the whole update body is skipped by
+    # the guard in mm_tdoa_robust.c, and collinear anchors give a zero
+    # Jacobian (zero gain).
     pos_a = cffirmware.vec3_s()
-    pos_a.x, pos_a.y, pos_a.z = 0.0, 0.0, 0.0
+    pos_a.x, pos_a.y, pos_a.z = 4.0, 0.0, 0.0
     pos_b = cffirmware.vec3_s()
-    pos_b.x, pos_b.y, pos_b.z = 4.0, 0.0, 0.0
+    pos_b.x, pos_b.y, pos_b.z = 0.0, 4.0, 0.0
 
     tdoa = cffirmware.tdoaMeasurement_t()
     tdoa.anchorIdA = 0
     tdoa.anchorIdB = 1
     tdoa.anchorPositionA = pos_a
     tdoa.anchorPositionB = pos_b
-    tdoa.distanceDiff = 0.1
+    tdoa.distanceDiff = 0.5
     tdoa.stdDev = 0.15
 
     outlier_filter_state = cffirmware.OutlierFilterTdoaState_t()
@@ -71,6 +75,15 @@ def test_robust_tdoa_update_is_exposed_and_runs():
 
     # The robust update takes no now_ms (see mm_tdoa_robust.h)
     cffirmware.kalmanCoreRobustUpdateWithTdoa(core, tdoa, outlier_filter_state)
+
+    # The update must actually move the state (innovation is 0.5 m)
+    state = cffirmware.state_t()
+    acc = cffirmware.Axis3f()
+    cffirmware.kalmanCoreExternalizeState(core, state, acc)
+    moved = math.sqrt(state.position.x ** 2 + state.position.y ** 2
+                      + state.position.z ** 2)
+    assert moved > 1e-6
+    assert math.isfinite(moved)
 
 
 def test_emulator_rejects_unknown_tdoa_model():
@@ -81,10 +94,12 @@ def test_emulator_rejects_unknown_tdoa_model():
 def test_emulator_robust_model_processes_a_tdoa_sample():
     import cffirmware
 
+    # Off-origin, off-axis anchors so the robust update body actually runs
+    # (see the geometry note in test_robust_tdoa_update_is_exposed_and_runs)
     pos_a = cffirmware.vec3_s()
-    pos_a.x, pos_a.y, pos_a.z = 0.0, 0.0, 0.0
+    pos_a.x, pos_a.y, pos_a.z = 4.0, 0.0, 0.0
     pos_b = cffirmware.vec3_s()
-    pos_b.x, pos_b.y, pos_b.z = 4.0, 0.0, 0.0
+    pos_b.x, pos_b.y, pos_b.z = 0.0, 4.0, 0.0
     anchor_positions = {0: pos_a, 1: pos_b}
 
     emulator = EstimatorKalmanEmulator(anchor_positions, tdoa_model='robust')

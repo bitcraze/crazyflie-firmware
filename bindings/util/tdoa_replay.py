@@ -113,6 +113,10 @@ def replay(anchor_positions, imu_samples, tdoa_samples, params=None):
                 'standard' is kalmanCoreUpdateWithTdoa; 'robust' is the
                 M-estimation kalmanCoreRobustUpdateWithTdoa, which bypasses
                 the outlier filter (firmware behavior with kalman.robustTdoa=1).
+                Caveat: mm_tdoa_robust.c keeps M-estimation state in a static
+                buffer (x_err), shared process-wide, so back-to-back 'robust'
+                replays in one process are not strictly independent; run one
+                robust replay per process for exact reproducibility.
 
     Returns:
         [(t_ms, (x, y, z))] trajectory, one entry per 1 kHz iteration.
