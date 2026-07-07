@@ -1,6 +1,7 @@
 # Pluggable TDoA outlier filters for offline replay — design
 
-- **Status:** approved in conversation 2026-07-07; awaiting spec review
+- **Status:** approved 2026-07-07; amended same day to fold in the
+  `mm_tdoa_robust` update method — amendment awaiting review
 - **Branch:** `tdoa-candidate-logging`
 - **Author:** Rik Bouwmeester (with Claude Code)
 - **Date:** 2026-07-07
@@ -35,6 +36,16 @@ Kalman state at update time. A seam is needed to externalize that decision.
   Python port, which loses float32 bit-exactness and weakens A/B conclusions).
 - **Filter roster: all six** — `integrator`, `none`, `sanity`, `fixed`,
   `mad_window`, `pair_integrator`.
+- **Amendment (same day): `mm_tdoa_robust` in scope** as an orthogonal second
+  dimension — the *TDoA update method* (`standard` | `robust`) — instead of
+  deferred. Rationale: `kalmanCoreRobustUpdateWithTdoa` is already compiled
+  into the bindings (`bindings/setup.py`, `cffirmware.i`), it *ignores* its
+  `outlierFilterState` parameter (the M-estimator's Geman-McClure weighting is
+  its outlier handling; on-drone `kalman.robustTdoa = 1` runs ungated), and
+  its innovation is computed with the same measurement model as `mm_tdoa.c`,
+  so the Task-1 seam gates it unchanged. No additional C work.
+- **CLI shape for the update method: a single `--tdoa-update` switch per run**
+  (default `standard`) in both tools — not a third grid axis.
 
 ## 1. Firmware seam (`mm_tdoa.c` / `mm_tdoa.h`)
 
@@ -95,6 +106,19 @@ Roster:
 - `tdoa_replay.replay(...)` grows `params['outlier_filter']` (a name string,
   resolved via `make_outlier_filter`). Absent → legacy path (`None`), which is
   semantically the integrator.
+- **Update method (amendment):** the emulator also takes
+  `tdoa_update='standard' | 'robust'` (invalid value → `ValueError` at
+  construction) and `replay` takes `params['tdoa_update']` (default
+  `standard`). The four combinations of (filter, update):
+  - no filter + `standard` → `kalmanCoreUpdateWithTdoa` (today's path, unchanged);
+  - no filter + `robust` → `kalmanCoreRobustUpdateWithTdoa` directly —
+    matches on-drone `robustTdoa = 1` (which is ungated);
+  - filter + `standard` → innovation → `validate` → `kalmanCoreUpdateWithTdoaUnfiltered`;
+  - filter + `robust` → innovation → `validate` → `kalmanCoreRobustUpdateWithTdoa`
+    (a novel gated-robust combination, only available offline).
+  Note: `mm_tdoa_robust.c` keeps state in `static` locals that carry over
+  between calls (same on the drone) — replay stays deterministic for a given
+  sample sequence, but robust results depend on call history within a run.
 
 ## 4. CLI
 
@@ -104,6 +128,9 @@ Roster:
 - `tools/usdlog/replay_tdoa.py`: `--outlier-filters NAME...` (default
   `['integrator']`); evaluation grid is policies × filters with rows labeled
   `policy/filter`. Defaults reproduce today's output exactly.
+- Both tools: `--tdoa-update {standard,robust}` (default `standard`), one
+  value per run applied to the whole grid; echoed in the console output and
+  the plot title.
 
 ## 5. Testing & validation
 
@@ -114,9 +141,13 @@ Roster:
 - **Bindings-free unit tests** for the pure-Python filters (`sanity`, `fixed`,
   `mad_window`, `pair_integrator`, `none`) using stub tdoa objects: gate
   thresholds, warmup, MAD floor, per-pair isolation, reset behavior.
+- **Robust-path equivalence test (amendment):** replaying with
+  `tdoa_update='robust'` and filter `'none'` must exactly equal the direct
+  (no-filter) robust path — the innovation call is pure and `none` accepts
+  everything, so the seam must be a no-op wrapper there.
 - **Hardware-validated run:** replay `run_validation.bin` across the filter
-  roster and record the accuracy table in the docs, like the F1 validation
-  runs.
+  roster (and a `--tdoa-update robust` row) and record the accuracy table in
+  the docs, like the F1 validation runs.
 - `tools/usdlog/README_tdoa_candidates.md` gains an outlier-filter section next
   to the selection-policy one (roster, defaults, how to add a filter).
 
@@ -134,7 +165,7 @@ Roster:
   only for now.
 - Mahalanobis/chi-squared gate — needs the innovation variance `H·P·Hᵀ + R`
   exposed from C.
-- `mm_tdoa_robust` (M-estimator) — an alternative *measurement update*, not a
-  gate; belongs to a different seam if ever replayed.
 - Firmware-side adoption of any winning filter — this work is offline-only
   except for the behavior-preserving `mm_tdoa.c` refactor.
+- A `--tdoa-updates` grid axis in `replay_tdoa.py` (single switch chosen
+  instead; revisit if cross-method tables become a frequent need).
