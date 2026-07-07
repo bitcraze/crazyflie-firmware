@@ -21,5 +21,7 @@ are built automatically via `make bindings_python` — this needs `swig` and a C
 compiler. Force a rebuild with `--rebuild-bindings`.
 
 Options: `--selection-policy` selects the anchor-pair selection policy for the
-replay (default `baseline`), `--tdoa-std` the measurement noise, and
+replay (default `baseline`), `--tdoa-model` the Kalman measurement model
+(`standard` or `robust`, the M-estimation model the firmware uses with
+`kalman.robustTdoa=1`), `--tdoa-std` the measurement noise, and
 `--save out.png` writes the figure to a file instead of opening a window.

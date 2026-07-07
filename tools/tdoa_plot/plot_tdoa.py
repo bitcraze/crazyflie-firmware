@@ -80,9 +80,11 @@ def load_series(args):
     tdoa_samples = apply_policy(policy, groups)
     print(f'Replaying {len(tdoa_samples)} TDoA + {len(imu_samples)} IMU samples '
           f'through the firmware Kalman core '
-          f'(selection policy: {args.selection_policy}) ...')
+          f'(selection policy: {args.selection_policy}, '
+          f'measurement model: {args.tdoa_model}) ...')
     replayed = replay(anchor_positions, imu_samples, tdoa_samples,
-                      {'tdoa_std': args.tdoa_std})
+                      {'tdoa_std': args.tdoa_std,
+                       'tdoa_model': args.tdoa_model})
     return replayed, live, gt
 
 
@@ -105,7 +107,14 @@ def print_stats(replayed, live, gt):
             continue
         per_axis = ([], [], [])   # signed errors per axis [m]
         err_3d = []               # Euclidean error [m]
+        n_non_finite = 0
+        first_non_finite_ms = None
         for t_ms, pos in traj:
+            if not all(math.isfinite(c) for c in pos):
+                n_non_finite += 1
+                if first_non_finite_ms is None:
+                    first_non_finite_ms = t_ms
+                continue
             gt_pos = _interp_ground_truth(gt, t_ms)
             if gt_pos is None:
                 continue
@@ -115,6 +124,9 @@ def print_stats(replayed, live, gt):
             err_3d.append(math.sqrt(sum(c * c for c in e)))
 
         print(f'--- accuracy vs ground truth: {name} ---')
+        if n_non_finite:
+            print(f'  WARNING: estimator diverged, {n_non_finite} non-finite '
+                  f'samples excluded (first at t={first_non_finite_ms / 1000.0:.1f} s)')
         if not err_3d:
             print('  no samples overlap the ground-truth time range')
             continue
@@ -180,6 +192,12 @@ def main():
     parser.add_argument('--selection-policy', default='baseline',
                         help='Anchor-pair selection policy for the replay '
                              '(default: baseline)')
+    parser.add_argument('--tdoa-model', default='standard',
+                        choices=('standard', 'robust'),
+                        help='TDoA measurement model for the replay: standard '
+                             '(kalmanCoreUpdateWithTdoa) or robust '
+                             '(M-estimation, kalman.robustTdoa=1 equivalent) '
+                             '(default: standard)')
     parser.add_argument('--tdoa-std', type=float, default=0.15,
                         help='TDoA measurement std dev [m] used in the Kalman '
                              'update (default: 0.15)')
@@ -195,7 +213,9 @@ def main():
         sys.exit('Nothing to plot: no replayable candidates, no stateEstimate '
                  'and no Lighthouse data in this log.')
     print_stats(replayed, live, gt)
-    title = f'{Path(args.logfile).name}  (selection policy: {args.selection_policy})'
+    title = (f'{Path(args.logfile).name}  '
+             f'(selection policy: {args.selection_policy}, '
+             f'model: {args.tdoa_model})')
     plot(replayed, live, gt, title, save_path=args.save)
 
 
