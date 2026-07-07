@@ -116,7 +116,7 @@ cfcli -u radio://0/100/2M/F00D2BEFED --csv loco display \
 
 Add your own in `bindings/util/tdoa_selection.py` (subclass `SelectionPolicy`).
 
-## Dropped uSD events are checked automatically
+## Dropped uSD events and SD write failures are checked automatically
 
 The uSD ring buffer silently drops events if the SD write task can't keep up,
 which breaks lossless replay. The firmware counts `usd.eventsRequested` vs
@@ -128,7 +128,16 @@ If drops are reported:
 - increase the ring buffer size (line 2 of `config.txt`), or
 - switch to `config_tdoa_candidates_lean.txt`.
 
-Do not use a log with drops for replay conclusions; the holes are unflagged.
+A failing SD *write* (e.g. flaky card contact while the drone is handled)
+silently stops logging mid-run: the drop counters freeze equal (so the drop
+check alone would pass) and the log file is truncated or 0 bytes. The
+firmware stores the first failing FatFS code in the sticky `usd.writeError`
+log variable (0 = ok, reset at log start) and `read_usd_log.sh` fails the
+readback if it is non-zero. If it triggers, reseat the microSD card
+(power off, firm push-click) and check the card's health before retrying.
+
+Do not use a log with drops or write failures for replay conclusions; the
+holes are unflagged.
 
 ## Hardware validation checklist
 
@@ -140,9 +149,12 @@ Collected logs stay local (do not commit them).
 3. **Collect**: disconnect the radio; move the drone by hand (or fly, with
    explicit permission) for at least 60 s inside loco + Lighthouse coverage.
 4. **Read back**: `tools/usdlog/read_usd_log.sh <uri> run.bin`
-   - PASS requires: the automatic drop check prints
-     `OK: no dropped events` (R1) and the file decodes
+   - PASS requires: the automatic checks print `OK: no dropped events` and
+     `OK: no SD write failures` (R1), and the file decodes
      (`replay_tdoa.py` reads it) with a plausible size (R2).
+   - Radio readback of multi-MB logs is slow; pulling the SD card or using a
+     `usb://` URI is much faster. The integrity checks still need the radio
+     (or USB) link once, before removing the card.
 5. **Verify capture faithfulness**:
    `python3 -m tools.usdlog.replay_tdoa run.bin --anchors anchors.yaml --policies baseline`
    - PASS requires: `baseline reconstruction: OK (... 0 unmatched live
@@ -152,11 +164,23 @@ Collected logs stay local (do not commit them).
      are expected, not a failure.
 6. **Quantify replay fidelity**: the same command prints
    `baseline vs live stateEstimate: rms ... m, max ... m`.
-   - Record the numbers here. Documented tolerance (F1, trajectory level):
-     **rms ≤ TBD m** — fill in after the first validated run and treat
-     regressions beyond it as failures.
+   - Documented tolerance (F1, trajectory level), regime-dependent — treat
+     regressions beyond these as failures:
+     - **stationary** (drone at rest in coverage): **rms ≤ 0.10 m**
+       (observed 0.044 m).
+     - **hand-moved** (carried by hand; UWB antenna shadowing makes the TDoA
+       stream genuinely noisy and the onboard estimator resets): **rms ≤
+       1.0 m** (observed 0.67 m). For context, the *live* estimate itself was
+       rms 0.45 m from the Lighthouse ground truth on the validated run, so
+       replay error is of the same order as live error in this regime. The
+       strict faithfulness claim is the measurement-level reconstruction in
+       step 5, which must always be exact.
 
-Latest validated run: _(date, firmware commit, rms/max)_ — not yet performed.
+Latest validated run: 2026-07-07, firmware `4379d0e2` (cf21bl +
+`tdoa3_lh_groundtruth.conf`), hand-moved ~75 s, 16121/16121 candidates
+reconstructed, replay-vs-live rms 0.672 m / max 2.92 m, live-vs-groundtruth
+rms 0.451 m / max 1.97 m. Stationary reference (same firmware family,
+20 min desk log): 83398/83398 reconstructed, replay-vs-live rms 0.044 m.
 
 ## Notes / limitations
 
