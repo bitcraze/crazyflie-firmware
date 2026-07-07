@@ -25,8 +25,9 @@ def test_apply_policy_stamps_measurements_with_the_group_time():
     }}
     groups = build_candidate_groups(log)
     samples = apply_policy(make_policy('baseline'), groups)
+    # ids in the estimator convention: idA = remote, idB = packet anchor
     assert samples == [('estTDOA', {
-        'idA': 1, 'idB': 2, 'distanceDiff': 0.5, 'timestamp': 101.0,
+        'idA': 2, 'idB': 1, 'distanceDiff': 0.5, 'timestamp': 101.0,
     })]
 
 

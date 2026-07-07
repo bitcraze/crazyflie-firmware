@@ -60,9 +60,17 @@ def build_candidate_groups(log_data):
 
 
 def _measurement(group, candidate):
+    # Convert from the candidate-log convention to the estimator (estTDOA)
+    # convention, verified on hardware: the candidate event logs
+    # (idA = packet's anchor, idB = remote), while the live estimator
+    # (enqueueTDOA in tdoaEngine.c) enqueues (anchorIds[0] = remote,
+    # anchorIds[1] = packet's anchor) with the same distanceDiff value
+    # (= d(packet anchor) - d(remote) = d(idB) - d(idA) in this convention).
+    # Everything downstream (baseline verifier, Kalman emulator) consumes
+    # the estimator convention.
     return {
-        'idA': group['idA'],
-        'idB': candidate['idB'],
+        'idA': candidate['idB'],
+        'idB': group['idA'],
         'distanceDiff': candidate['distanceDiff'],
     }
 

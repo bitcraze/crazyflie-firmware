@@ -59,7 +59,9 @@ def test_baseline_policy_picks_the_selected_candidate():
     ])
     group = build_candidate_groups(log)[0]
     measurements = make_policy('baseline').select(group)
-    assert measurements == [{'idA': 1, 'idB': 3, 'distanceDiff': 0.6}]
+    # Measurements are in the estimator (estTDOA) convention: idA = remote
+    # candidate anchor, idB = the packet's transmitting anchor.
+    assert measurements == [{'idA': 3, 'idB': 1, 'distanceDiff': 0.6}]
 
 
 def test_baseline_policy_skips_groups_without_selection():
@@ -85,11 +87,12 @@ def test_round_robin_rotates_and_resets():
     ])
     group = build_candidate_groups(log)[0]
     policy = make_policy('round_robin')
-    first = policy.select(group)[0]['idB']
-    second = policy.select(group)[0]['idB']
+    # The remote (rotating) anchor lands in idA under the estimator convention
+    first = policy.select(group)[0]['idA']
+    second = policy.select(group)[0]['idA']
     assert {first, second} == {2, 3}
     policy.reset()
-    assert policy.select(group)[0]['idB'] == first
+    assert policy.select(group)[0]['idA'] == first
 
 
 def test_verify_baseline_reconstruction_clean_log():
@@ -98,10 +101,10 @@ def test_verify_baseline_reconstruction_clean_log():
         (100.0, 7, 1, 3, 0.6, 0),
         (105.0, 8, 4, 5, -0.1, 1),
     ])
-    log['estTDOA'] = {
+    log['estTDOA'] = {  # estimator convention: idA = remote, idB = packet anchor
         'timestamp': [100.0, 105.0],
-        'idA': [1, 4],
-        'idB': [2, 5],
+        'idA': [2, 5],
+        'idB': [1, 4],
         'distanceDiff': [0.5, -0.1],
     }
     result = verify_baseline_reconstruction(log)
@@ -115,12 +118,45 @@ def test_verify_baseline_reconstruction_clean_log():
     assert result['first_unmatched_est'] is None
 
 
+def test_reconstruction_matches_real_firmware_id_convention():
+    """Regression test for the id-order convention, verified on hardware.
+
+    The firmware logs the two events of one packet with OPPOSITE id order:
+    - estTdoaCand (tdoaEngine.c): idA = anchor that transmitted the processed
+      packet, idB = the remote (candidate) anchor.
+    - estTDOA (estimator.c via enqueueTDOA): anchorIds[0]/idA = the REMOTE
+      anchor, anchorIds[1]/idB = the packet's anchor, same distanceDiff value
+      (= d(packet anchor) - d(remote)).
+
+    Captured 2026-07-07: a desk log where every packet produced candidate
+    (idA=an, idB=other, v) and estTDOA (idA=other, idB=an, v). The first
+    replay implementation assumed equal id order and matched 7/83398.
+    """
+    log = _cand_log([
+        # packet from anchor 3; remote candidates 5 (selected) and 7
+        (100.0, 0, 3, 5, 0.25, 1),
+        (100.0, 0, 3, 7, -0.75, 0),
+        # packet from anchor 8; remote candidate 2 (selected)
+        (110.0, 1, 8, 2, 1.5, 1),
+    ])
+    log['estTDOA'] = {  # as the real estimator logs it: (remote, packet, v)
+        'timestamp': [100.0, 110.0],
+        'idA': [5, 2],
+        'idB': [3, 8],
+        'distanceDiff': [0.25, 1.5],
+    }
+    result = verify_baseline_reconstruction(log)
+    assert result['n_matched'] == 2
+    assert result['n_unmatched_est'] == 0
+    assert result['first_unmatched_est'] is None
+
+
 def test_verify_baseline_reconstruction_detects_mismatch():
     log = _cand_log([(100.0, 7, 1, 2, 0.5, 1)])
-    log['estTDOA'] = {
+    log['estTDOA'] = {  # ids in estimator convention; the value differs
         'timestamp': [100.0],
-        'idA': [1],
-        'idB': [2],
+        'idA': [2],
+        'idB': [1],
         'distanceDiff': [0.7],  # differs from the flagged candidate
     }
     result = verify_baseline_reconstruction(log)
@@ -137,10 +173,10 @@ def test_verify_baseline_reconstruction_tolerates_position_gated_gaps():
         (110.0, 8, 3, 4, 0.6, 1),
         (120.0, 9, 5, 6, -0.1, 1),
     ])
-    log['estTDOA'] = {
+    log['estTDOA'] = {  # estimator convention: idA = remote, idB = packet anchor
         'timestamp': [100.0, 120.0],
-        'idA': [1, 5],
-        'idB': [2, 6],
+        'idA': [2, 6],
+        'idB': [1, 5],
         'distanceDiff': [0.5, -0.1],
     }
     result = verify_baseline_reconstruction(log)
