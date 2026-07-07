@@ -28,7 +28,7 @@ class _Tdoa:
 
 def test_all_spec_filters_are_registered():
     assert set(FILTER_FACTORIES) == {
-        'integrator', 'none', 'sanity', 'fixed', 'mad_window', 'pair_integrator'}
+        'integrator', 'none', 'sanity', 'mad_window', 'pair_integrator'}
 
 
 def test_unknown_name_raises_value_error_listing_available():
@@ -48,14 +48,6 @@ def test_sanity_rejects_physically_impossible_distance_diff():
     assert not f.validate(_Tdoa(dd=4.1), error=0.0, now_ms=0)
     # the innovation is irrelevant to this filter
     assert f.validate(_Tdoa(dd=1.0), error=100.0, now_ms=0)
-
-
-def test_fixed_gate_is_2p5_stddev():
-    f = make_outlier_filter('fixed')
-    t = _Tdoa(std=0.15)   # gate = 0.375
-    assert f.validate(t, error=0.37, now_ms=0)
-    assert not f.validate(t, error=0.38, now_ms=0)
-    assert not f.validate(t, error=-0.38, now_ms=0)
 
 
 def test_mad_window_accepts_everything_during_warmup():

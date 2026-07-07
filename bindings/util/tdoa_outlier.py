@@ -78,17 +78,6 @@ class SanityFilter(OutlierFilter):
         return _is_physically_possible(tdoa)
 
 
-class FixedGateFilter(OutlierFilter):
-    """Static innovation gate at the integrator's closed-state acceptance
-    level (2.5 sigma), with no adaptivity: a probe for whether the
-    integrator's open/close machinery earns its keep."""
-    name = 'fixed'
-    GATE_STD_MULTIPLIER = 2.5
-
-    def validate(self, tdoa, error, now_ms):
-        return abs(error) < self.GATE_STD_MULTIPLIER * tdoa.stdDev
-
-
 class MadWindowFilter(OutlierFilter):
     """Robust adaptive gate: reject innovations far from the running median,
     scaled by the median absolute deviation (MAD) of a sliding window.
@@ -190,7 +179,6 @@ FILTER_FACTORIES = {
     'integrator': IntegratorFilter,
     'none': NoneFilter,
     'sanity': SanityFilter,
-    'fixed': FixedGateFilter,
     'mad_window': MadWindowFilter,
     'pair_integrator': PairIntegratorFilter,
 }
