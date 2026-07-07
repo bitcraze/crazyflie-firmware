@@ -483,9 +483,12 @@ static void usddeckWriteEventData(const usdLogEventConfig_t* cfg, const uint8_t*
     return;
   }
 
-  ++usdLogStats.eventsRequested;
-
   xSemaphoreTake(logBufferMutex, portMAX_DELAY);
+
+  // Counted inside the mutex: events arrive from multiple task contexts
+  // (estimator, LPS, ...) and an unprotected increment loses updates, making
+  // eventsRequested drift below eventsWritten and breaking the drop check.
+  ++usdLogStats.eventsRequested;
 
   // trigger writing once there is some data
   if (logBuffer.size > 0 && xHandleWriteTask) {
