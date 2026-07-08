@@ -110,12 +110,12 @@ typedef struct {
 } bccam_uart_rx_collector_isr_context_t;
 static bccam_uart_rx_collector_t rx_collector;
 static bccam_uart_rx_collector_isr_context_t rx_collector_context;
-STATIC_MEM_QUEUE_ALLOC(request_queue,
-                       BCCAM_UART_REQUEST_QUEUE_LENGTH,
-                       sizeof(bccam_uart_request_t));
-STATIC_MEM_QUEUE_ALLOC(rx_queue,
-                       BCCAM_UART_RX_QUEUE_LENGTH,
-                       sizeof(bccam_uart_rx_event_t));
+static uint8_t request_queue_storage[
+  BCCAM_UART_REQUEST_QUEUE_LENGTH * sizeof(bccam_uart_request_t)];
+static StaticQueue_t request_queue_mgm;
+static uint8_t rx_queue_storage[
+  BCCAM_UART_RX_QUEUE_LENGTH * sizeof(bccam_uart_rx_event_t)];
+static StaticQueue_t rx_queue_mgm;
 STATIC_MEM_TASK_ALLOC(bcCamUartTask, BCCAM_UART_TASK_STACKSIZE);
 #endif
 
@@ -1451,8 +1451,14 @@ void bccam_uart_service_init(DeckInfo *deck_info_arg) {
   firmware_startup_reset_count = 0;
   clear_pending_mode_request();
 #if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
-  request_queue = STATIC_MEM_QUEUE_CREATE(request_queue);
-  rx_queue = STATIC_MEM_QUEUE_CREATE(rx_queue);
+  request_queue = xQueueCreateStatic(BCCAM_UART_REQUEST_QUEUE_LENGTH,
+                                     sizeof(bccam_uart_request_t),
+                                     request_queue_storage,
+                                     &request_queue_mgm);
+  rx_queue = xQueueCreateStatic(BCCAM_UART_RX_QUEUE_LENGTH,
+                                sizeof(bccam_uart_rx_event_t),
+                                rx_queue_storage,
+                                &rx_queue_mgm);
   reset_rx_collector_for_firmware_mode();
   reset_rx_queue_state();
 #endif
