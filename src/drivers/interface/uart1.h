@@ -27,6 +27,8 @@
 #define UART1_H_
 
 #include <stdbool.h>
+#include <stdint.h>
+#include "FreeRTOS.h"
 #include "eprintf.h"
 
 #define UART1_BAUDRATE           9600
@@ -57,6 +59,10 @@ typedef enum {
     uart1ParityNone, uart1ParityEven, uart1ParityOdd
 } uart1Parity_t;
 
+typedef void (*uart1RxCallback_t)(uint8_t byte,
+                                  BaseType_t *higher_priority_task_woken);
+typedef void (*uart1ErrorCallback_t)(BaseType_t *higher_priority_task_woken);
+
 /**
  * Initialize the UART with parity None
  */
@@ -86,6 +92,32 @@ void uart1SetBaudrate(const uint32_t baudrate);
  * @return true if the UART is initialized
  */
 bool uart1Test(void);
+
+/**
+ * Set an exclusive RX callback.
+ *
+ * When set, incoming RX bytes are delivered to the callback from the UART ISR
+ * and are not queued for uart1GetDataWithTimeout(). Clear the callback before
+ * handing UART1 back to queue-based consumers.
+ */
+void uart1SetRxCallback(uart1RxCallback_t callback);
+
+void uart1ClearRxCallback(void);
+
+void uart1SetErrorCallback(uart1ErrorCallback_t callback);
+
+void uart1ClearErrorCallback(void);
+
+/**
+ * Set exclusive ISR callbacks for RX bytes and UART errors.
+ *
+ * A non-NULL RX callback diverts incoming bytes away from the UART1 RX queue.
+ * Call uart1ClearCallbacks() before queue-based consumers read UART1 again.
+ */
+void uart1SetCallbacks(uart1RxCallback_t rx_callback,
+                       uart1ErrorCallback_t error_callback);
+
+void uart1ClearCallbacks(void);
 
 /**
  * Read a byte of data from incoming queue with a timeout
