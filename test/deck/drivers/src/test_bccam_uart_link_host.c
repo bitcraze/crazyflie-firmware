@@ -36,6 +36,17 @@ static void set_contract_id(uint8_t out[BCCAM_UART_SERVICE_CONTRACT_ID_LEN],
   memcpy(out, contract_id, strlen(contract_id));
 }
 
+static void assert_contract_id_equals(
+  const uint8_t actual[BCCAM_UART_SERVICE_CONTRACT_ID_LEN],
+  const char *expected) {
+  uint8_t expected_contract_id[BCCAM_UART_SERVICE_CONTRACT_ID_LEN];
+
+  set_contract_id(expected_contract_id, expected);
+  TEST_ASSERT_EQUAL_MEMORY(expected_contract_id,
+                           actual,
+                           BCCAM_UART_SERVICE_CONTRACT_ID_LEN);
+}
+
 static void test_write_le16(uint8_t *out, uint16_t value) {
   out[0] = (uint8_t)(value & 0xFFu);
   out[1] = (uint8_t)((value >> 8) & 0xFFu);
@@ -67,9 +78,8 @@ void testDiscoveryReplyAdvertisesControlContract(void) {
   TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_SERVICE_CONTROL, initiator.services[0].service_id);
   TEST_ASSERT_EQUAL_UINT8(1, initiator.services[0].major);
   TEST_ASSERT_EQUAL_UINT8(0, initiator.services[0].minor);
-  TEST_ASSERT_EQUAL_MEMORY("bitcraze.control",
-                           initiator.services[0].contract_id,
-                           BCCAM_UART_SERVICE_CONTRACT_ID_LEN);
+  assert_contract_id_equals(initiator.services[0].contract_id,
+                            "bitcraze.control");
 }
 
 void testUnsolicitedCreditUpdateDuringDiscoveryIsIgnored(void) {
@@ -143,9 +153,7 @@ void testDiscoverReplyWireLayoutUsesServiceMajorMinorContractOrder(void) {
   TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_SERVICE_CONTROL, payload[6]);
   TEST_ASSERT_EQUAL_UINT8(0, payload[7]);
   TEST_ASSERT_EQUAL_UINT8(0, payload[8]);
-  TEST_ASSERT_EQUAL_MEMORY("bitcraze.control",
-                           &payload[9],
-                           BCCAM_UART_SERVICE_CONTRACT_ID_LEN);
+  assert_contract_id_equals(&payload[9], "bitcraze.control");
 
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
                         bccam_uart_link_decode_management(payload,
@@ -156,9 +164,59 @@ void testDiscoverReplyWireLayoutUsesServiceMajorMinorContractOrder(void) {
                           decoded.body.discover_reply.services[0].service_id);
   TEST_ASSERT_EQUAL_UINT8(0, decoded.body.discover_reply.services[0].major);
   TEST_ASSERT_EQUAL_UINT8(0, decoded.body.discover_reply.services[0].minor);
-  TEST_ASSERT_EQUAL_MEMORY("bitcraze.control",
-                           decoded.body.discover_reply.services[0].contract_id,
-                           BCCAM_UART_SERVICE_CONTRACT_ID_LEN);
+  assert_contract_id_equals(decoded.body.discover_reply.services[0].contract_id,
+                            "bitcraze.control");
+}
+
+void testDiscoverReplyUses32ByteContractSlotsForThreeServices(void) {
+  bccam_uart_service_entry_t services[] = {
+    { .service_id = 1, .major = 1, .minor = 0 },
+    { .service_id = 2, .major = 1, .minor = 0 },
+    { .service_id = 3, .major = 1, .minor = 0 },
+  };
+  uint8_t payload[BCCAM_UART_MANAGEMENT_MAX_PAYLOAD];
+  size_t payload_len = 0;
+
+  set_contract_id(services[0].contract_id, "bitcraze.control");
+  set_contract_id(services[1].contract_id, "bitcraze.console");
+  set_contract_id(services[2].contract_id, "bitcraze.telem");
+
+  TEST_ASSERT_EQUAL_UINT8(32u, BCCAM_UART_SERVICE_CONTRACT_ID_LEN);
+  TEST_ASSERT_EQUAL_UINT8(3u, BCCAM_UART_MAX_DISCOVERED_SERVICES);
+  TEST_ASSERT_EQUAL_UINT16(128u, BCCAM_UART_MANAGEMENT_MAX_PAYLOAD);
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+                        bccam_uart_link_encode_discover_reply(0x42,
+                                                              services,
+                                                              3,
+                                                              payload,
+                                                              sizeof(payload),
+                                                              &payload_len));
+  TEST_ASSERT_EQUAL_size_t(6 + (3 * (3 + 32)), payload_len);
+}
+
+void testDiscoverReplyRejectsFourServices(void) {
+  bccam_uart_service_entry_t services[] = {
+    { .service_id = 1, .major = 1, .minor = 0 },
+    { .service_id = 2, .major = 1, .minor = 0 },
+    { .service_id = 3, .major = 1, .minor = 0 },
+    { .service_id = 4, .major = 1, .minor = 0 },
+  };
+  uint8_t payload[BCCAM_UART_MANAGEMENT_MAX_PAYLOAD];
+  size_t payload_len = 99;
+
+  set_contract_id(services[0].contract_id, "svc.one");
+  set_contract_id(services[1].contract_id, "svc.two");
+  set_contract_id(services[2].contract_id, "svc.three");
+  set_contract_id(services[3].contract_id, "svc.four");
+
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_ERR_BAD_ARGUMENT,
+                        bccam_uart_link_encode_discover_reply(0x42,
+                                                              services,
+                                                              4,
+                                                              payload,
+                                                              sizeof(payload),
+                                                              &payload_len));
+  TEST_ASSERT_EQUAL_size_t(0, payload_len);
 }
 
 void testDiscoverReplyFitsMaximumServiceTableCapacity(void) {
@@ -166,9 +224,6 @@ void testDiscoverReplyFitsMaximumServiceTableCapacity(void) {
     { .service_id = 1, .major = 1, .minor = 0 },
     { .service_id = 2, .major = 1, .minor = 0 },
     { .service_id = 3, .major = 1, .minor = 0 },
-    { .service_id = 4, .major = 1, .minor = 0 },
-    { .service_id = 5, .major = 1, .minor = 0 },
-    { .service_id = 6, .major = 1, .minor = 0 },
   };
   uint8_t payload[BCCAM_UART_MANAGEMENT_MAX_PAYLOAD];
   size_t payload_len = 0;
@@ -176,9 +231,6 @@ void testDiscoverReplyFitsMaximumServiceTableCapacity(void) {
   set_contract_id(services[0].contract_id, "svc.one");
   set_contract_id(services[1].contract_id, "svc.two");
   set_contract_id(services[2].contract_id, "svc.three");
-  set_contract_id(services[3].contract_id, "svc.four");
-  set_contract_id(services[4].contract_id, "svc.five");
-  set_contract_id(services[5].contract_id, "svc.six");
 
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
                         bccam_uart_link_encode_discover_reply(0x42,
