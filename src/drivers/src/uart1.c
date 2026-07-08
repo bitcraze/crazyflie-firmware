@@ -39,6 +39,7 @@
 #include "config.h"
 #include "nvic.h"
 #include "uart1.h"
+#include "uart1_isr.h"
 #include "cfassert.h"
 #include "config.h"
 #include "nvicconf.h"
@@ -57,6 +58,8 @@ STATIC_MEM_QUEUE_ALLOC(uart1queue, QUEUE_LENGTH, sizeof(uint8_t));
 
 static bool isInit = false;
 static bool hasOverrun = false;
+static uart1RxCallback_t rxCallback;
+static uart1ErrorCallback_t errorCallback;
 
 #ifdef ENABLE_UART1_DMA
 static xSemaphoreHandle uartBusy;
@@ -208,6 +211,58 @@ bool uart1Test(void)
   return isInit;
 }
 
+static uint32_t uart1DisableIrq(void)
+{
+  const uint32_t irqWasEnabled = NVIC_GetEnableIRQ(UART1_IRQ);
+  NVIC_DisableIRQ(UART1_IRQ);
+  return irqWasEnabled;
+}
+
+static void uart1RestoreIrq(uint32_t irqWasEnabled)
+{
+  if (irqWasEnabled != 0) {
+    NVIC_EnableIRQ(UART1_IRQ);
+  }
+}
+
+void uart1SetRxCallback(uart1RxCallback_t callback)
+{
+  const uint32_t irqWasEnabled = uart1DisableIrq();
+  rxCallback = callback;
+  uart1RestoreIrq(irqWasEnabled);
+}
+
+void uart1ClearRxCallback(void)
+{
+  uart1SetRxCallback(NULL);
+}
+
+void uart1SetErrorCallback(uart1ErrorCallback_t callback)
+{
+  const uint32_t irqWasEnabled = uart1DisableIrq();
+  errorCallback = callback;
+  uart1RestoreIrq(irqWasEnabled);
+}
+
+void uart1ClearErrorCallback(void)
+{
+  uart1SetErrorCallback(NULL);
+}
+
+void uart1SetCallbacks(uart1RxCallback_t rx_callback,
+                       uart1ErrorCallback_t error_callback)
+{
+  const uint32_t irqWasEnabled = uart1DisableIrq();
+  rxCallback = rx_callback;
+  errorCallback = error_callback;
+  uart1RestoreIrq(irqWasEnabled);
+}
+
+void uart1ClearCallbacks(void)
+{
+  uart1SetCallbacks(NULL, NULL);
+}
+
 bool uart1GetDataWithTimeout(uint8_t *c, const uint32_t timeoutTicks)
 {
   if (xQueueReceive(uart1queue, c, timeoutTicks) == pdTRUE)
@@ -329,21 +384,39 @@ void __attribute__((used)) DMA1_Stream3_IRQHandler(void)
 
 void __attribute__((used)) USART3_IRQHandler(void)
 {
-  if (USART_GetITStatus(UART1_TYPE, USART_IT_RXNE))
-  {
-    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+  const uint32_t status = UART1_TYPE->SR;
+  const uart1IsrRxAction_t rxAction = uart1IsrGetRxAction(status);
+
+  if (rxAction == UART1_ISR_RX_DELIVER_BYTE) {
     uint8_t rxData = USART_ReceiveData(UART1_TYPE) & 0x00FF;
-    xQueueSendFromISR(uart1queue, &rxData, &xHigherPriorityTaskWoken);
-    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-  } else {
-    /** if we get here, the error is most likely caused by an overrun!
-     * - PE (Parity error), FE (Framing error), NE (Noise error), ORE (OverRun error)
-     * - and IDLE (Idle line detected) pending bits are cleared by software sequence:
-     * - reading USART_SR register followed reading the USART_DR register.
+    if (rxCallback != NULL) {
+      rxCallback(rxData, &xHigherPriorityTaskWoken);
+    } else {
+      xQueueSendFromISR(uart1queue, &rxData, &xHigherPriorityTaskWoken);
+    }
+  } else if (rxAction != UART1_ISR_RX_IDLE) {
+    /**
+     * PE, FE, NE and ORE are cleared by the STM32 USART state-machine
+     * sequence "read SR, then read DR". The SR read happened above when the
+     * ISR took the status snapshot. If RXNE is also set, the DR value is the
+     * byte marked by the error flags, so consume it only to clear the UART and
+     * deliberately do not forward it to higher protocol layers.
      */
-    asm volatile ("" : "=m" (UART1_TYPE->SR) : "r" (UART1_TYPE->SR)); // force non-optimizable reads
-    asm volatile ("" : "=m" (UART1_TYPE->DR) : "r" (UART1_TYPE->DR)); // of these two registers
+    if (rxAction == UART1_ISR_RX_DISCARD_BYTE_AND_REPORT_ERROR) {
+      (void)USART_ReceiveData(UART1_TYPE);
+    } else {
+      volatile uint32_t clearRead;
+      clearRead = UART1_TYPE->SR;
+      clearRead = UART1_TYPE->DR;
+      (void)clearRead;
+    }
 
     hasOverrun = true;
+    if (errorCallback != NULL) {
+      errorCallback(&xHigherPriorityTaskWoken);
+    }
   }
+
+  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
