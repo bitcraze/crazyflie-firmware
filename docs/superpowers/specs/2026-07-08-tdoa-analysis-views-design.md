@@ -1,6 +1,6 @@
 # TDoA diagnostics data layer + analysis views — design
 
-- **Status:** approved in brainstorming dialogue 2026-07-08; written spec pending user review
+- **Status:** approved by user 2026-07-08
 - **Branch:** `tdoa-candidate-logging`
 - **Author:** Rik Bouwmeester (with Claude Code)
 - **Date:** 2026-07-08
