@@ -133,6 +133,14 @@ bool uart1GetDataWithDefaultTimeout(uint8_t *c);
 void uart1GetBytesWithDefaultTimeout(uint32_t size, uint8_t* data);
 
 /**
+ * Register a callback that is called for each received byte.
+ * The callback is called from the UART1 interrupt context, so it should be fast and not block.
+ *
+ * @param[in] cb Callback to call from ISR context, or NULL to disable.
+ */
+void uart1RegisterRxCallback(uart1RxCallback_t cb);
+
+/**
  * @brief Get the number of bytes available in the UART1 in queue
  *
  * @return uint32_t  Number of bytes available
