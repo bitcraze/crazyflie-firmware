@@ -118,7 +118,6 @@ void uart1Init(const uint32_t baudrate) {
 
 void uart1InitWithParity(const uint32_t baudrate, const uart1Parity_t parity)
 {
-
   USART_InitTypeDef USART_InitStructure;
   GPIO_InitTypeDef GPIO_InitStructure;
   NVIC_InitTypeDef NVIC_InitStructure;
@@ -284,6 +283,11 @@ void uart1GetBytesWithDefaultTimeout(uint32_t size, uint8_t* data)
   for (size_t i = 0; i < size; i++) {
     xQueueReceive(uart1queue, &data[i], portMAX_DELAY);
   }
+}
+
+void uart1RegisterRxCallback(uart1RxCallback_t cb)
+{
+  rxCallback = cb;
 }
 
 void uart1SendData(uint32_t size, uint8_t* data)
