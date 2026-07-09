@@ -54,6 +54,7 @@
 #define QUEUE_LENGTH 64
 static xQueueHandle uart1queue;
 STATIC_MEM_QUEUE_ALLOC(uart1queue, QUEUE_LENGTH, sizeof(uint8_t));
+static uart1RxCallback_t rxCallback = NULL;
 
 static bool isInit = false;
 static bool hasOverrun = false;
@@ -115,7 +116,6 @@ void uart1Init(const uint32_t baudrate) {
 
 void uart1InitWithParity(const uint32_t baudrate, const uart1Parity_t parity)
 {
-
   USART_InitTypeDef USART_InitStructure;
   GPIO_InitTypeDef GPIO_InitStructure;
   NVIC_InitTypeDef NVIC_InitStructure;
@@ -231,6 +231,11 @@ void uart1GetBytesWithDefaultTimeout(uint32_t size, uint8_t* data)
   }
 }
 
+void uart1RegisterRxCallback(uart1RxCallback_t cb)
+{
+  rxCallback = cb;
+}
+
 void uart1SendData(uint32_t size, uint8_t* data)
 {
   uint32_t i;
@@ -329,12 +334,16 @@ void __attribute__((used)) DMA1_Stream3_IRQHandler(void)
 
 void __attribute__((used)) USART3_IRQHandler(void)
 {
-  if (USART_GetITStatus(UART1_TYPE, USART_IT_RXNE))
+  if ((UART1_TYPE->SR & (1<<5)) != 0) // if the RXNE interrupt has occurred (optimized)
   {
     portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
     uint8_t rxData = USART_ReceiveData(UART1_TYPE) & 0x00FF;
-    xQueueSendFromISR(uart1queue, &rxData, &xHigherPriorityTaskWoken);
-    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    if (rxCallback != NULL) {
+      rxCallback(rxData);
+    } else {
+      xQueueSendFromISR(uart1queue, &rxData, &xHigherPriorityTaskWoken);
+      portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    }
   } else {
     /** if we get here, the error is most likely caused by an overrun!
      * - PE (Parity error), FE (Framing error), NE (Noise error), ORE (OverRun error)
