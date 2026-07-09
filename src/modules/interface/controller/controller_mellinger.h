@@ -115,6 +115,9 @@ void controllerMellingerFirmware(control_t *control, const setpoint_t *setpoint,
                                          const state_t *state,
                                          const stabilizerStep_t stabilizerStep);
 
+void controllerMellingerEnterPreciseLand(void);
+void controllerMellingerExitPreciseLand(void);
+
 #endif // CRAZYFLIE_FW
 
 #endif //__CONTROLLER_MELLINGER_H__

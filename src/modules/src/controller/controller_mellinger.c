@@ -141,6 +141,21 @@ static struct {
   .i_range_m_z  = 1500.0f,
 };
 
+static struct {
+  float pos_kp;
+  float pos_ki;
+  float pos_kd;
+  float att_kp;
+  float att_ki;
+  float att_kd;
+} precLandMelParams = {
+  .pos_kp = 1.0f,
+  .pos_ki = 0.7f,
+  .pos_kd = 0.1f,
+  .att_kp = 100000.0f,
+  .att_ki = 0.0f,
+  .att_kd = 10000.0f,
+};
 
 void controllerMellingerReset(controllerMellinger_t* self)
 {
@@ -462,6 +477,22 @@ void controllerMellingerFirmware(control_t *control, const setpoint_t *setpoint,
   controllerMellinger(&g_self, control, setpoint, sensors, state, stabilizerStep);
 }
 
+
+void controllerMellingerEnterPreciseLand(void)
+{
+  // Mellinger position params order: kp_xy, kd_xy, ki_xy, i_range_xy, kp_z, kd_z, ki_z, i_range_z
+  controllerMellingerChangePosParams(precLandMelParams.pos_kp, precLandMelParams.pos_kd, precLandMelParams.pos_ki, NAN,
+                                     NAN, NAN, NAN, NAN);
+
+  controllerMellingerChangeAttParams(precLandMelParams.att_kp, precLandMelParams.att_kd, precLandMelParams.att_ki, NAN, NAN);
+}
+
+void controllerMellingerExitPreciseLand(void)
+{
+  controllerMellingerResetParamsToPrevious();
+}
+
+
 // ---------------------------------------------------------------------------
 // Parameter change / reset functions
 // Mirrors positionControllerChangePosPIDParams() / resetPosPIDParamsToPrevious()
@@ -628,6 +659,39 @@ PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, i_range_m_xy, &g_self.i_range_m_xy)
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, i_range_m_z, &g_self.i_range_m_z)
 PARAM_GROUP_STOP(ctrlMel)
+
+
+/**
+ * Gains temporarily applied to the Mellinger controller during a precise landing
+ * (see plan_precise_land() / land_precise), restored to their previous values afterward.
+ */
+PARAM_GROUP_START(precLandMel)
+/**
+ * @brief Precise-landing position proportional gain (xy)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, posKp, &precLandMelParams.pos_kp)
+/**
+ * @brief Precise-landing position integral gain (xy)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, posKi, &precLandMelParams.pos_ki)
+/**
+ * @brief Precise-landing position derivative gain (xy)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, posKd, &precLandMelParams.pos_kd)
+/**
+ * @brief Precise-landing attitude proportional gain
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, attKp, &precLandMelParams.att_kp)
+/**
+ * @brief Precise-landing attitude integral gain
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, attKi, &precLandMelParams.att_ki)
+/**
+ * @brief Precise-landing attitude derivative gain
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, attKd, &precLandMelParams.att_kd)
+PARAM_GROUP_STOP(precLandMel)
+
 
 /**
  * Logging variables for the command and reference signals for the
