@@ -57,7 +57,7 @@ typedef enum {
 } Channel;
 
 typedef enum {
-  setContinuousWave    = 0x00,
+  setContinuousWave    = 0x00, // Legacy name; the payload selects the radio test mode
   armSystem            = 0x01, // Deprecated: moved to crtp_supervisor
   recoverSystem        = 0x02, // Deprecated: moved to crtp_supervisor
   userNotification     = 0x03,
@@ -128,7 +128,7 @@ static void platformCommandProcess(CRTPPacket *p)
     case setContinuousWave:
     {
       static SyslinkPacket slp;
-      slp.type = SYSLINK_RADIO_CONTWAVE;
+      slp.type = SYSLINK_RADIO_TEST;
       slp.length = 1;
       slp.data[0] = data[0];
       syslinkSendPacket(&slp);

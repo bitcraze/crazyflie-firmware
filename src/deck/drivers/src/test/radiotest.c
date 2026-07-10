@@ -35,6 +35,7 @@
 #include "config.h"
 #include "debug.h"
 #include "deck.h"
+#include "radiolink.h"
 #include "syslink.h"
 #include "param.h"
 #include "platform_defaults.h"
@@ -52,9 +53,11 @@
 //Hardware configuration
 static bool isInit;
 static uint8_t channel = 80;
+static uint8_t datarate = RADIO_RATE_2M;
 static int8_t power = -16;
 static uint8_t contwave = 0;
 static uint8_t old_channel;
+static uint8_t old_datarate;
 static int8_t old_power;
 static uint8_t old_contwave;
 
@@ -72,39 +75,42 @@ static void spinMotorsTask(void *param)
 
 static void radiotestTask(void *param)
 {
-
   SyslinkPacket slp;
-  old_channel = 0;
-  old_power = 0;
+  bool configSent = false;
+
+  old_channel = channel;
+  old_datarate = datarate;
+  old_power = power;
   old_contwave = contwave;
 
   while (1)
   {
     vTaskDelay(M2T(1000));
 
+    if (!configSent || channel != old_channel)
+    {
+      radiolinkSetChannel(channel);
+      old_channel = channel;
+    }
+    if (!configSent || datarate != old_datarate)
+    {
+      radiolinkSetDatarate(datarate);
+      old_datarate = datarate;
+    }
+    if (!configSent || power != old_power)
+    {
+      radiolinkSetPowerDbm(power);
+      old_power = power;
+    }
+    configSent = true;
+
     if (contwave != old_contwave)
     {
-      slp.type = SYSLINK_RADIO_CONTWAVE;
+      slp.type = SYSLINK_RADIO_TEST;
       slp.length = 1;
       slp.data[0] = contwave;
       syslinkSendPacket(&slp);
       old_contwave = contwave;
-    }
-    if (channel != old_channel)
-    {
-      slp.type = SYSLINK_RADIO_CHANNEL;
-      slp.length = 1;
-      slp.data[0] = channel;
-      syslinkSendPacket(&slp);
-      old_channel = channel;
-    }
-    if (power != old_power)
-    {
-      slp.type = SYSLINK_RADIO_POWER;
-      slp.length = 1;
-      slp.data[0] = power;
-      syslinkSendPacket(&slp);
-      old_power = power;
     }
   }
 }
@@ -143,9 +149,37 @@ static const DeckDriver radiotest_deck = {
 
 DECK_DRIVER(radiotest_deck);
 
+/**
+ * Radio test configuration for lab use.
+ *
+ * The bcRadioTest deck driver must be initialized for changes to be sent to
+ * the nRF51. Configure the channel, data rate and power before enabling a test
+ * mode. Use USB to retain control while a test is active.
+ */
 PARAM_GROUP_START(radiotest)
+
+/**
+ * @brief Radio channel in the range 0 to 125. Default is 80.
+ */
 PARAM_ADD(PARAM_UINT8, channel, &channel)
+
+/**
+ * @brief Radio data rate. 0=250 Kbit/s, 1=1 Mbit/s, 2=2 Mbit/s (default), 3=BLE 1M PHY (test only).
+ */
+PARAM_ADD(PARAM_UINT8, datarate, &datarate)
+
+/**
+ * @brief Radio transmit power in dBm. Default is -16.
+ */
 PARAM_ADD(PARAM_INT8,  power, &power)
+
+/**
+ * @brief Radio test mode. 0=off, 1=unmodulated carrier, 2=modulated/whitened carrier.
+ *
+ * Only change this parameter over USB. Starting a test disables radio and BLE
+ * communication. Mode 0 returns to ESB radio operation, but the nRF51 must be
+ * rebooted to resume BLE advertising.
+ */
 PARAM_ADD(PARAM_UINT8, contwave, &contwave)
 
 PARAM_GROUP_STOP(radiotest)

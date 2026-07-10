@@ -20,25 +20,50 @@ The first byte describes the command:
 
 | value | Command |
 |-------|---------|
-| 0     | [Set continuous wave](#set-continuous-wave) |
+| 0     | [Set radio test mode](#set-radio-test-mode) |
 | 1     | Request arm/disarm the system *(deprecated, use [supervisor port](crtp_supervisor.md#armdisarm-system))* |
 | 2     | Recover system *(deprecated, use [supervisor port](crtp_supervisor.md#recover-system))* |
 
-### Set continuous wave
+### Set radio test mode
+
+The command retains the legacy `setContinuousWave` name and value for compatibility.
 
 Command and answer:
 
 | Byte | Description |
 |------|-------------|
 | 0    | command setContinuousWave (0) |
-| 1    | Enable |
+| 1    | Test mode: 0=off, 1=unmodulated carrier, 2=modulated/whitened carrier |
 
-If enable is not 0, the Crazyflie radio will start transmitting a continuous sine wave at the currently setup
-freqency. The same packet is sent back to confirm the value has been set.
+Modes 1 and 2 start transmitting with the currently configured channel, data rate, and power. The same packet is sent
+back to confirm the mode has been set.
 
-This command should only be sent over USB (it disables the radio communication).
+This command must only be sent over USB. Starting either test disables the nRF51 SoftDevice, radio communication, and
+BLE advertising. Mode 0 stops the test and returns the radio to ESB operation, but the nRF51 must be rebooted before BLE
+advertising resumes.
+
 It is used in production to test the Crazyflie radio path and should not be used outside of a lab or
 other very controlled environment. It will effectively jam local radio communication on the channel.
+
+The `bcRadioTest` deck driver provides parameters for configuring and starting the test. A dedicated Crazyflie 2.1
+Brushless lab build can be configured from the repository root with:
+
+```
+./scripts/kconfig/merge_config.sh configs/cf21bl_defconfig configs/radiotest.conf
+```
+
+The normal `cf21bl_defconfig` does not force the test driver. In a radio-test-enabled build, set the configuration
+parameters before setting the mode:
+
+| Parameter | Values |
+|-----------|--------|
+| `radiotest.channel` | Radio channel 0..125 (default 80) |
+| `radiotest.datarate` | 0=250 Kbit/s, 1=1 Mbit/s, 2=2 Mbit/s (default), 3=BLE 1M PHY (test only) |
+| `radiotest.power` | Transmit power in dBm (default -16) |
+| `radiotest.contwave` | Test mode: 0=off, 1=unmodulated carrier, 2=modulated/whitened carrier |
+
+The `contwave` parameter name is retained for compatibility. Parameter control must also use USB, since radio and BLE
+connectivity are intentionally unavailable after selecting mode 1 or 2.
 
 ## Version commands
 
