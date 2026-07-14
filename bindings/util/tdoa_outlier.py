@@ -31,6 +31,15 @@ def _is_physically_possible(tdoa):
     return tdoa.distanceDiff ** 2 < _anchor_distance_sq(tdoa)
 
 
+def _median(values):
+    vals = sorted(values)
+    n = len(vals)
+    mid = n // 2
+    if n % 2:
+        return vals[mid]
+    return 0.5 * (vals[mid - 1] + vals[mid])
+
+
 class OutlierFilter:
     """Base class. ``validate`` returns True if the update should be applied."""
     name = 'base'
@@ -103,19 +112,14 @@ class MadWindowFilter(OutlierFilter):
 
     @staticmethod
     def _median(values):
-        vals = sorted(values)
-        n = len(vals)
-        mid = n // 2
-        if n % 2:
-            return vals[mid]
-        return 0.5 * (vals[mid - 1] + vals[mid])
+        return _median(values)
 
     def validate(self, tdoa, error, now_ms):
         if len(self._window) < self.WARMUP:
             accepted = True
         else:
-            med = self._median(self._window)
-            mad = self._median(abs(e - med) for e in self._window)
+            med = _median(self._window)
+            mad = _median(abs(e - med) for e in self._window)
             mad = max(mad, self.MAD_FLOOR_STD_MULTIPLIER * tdoa.stdDev)
             accepted = abs(error - med) < self.K * mad
         self._window.append(error)
@@ -174,6 +178,148 @@ class PairIntegratorFilter(OutlierFilter):
         return sample_is_good
 
 
+class PairHampelFilter(OutlierFilter):
+    """Measurement-domain (not innovation-domain) Hampel gate, per anchor pair.
+
+    Unlike every other filter here, this one never looks at the Kalman
+    innovation: it keeps, per (idA, idB) anchor pair, a sliding window of raw
+    ``distanceDiff`` values and rejects a new sample that deviates from the
+    pair's median by more than K times the pair's MAD (median absolute
+    deviation), floored so a quiet window cannot collapse the gate. Because
+    the decision is purely a function of the measurement stream, a diverged
+    Kalman state can never make this filter "agree" with it — it cannot
+    self-confirm the way an innovation-gated filter can.
+
+    As with MadWindowFilter, every sample — accepted or rejected — enters the
+    window, so a sustained level shift (a real, persistent change in the
+    pair's distanceDiff) eventually drags the median along and reopens the
+    gate. A window is cleared if it goes stale (no sample for MAX_AGE_MS):
+    stale history must not gate fresh data after a coverage gap.
+    """
+    name = 'pair_hampel'
+    WINDOW = 8
+    WARMUP = 4
+    K = 5.0
+    MAD_FLOOR_STD_MULTIPLIER = 0.5
+    MAX_AGE_MS = 2000
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self._pairs = {}
+
+    def validate(self, tdoa, error, now_ms):
+        if not _is_physically_possible(tdoa):
+            return False
+
+        key = (int(tdoa.anchorIdA), int(tdoa.anchorIdB))
+        s = self._pairs.setdefault(
+            key, {'window': deque(maxlen=self.WINDOW), 'last_seen_ms': None})
+
+        if s['last_seen_ms'] is not None \
+                and now_ms - s['last_seen_ms'] > self.MAX_AGE_MS:
+            s['window'].clear()
+
+        window = s['window']
+        if len(window) < self.WARMUP:
+            accepted = True
+        else:
+            med = _median(window)
+            mad = _median(abs(v - med) for v in window)
+            mad = max(mad, self.MAD_FLOOR_STD_MULTIPLIER * tdoa.stdDev)
+            accepted = abs(tdoa.distanceDiff - med) < self.K * mad
+
+        window.append(tdoa.distanceDiff)
+        s['last_seen_ms'] = now_ms
+        return accepted
+
+
+class AndFilter(OutlierFilter):
+    """Composition: accept only if every child filter accepts.
+
+    Every child's ``validate`` is called on every sample, with no
+    short-circuiting — stateful children (e.g. MadWindowFilter,
+    PairIntegratorFilter) must observe every sample to keep their internal
+    state consistent, even once the combined result is already known to be
+    False.
+
+    Note: ``make_outlier_filter`` applies ``params`` to a filter via
+    ``setattr``/``hasattr`` on the top-level instance, so tuning-constant
+    overrides are not routed to children of a composite; construct children
+    with their desired constants already set (e.g. via a factory closure)
+    instead of relying on the ``params`` mechanism for filters built from
+    this class.
+    """
+    name = 'and'
+
+    def __init__(self, filters):
+        self._filters = list(filters)
+
+    def reset(self):
+        for f in self._filters:
+            f.reset()
+
+    def validate(self, tdoa, error, now_ms):
+        results = [f.validate(tdoa, error, now_ms) for f in self._filters]
+        return all(results)
+
+
+class AnchorQualityFilter(OutlierFilter):
+    """Per-anchor health tracking on top of the pair-Hampel detector.
+
+    Motivation (seen in ground-truth diagnostics of real logs): outlier bursts
+    are often anchor-specific — one anchor goes bad for a few seconds (NLOS,
+    interference) and pollutes *every* pair it participates in. A per-pair
+    gate rejects many of those samples one by one, but each pair's window has
+    to discover the problem separately. This filter aggregates: it keeps one
+    exponentially-weighted rejection rate per anchor id, fed by the pair-Hampel
+    verdicts of every sample the anchor participates in, and suppresses all
+    measurements of an anchor whose recent rejection rate exceeds Q_MAX.
+
+    Recovery is data-driven: a suppressed anchor's samples keep flowing
+    through the detector (windows and rates keep updating), so when its
+    measurements become consistent again the rejection rate decays below
+    Q_MAX and the anchor is readmitted.
+
+    ALPHA is a per-sample EWMA weight, so its effective time constant scales
+    with the anchor's sample rate (~1/(ALPHA * rate)); at TDoA3 rates each
+    anchor participates in a few hundred samples/s.
+
+    State: the pair windows of PairHampelFilter plus one float per anchor id
+    — comfortably firmware-sized.
+    """
+    name = 'anchor_quality'
+    ALPHA = 0.005
+    Q_MAX = 0.35
+
+    def __init__(self):
+        self._detector = PairHampelFilter()
+        self.reset()
+
+    def reset(self):
+        self._detector.reset()
+        self._quality = {}
+
+    def validate(self, tdoa, error, now_ms):
+        detector_ok = self._detector.validate(tdoa, error, now_ms)
+        reject = 0.0 if detector_ok else 1.0
+        ids = (int(tdoa.anchorIdA), int(tdoa.anchorIdB))
+        for anchor_id in ids:
+            q = self._quality.get(anchor_id, 0.0)
+            self._quality[anchor_id] = q + self.ALPHA * (reject - q)
+        return detector_ok and all(
+            self._quality[anchor_id] <= self.Q_MAX for anchor_id in ids)
+
+
+def _make_sanity_mad_filter():
+    return AndFilter([SanityFilter(), MadWindowFilter()])
+
+
+def _make_hampel_mad_filter():
+    return AndFilter([PairHampelFilter(), MadWindowFilter()])
+
+
 # Factories (not instances) so each replay run gets fresh filter state.
 FILTER_FACTORIES = {
     'integrator': IntegratorFilter,
@@ -181,13 +327,25 @@ FILTER_FACTORIES = {
     'sanity': SanityFilter,
     'mad_window': MadWindowFilter,
     'pair_integrator': PairIntegratorFilter,
+    'pair_hampel': PairHampelFilter,
+    'sanity_mad': _make_sanity_mad_filter,
+    'hampel_mad': _make_hampel_mad_filter,
+    'anchor_quality': AnchorQualityFilter,
 }
 
 
-def make_outlier_filter(name):
+def make_outlier_filter(name, params=None):
     try:
-        return FILTER_FACTORIES[name]()
+        f = FILTER_FACTORIES[name]()
     except KeyError:
         raise ValueError(
             f"Unknown outlier filter '{name}'. "
             f"Available: {', '.join(sorted(FILTER_FACTORIES))}")
+    # Tuning-constant overrides (class attrs like K / WINDOW); reset afterwards
+    # so state sized from a constant (e.g. a deque maxlen) picks it up.
+    for key, value in (params or {}).items():
+        if not hasattr(f, key):
+            raise ValueError(f"Filter '{name}' has no tuning constant '{key}'")
+        setattr(f, key, value)
+    f.reset()
+    return f

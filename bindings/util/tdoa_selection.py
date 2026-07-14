@@ -132,6 +132,53 @@ class MedianPolicy(SelectionPolicy):
         return [_measurement(group, best)]
 
 
+class TrimmedAllPolicy(SelectionPolicy):
+    """Feed every candidate within ``tol_m`` of the group median distanceDiff.
+
+    Middle ground between 'all' (feed everything) and 'median' (feed a single
+    candidate): keeps the redundancy of 'all' but trims candidates whose
+    distanceDiff is far from the group consensus, which is cheap to compute
+    and causal (per-group, no history).
+    """
+    name = 'trimmed_all'
+
+    def __init__(self, tol_m=0.75):
+        self.tol_m = tol_m
+
+    def select(self, group):
+        cs = group['candidates']
+        if not cs:
+            return []
+        vals = sorted(c['distanceDiff'] for c in cs)
+        median = vals[len(vals) // 2]
+        kept = [c for c in cs if abs(c['distanceDiff'] - median) <= self.tol_m]
+        if not kept:
+            kept = [min(cs, key=lambda c: abs(c['distanceDiff'] - median))]
+        return [_measurement(group, c) for c in kept]
+
+
+class TopKPolicy(SelectionPolicy):
+    """Feed the ``k`` candidates closest to the group median distanceDiff.
+
+    Another middle ground between 'all' and 'median': a fixed-size, cheap
+    (bounded sort) subset centered on the group consensus.
+    """
+    name = 'top_k'
+
+    def __init__(self, k=3):
+        self.k = k
+
+    def select(self, group):
+        cs = group['candidates']
+        if not cs:
+            return []
+        vals = sorted(c['distanceDiff'] for c in cs)
+        median = vals[len(vals) // 2]
+        ranked = sorted(cs, key=lambda c: abs(c['distanceDiff'] - median))
+        kept = ranked[:self.k]
+        return [_measurement(group, c) for c in kept]
+
+
 class RoundRobinPolicy(SelectionPolicy):
     """Pick one candidate per packet, rotating through the group indices.
 
@@ -161,16 +208,19 @@ POLICY_FACTORIES = {
     'all': AllCandidatesPolicy,
     'median': MedianPolicy,
     'round_robin': RoundRobinPolicy,
+    'trimmed_all': TrimmedAllPolicy,
+    'top_k': TopKPolicy,
 }
 
 
-def make_policy(name):
+def make_policy(name, params=None):
     try:
-        return POLICY_FACTORIES[name]()
+        factory = POLICY_FACTORIES[name]
     except KeyError:
         raise ValueError(
             f"Unknown selection policy '{name}'. "
             f"Available: {', '.join(sorted(POLICY_FACTORIES))}")
+    return factory(**(params or {}))
 
 
 def verify_baseline_reconstruction(log_data):

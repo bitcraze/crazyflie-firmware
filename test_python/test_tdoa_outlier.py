@@ -6,7 +6,8 @@ bindings in test_tdoa_outlier_seam.py; here we only check its registration.
 
 import pytest
 
-from bindings.util.tdoa_outlier import FILTER_FACTORIES, make_outlier_filter
+from bindings.util.tdoa_outlier import (
+    FILTER_FACTORIES, AndFilter, OutlierFilter, make_outlier_filter)
 
 
 class _Vec:
@@ -28,7 +29,8 @@ class _Tdoa:
 
 def test_all_spec_filters_are_registered():
     assert set(FILTER_FACTORIES) == {
-        'integrator', 'none', 'sanity', 'mad_window', 'pair_integrator'}
+        'integrator', 'none', 'sanity', 'mad_window', 'pair_integrator',
+        'pair_hampel', 'sanity_mad', 'hampel_mad', 'anchor_quality'}
 
 
 def test_unknown_name_raises_value_error_listing_available():
@@ -111,3 +113,191 @@ def test_factories_return_fresh_instances():
     a = make_outlier_filter('mad_window')
     b = make_outlier_filter('mad_window')
     assert a is not b
+
+
+# --- pair_hampel ---------------------------------------------------------
+
+
+def test_pair_hampel_accepts_everything_during_warmup():
+    f = make_outlier_filter('pair_hampel')
+    # WARMUP = 4: the first 4 samples for a pair are accepted unconditionally,
+    # even though 0.0 vs 1.0 would otherwise look like an outlier.
+    assert f.validate(_Tdoa(dd=0.0), error=0.0, now_ms=0)
+    assert f.validate(_Tdoa(dd=0.0), error=0.0, now_ms=1)
+    assert f.validate(_Tdoa(dd=0.0), error=0.0, now_ms=2)
+    assert f.validate(_Tdoa(dd=1.0), error=0.0, now_ms=3)
+
+
+def test_pair_hampel_rejects_clear_outlier_after_warmup():
+    f = make_outlier_filter('pair_hampel')
+    for i in range(4):
+        f.validate(_Tdoa(dd=0.0), error=0.0, now_ms=i)
+    # med = 0, mad floored at 0.5 * std = 0.075, gate = 5 * 0.075 = 0.375
+    assert f.validate(_Tdoa(dd=0.3), error=0.0, now_ms=10)
+    assert not f.validate(_Tdoa(dd=3.0), error=0.0, now_ms=11)
+
+
+def test_pair_hampel_pairs_are_independent():
+    f = make_outlier_filter('pair_hampel')
+    # Fill pair (0, 1) with a stable level and confirm it rejects outliers.
+    for i in range(4):
+        f.validate(_Tdoa(dd=0.0, ids=(0, 1)), now_ms=i, error=0.0)
+    assert not f.validate(_Tdoa(dd=3.0, ids=(0, 1)), error=0.0, now_ms=10)
+    # A fresh pair (0, 2) has no history: it is still in warmup and accepts
+    # the very same value pair (0, 1) just rejected.
+    assert f.validate(_Tdoa(dd=3.0, ids=(0, 2)), error=0.0, now_ms=10)
+
+
+def test_pair_hampel_clears_stale_window_after_max_age():
+    f = make_outlier_filter('pair_hampel')
+    for i in range(4):
+        f.validate(_Tdoa(dd=0.0, ids=(0, 1)), error=0.0, now_ms=i)
+    # A gap longer than MAX_AGE_MS clears the pair's history, so the window
+    # is back in warmup and a value that would otherwise be rejected passes.
+    stale_ms = 4 + f.MAX_AGE_MS + 1
+    assert f.validate(_Tdoa(dd=3.0, ids=(0, 1)), error=0.0, now_ms=stale_ms)
+    s = f._pairs[(0, 1)]
+    assert len(s['window']) == 1
+
+
+def test_pair_hampel_rejects_physically_impossible_distance_diff():
+    f = make_outlier_filter('pair_hampel')
+    # anchors 4 m apart: |dd| must be < 4
+    assert not f.validate(_Tdoa(dd=4.1), error=0.0, now_ms=0)
+    # a rejected-for-impossibility sample must not be recorded into the
+    # pair's window.
+    assert (0, 1) not in f._pairs
+
+
+def test_pair_hampel_recovers_from_a_sustained_level_shift():
+    f = make_outlier_filter('pair_hampel')
+    # Anchors 20 m apart so both the base level and the shifted level below
+    # stay within the physically-possible range (|dd| < anchor separation).
+    pb = (20.0, 0.0, 0.0)
+    for i in range(f.WINDOW * 2):
+        f.validate(_Tdoa(dd=0.0, pb=pb), error=0.0, now_ms=i)
+    # A persistent step in distanceDiff: rejected at first, but every sample
+    # (accepted or not) enters the window, so once the window is full of the
+    # new level the shift is accepted again.
+    accepted = [
+        f.validate(_Tdoa(dd=5.0, pb=pb), error=0.0, now_ms=100 + i)
+        for i in range(f.WINDOW * 2)
+    ]
+    assert not accepted[0]
+    assert accepted[-1]
+
+
+# --- AndFilter / sanity_mad ------------------------------------------------
+
+
+class _RecordingFilter(OutlierFilter):
+    """Stub that always accepts and records every call it sees."""
+    name = 'recording'
+
+    def __init__(self):
+        self.calls = []
+
+    def reset(self):
+        self.calls = []
+
+    def validate(self, tdoa, error, now_ms):
+        self.calls.append((tdoa.distanceDiff, error, now_ms))
+        return True
+
+
+def test_and_filter_calls_every_child_on_every_sample():
+    a = _RecordingFilter()
+    b = _RecordingFilter()
+    f = AndFilter([a, b])
+    f.validate(_Tdoa(dd=1.0), error=0.5, now_ms=10)
+    f.validate(_Tdoa(dd=2.0), error=0.6, now_ms=20)
+    assert a.calls == [(1.0, 0.5, 10), (2.0, 0.6, 20)]
+    assert b.calls == a.calls
+
+
+def test_and_filter_does_not_short_circuit_a_rejecting_child():
+    class _RejectingFilter(OutlierFilter):
+        def validate(self, tdoa, error, now_ms):
+            return False
+
+    recorder = _RecordingFilter()
+    f = AndFilter([_RejectingFilter(), recorder])
+    assert not f.validate(_Tdoa(), error=0.0, now_ms=0)
+    # The second child must still have been called despite the first
+    # rejecting.
+    assert recorder.calls == [(0.0, 0.0, 0)]
+
+
+def test_and_filter_accepts_only_if_all_children_accept():
+    class _AlwaysAccept(OutlierFilter):
+        def validate(self, tdoa, error, now_ms):
+            return True
+
+    class _AlwaysReject(OutlierFilter):
+        def validate(self, tdoa, error, now_ms):
+            return False
+
+    assert AndFilter([_AlwaysAccept(), _AlwaysAccept()]).validate(
+        _Tdoa(), error=0.0, now_ms=0)
+    assert not AndFilter([_AlwaysAccept(), _AlwaysReject()]).validate(
+        _Tdoa(), error=0.0, now_ms=0)
+
+
+def test_and_filter_reset_resets_all_children():
+    a = _RecordingFilter()
+    b = _RecordingFilter()
+    f = AndFilter([a, b])
+    f.validate(_Tdoa(), error=0.0, now_ms=0)
+    assert a.calls and b.calls
+    f.reset()
+    assert a.calls == [] and b.calls == []
+
+
+def test_sanity_mad_registered_and_combines_both_checks():
+    f = make_outlier_filter('sanity_mad')
+    assert isinstance(f, AndFilter)
+    # Physically impossible: rejected regardless of the innovation.
+    assert not f.validate(_Tdoa(dd=4.1), error=0.0, now_ms=0)
+    # Physically possible and within warmup: accepted.
+    for i in range(20):
+        assert f.validate(_Tdoa(dd=0.0), error=0.0, now_ms=i)
+    # After warmup a large innovation is rejected by the MAD gate even
+    # though it is physically possible.
+    assert not f.validate(_Tdoa(dd=0.0), error=5.0, now_ms=30)
+
+
+def test_anchor_quality_suppresses_a_bursting_anchor_across_pairs():
+    # ALPHA/Q_MAX tuned for a short test: two rejections push an anchor's
+    # rejection EWMA to 0.51, and one subsequent acceptance only decays it
+    # to 0.357 — still above Q_MAX, so suppression persists.
+    f = make_outlier_filter('anchor_quality', {'ALPHA': 0.3, 'Q_MAX': 0.35})
+    # Warm up two pairs that share anchor 9: (9, 1) and (9, 2).
+    for i in range(4):
+        assert f.validate(_Tdoa(dd=0.0, ids=(9, 1)), error=0.0, now_ms=i)
+        assert f.validate(_Tdoa(dd=0.0, ids=(9, 2)), error=0.0, now_ms=i)
+    # Anchor 9 goes bad: gross outliers on both its pairs. The detector
+    # rejects them and anchor 9's rejection rate climbs past Q_MAX.
+    assert not f.validate(_Tdoa(dd=3.0, ids=(9, 1)), error=0.0, now_ms=10)
+    assert not f.validate(_Tdoa(dd=3.0, ids=(9, 2)), error=0.0, now_ms=11)
+    # Now even an in-family measurement involving anchor 9 is suppressed
+    # (the detector accepts it, the quality gate does not) ...
+    assert not f.validate(_Tdoa(dd=0.0, ids=(9, 1)), error=0.0, now_ms=12)
+    # ... while a pair not involving anchor 9 is unaffected.
+    for i in range(4):
+        assert f.validate(_Tdoa(dd=0.0, ids=(3, 4)), error=0.0, now_ms=13 + i)
+
+
+def test_anchor_quality_readmits_an_anchor_when_its_data_recovers():
+    f = make_outlier_filter('anchor_quality', {'ALPHA': 0.3, 'Q_MAX': 0.35})
+    for i in range(4):
+        f.validate(_Tdoa(dd=0.0, ids=(9, 1)), error=0.0, now_ms=i)
+    assert not f.validate(_Tdoa(dd=3.0, ids=(9, 1)), error=0.0, now_ms=10)
+    assert not f.validate(_Tdoa(dd=3.0, ids=(9, 1)), error=0.0, now_ms=11)
+    # Consistent data keeps flowing: detector accepts, EWMA decays, and the
+    # anchor is eventually readmitted.
+    readmitted = False
+    for i in range(10):
+        if f.validate(_Tdoa(dd=0.0, ids=(9, 1)), error=0.0, now_ms=20 + i):
+            readmitted = True
+            break
+    assert readmitted

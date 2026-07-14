@@ -80,6 +80,117 @@ def test_all_policy_returns_every_candidate():
     assert len(make_policy('all').select(group)) == 2
 
 
+def test_trimmed_all_keeps_in_tolerance_and_drops_outlier():
+    # median of [0.5, 0.55, 0.6, 5.0] (sorted) at index 4//2=2 is 0.6.
+    # 5.0 is far outside tol_m=0.2 and should be dropped; the rest kept.
+    log = _cand_log([
+        (100.0, 7, 1, 2, 0.5, 0),
+        (100.0, 7, 1, 3, 0.55, 0),
+        (100.0, 7, 1, 4, 0.6, 1),
+        (100.0, 7, 1, 9, 5.0, 0),
+    ])
+    group = build_candidate_groups(log)[0]
+    measurements = make_policy('trimmed_all', {'tol_m': 0.2}).select(group)
+    ids = sorted(m['idA'] for m in measurements)
+    assert ids == [2, 3, 4]
+    assert 9 not in ids
+
+
+def test_trimmed_all_with_huge_tolerance_matches_all():
+    log = _cand_log([
+        (100.0, 7, 1, 2, 0.5, 0),
+        (100.0, 7, 1, 3, 0.6, 1),
+        (100.0, 7, 1, 9, 5.0, 0),
+    ])
+    group = build_candidate_groups(log)[0]
+    trimmed = make_policy('trimmed_all', {'tol_m': 1e9}).select(group)
+    everything = make_policy('all').select(group)
+    assert trimmed == everything
+
+
+def test_trimmed_all_with_zero_tolerance_returns_median_valued_candidates():
+    # sorted distanceDiffs: [0.5, 0.6, 0.6] -> median (index 3//2=1) is 0.6
+    log = _cand_log([
+        (100.0, 7, 1, 2, 0.5, 0),
+        (100.0, 7, 1, 3, 0.6, 1),
+        (100.0, 7, 1, 4, 0.6, 0),
+    ])
+    group = build_candidate_groups(log)[0]
+    measurements = make_policy('trimmed_all', {'tol_m': 0.0}).select(group)
+    ids = sorted(m['idA'] for m in measurements)
+    assert ids == [3, 4]
+
+
+def test_trimmed_all_empty_candidates_returns_empty():
+    log = _cand_log([(100.0, 7, 1, 2, 0.5, 0)])
+    group = build_candidate_groups(log)[0]
+    group['candidates'] = []
+    assert make_policy('trimmed_all').select(group) == []
+
+
+def test_top_k_with_k_at_least_group_size_matches_all():
+    log = _cand_log([
+        (100.0, 7, 1, 2, 0.5, 0),
+        (100.0, 7, 1, 3, 0.6, 1),
+        (100.0, 7, 1, 9, 5.0, 0),
+    ])
+    group = build_candidate_groups(log)[0]
+    top_k = make_policy('top_k', {'k': 10}).select(group)
+    everything = make_policy('all').select(group)
+    assert sorted(top_k, key=lambda m: m['idA']) == sorted(everything, key=lambda m: m['idA'])
+
+
+def test_top_k_one_matches_median_choice():
+    log = _cand_log([
+        (100.0, 7, 1, 2, 0.5, 0),
+        (100.0, 7, 1, 3, 0.6, 1),
+        (100.0, 7, 1, 9, 5.0, 0),
+    ])
+    group = build_candidate_groups(log)[0]
+    assert make_policy('top_k', {'k': 1}).select(group) == make_policy('median').select(group)
+
+
+def test_top_k_fewer_candidates_than_k_returns_all():
+    log = _cand_log([
+        (100.0, 7, 1, 2, 0.5, 0),
+        (100.0, 7, 1, 3, 0.6, 1),
+    ])
+    group = build_candidate_groups(log)[0]
+    assert len(make_policy('top_k', {'k': 5}).select(group)) == 2
+
+
+def test_top_k_empty_candidates_returns_empty():
+    log = _cand_log([(100.0, 7, 1, 2, 0.5, 0)])
+    group = build_candidate_groups(log)[0]
+    group['candidates'] = []
+    assert make_policy('top_k').select(group) == []
+
+
+def test_trimmed_all_measurement_conversion_uses_idA_idB_swap():
+    # packet anchor 3 (idA), remote candidate 5 (idB), both within tolerance
+    log = _cand_log([
+        (100.0, 0, 3, 5, 0.25, 1),
+        (100.0, 0, 3, 6, 0.30, 0),
+    ])
+    group = build_candidate_groups(log)[0]
+    measurements = make_policy('trimmed_all', {'tol_m': 10.0}).select(group)
+    assert {(m['idA'], m['idB'], m['distanceDiff']) for m in measurements} == {
+        (5, 3, 0.25), (6, 3, 0.30),
+    }
+
+
+def test_top_k_measurement_conversion_uses_idA_idB_swap():
+    log = _cand_log([
+        (100.0, 0, 3, 5, 0.25, 1),
+        (100.0, 0, 3, 6, 0.30, 0),
+    ])
+    group = build_candidate_groups(log)[0]
+    measurements = make_policy('top_k', {'k': 2}).select(group)
+    assert {(m['idA'], m['idB'], m['distanceDiff']) for m in measurements} == {
+        (5, 3, 0.25), (6, 3, 0.30),
+    }
+
+
 def test_round_robin_rotates_and_resets():
     log = _cand_log([
         (100.0, 7, 1, 2, 0.5, 0),
