@@ -102,6 +102,8 @@ def run_config(config):
         params['std_model'] = config['std_model']
     if config.get('std_model_params'):
         params['std_model_params'] = config['std_model_params']
+    if config.get('kalman_params'):
+        params['kalman_params'] = config['kalman_params']
 
     trajectory = replay(_CTX['anchor_positions'], list(_CTX['imu_samples']),
                         tdoa_samples, params)
@@ -115,7 +117,8 @@ def config_label(config):
              config.get('model', 'standard'), f"std={config.get('std', 0.15)}"]
     if config.get('std_model'):
         parts.append(f"stdmod={config['std_model']}")
-    for key in ('policy_params', 'filter_params', 'std_model_params'):
+    for key in ('policy_params', 'filter_params', 'std_model_params',
+                'kalman_params'):
         if config.get(key):
             parts.append(str(config[key]))
     return '/'.join(parts)

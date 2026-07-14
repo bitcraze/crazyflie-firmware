@@ -162,7 +162,8 @@ def replay(anchor_positions, imu_samples, tdoa_samples, params=None):
 
     emulator = EstimatorKalmanEmulator(
         anchor_positions, tdoa_model=params.get('tdoa_model', 'standard'),
-        outlier_filter=outlier_filter, std_model=std_model)
+        outlier_filter=outlier_filter, std_model=std_model,
+        kalman_params=params.get('kalman_params'))
     emulator.TDOA_ENGINE_MEASUREMENT_NOISE_STD = params.get('tdoa_std', DEFAULT_TDOA_STD)
 
     tdoa_samples, n_skipped = filter_known_anchors(tdoa_samples, anchor_positions)

@@ -26,13 +26,17 @@ class EstimatorKalmanEmulator:
 
     """
     def __init__(self, anchor_positions, tdoa_model='standard',
-                 outlier_filter=None, std_model=None) -> None:
+                 outlier_filter=None, std_model=None,
+                 kalman_params=None) -> None:
         if tdoa_model not in TDOA_MODELS:
             raise ValueError(
                 f"unknown tdoa_model '{tdoa_model}', expected one of {TDOA_MODELS}")
         self.tdoa_model = tdoa_model
         self.outlier_filter = outlier_filter
         self.std_model = std_model
+        # Overrides applied on top of kalmanCoreDefaultParams at init, e.g.
+        # {'procNoiseVel': 0.3} to A/B process-noise tuning in replay.
+        self.kalman_params = kalman_params or {}
         self.anchor_positions = anchor_positions
         self.accSubSampler = cffirmware.Axis3fSubSampler_t()
         self.gyroSubSampler = cffirmware.Axis3fSubSampler_t()
@@ -103,6 +107,10 @@ class EstimatorKalmanEmulator:
 
         self.coreParams = cffirmware.kalmanCoreParams_t()
         cffirmware.kalmanCoreDefaultParams(self.coreParams)
+        for key, value in self.kalman_params.items():
+            if not hasattr(self.coreParams, key):
+                raise ValueError(f"kalmanCoreParams_t has no field '{key}'")
+            setattr(self.coreParams, key, value)
         # Note: If the emulator is used with data from a deck that uses roll/pitch/yaw zero reversion, this should be
         # set to a non-zero value to behave like the CF. See estimatorKalmanInit() in estimator_kalman.c
         # self.coreParams.AttitudeReversion = 0.001

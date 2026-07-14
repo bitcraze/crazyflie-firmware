@@ -98,6 +98,33 @@ in every split.
   anchor-0/4 burst. Kept in the roster; may matter more on logs with harder
   anchor failures.
 
+## Is the low std really underestimated process noise?
+
+Follow-up experiment (grid over `kalman_params` overrides, same
+train/validate protocol): what the low std mostly buys is **gain**, i.e. it
+compensates a process noise that understates how bad the prediction is while
+the drone is hand-carried. Evidence:
+
+- Raising the accelerometer process noise ~10× (`procNoiseAcc_xy` 0.5→5,
+  `procNoiseAcc_z` 1→10) at the honest std 0.15 recovers most of the low-std
+  gain: validation fly-away 40.1 % → 22.3 % (vs 18.7 % for std 0.04), p95
+  0.895 → 0.622 m (vs 0.590), rms 0.446 → 0.319 (vs 0.310). Stable across
+  alternate splits.
+- Q and R are substitutes, not complements: raising Q *on top of* std 0.04
+  makes everything worse (the filter starts chasing measurement noise).
+- Scaling each measurement's std by sqrt(n_cand) (packet-correlation
+  compensation, `std_model: ncand`) at base std 0.02 (effective ≈ 0.046)
+  performs the same as plain std 0.04 — consistent with "total per-packet
+  weight is what matters", not the per-measurement value.
+
+Interpretation: std 0.04 is not a better noise estimate (true per-candidate
+noise is ~0.15 m) — it is a cheap way of restoring tracking bandwidth. The
+boosted-Q variant at std 0.15 is only marginally worse in raw error and keeps
+R honest, which should make the covariance (and everything that reads it:
+innovation gates, supervisor) far less overconfident. For *flight* (better
+prediction than hand-carry) the right Q is probably lower; both knobs need
+retuning on flight logs.
+
 ## Firmware implications (if confirmed on more data)
 
 Replace "select one pair per packet + global innovation integrator" with

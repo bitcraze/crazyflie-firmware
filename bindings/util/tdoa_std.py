@@ -74,7 +74,24 @@ class SpreadStdModel(StdModel):
         return math.sqrt(base * base + (self.GAIN * spread) ** 2)
 
 
+class NCandStdModel(StdModel):
+    """Correlation compensation: scale std by sqrt(n_cand) of the packet.
+
+    The candidates of one packet share the transmitting anchor, clock
+    correction and multipath environment, so feeding n of them as independent
+    updates over-counts information ~n-fold and collapses the covariance
+    faster than the actual information justifies. Scaling each std by
+    sqrt(n_cand) makes one packet carry one base-std measurement's worth of
+    information in total, whatever the candidate count.
+    """
+    name = 'ncand'
+
+    def stddev(self, tdoa, sample, error, now_ms):
+        return tdoa.stdDev * math.sqrt(max(1, int(sample.get('n_cand', 1))))
+
+
 STD_MODEL_FACTORIES = {
+    'ncand': NCandStdModel,
     'huber': HuberStdModel,
     'spread': SpreadStdModel,
 }
