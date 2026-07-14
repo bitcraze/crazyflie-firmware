@@ -76,18 +76,41 @@ def load_series(args):
 
     anchor_positions = read_loco_anchor_positions(args.anchors)
     imu_samples = extract_imu_samples(log_data)
-    policy = make_policy(args.selection_policy)
+    policy_params = parse_params(args.policy_param)
+    filter_params = parse_params(args.filter_param)
+    policy = make_policy(args.selection_policy, policy_params)
     tdoa_samples = apply_policy(policy, groups)
     print(f'Replaying {len(tdoa_samples)} TDoA + {len(imu_samples)} IMU samples '
           f'through the firmware Kalman core '
-          f'(selection policy: {args.selection_policy}, '
-          f'measurement model: {args.tdoa_model}, '
-          f'outlier filter: {args.outlier_filter}) ...')
+          f'(selection policy: {args.selection_policy}'
+          + (f' {policy_params}' if policy_params else '')
+          + f', measurement model: {args.tdoa_model}, '
+          f'outlier filter: {args.outlier_filter}'
+          + (f' {filter_params}' if filter_params else '') + ') ...')
     replayed = replay(anchor_positions, imu_samples, tdoa_samples,
                       {'tdoa_std': args.tdoa_std,
                        'tdoa_model': args.tdoa_model,
-                       'outlier_filter': args.outlier_filter})
+                       'outlier_filter': args.outlier_filter,
+                       'outlier_filter_params': filter_params})
     return replayed, live, gt
+
+
+def parse_params(pairs):
+    """Parse repeated KEY=VALUE args into a dict, as int where possible.
+
+    Tuning constants are numeric; sizes like WINDOW must stay int (they end
+    up as a deque maxlen).
+    """
+    params = {}
+    for pair in pairs or []:
+        key, sep, value = pair.partition('=')
+        if not sep:
+            sys.exit(f"--*-param expects KEY=VALUE, got '{pair}'")
+        try:
+            params[key] = int(value)
+        except ValueError:
+            params[key] = float(value)
+    return params
 
 
 def print_stats(replayed, live, gt):
@@ -204,6 +227,13 @@ def main():
                         help='TDoA outlier filter for the replay (see '
                              'bindings/util/tdoa_outlier.py; default: '
                              'integrator, the firmware filter)')
+    parser.add_argument('--policy-param', action='append', metavar='KEY=VALUE',
+                        help='Selection-policy constructor kwarg, repeatable '
+                             '(e.g. --policy-param k=3 for top_k)')
+    parser.add_argument('--filter-param', action='append', metavar='KEY=VALUE',
+                        help='Outlier-filter tuning-constant override, '
+                             'repeatable (e.g. --filter-param WINDOW=16 '
+                             '--filter-param WARMUP=6 for pair_hampel)')
     parser.add_argument('--tdoa-std', type=float, default=0.15,
                         help='TDoA measurement std dev [m] used in the Kalman '
                              'update (default: 0.15)')

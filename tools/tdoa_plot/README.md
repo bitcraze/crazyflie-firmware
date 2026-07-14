@@ -25,3 +25,12 @@ replay (default `baseline`), `--tdoa-model` the Kalman measurement model
 (`standard` or `robust`, the M-estimation model the firmware uses with
 `kalman.robustTdoa=1`), `--tdoa-std` the measurement noise, and
 `--save out.png` writes the figure to a file instead of opening a window.
+`--policy-param KEY=VALUE` / `--filter-param KEY=VALUE` (repeatable) pass
+tuning constants to parametrized policies/filters, e.g. the best-known config
+from `tools/usdlog/README_tdoa_experiments.md`:
+
+```
+uv run plot_tdoa.py path/to/log.bin --anchors path/to/anchors.yaml \
+    --selection-policy all --outlier-filter pair_hampel \
+    --filter-param WINDOW=16 --filter-param WARMUP=6 --tdoa-std 0.04
+```
