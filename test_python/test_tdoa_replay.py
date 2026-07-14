@@ -4,6 +4,8 @@ The end-to-end replay (which does need the bindings) is covered by
 test_tdoa_replay_smoke.py.
 """
 
+import pytest
+
 from bindings.util.tdoa_replay import (
     apply_policy,
     extract_imu_samples,
@@ -26,9 +28,17 @@ def test_apply_policy_stamps_measurements_with_the_group_time():
     groups = build_candidate_groups(log)
     samples = apply_policy(make_policy('baseline'), groups)
     # ids in the estimator convention: idA = remote, idB = packet anchor
-    assert samples == [('estTDOA', {
-        'idA': 2, 'idB': 1, 'distanceDiff': 0.5, 'timestamp': 101.0,
-    })]
+    assert len(samples) == 1
+    log_type, sample = samples[0]
+    assert log_type == 'estTDOA'
+    assert sample['idA'] == 2
+    assert sample['idB'] == 1
+    assert sample['distanceDiff'] == 0.5
+    assert sample['timestamp'] == 101.0
+    # Per-packet candidate statistics for std models / filters: group median
+    # is diffs[n // 2] = 0.6, so the MAD over {0.5, 0.6} is 0.1
+    assert sample['n_cand'] == 2
+    assert sample['group_spread'] == pytest.approx(0.1)
 
 
 def test_merge_samples_orders_by_timestamp_and_is_stable():

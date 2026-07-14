@@ -26,12 +26,13 @@ class EstimatorKalmanEmulator:
 
     """
     def __init__(self, anchor_positions, tdoa_model='standard',
-                 outlier_filter=None) -> None:
+                 outlier_filter=None, std_model=None) -> None:
         if tdoa_model not in TDOA_MODELS:
             raise ValueError(
                 f"unknown tdoa_model '{tdoa_model}', expected one of {TDOA_MODELS}")
         self.tdoa_model = tdoa_model
         self.outlier_filter = outlier_filter
+        self.std_model = std_model
         self.anchor_positions = anchor_positions
         self.accSubSampler = cffirmware.Axis3fSubSampler_t()
         self.gyroSubSampler = cffirmware.Axis3fSubSampler_t()
@@ -109,6 +110,8 @@ class EstimatorKalmanEmulator:
         cffirmware.outlierFilterTdoaReset(self.outlierFilterState)
         if self.outlier_filter is not None:
             self.outlier_filter.reset()
+        if self.std_model is not None:
+            self.std_model.reset()
         cffirmware.kalmanCoreInit(self.coreData, self.coreParams, self.now_ms)
 
         self._is_initialized = True
@@ -139,6 +142,14 @@ class EstimatorKalmanEmulator:
             tdoa.anchorPositionB = self.anchor_positions[tdoa.anchorIdB]
             tdoa.distanceDiff = float(tdoa_data['distanceDiff'])
             tdoa.stdDev = self.TDOA_ENGINE_MEASUREMENT_NOISE_STD
+
+            if self.std_model is not None:
+                # Innovation does not depend on stdDev, so it can inform the
+                # std model. NaN innovation (degenerate geometry) is skipped
+                # below on the filtered path; the std model just passes the
+                # base std through in that case.
+                error = cffirmware.kalmanCoreTdoaInnovation(self.coreData, tdoa)
+                tdoa.stdDev = self.std_model.stddev(tdoa, tdoa_data, error, now_ms)
 
             if self.outlier_filter is None:
                 # Built-in behavior: standard is gated by the C integrator

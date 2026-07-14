@@ -65,12 +65,24 @@ def apply_policy(policy, groups):
     policy.reset()
     samples = []
     for group in groups:
-        for m in policy.select(group):
+        selected = policy.select(group)
+        if not selected:
+            continue
+        # Per-packet candidate statistics, available to std models / filters.
+        # Causal and firmware-implementable: the firmware holds the same
+        # candidate set when it processes the packet.
+        diffs = sorted(c['distanceDiff'] for c in group['candidates'])
+        n = len(diffs)
+        median = diffs[n // 2]
+        spread = sorted(abs(d - median) for d in diffs)[n // 2]  # MAD
+        for m in selected:
             samples.append(('estTDOA', {
                 'idA': m['idA'],
                 'idB': m['idB'],
                 'distanceDiff': m['distanceDiff'],
                 'timestamp': group['t_ms'],
+                'n_cand': n,
+                'group_spread': spread,
             }))
     return samples
 
@@ -121,6 +133,12 @@ def replay(anchor_positions, imu_samples, tdoa_samples, params=None):
                 bindings/util/tdoa_outlier.py). Absent -> the firmware's
                 built-in behavior (standard model: C integrator filter;
                 robust model: ungated).
+            'outlier_filter_params' (dict, optional): tuning-constant
+                overrides for the outlier filter (e.g. {'K': 4.0}).
+            'std_model' (str, optional): per-update measurement-noise model
+                (see bindings/util/tdoa_std.py). Absent -> constant tdoa_std.
+            'std_model_params' (dict, optional): tuning-constant overrides
+                for the std model.
 
     Returns:
         [(t_ms, (x, y, z))] trajectory, one entry per 1 kHz iteration.
@@ -132,11 +150,19 @@ def replay(anchor_positions, imu_samples, tdoa_samples, params=None):
     filter_name = params.get('outlier_filter')
     if filter_name is not None:
         from bindings.util.tdoa_outlier import make_outlier_filter
-        outlier_filter = make_outlier_filter(filter_name)
+        outlier_filter = make_outlier_filter(
+            filter_name, params.get('outlier_filter_params'))
+
+    std_model = None
+    std_model_name = params.get('std_model')
+    if std_model_name is not None:
+        from bindings.util.tdoa_std import make_std_model
+        std_model = make_std_model(std_model_name,
+                                   params.get('std_model_params'))
 
     emulator = EstimatorKalmanEmulator(
         anchor_positions, tdoa_model=params.get('tdoa_model', 'standard'),
-        outlier_filter=outlier_filter)
+        outlier_filter=outlier_filter, std_model=std_model)
     emulator.TDOA_ENGINE_MEASUREMENT_NOISE_STD = params.get('tdoa_std', DEFAULT_TDOA_STD)
 
     tdoa_samples, n_skipped = filter_known_anchors(tdoa_samples, anchor_positions)
