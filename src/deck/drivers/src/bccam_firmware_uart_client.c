@@ -13,7 +13,9 @@
 #define BCCAM_UART_BAUDRATE       1000000
 #define BCCAM_FW_RESET_HOLD_MS    50
 #define BCCAM_FW_BOOT_SETUP_MS    50
-#define BCCAM_FW_BOOT_WAIT_MS     500
+// The Camera UART starts late in the QCC application boot sequence. Since
+// ESTABLISH is intentionally not retried, wait until that UART is ready.
+#define BCCAM_FW_BOOT_WAIT_MS     2000
 #define BCCAM_FW_RX_DRAIN_MS      100
 #define BCCAM_FW_RX_BYTES_PER_POLL 128
 #define BCCAM_UART_TX_COMPLETE_TIMEOUT_MS 100
@@ -191,7 +193,11 @@ static bool firmware_deck_begin_boot(bccam_deck_controller_t *deck_controller,
 static bool firmware_deck_release_boot(bccam_deck_controller_t *deck_controller,
                                        uint32_t wait_ticks) {
 #if defined(UNIT_TEST) || defined(UNIT_TEST_MODE)
-  test_trace_append_entry(BCCAM_FIRMWARE_UART_CLIENT_TEST_DECK_RELEASE_BOOT);
+  bccam_firmware_uart_client_test_trace_entry_t *entry =
+    test_trace_append_entry(BCCAM_FIRMWARE_UART_CLIENT_TEST_DECK_RELEASE_BOOT);
+  if (entry != NULL) {
+    entry->value = wait_ticks;
+  }
 #endif
   return bccam_deck_controller_release_boot(deck_controller, wait_ticks);
 }

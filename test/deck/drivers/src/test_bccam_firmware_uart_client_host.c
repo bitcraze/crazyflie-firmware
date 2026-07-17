@@ -10,6 +10,7 @@
 // @MODULE "bccam_uart_runtime.c"
 
 #define TEST_FIRMWARE_BAUDRATE 1000000
+#define TEST_FIRMWARE_BOOT_WAIT_TICKS 2000
 
 static bccam_deck_controller_t deck_controller;
 static bccam_firmware_uart_client_t client;
@@ -48,6 +49,7 @@ void testEnterFirmwarePreservesOneMbaudOrderingAndStartsEstablishment(void) {
   index = find_after(BCCAM_FIRMWARE_UART_CLIENT_TEST_UART_SET_BAUDRATE, index);
   TEST_ASSERT_EQUAL_UINT32(TEST_FIRMWARE_BAUDRATE, trace(index)->value);
   index = find_after(BCCAM_FIRMWARE_UART_CLIENT_TEST_DECK_RELEASE_BOOT, index);
+  TEST_ASSERT_EQUAL_UINT32(TEST_FIRMWARE_BOOT_WAIT_TICKS, trace(index)->value);
   index = find_after(BCCAM_FIRMWARE_UART_CLIENT_TEST_RUNTIME_START_ESTABLISHMENT,
                      index);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_LINK_INACTIVE,
