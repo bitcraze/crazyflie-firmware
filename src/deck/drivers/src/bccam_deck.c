@@ -42,7 +42,7 @@
 #define DEBUG_MODULE "BCCAM"
 #include "debug.h"
 
-#define BCCAM_UART_BAUDRATE       2000000
+#define BCCAM_UART_BAUDRATE       1000000
 #define BCCAM_ISP_BAUDRATE        500000
 
 #define BCCAM_FW_RESET_HOLD_MS    50
@@ -50,12 +50,11 @@
 #define BCCAM_FW_BOOT_WAIT_MS     500
 #define BCCAM_FW_RX_DRAIN_MS      100
 
-// Deck controller GPIO pin mapping (STM32 deck-ctrl MCU)
-#define GPIO_UART1_EN   DECKCTRL_GPIO_PIN_0   // PA0 - UART1 enable
-#define GPIO_UART2_EN   DECKCTRL_GPIO_PIN_1   // PA1 - UART2 enable
-#define GPIO_QCC_EN     DECKCTRL_GPIO_PIN_2   // PA2 - QCC748 chip enable
-#define GPIO_QCC_BOOT   DECKCTRL_GPIO_PIN_7   // PA7 - QCC748 boot select
-#define GPIO_PWR_EN     DECKCTRL_GPIO_PIN_12  // PC15 - Power enable
+// Deck controller logical GPIO mapping (STM32 deck-ctrl MCU)
+#define GPIO_QCC_EN   DECKCTRL_GPIO_PIN_0  // PA2 - QCC748 enable/reset
+#define GPIO_QCC_BOOT DECKCTRL_GPIO_PIN_5  // PA7 - QCC748 SYS_BOOT
+#define GPIO_PWR_EN   DECKCTRL_GPIO_PIN_10 // PC15 - power enable
+#define GPIO_UART_SEL DECKCTRL_GPIO_PIN_11 // PA0 - select expansion UART1
 
 // QCC748 UART ISP protocol constants
 #define ISP_HANDSHAKE_BYTE      0x55
@@ -529,6 +528,14 @@ static void bcCamDeckInit(DeckInfo *info) {
     return;
   }
 
+  if (info == NULL || info->boardRevision == NULL ||
+      strcmp(info->boardRevision, "G") != 0) {
+    DEBUG_PRINT("Incompatible bcCam deck revision: expected G, got %s\n",
+                (info != NULL && info->boardRevision != NULL) ?
+                  info->boardRevision : "<missing>");
+    return;
+  }
+
   deckInfoG = info;
 
   // Power on the deck
@@ -553,9 +560,9 @@ static void bcCamDeckInit(DeckInfo *info) {
 
   vTaskDelay(M2T(100));
 
-  // Enable UART1 pass-through on deck controller
-  if (!gpioSetup(info, GPIO_UART1_EN, OUTPUT, HIGH)) {
-    DEBUG_PRINT("Failed to enable UART1\n");
+  // Select expansion UART1 for application and ROM communication.
+  if (!gpioSetup(info, GPIO_UART_SEL, OUTPUT, HIGH)) {
+    DEBUG_PRINT("Failed to select UART1\n");
     return;
   }
 
@@ -568,6 +575,26 @@ static void bcCamDeckInit(DeckInfo *info) {
   isInit = true;
   DEBUG_PRINT("bcCam deck initialized\n");
 }
+
+#if defined(UNIT_TEST) || defined(UNIT_TEST_MODE)
+void bccam_deck_test_reset(void) {
+  isInit = false;
+  isInBootloader = false;
+  isInFirmware = true;
+  newFwSize = 0;
+  flashErased = false;
+  deckInfoG = NULL;
+  writeBufUsed = 0;
+  writeBufBase = 0;
+  bytesWritten = 0;
+  bootloaderRequested = false;
+  fwResetRequested = false;
+}
+
+void bccam_deck_test_set_bootloader(bool active) {
+  isInBootloader = active;
+}
+#endif
 
 static bool bcCamDeckTest(void) {
   if (!isInit) {
