@@ -134,7 +134,7 @@ void appMain(){
             if (min_hop < 254) my_hop_count = min_hop + 1;
         }
 
-        // Se è passato più di 1.5s dall'ultimo ACK della Base Station entro in mission_mode.
+        // Se è passato più di 2s dall'ultimo ACK della Base Station entro in mission_mode.
         if (my_id != 0){
             if ((current_time - last_ack_timestamp) > M2T(2000)) {
                 mission_mode = true; 
