@@ -4,13 +4,14 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+// Numero massimo di droni vicini tracciati simultaneamente nella Neighbor Table.
 #define MAX_NEIGHBORS 10 
 
 typedef struct {
-    uint8_t id;             
-    int8_t rssi;            
-    uint32_t last_updated;  
-    uint8_t hop_count;
+    uint8_t id;             // Identificativo univoco del drone vicino.        
+    int8_t rssi;            // Potenza del segnale ricevuto in dBm, valore negativo.
+    uint32_t last_updated;  // Timestamp FreeRTOS dell'ultimo pacchetto ricevuto (tick).
+    uint8_t hop_count;      // Distanza in salti dalla base station dichiarata dal vicino.
 } Neighbor_t;
 
 void state_init(void);
