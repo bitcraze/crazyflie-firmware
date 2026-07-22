@@ -140,6 +140,10 @@ static bool firmware_uart_recv(uint8_t *byte, uint32_t timeout_ticks) {
 static void firmware_uart_init(void) {
 }
 #else
+static bool tick_has_reached(TickType_t now, TickType_t deadline) {
+  return (int32_t)(now - deadline) >= 0;
+}
+
 static void firmware_uart_set_baudrate(uint32_t baudrate) {
   uart1SetBaudrate(baudrate);
 }
@@ -165,7 +169,7 @@ static void firmware_drain_rx(uint32_t timeout_ms) {
 #else
   uint8_t dummy;
   const TickType_t end = xTaskGetTickCount() + M2T(timeout_ms);
-  while (xTaskGetTickCount() < end) {
+  while (!tick_has_reached(xTaskGetTickCount(), end)) {
     if (!firmware_uart_recv(&dummy, M2T(5))) {
       break;
     }

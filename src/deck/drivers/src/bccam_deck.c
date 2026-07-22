@@ -264,7 +264,11 @@ static uint8_t bcCamPropertiesQuery(void) {
 
   const bccam_uart_service_state_t state =
     (bccam_uart_service_state_t)driverStateLog;
-  uint8_t result = DECK_MEMORY_MASK_STARTED | DECK_MEMORY_MASK_SUPPORTS_HOT_RESTART;
+  uint8_t result = DECK_MEMORY_MASK_SUPPORTS_HOT_RESTART;
+
+  if (isInit) {
+    result |= DECK_MEMORY_MASK_STARTED;
+  }
 
   if (bccam_uart_service_state_has_active_bootloader(state)) {
     result |= DECK_MEMORY_MASK_BOOT_LOADER_ACTIVE;

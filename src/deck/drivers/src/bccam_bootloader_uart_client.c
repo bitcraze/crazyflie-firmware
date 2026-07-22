@@ -29,6 +29,10 @@
 #define ISP_ACK_SCAN_MAX          2048
 #define BCCAM_WRITE_BUF_SIZE      1024
 
+static bool tick_has_reached(TickType_t now, TickType_t deadline) {
+  return (int32_t)(now - deadline) >= 0;
+}
+
 #if defined(UNIT_TEST) || defined(UNIT_TEST_MODE)
 #define TEST_TRACE_MAX 64
 #define TEST_RX_MAX 4096
@@ -214,7 +218,7 @@ static void isp_drain_rx(uint32_t timeout_ms) {
 #else
   uint8_t dummy;
   const TickType_t end = xTaskGetTickCount() + M2T(timeout_ms);
-  while (xTaskGetTickCount() < end) {
+  while (!tick_has_reached(xTaskGetTickCount(), end)) {
     if (!uart1GetDataWithTimeout(&dummy, M2T(5))) {
       break;
     }
@@ -376,7 +380,7 @@ bool bccam_bootloader_uart_client_enter(
   bool got_ok = false;
   const TickType_t deadline = bootloader_now_ticks() + M2T(5000);
 
-  while (bootloader_now_ticks() < deadline) {
+  while (!tick_has_reached(bootloader_now_ticks(), deadline)) {
     bootloader_uart_send(sizeof(handshake), handshake);
 
     uint8_t c;

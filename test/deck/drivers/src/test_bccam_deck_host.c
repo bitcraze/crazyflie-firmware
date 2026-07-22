@@ -95,6 +95,10 @@ void testNonGBoardRevisionIsRejectedWithoutHardwareOrProtocolSideEffects(void) {
   deck_info.boardRevision = "F";
   driver_bccam_deck->init(&deck_info);
   assert_no_init_side_effects();
+  TEST_ASSERT_BITS_LOW(DECK_MEMORY_MASK_STARTED,
+                       driver_bccam_deck->memoryDef->properties());
+  TEST_ASSERT_BITS_HIGH(DECK_MEMORY_MASK_SUPPORTS_HOT_RESTART,
+                        driver_bccam_deck->memoryDef->properties());
 }
 
 void testRevisionGInitializesRevGPowerAndUartSelectMappings(void) {
@@ -110,6 +114,8 @@ void testRevisionGInitializesRevGPowerAndUartSelectMappings(void) {
   TEST_ASSERT_EQUAL_UINT8(1, delay_count);
   TEST_ASSERT_EQUAL_UINT8(1, service_init_count);
   TEST_ASSERT_TRUE(driver_bccam_deck->test());
+  TEST_ASSERT_BITS_HIGH(DECK_MEMORY_MASK_STARTED,
+                        driver_bccam_deck->memoryDef->properties());
 }
 
 void testDeckPropertiesOnlyReportBootloaderActiveForReadyAndBusy(void) {

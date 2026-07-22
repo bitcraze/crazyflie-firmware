@@ -67,3 +67,21 @@ void testPin11ValueUsesUpperBankAndPreservesOtherBits(void) {
   TEST_ASSERT_EQUAL_UINT16(1, actual_write_length);
   TEST_ASSERT_EQUAL_HEX8(0xA7, actual_write_value);
 }
+
+void testPin3ReadUsesLowerBank(void) {
+  expected_register = DECKCTRL_GPIO_VALUE_REG;
+  read_value = 0x08;
+  uint32_t value = LOW;
+
+  TEST_ASSERT_TRUE(deckctrl_gpio_read(&deck_info, DECKCTRL_GPIO_PIN_3, &value));
+  TEST_ASSERT_EQUAL_UINT32(HIGH, value);
+}
+
+void testPin11ReadUsesUpperBank(void) {
+  expected_register = DECKCTRL_GPIO_VALUE_REG + 1;
+  read_value = 0x80;
+  uint32_t value = HIGH;
+
+  TEST_ASSERT_TRUE(deckctrl_gpio_read(&deck_info, DECKCTRL_GPIO_PIN_11, &value));
+  TEST_ASSERT_EQUAL_UINT32(LOW, value);
+}
