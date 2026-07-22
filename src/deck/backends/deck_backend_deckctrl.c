@@ -107,6 +107,7 @@ static const DeckDiscoveryBackend_t deckctrlBackend;
  */
 static DeckInfo deck_info[CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS];           ///< Deck information structures
 static char product_names[CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS][16];       ///< Product name strings
+static char board_revisions[CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS][2];      ///< Board revision strings
 static DeckCtrlContext deck_contexts[CONFIG_DECK_BACKEND_DECKCTRL_MAX_DECKS]; ///< Backend-specific contexts
 static int deck_count = 0;  ///< Number of decks discovered so far
 
@@ -255,6 +256,10 @@ static DeckInfo* deckctrl_getNextDeck(void)
     // Extract VID/PID which will be used to match with deck drivers
     info->vid = deck_mem_data[DECKCTRL_MEM_VENDOR_ID_OFFSET];
     info->pid = deck_mem_data[DECKCTRL_MEM_PRODUCT_ID_OFFSET];
+
+    board_revisions[current_deck][0] = deck_mem_data[DECKCTRL_MEM_BOARD_REV_OFFSET];
+    board_revisions[current_deck][1] = '\0';
+    info->boardRevision = board_revisions[current_deck];
 
     info->production_year = deck_mem_data[DECKCTRL_MEM_PRODUCTION_YEAR_OFFSET];
     info->production_month = deck_mem_data[DECKCTRL_MEM_PRODUCTION_MONTH_OFFSET];
