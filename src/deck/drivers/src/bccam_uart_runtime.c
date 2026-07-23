@@ -146,6 +146,20 @@ static void refresh_control_binding(bccam_uart_runtime_t *runtime) {
   runtime->control_service_id = descriptor.handle;
 }
 
+/** Resolve the compatible Console handle bound in the current Link session. */
+static bool console_service_id(const bccam_uart_runtime_t *runtime,
+                               uint8_t *service_id) {
+  bccam_uart_service_descriptor_t descriptor;
+  if (runtime == NULL ||
+      !bccam_uart_link_console_binding(&runtime->link, &descriptor)) {
+    return false;
+  }
+  if (service_id != NULL) {
+    *service_id = descriptor.handle;
+  }
+  return true;
+}
+
 void bccam_uart_runtime_init(bccam_uart_runtime_t *runtime) {
   if (runtime == NULL) {
     return;
@@ -426,13 +440,12 @@ int bccam_uart_runtime_step_control_probe(bccam_uart_runtime_t *runtime) {
     set_last_error(runtime, result);
     return result;
   }
-  uint8_t service = 0u;
   uint8_t payload[BCCAM_UART_NORMAL_MAX_PAYLOAD];
   uint16_t payload_len = 0u;
   bool unit_present = false;
-  const int result = bccam_uart_link_take_rx(&runtime->link, &service, payload,
-                                              sizeof(payload), &payload_len,
-                                              &unit_present);
+  const int result = bccam_uart_link_take_rx_for_service(
+    &runtime->link, runtime->control_service_id, payload, sizeof(payload),
+    &payload_len, &unit_present);
   if (result != BCCAM_UART_OK) {
     set_last_error(runtime, result);
     return result;
@@ -440,12 +453,13 @@ int bccam_uart_runtime_step_control_probe(bccam_uart_runtime_t *runtime) {
   if (!unit_present) {
     return BCCAM_UART_OK;
   }
-  if (service == runtime->control_service_id && runtime->control_request_sent &&
+  if (runtime->control_request_sent &&
       handle_schema_response(runtime, payload, payload_len)) {
     runtime->control_probe_done = true;
-  } else {
-    runtime->control_rx_malformed++;
+    runtime->control_rx_release_pending = false;
+    return BCCAM_UART_OK;
   }
+  runtime->control_rx_malformed++;
   runtime->control_rx_release_pending = true;
   return release_control_rx(runtime);
 }
@@ -456,6 +470,66 @@ bool bccam_uart_runtime_control_probe_done(const bccam_uart_runtime_t *runtime) 
 
 bool bccam_uart_runtime_control_service_bound(const bccam_uart_runtime_t *runtime) {
   return runtime != NULL && runtime->control_service_bound;
+}
+
+bool bccam_uart_runtime_console_service_bound(const bccam_uart_runtime_t *runtime) {
+  return console_service_id(runtime, NULL);
+}
+
+int bccam_uart_runtime_open_console_rx(bccam_uart_runtime_t *runtime) {
+  uint8_t service = 0u;
+  if (runtime == NULL) {
+    return BCCAM_UART_ERR_BAD_ARGUMENT;
+  }
+  if (!console_service_id(runtime, &service)) {
+    return BCCAM_UART_ERR_UNKNOWN_SERVICE;
+  }
+  if (bccam_uart_link_get_rx_advertised_credit(&runtime->link, service) > 0u) {
+    return BCCAM_UART_OK;
+  }
+  const int result = bccam_uart_link_send_credit_update(&runtime->link,
+                                                         service, 1u);
+  if (!temporary_result(result)) {
+    set_last_error(runtime, result);
+  }
+  return result;
+}
+
+int bccam_uart_runtime_take_console_rx(bccam_uart_runtime_t *runtime,
+                                       uint8_t *payload,
+                                       size_t payload_capacity,
+                                       uint16_t *payload_len,
+                                       bool *unit_present) {
+  uint8_t console_service = 0u;
+  if (payload_len == NULL || unit_present == NULL) {
+    return BCCAM_UART_ERR_BAD_ARGUMENT;
+  }
+  *payload_len = 0u;
+  *unit_present = false;
+  if (runtime == NULL || payload == NULL) {
+    return BCCAM_UART_ERR_BAD_ARGUMENT;
+  }
+  if (!console_service_id(runtime, &console_service)) {
+    return BCCAM_UART_ERR_UNKNOWN_SERVICE;
+  }
+  return bccam_uart_link_take_rx_for_service(
+    &runtime->link, console_service, payload, payload_capacity, payload_len,
+    unit_present);
+}
+
+int bccam_uart_runtime_release_console_rx(bccam_uart_runtime_t *runtime) {
+  uint8_t service = 0u;
+  if (runtime == NULL) {
+    return BCCAM_UART_ERR_BAD_ARGUMENT;
+  }
+  if (!console_service_id(runtime, &service)) {
+    return BCCAM_UART_ERR_UNKNOWN_SERVICE;
+  }
+  const int result = bccam_uart_link_release_rx_slot(&runtime->link, service);
+  if (!temporary_result(result)) {
+    set_last_error(runtime, result);
+  }
+  return result;
 }
 
 uint8_t bccam_uart_runtime_control_service_id(const bccam_uart_runtime_t *runtime) {
