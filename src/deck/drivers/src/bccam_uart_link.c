@@ -40,9 +40,7 @@ static void clear_session(bccam_uart_link_endpoint_t *endpoint) {
   memset(endpoint->observed_credit_handles, 0,
          sizeof(endpoint->observed_credit_handles));
   memset(&endpoint->control_binding, 0, sizeof(endpoint->control_binding));
-  endpoint->rx_pending = false;
-  endpoint->rx_service = 0u;
-  endpoint->rx_payload_len = 0u;
+  memset(&endpoint->console_binding, 0, sizeof(endpoint->console_binding));
   endpoint->tx_pending = false;
   endpoint->tx_version = 0u;
   endpoint->tx_service = 0u;
@@ -144,6 +142,12 @@ static bool is_control_contract(const uint8_t *id, uint8_t len) {
   return len == sizeof(control) - 1u && memcmp(id, control, len) == 0;
 }
 
+/** Return true when an encoded contract ID names bitcraze.console. */
+static bool is_console_contract(const uint8_t *id, uint8_t len) {
+  static const uint8_t console[] = "bitcraze.console";
+  return len == sizeof(console) - 1u && memcmp(id, console, len) == 0;
+}
+
 static bool observed_credit_handles_are_known(
   const bccam_uart_link_endpoint_t *endpoint) {
   for (size_t i = 0u; i < sizeof(endpoint->observed_credit_handles); i++) {
@@ -155,10 +159,38 @@ static bool observed_credit_handles_are_known(
   return true;
 }
 
-static int control_index(const bccam_uart_link_endpoint_t *endpoint,
-                         uint8_t handle) {
-  return endpoint != NULL && endpoint->control_binding.valid &&
-         endpoint->control_binding.descriptor.handle == handle ? 0 : -1;
+/** Find the mutable supported-service binding for an opaque handle. */
+static bccam_uart_service_binding_t *binding_for_service(
+  bccam_uart_link_endpoint_t *endpoint, uint8_t handle) {
+  if (endpoint == NULL) {
+    return NULL;
+  }
+  if (endpoint->control_binding.valid &&
+      endpoint->control_binding.descriptor.handle == handle) {
+    return &endpoint->control_binding;
+  }
+  if (endpoint->console_binding.valid &&
+      endpoint->console_binding.descriptor.handle == handle) {
+    return &endpoint->console_binding;
+  }
+  return NULL;
+}
+
+/** Find the read-only supported-service binding for an opaque handle. */
+static const bccam_uart_service_binding_t *binding_for_service_const(
+  const bccam_uart_link_endpoint_t *endpoint, uint8_t handle) {
+  if (endpoint == NULL) {
+    return NULL;
+  }
+  if (endpoint->control_binding.valid &&
+      endpoint->control_binding.descriptor.handle == handle) {
+    return &endpoint->control_binding;
+  }
+  if (endpoint->console_binding.valid &&
+      endpoint->console_binding.descriptor.handle == handle) {
+    return &endpoint->console_binding;
+  }
+  return NULL;
 }
 
 void bccam_uart_link_init(bccam_uart_link_endpoint_t *endpoint) {
@@ -311,19 +343,20 @@ int bccam_uart_link_send_normal(bccam_uart_link_endpoint_t *endpoint,
   if (endpoint->state != BCCAM_UART_LINK_ACTIVE) {
     return BCCAM_UART_ERR_NOT_ACTIVE;
   }
-  if (control_index(endpoint, service) < 0) {
+  bccam_uart_service_binding_t *binding = binding_for_service(endpoint, service);
+  if (binding == NULL) {
     return BCCAM_UART_ERR_UNKNOWN_SERVICE;
   }
   if (payload_len > endpoint->negotiated_payload) {
     return BCCAM_UART_ERR_PAYLOAD_TOO_LONG;
   }
-  if (endpoint->control_binding.tx_credit == 0u) {
+  if (binding->tx_credit == 0u) {
     return BCCAM_UART_ERR_NO_CREDIT;
   }
   const int result = queue_unit(endpoint, endpoint->active_link_version,
                                 service, payload, payload_len);
   if (result == BCCAM_UART_OK) {
-    endpoint->control_binding.tx_credit--;
+    binding->tx_credit--;
   }
   return result;
 }
@@ -340,10 +373,11 @@ int bccam_uart_link_send_credit_update(bccam_uart_link_endpoint_t *endpoint,
   if (endpoint->state != BCCAM_UART_LINK_ACTIVE) {
     return BCCAM_UART_ERR_NOT_ACTIVE;
   }
-  if (control_index(endpoint, service) < 0) {
+  bccam_uart_service_binding_t *binding = binding_for_service(endpoint, service);
+  if (binding == NULL) {
     return BCCAM_UART_ERR_UNKNOWN_SERVICE;
   }
-  if (available_credit < endpoint->control_binding.rx_advertised_credit) {
+  if (available_credit < binding->rx_advertised_credit) {
     return BCCAM_UART_ERR_BAD_ARGUMENT;
   }
   const uint8_t payload[] = {
@@ -353,7 +387,7 @@ int bccam_uart_link_send_credit_update(bccam_uart_link_endpoint_t *endpoint,
                                 BCCAM_UART_SERVICE_LINK_MANAGEMENT,
                                 payload, sizeof(payload));
   if (result == BCCAM_UART_OK) {
-    endpoint->control_binding.rx_advertised_credit = available_credit;
+    binding->rx_advertised_credit = available_credit;
     endpoint->counters.credit_updates_tx++;
   }
   return result;
@@ -361,15 +395,16 @@ int bccam_uart_link_send_credit_update(bccam_uart_link_endpoint_t *endpoint,
 
 int bccam_uart_link_release_rx_slot(bccam_uart_link_endpoint_t *endpoint,
                                     uint8_t service) {
-  if (endpoint == NULL || control_index(endpoint, service) < 0) {
+  bccam_uart_service_binding_t *binding = binding_for_service(endpoint, service);
+  if (binding == NULL) {
     return BCCAM_UART_ERR_UNKNOWN_SERVICE;
   }
-  if (endpoint->control_binding.rx_advertised_credit >= 127u) {
+  if (binding->rx_advertised_credit >= 127u) {
     return BCCAM_UART_OK;
   }
   return bccam_uart_link_send_credit_update(
     endpoint, service,
-    (uint8_t)(endpoint->control_binding.rx_advertised_credit + 1u));
+    (uint8_t)(binding->rx_advertised_credit + 1u));
 }
 
 static int handle_establish_reply(bccam_uart_link_endpoint_t *endpoint,
@@ -443,6 +478,7 @@ static int handle_service_descriptor(bccam_uart_link_endpoint_t *endpoint,
   const uint8_t ordinal = payload[2];
   const uint8_t handle = payload[3];
   const bool control_contract = is_control_contract(&payload[7], payload[6]);
+  const bool console_contract = is_console_contract(&payload[7], payload[6]);
   if (bit_is_set(endpoint->seen_ordinals, ordinal) ||
       bit_is_set(endpoint->seen_handles, handle)) {
     return malformed_management(endpoint);
@@ -467,6 +503,18 @@ static int handle_service_descriptor(bccam_uart_link_endpoint_t *endpoint,
       endpoint->control_binding.tx_credit = endpoint->pending_tx_credit[handle];
       endpoint->pending_tx_credit[handle] = 0u;
     }
+  } else if (console_contract &&
+             payload[4] == BCCAM_UART_CONSOLE_CONTRACT_MAJOR &&
+             !endpoint->console_binding.valid) {
+    endpoint->console_binding.valid = true;
+    endpoint->console_binding.descriptor.handle = handle;
+    endpoint->console_binding.descriptor.major = payload[4];
+    endpoint->console_binding.descriptor.minor = payload[5];
+    endpoint->console_binding.descriptor.contract_id_len = payload[6];
+    memcpy(endpoint->console_binding.descriptor.contract_id,
+           &payload[7], payload[6]);
+    endpoint->console_binding.tx_credit = endpoint->pending_tx_credit[handle];
+    endpoint->pending_tx_credit[handle] = 0u;
   }
   endpoint->pending = BCCAM_UART_PENDING_NONE;
   endpoint->pending_transaction_id = 0u;
@@ -486,11 +534,12 @@ static int handle_credit_update(bccam_uart_link_endpoint_t *endpoint,
     return malformed_management(endpoint);
   }
   set_bit(endpoint->observed_credit_handles, handle);
-  if (control_index(endpoint, handle) >= 0) {
-    if (payload[3] < endpoint->control_binding.tx_credit) {
+  bccam_uart_service_binding_t *binding = binding_for_service(endpoint, handle);
+  if (binding != NULL) {
+    if (payload[3] < binding->tx_credit) {
       return malformed_management(endpoint);
     }
-    endpoint->control_binding.tx_credit = payload[3];
+    binding->tx_credit = payload[3];
   } else {
     if (payload[3] < endpoint->pending_tx_credit[handle]) {
       return malformed_management(endpoint);
@@ -558,20 +607,19 @@ int bccam_uart_link_receive_unit(bccam_uart_link_endpoint_t *endpoint,
   if (endpoint->state != BCCAM_UART_LINK_ACTIVE) {
     return BCCAM_UART_ERR_NOT_ACTIVE;
   }
-  if (control_index(endpoint, service) < 0) {
+  bccam_uart_service_binding_t *binding = binding_for_service(endpoint, service);
+  if (binding == NULL) {
     endpoint->counters.rx_unknown_service_errors++;
     return peer_error(endpoint, BCCAM_UART_ERR_UNKNOWN_SERVICE);
   }
-  if (endpoint->control_binding.rx_advertised_credit == 0u ||
-      endpoint->rx_pending) {
+  if (binding->rx_advertised_credit == 0u || binding->rx_pending) {
     return peer_error(endpoint, BCCAM_UART_ERR_NO_CREDIT);
   }
-  endpoint->control_binding.rx_advertised_credit--;
-  endpoint->rx_pending = true;
-  endpoint->rx_service = service;
-  endpoint->rx_payload_len = payload_len;
+  binding->rx_advertised_credit--;
+  binding->rx_pending = true;
+  binding->rx_payload_len = payload_len;
   if (payload_len > 0u) {
-    memcpy(endpoint->rx_payload, payload, payload_len);
+    memcpy(binding->rx_payload, payload, payload_len);
   }
   return BCCAM_UART_OK;
 }
@@ -604,6 +652,47 @@ int bccam_uart_link_take_tx_unit(bccam_uart_link_endpoint_t *endpoint,
   return BCCAM_UART_OK;
 }
 
+/** Copy and consume one pending unit from a service-owned receive slot. */
+static int take_binding_rx(bccam_uart_service_binding_t *binding,
+                           uint8_t *out,
+                           size_t out_capacity,
+                           uint16_t *out_len,
+                           bool *unit_present) {
+  if (!binding->rx_pending) {
+    return BCCAM_UART_OK;
+  }
+  if (out_capacity < binding->rx_payload_len) {
+    return BCCAM_UART_ERR_BUFFER_TOO_SMALL;
+  }
+  *out_len = binding->rx_payload_len;
+  *unit_present = true;
+  memcpy(out, binding->rx_payload, binding->rx_payload_len);
+  binding->rx_pending = false;
+  binding->rx_payload_len = 0u;
+  return BCCAM_UART_OK;
+}
+
+int bccam_uart_link_take_rx_for_service(
+  bccam_uart_link_endpoint_t *endpoint,
+  uint8_t service,
+  uint8_t *out,
+  size_t out_capacity,
+  uint16_t *out_len,
+  bool *unit_present) {
+  if (out_len == NULL || unit_present == NULL) {
+    return BCCAM_UART_ERR_BAD_ARGUMENT;
+  }
+  *out_len = 0u;
+  *unit_present = false;
+  if (endpoint == NULL || out == NULL) {
+    return BCCAM_UART_ERR_BAD_ARGUMENT;
+  }
+  bccam_uart_service_binding_t *binding = binding_for_service(endpoint,
+                                                               service);
+  return binding == NULL ? BCCAM_UART_ERR_UNKNOWN_SERVICE :
+    take_binding_rx(binding, out, out_capacity, out_len, unit_present);
+}
+
 int bccam_uart_link_take_rx(bccam_uart_link_endpoint_t *endpoint,
                             uint8_t *service,
                             uint8_t *out,
@@ -618,19 +707,17 @@ int bccam_uart_link_take_rx(bccam_uart_link_endpoint_t *endpoint,
   if (endpoint == NULL || service == NULL || out == NULL) {
     return BCCAM_UART_ERR_BAD_ARGUMENT;
   }
-  if (!endpoint->rx_pending) {
+  bccam_uart_service_binding_t *binding = NULL;
+  if (endpoint->control_binding.rx_pending) {
+    binding = &endpoint->control_binding;
+  } else if (endpoint->console_binding.rx_pending) {
+    binding = &endpoint->console_binding;
+  }
+  if (binding == NULL) {
     return BCCAM_UART_OK;
   }
-  if (out_capacity < endpoint->rx_payload_len) {
-    return BCCAM_UART_ERR_BUFFER_TOO_SMALL;
-  }
-  *service = endpoint->rx_service;
-  *out_len = endpoint->rx_payload_len;
-  *unit_present = true;
-  memcpy(out, endpoint->rx_payload, endpoint->rx_payload_len);
-  endpoint->rx_pending = false;
-  endpoint->rx_payload_len = 0u;
-  return BCCAM_UART_OK;
+  *service = binding->descriptor.handle;
+  return take_binding_rx(binding, out, out_capacity, out_len, unit_present);
 }
 
 int bccam_uart_link_enter_fault(bccam_uart_link_endpoint_t *endpoint) {
@@ -667,6 +754,17 @@ bool bccam_uart_link_control_binding(const bccam_uart_link_endpoint_t *endpoint,
   return true;
 }
 
+bool bccam_uart_link_console_binding(const bccam_uart_link_endpoint_t *endpoint,
+                                     bccam_uart_service_descriptor_t *descriptor) {
+  if (endpoint == NULL || !endpoint->console_binding.valid) {
+    return false;
+  }
+  if (descriptor != NULL) {
+    *descriptor = endpoint->console_binding.descriptor;
+  }
+  return true;
+}
+
 bool bccam_uart_link_boot_notice_received(
   const bccam_uart_link_endpoint_t *endpoint) {
   return endpoint != NULL && endpoint->boot_notice_received;
@@ -680,12 +778,14 @@ void bccam_uart_link_clear_boot_notice(bccam_uart_link_endpoint_t *endpoint) {
 
 uint8_t bccam_uart_link_get_tx_credit(
   const bccam_uart_link_endpoint_t *endpoint, uint8_t service) {
-  return control_index(endpoint, service) < 0 ? 0u :
-    endpoint->control_binding.tx_credit;
+  const bccam_uart_service_binding_t *binding =
+    binding_for_service_const(endpoint, service);
+  return binding == NULL ? 0u : binding->tx_credit;
 }
 
 uint8_t bccam_uart_link_get_rx_advertised_credit(
   const bccam_uart_link_endpoint_t *endpoint, uint8_t service) {
-  return control_index(endpoint, service) < 0 ? 0u :
-    endpoint->control_binding.rx_advertised_credit;
+  const bccam_uart_service_binding_t *binding =
+    binding_for_service_const(endpoint, service);
+  return binding == NULL ? 0u : binding->rx_advertised_credit;
 }

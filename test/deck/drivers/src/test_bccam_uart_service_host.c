@@ -391,6 +391,28 @@ void testIncompatibleAndReadyStartupDisableDeadlineRecovery(void) {
   TEST_ASSERT_EQUAL_UINT32(0, report.reset_count);
 }
 
+/** Verify diagnostics pause recovery and disabling starts a fresh timeout. */
+void testEnabledBoundConsoleSuspendsStalledControlRecovery(void) {
+  bccam_uart_service_test_startup_recovery_report_t report = {0};
+  bccam_uart_service_test_start_firmware_establishment();
+  bccam_uart_service_test_set_firmware_startup_result(
+    BCCAM_UART_FIRMWARE_STARTUP_WAITING);
+  bccam_uart_service_test_set_firmware_control_probe_phase(
+    BCCAM_UART_CONTROL_PROBE_WAITING_FOR_RESPONSE);
+  bccam_uart_service_test_set_console_diagnostics_active(true);
+
+  TEST_ASSERT_FALSE(bccam_uart_service_test_update_startup_watchdog(3000,
+                                                                    &report));
+  TEST_ASSERT_EQUAL_UINT32(0, report.reset_count);
+
+  bccam_uart_service_test_set_console_diagnostics_active(false);
+  TEST_ASSERT_FALSE(bccam_uart_service_test_update_startup_watchdog(3000,
+                                                                    &report));
+  TEST_ASSERT_TRUE(bccam_uart_service_test_update_startup_watchdog(6000,
+                                                                   &report));
+  TEST_ASSERT_EQUAL_UINT32(1, report.reset_count);
+}
+
 void testPollFailureFormattingBoundariesRemainTerminated(void) {
   char one[1] = { 'x' };
   char short_text[8];
