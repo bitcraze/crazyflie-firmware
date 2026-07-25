@@ -31,6 +31,7 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "semphr.h"
+#include "task.h"
 
 /*ST includes */
 #include "stm32fxxx.h"
@@ -57,6 +58,8 @@ STATIC_MEM_QUEUE_ALLOC(uart1queue, QUEUE_LENGTH, sizeof(uint8_t));
 
 static bool isInit = false;
 static bool hasOverrun = false;
+static uart1RxCallback_t rxCallback;
+static uart1ErrorCallback_t errorCallback;
 
 #ifdef ENABLE_UART1_DMA
 static xSemaphoreHandle uartBusy;
@@ -208,6 +211,58 @@ bool uart1Test(void)
   return isInit;
 }
 
+static uint32_t uart1DisableIrq(void)
+{
+  const uint32_t irqWasEnabled = NVIC_GetEnableIRQ(UART1_IRQ);
+  NVIC_DisableIRQ(UART1_IRQ);
+  return irqWasEnabled;
+}
+
+static void uart1RestoreIrq(uint32_t irqWasEnabled)
+{
+  if (irqWasEnabled != 0) {
+    NVIC_EnableIRQ(UART1_IRQ);
+  }
+}
+
+void uart1SetRxCallback(uart1RxCallback_t callback)
+{
+  const uint32_t irqWasEnabled = uart1DisableIrq();
+  rxCallback = callback;
+  uart1RestoreIrq(irqWasEnabled);
+}
+
+void uart1ClearRxCallback(void)
+{
+  uart1SetRxCallback(NULL);
+}
+
+void uart1SetErrorCallback(uart1ErrorCallback_t callback)
+{
+  const uint32_t irqWasEnabled = uart1DisableIrq();
+  errorCallback = callback;
+  uart1RestoreIrq(irqWasEnabled);
+}
+
+void uart1ClearErrorCallback(void)
+{
+  uart1SetErrorCallback(NULL);
+}
+
+void uart1SetCallbacks(uart1RxCallback_t rx_callback,
+                       uart1ErrorCallback_t error_callback)
+{
+  const uint32_t irqWasEnabled = uart1DisableIrq();
+  rxCallback = rx_callback;
+  errorCallback = error_callback;
+  uart1RestoreIrq(irqWasEnabled);
+}
+
+void uart1ClearCallbacks(void)
+{
+  uart1SetCallbacks(NULL, NULL);
+}
+
 bool uart1GetDataWithTimeout(uint8_t *c, const uint32_t timeoutTicks)
 {
   if (xQueueReceive(uart1queue, c, timeoutTicks) == pdTRUE)
@@ -243,6 +298,35 @@ void uart1SendData(uint32_t size, uint8_t* data)
     while (!(UART1_TYPE->SR & USART_FLAG_TXE));
     UART1_TYPE->DR = (data[i] & 0x00FF);
   }
+}
+
+bool uart1SendDataWaitComplete(uint32_t size,
+                               const uint8_t* data,
+                               uint32_t timeoutTicks)
+{
+  if (!isInit || (size > 0 && data == NULL)) {
+    return false;
+  }
+
+  const TickType_t deadline = xTaskGetTickCount() + timeoutTicks;
+  for (uint32_t i = 0; i < size; i++) {
+    while (!(UART1_TYPE->SR & USART_FLAG_TXE)) {
+      if ((int32_t)(xTaskGetTickCount() - deadline) >= 0) {
+        return false;
+      }
+    }
+    UART1_TYPE->DR = (data[i] & 0x00FF);
+  }
+
+  if (size > 0) {
+    while (!(UART1_TYPE->SR & USART_FLAG_TC)) {
+      if ((int32_t)(xTaskGetTickCount() - deadline) >= 0) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 #ifdef ENABLE_UART1_DMA
@@ -329,21 +413,40 @@ void __attribute__((used)) DMA1_Stream3_IRQHandler(void)
 
 void __attribute__((used)) USART3_IRQHandler(void)
 {
-  if (USART_GetITStatus(UART1_TYPE, USART_IT_RXNE))
+  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+  const uint32_t status = UART1_TYPE->SR;
+  const bool hasRxData = (status & USART_FLAG_RXNE) != 0;
+  const bool hasError = ((status & USART_FLAG_ORE) != 0) ||
+                        ((status & USART_FLAG_NE) != 0) ||
+                        ((status & USART_FLAG_FE) != 0) ||
+                        ((status & USART_FLAG_PE) != 0);
+
+  if (hasRxData)
   {
-    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
     uint8_t rxData = USART_ReceiveData(UART1_TYPE) & 0x00FF;
-    xQueueSendFromISR(uart1queue, &rxData, &xHigherPriorityTaskWoken);
-    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-  } else {
+    if (rxCallback != NULL) {
+      rxCallback(rxData, &xHigherPriorityTaskWoken);
+    } else {
+      xQueueSendFromISR(uart1queue, &rxData, &xHigherPriorityTaskWoken);
+    }
+  }
+
+  if (hasError) {
     /** if we get here, the error is most likely caused by an overrun!
      * - PE (Parity error), FE (Framing error), NE (Noise error), ORE (OverRun error)
      * - and IDLE (Idle line detected) pending bits are cleared by software sequence:
      * - reading USART_SR register followed reading the USART_DR register.
      */
-    asm volatile ("" : "=m" (UART1_TYPE->SR) : "r" (UART1_TYPE->SR)); // force non-optimizable reads
-    asm volatile ("" : "=m" (UART1_TYPE->DR) : "r" (UART1_TYPE->DR)); // of these two registers
+    if (!hasRxData) {
+      asm volatile ("" : "=m" (UART1_TYPE->SR) : "r" (UART1_TYPE->SR)); // force non-optimizable reads
+      asm volatile ("" : "=m" (UART1_TYPE->DR) : "r" (UART1_TYPE->DR)); // of these two registers
+    }
 
     hasOverrun = true;
+    if (errorCallback != NULL) {
+      errorCallback(&xHigherPriorityTaskWoken);
+    }
   }
+
+  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }

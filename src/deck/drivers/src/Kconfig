@@ -539,3 +539,10 @@ config DECK_BCCAM
     default y
     help
         Enables the support for the WiFi camera deck
+
+config DECK_BCCAM_DEBUG
+    depends on DECK_BCCAM
+    bool "Enable WiFi camera deck debug prints"
+    default n
+    help
+        Enable extra debug prints for the WiFi camera deck driver.
