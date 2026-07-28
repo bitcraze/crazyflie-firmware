@@ -1,3 +1,5 @@
+// @IGNORE_IF_NOT CONFIG_DECK_BACKEND_DECKCTRL
+
 #include <stdint.h>
 #include <string.h>
 
