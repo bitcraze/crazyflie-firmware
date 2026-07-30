@@ -1,0 +1,100 @@
+// File under test math3d.h
+#include "math3d.h"
+
+#include <math.h>
+
+#include "unity.h"
+
+// These tests pin the operand order of qqmul(): it returns the Hamilton
+// product q*p, and callers such as mm_pose.c depend on that order to get a
+// body-frame attitude error rather than a global one.
+
+// Hamilton product a*b, written out independently of the function under test,
+// so fixtures are built from a reference rather than from qqmul() itself.
+static struct quat referenceHamilton(struct quat a, struct quat b) {
+  return mkquat(a.w*b.x + a.x*b.w + a.y*b.z - a.z*b.y,
+                a.w*b.y + a.y*b.w + a.z*b.x - a.x*b.z,
+                a.w*b.z + a.z*b.w + a.x*b.y - a.y*b.x,
+                a.w*b.w - a.x*b.x - a.y*b.y - a.z*b.z);
+}
+
+static void assertQuatEqual(struct quat expected, struct quat actual) {
+  TEST_ASSERT_FLOAT_WITHIN(1e-5f, expected.x, actual.x);
+  TEST_ASSERT_FLOAT_WITHIN(1e-5f, expected.y, actual.y);
+  TEST_ASSERT_FLOAT_WITHIN(1e-5f, expected.z, actual.z);
+  TEST_ASSERT_FLOAT_WITHIN(1e-5f, expected.w, actual.w);
+}
+
+void testThatQqmulReturnsTheHamiltonProductInArgumentOrder() {
+  // Fixture: 90 deg about x, then 90 deg about y. Chosen because these do not
+  // commute, so a reversed implementation cannot coincidentally pass.
+  struct quat q = qaxisangle(mkvec(1, 0, 0), M_PI_2);
+  struct quat p = qaxisangle(mkvec(0, 1, 0), M_PI_2);
+
+  // Hamilton q*p, computed by hand
+  struct quat expected = mkquat(0.5f, 0.5f, 0.5f, 0.5f);
+
+  // Test
+  struct quat actual = qqmul(q, p);
+
+  // Assert
+  assertQuatEqual(expected, actual);
+}
+
+void testThatQqmulIsNotCommutativeInTheExpectedDirection() {
+  // Fixture
+  struct quat q = qaxisangle(mkvec(1, 0, 0), M_PI_2);
+  struct quat p = qaxisangle(mkvec(0, 1, 0), M_PI_2);
+
+  // Test
+  struct quat qp = qqmul(q, p);
+  struct quat pq = qqmul(p, q);
+
+  // Assert: the two orders differ, and qqmul(q, p) is the one whose z is
+  // positive. If the body is ever reversed, this is the assertion that trips.
+  TEST_ASSERT_FLOAT_WITHIN(1e-5f, 0.5f, qp.z);
+  TEST_ASSERT_FLOAT_WITHIN(1e-5f, -0.5f, pq.z);
+}
+
+void testThatQqmulComposesRotationsRightToLeft() {
+  // Fixture: qvrot(qqmul(q, p), v) must equal qvrot(q, qvrot(p, v)),
+  // i.e. p is applied first. This is the property callers actually rely on.
+  struct quat q = qaxisangle(mkvec(1, 0, 0), M_PI_2);
+  struct quat p = qaxisangle(mkvec(0, 1, 0), M_PI_2);
+  struct vec v = mkvec(0, 0, 1);
+
+  // Test
+  struct vec composed = qvrot(qqmul(q, p), v);
+  struct vec sequential = qvrot(q, qvrot(p, v));
+
+  // Assert
+  TEST_ASSERT_FLOAT_WITHIN(1e-5f, sequential.x, composed.x);
+  TEST_ASSERT_FLOAT_WITHIN(1e-5f, sequential.y, composed.y);
+  TEST_ASSERT_FLOAT_WITHIN(1e-5f, sequential.z, composed.z);
+}
+
+void testThatQqmulWithInverseYieldsIdentity() {
+  // Fixture
+  struct quat q = qaxisangle(vnormalize(mkvec(1, -2, 3)), 0.7f);
+
+  // Test
+  struct quat actual = qqmul(q, qinv(q));
+
+  // Assert
+  assertQuatEqual(qeye(), actual);
+}
+
+void testThatQqmulAppliesBodyFramePerturbationOnTheRight() {
+  // Fixture: this is the property mm_pose.c depends on. With q_ekf mapping
+  // body to world, a body-frame perturbation composes on the right, so the
+  // body-frame residual is q_ekf^-1 * q_measured.
+  struct quat qEkf = qaxisangle(mkvec(0, 0, 1), 1.2f);
+  struct quat delta = qaxisangle(mkvec(1, 0, 0), 0.05f);
+  struct quat qMeasured = referenceHamilton(qEkf, delta);
+
+  // Test
+  struct quat residual = qqmul(qinv(qEkf), qMeasured);
+
+  // Assert: we recover the body-frame perturbation, not a yaw-rotated version
+  assertQuatEqual(delta, residual);
+}
