@@ -64,7 +64,11 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
   const float y = sr[1];
   const float z = sr[2];
   const float t = sweepInfo->t;
-  const float tan_t = tanf(t);
+  // Use the calibrated rotor tilt, so that H below is the gradient of the same
+  // function the residual is computed from (lighthouseCalibrationMeasurementModel*,
+  // which applies asin(z * tan(t - calib->tilt) / r)). Holds for both LH1, where
+  // t is 0, and LH2, where t is -/+30 degrees.
+  const float tan_t = tanf(t - sweepInfo->calib->tilt);
 
   const float r2 = x * x + y * y;
   const float r = arm_sqrt(r2);
