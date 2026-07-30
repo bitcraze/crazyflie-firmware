@@ -1,8 +1,6 @@
 // File under test math3d.h
 #include "math3d.h"
 
-#include <math.h>
-
 #include "unity.h"
 
 // These tests pin the operand order of qqmul(): it returns the Hamilton
@@ -28,8 +26,8 @@ static void assertQuatEqual(struct quat expected, struct quat actual) {
 void testThatQqmulReturnsTheHamiltonProductInArgumentOrder() {
   // Fixture: 90 deg about x, then 90 deg about y. Chosen because these do not
   // commute, so a reversed implementation cannot coincidentally pass.
-  struct quat q = qaxisangle(mkvec(1, 0, 0), M_PI_2);
-  struct quat p = qaxisangle(mkvec(0, 1, 0), M_PI_2);
+  struct quat q = qaxisangle(mkvec(1, 0, 0), M_PI_2_F);
+  struct quat p = qaxisangle(mkvec(0, 1, 0), M_PI_2_F);
 
   // Hamilton q*p, computed by hand
   struct quat expected = mkquat(0.5f, 0.5f, 0.5f, 0.5f);
@@ -43,8 +41,8 @@ void testThatQqmulReturnsTheHamiltonProductInArgumentOrder() {
 
 void testThatQqmulIsNotCommutativeInTheExpectedDirection() {
   // Fixture
-  struct quat q = qaxisangle(mkvec(1, 0, 0), M_PI_2);
-  struct quat p = qaxisangle(mkvec(0, 1, 0), M_PI_2);
+  struct quat q = qaxisangle(mkvec(1, 0, 0), M_PI_2_F);
+  struct quat p = qaxisangle(mkvec(0, 1, 0), M_PI_2_F);
 
   // Test
   struct quat qp = qqmul(q, p);
@@ -59,8 +57,8 @@ void testThatQqmulIsNotCommutativeInTheExpectedDirection() {
 void testThatQqmulComposesRotationsRightToLeft() {
   // Fixture: qvrot(qqmul(q, p), v) must equal qvrot(q, qvrot(p, v)),
   // i.e. p is applied first. This is the property callers actually rely on.
-  struct quat q = qaxisangle(mkvec(1, 0, 0), M_PI_2);
-  struct quat p = qaxisangle(mkvec(0, 1, 0), M_PI_2);
+  struct quat q = qaxisangle(mkvec(1, 0, 0), M_PI_2_F);
+  struct quat p = qaxisangle(mkvec(0, 1, 0), M_PI_2_F);
   struct vec v = mkvec(0, 0, 1);
 
   // Test
