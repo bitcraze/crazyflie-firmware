@@ -697,11 +697,16 @@ static void generateStorageKey(const uint16_t index, char key[KEY_LEN])
   strcat(key, name);
 }
 
+static bool paramIsPersistent(int index)
+{
+  return (params[index].extended_type & (PARAM_PERSISTENT >> 8)) != 0;
+}
+
 bool paramPersistentStoreByVarId(paramVarId_t varid)
 {
   ASSERT(PARAM_VARID_IS_VALID(varid));
 
-  if (!(params[varid.index].extended_type & (PARAM_PERSISTENT >> 8))) {
+  if (!paramIsPersistent(varid.index)) {
     return false;
   }
 
@@ -875,7 +880,7 @@ static bool persistentParamFromStorage(const char *key, void *buffer, size_t len
   char *completeName = (char *) key + strlen(PERSISTENT_PREFIX_STRING);
   paramVarId_t varId = paramGetVarIdFromComplete(completeName);
 
-  if (PARAM_VARID_IS_VALID(varId)) {
+  if (PARAM_VARID_IS_VALID(varId) && paramIsPersistent(varId.index)) {
     paramSet(varId.index, buffer);
   }
 
