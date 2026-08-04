@@ -124,6 +124,28 @@ jobs:
         target:
         - allyesconfig
         - allnoconfig
+
+    env:
+      TARGET: ${{ matrix.target }}
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: build
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "./tools/build/kbuild_target ${TARGET}"
+
+  kbuild-targets-scheduled:
+    runs-on: ubuntu-latest
+    needs: basic_build
+    if: github.event_name == 'schedule'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
         - randconfig
 
     env:
