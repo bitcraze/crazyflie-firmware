@@ -140,7 +140,7 @@ jobs:
   kbuild-targets-random:
     runs-on: ubuntu-latest
     needs: basic_build
-    if: github.event_name == 'schedule' || 1
+    if: github.event_name == 'schedule'
 
     steps:
     - name: Checkout Repo
