@@ -140,7 +140,7 @@ jobs:
   kbuild-targets-scheduled:
     runs-on: ubuntu-latest
     needs: basic_build
-    if: github.event_name == 'schedule'
+    if: github.event_name == 'schedule' || 1
 
     strategy:
       fail-fast: false
@@ -158,4 +158,5 @@ jobs:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "./tools/build/kbuild_target ${TARGET}"
+      # KCONFIG_SEED is derived from the commit SHA
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "KCONFIG_SEED=0x${GITHUB_SHA:0:8} ./tools/build/kbuild_target ${TARGET}"
