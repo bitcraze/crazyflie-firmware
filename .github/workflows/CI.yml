@@ -136,4 +136,4 @@ jobs:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "./tools/build/kbuild_target ${TARGET}"
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "KCONFIG_ALLCONFIG=configs/all.config make ${TARGET} &&  ./tools/build/build UNIT_TEST_STYLE=min"
