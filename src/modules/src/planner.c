@@ -76,7 +76,9 @@ void plan_init(struct planner *p)
 void plan_stop(struct planner *p)
 {
 	if (p->state == TRAJECTORY_STATE_PRECISE_LANDING) {
+#ifdef CRAZYFLIE_FW
 		controllerExitPreciseLand();
+#endif
 	}
 	p->state = TRAJECTORY_STATE_IDLE;
 }
@@ -106,7 +108,9 @@ bool plan_is_stopped(struct planner *p)
 void plan_disable(struct planner *p)
 {
 	if (p->state == TRAJECTORY_STATE_PRECISE_LANDING) {
+#ifdef CRAZYFLIE_FW
 		controllerExitPreciseLand();
+#endif
 	}
 	p->state = TRAJECTORY_STATE_DISABLED;
 }
@@ -121,7 +125,9 @@ struct traj_eval plan_current_goal(struct planner *p, float t)
 	switch (p->state) {
 		case TRAJECTORY_STATE_PRECISE_LANDING:
 			if (plan_is_finished(p, t)) {
+#ifdef CRAZYFLIE_FW
 				controllerExitPreciseLand();
+#endif
 				p->state = TRAJECTORY_STATE_IDLE;
 			}
 			return plan_eval(p, t);
@@ -257,7 +263,9 @@ int plan_precise_land(struct planner *p, struct vec curr_pos, float curr_yaw, fl
 	p->planned_trajectory.t_begin = t;
 	p->trajectory = &p->planned_trajectory;
 
+#ifdef CRAZYFLIE_FW
 	controllerEnterPreciseLand();
+#endif
 
 	return 0;
 }
