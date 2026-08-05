@@ -33,7 +33,7 @@
 #include "log.h"
 
 static const uint32_t evaluationIntervalMs = 100;
-static uint16_t maxRate = 50;  // Samples / second
+static uint16_t maxRate = 10;  // Samples / second
 static float discardProbability = 0.0f;
 
 bool throttleLh2Samples(const uint32_t nowMs) {

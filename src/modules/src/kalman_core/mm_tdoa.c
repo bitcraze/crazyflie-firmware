@@ -25,6 +25,9 @@
 
 #include "mm_tdoa.h"
 #include "test_support.h"
+#include "log.h"
+
+static float tdoaInnovation = 0.0f;
 
 #if CONFIG_ESTIMATOR_KALMAN_TDOA_OUTLIERFILTER_FALLBACK
 #include "outlierFilterTdoaSteps.h"
@@ -60,6 +63,7 @@ void kalmanCoreUpdateWithTdoa(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa, c
 
   float predicted = d1 - d0;
   float error = measurement - predicted;
+  tdoaInnovation = error;
 
   float h[KC_STATE_DIM] = {0};
   arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
@@ -92,3 +96,7 @@ void kalmanCoreUpdateWithTdoa(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa, c
     }
   }
 }
+
+LOG_GROUP_START(tdoa)
+  LOG_ADD(LOG_FLOAT, innovation, &tdoaInnovation)
+LOG_GROUP_STOP(tdoa)
