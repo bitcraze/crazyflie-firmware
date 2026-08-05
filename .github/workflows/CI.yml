@@ -19,7 +19,9 @@ permissions:
 
 jobs:
   read_targets_from_file:
-    uses: bitcraze/workflows/.github/workflows/read_build_targets.yml@cc82f0e5999c39eff964dd73ce9363e94d5b5b76
+    # TODO: temporarily pinned to the bitcraze/workflows PR branch HEAD for
+    # verification; update to the real commit SHA once that PR merges to main.
+    uses: bitcraze/workflows/.github/workflows/read_build_targets.yml@2284e0bfa7ceefcf85bc28eff99b19cd0a7ff0d7
     with:
       target_file: './build_targets.json'
 
@@ -34,7 +36,7 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       with:
         submodules: true
 
@@ -42,7 +44,7 @@ jobs:
       run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make ${{ matrix.platform }}_defconfig && ./tools/build/build UNIT_TEST_STYLE=min"
 
     - name: Upload Build Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ matrix.platform }}-${{ github.sha }}
         path: |
@@ -78,7 +80,7 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       with:
         submodules: true
 
@@ -107,7 +109,7 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       with:
         submodules: true
 
@@ -131,7 +133,7 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       with:
         submodules: true
 
