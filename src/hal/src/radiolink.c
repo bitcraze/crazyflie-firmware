@@ -44,6 +44,7 @@
 #include "queuemonitor.h"
 #include "static_mem.h"
 #include "cfassert.h"
+#include "param.h"
 
 #define RADIOLINK_TX_QUEUE_SIZE (1)
 #define RADIOLINK_CRTP_QUEUE_SIZE (5)
@@ -58,6 +59,8 @@ static xQueueHandle crtpPacketDelivery;
 STATIC_MEM_QUEUE_ALLOC(crtpPacketDelivery, RADIOLINK_CRTP_QUEUE_SIZE, sizeof(CRTPPacket));
 
 static bool isInit;
+
+static uint8_t disableRadioOnUsb = 0;
 
 static int radiolinkSendCRTPPacket(CRTPPacket *p);
 static int radiolinkSetEnable(bool enable);
@@ -147,6 +150,16 @@ void radiolinkSetPowerDbm(int8_t powerDbm)
   slp.type = SYSLINK_RADIO_POWER;
   slp.length = 1;
   slp.data[0] = powerDbm;
+  syslinkSendPacket(&slp);
+}
+
+void radiolinkSendDisableOnUsb(void)
+{
+  SyslinkPacket slp;
+
+  slp.type = SYSLINK_RADIO_DISABLE_ON_USB;
+  slp.length = 1;
+  slp.data[0] = disableRadioOnUsb ? 1 : 0;
   syslinkSendPacket(&slp);
 }
 
@@ -298,3 +311,17 @@ LOG_ADD_CORE(LOG_UINT16, numRxBc, &count_rx_broadcast)
  */
 LOG_ADD_CORE(LOG_UINT16, numRxUc, &count_rx_unicast)
 LOG_GROUP_STOP(radio)
+
+/**
+ * Radio link parameters.
+ */
+PARAM_GROUP_START(radio)
+/**
+ * @brief Turn the radio off while the Crazyflie is plugged in (default: 0)
+ *
+ * When different than 0, the nRF51 turns the radio off as long as a USB cable is connected.
+ * This keeps charging drones from showing up in radio scans and from being
+ * connected to. Unplugging the cable turns the radio back on without a reboot.
+ */
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8 | PARAM_PERSISTENT, disableRadioOnUsb, &disableRadioOnUsb, radiolinkSendDisableOnUsb)
+PARAM_GROUP_STOP(radio)
