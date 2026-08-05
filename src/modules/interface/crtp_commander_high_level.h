@@ -136,6 +136,35 @@ int crtpCommanderHighLevelLandWithVelocity(const float height_m, const float vel
 int crtpCommanderHighLevelLandYaw(const float absoluteHeight_m, const float duration_s, const float yaw);
 
 /**
+ * @brief vertical land from current x-y position to given height, hovering briefly
+ * above the target with temporarily-tuned controller gains before the final descent,
+ * for improved landing precision
+ *
+ * @param absoluteHeight_m absolute target height (m)
+ * @param duration_s       time it should take until target height is reached (s)
+ * @param hoverOffset_m    how far above the landing target to hover (m)
+ * @param hoverDuration_s  how long to hover above the target before the final descent (s).
+ *                         duration_s must be greater than hoverDuration_s + 0.1, or the
+ *                         command is rejected.
+ * @return zero if the command succeeded, an error code otherwise
+ */
+int crtpCommanderHighLevelPreciseLand(const float absoluteHeight_m, const float duration_s, const float hoverOffset_m, const float hoverDuration_s);
+
+/**
+ * @brief same as crtpCommanderHighLevelPreciseLand(), but with an explicit yaw
+ *
+ * @param absoluteHeight_m absolute target height (m)
+ * @param duration_s       time it should take until target height is reached (s)
+ * @param hoverOffset_m    how far above the landing target to hover (m)
+ * @param hoverDuration_s  how long to hover above the target before the final descent (s).
+ *                         duration_s must be greater than hoverDuration_s + 0.1, or the
+ *                         command is rejected.
+ * @param yaw              yaw (rad)
+ * @return zero if the command succeeded, an error code otherwise
+ */
+int crtpCommanderHighLevelPreciseLandYaw(const float absoluteHeight_m, const float duration_s, const float hoverOffset_m, const float hoverDuration_s, const float yaw);
+
+/**
  * @brief stops the current trajectory (turns off the motors)
  *
  * Send the trajectory planner to stopped state, where it requests motors off.

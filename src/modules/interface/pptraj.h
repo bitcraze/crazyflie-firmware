@@ -171,6 +171,11 @@ void piecewise_plan_7th_order_no_jerk(struct piecewise_traj *p, float duration,
 	struct vec p0, float y0, struct vec v0, float dy0, struct vec a0,
 	struct vec p1, float y1, struct vec v1, float dy1, struct vec a1);
 
+void plan_7th_order_no_jerk(struct piecewise_traj *pp, float *durations,
+							struct vec *positions, float *yaws,
+							struct vec *velocities, float *yaw_rates,
+							struct vec *accelerations, int num_pieces);
+
 struct traj_eval piecewise_eval(
 	struct piecewise_traj const *traj, float t);
 
