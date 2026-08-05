@@ -9,8 +9,9 @@ You'll need to use either the [Crazyflie VM](https://github.com/bitcraze/bitcraz
 [the toolbelt](https://github.com/bitcraze/toolbelt) or
 install some ARM toolchain.
 
-There is also experimental support for [building with nix](./nix.md).
-This allows to build the firmware in a reproducable way.
+There is also support for [building with pixi](./pixi.md), which lets you build and flash the firmware without installing dependencies system-wide, in a reproducible way.
+
+There is also experimental support for [building with nix](./nix.md), which allows you to build the firmware in a reproducible way.
 
 ### Install a toolchain
 
@@ -116,7 +117,7 @@ Build artifacts, including binaries, will end up in the `build` directory.
 ### Customize the firmware with kbuild (Advanced)
 
 
-**Please note** that these instructions are only meant for you if you want to build an custom firmware for a custom platform than the ones we have listed above. You can still configure and change the firmware without kbuild.
+**Please note** that these instructions are only meant for you if you want to build an custom firmware for a custom platform than the ones we have listed above, e.g., the legacy propellers or thrust upgrade kit, see [battery compensation](/docs/functional-areas/battery_compensation.md). You can still configure and change the firmware without kbuild.
 
 Please go to [these instructions](/docs/development/kbuild.md) to learn how to use the menuconfig.
 
