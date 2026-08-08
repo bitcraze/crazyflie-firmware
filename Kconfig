@@ -24,6 +24,14 @@ config DEBUG_QUEUE_MONITOR
     help
         Enable the queue monitoring functionality.
 
+config FREERTOS_USE_TRACE_FACILITY
+    bool "Enable sysload stats (FreeRTOS trace facility)"
+    default y
+    help
+        Enable FreeRTOS trace hooks and APIs such as uxTaskGetSystemState().
+        Disable to reduce cpu load if runtime task statistics are not
+        needed.
+
 config DEBUG_ENABLE_LED_MORSE
     bool "Enable blinking morse sequence with LEDs"
     default n
