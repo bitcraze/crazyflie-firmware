@@ -314,9 +314,6 @@ static void aideckInit(DeckInfo *info)
   if (isInit)
     return;
 
-  pinMode(DECK_GPIO_IO2, OUTPUT);
-  pinMode(DECK_GPIO_IO3, OUTPUT);
-
   bootloaderSync = xEventGroupCreate();
 
   // Pull reset for GAP8/ESP32
