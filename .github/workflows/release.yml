@@ -10,9 +10,7 @@ permissions:
 
 jobs:
   read_targets_from_file:
-    # TODO: temporarily pinned to the bitcraze/workflows PR branch HEAD for
-    # verification; update to the real commit SHA once that PR merges to main.
-    uses: bitcraze/workflows/.github/workflows/read_build_targets.yml@2284e0bfa7ceefcf85bc28eff99b19cd0a7ff0d7
+    uses: bitcraze/workflows/.github/workflows/read_build_targets.yml@41b8cc3c616fd6fad685c3411f21f72646333b19
     with:
       target_file: './build_targets.json'
 
