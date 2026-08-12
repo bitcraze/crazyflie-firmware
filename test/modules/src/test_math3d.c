@@ -26,23 +26,10 @@ void testThatQqmulReturnsTheHamiltonProductInArgumentOrder() {
   // Test
   struct quat actual = qqmul(q, p);
 
-  // Assert
+  // Assert: the result matches q*p, and the reversed order does not, so a
+  // reversed implementation cannot pass
   assertQuatEqual(expected, actual);
-}
-
-void testThatQqmulIsNotCommutativeInTheExpectedDirection() {
-  // Fixture
-  struct quat q = qaxisangle(mkvec(1, 0, 0), M_PI_2_F);
-  struct quat p = qaxisangle(mkvec(0, 1, 0), M_PI_2_F);
-
-  // Test
-  struct quat qp = qqmul(q, p);
-  struct quat pq = qqmul(p, q);
-
-  // Assert: the two orders differ, and qqmul(q, p) is the one whose z is
-  // positive. If the body is ever reversed, this is the assertion that trips.
-  TEST_ASSERT_FLOAT_WITHIN(1e-5f, 0.5f, qp.z);
-  TEST_ASSERT_FLOAT_WITHIN(1e-5f, -0.5f, pq.z);
+  TEST_ASSERT_FLOAT_WITHIN(1e-5f, -0.5f, qqmul(p, q).z);
 }
 
 void testThatQqmulComposesRotationsRightToLeft() {
