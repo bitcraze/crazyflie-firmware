@@ -7,15 +7,6 @@
 // product q*p, and callers such as mm_pose.c depend on that order to get a
 // body-frame attitude error rather than a global one.
 
-// Hamilton product a*b, written out independently of the function under test,
-// so fixtures are built from a reference rather than from qqmul() itself.
-static struct quat referenceHamilton(struct quat a, struct quat b) {
-  return mkquat(a.w*b.x + a.x*b.w + a.y*b.z - a.z*b.y,
-                a.w*b.y + a.y*b.w + a.z*b.x - a.x*b.z,
-                a.w*b.z + a.z*b.w + a.x*b.y - a.y*b.x,
-                a.w*b.w - a.x*b.x - a.y*b.y - a.z*b.z);
-}
-
 static void assertQuatEqual(struct quat expected, struct quat actual) {
   TEST_ASSERT_FLOAT_WITHIN(1e-5f, expected.x, actual.x);
   TEST_ASSERT_FLOAT_WITHIN(1e-5f, expected.y, actual.y);
@@ -86,9 +77,11 @@ void testThatQqmulAppliesBodyFramePerturbationOnTheRight() {
   // Fixture: this is the property mm_pose.c depends on. With q_ekf mapping
   // body to world, a body-frame perturbation composes on the right, so the
   // body-frame residual is q_ekf^-1 * q_measured.
-  struct quat qEkf = qaxisangle(mkvec(0, 0, 1), 1.2f);
-  struct quat delta = qaxisangle(mkvec(1, 0, 0), 0.05f);
-  struct quat qMeasured = referenceHamilton(qEkf, delta);
+  // q_measured is written out by hand rather than composed with qqmul(), so
+  // that building the fixture and unwinding it cannot cancel a reversed order.
+  struct quat qEkf = qaxisangle(mkvec(0, 0, 1), M_PI_2_F);
+  struct quat delta = qaxisangle(mkvec(1, 0, 0), M_PI_2_F);
+  struct quat qMeasured = mkquat(0.5f, 0.5f, 0.5f, 0.5f); // qEkf * delta
 
   // Test
   struct quat residual = qqmul(qinv(qEkf), qMeasured);
