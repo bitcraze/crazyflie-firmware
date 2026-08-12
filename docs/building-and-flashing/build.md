@@ -129,12 +129,18 @@ First make sure that you have [SWIG](https://swig.org/) installed on your system
 
 ```
 $ make cf2_defconfig
-$ make bindings_python
-$ cd build
-$ python3 setup.py install --user
+$ make test_python
 ```
 
+The `test_python` target builds the bindings and runs the Python tests with the
+build directory on `PYTHONPATH`. If you want to import the generated bindings
+manually without installing them, use:
+
+```
+$ PYTHONPATH=build python3 -c "import cffirmware"
+```
 ## Make targets
+
 
 ### General targets
 ```
