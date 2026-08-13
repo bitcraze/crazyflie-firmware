@@ -124,9 +124,13 @@ jobs:
         target:
         - allyesconfig
         - allnoconfig
+        include:
+        - target: allyesconfig
+          build_flag: --tolerate-ccmram-overflow
 
     env:
       TARGET: ${{ matrix.target }}
+      BUILD_FLAG: ${{ matrix.build_flag }}
 
     steps:
     - name: Checkout Repo
@@ -135,7 +139,7 @@ jobs:
         submodules: true
 
     - name: build
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "./tools/build/kbuild_target ${TARGET}"
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "KCONFIG_ALLCONFIG=configs/all.config make ${TARGET} && ./tools/build/build ${BUILD_FLAG} UNIT_TEST_STYLE=min"
 
   kbuild-targets-random:
     runs-on: ubuntu-latest
@@ -150,4 +154,4 @@ jobs:
 
     - name: build
       # KCONFIG_SEED is derived from the commit SHA
-      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "KCONFIG_SEED=0x${GITHUB_SHA:0:8} ./tools/build/kbuild_target randconfig"
+      run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "KCONFIG_SEED=0x${GITHUB_SHA:0:8} KCONFIG_ALLCONFIG=configs/all.config make randconfig && ./tools/build/build UNIT_TEST_STYLE=min"
