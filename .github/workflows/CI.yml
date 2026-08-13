@@ -162,11 +162,12 @@ jobs:
           -e GITHUB_SHA \
           -e RANDOM_BUILD_COUNT \
           -v ${PWD}:/module bitcraze/builder bash -c '
-            set -e
+            FAIL=0
             for i in $(seq 1 "$RANDOM_BUILD_COUNT"); do
               SEED=$(( 0x${GITHUB_SHA:0:8} + i ))
               echo "=== Random build $i/$RANDOM_BUILD_COUNT (seed=$SEED) ==="
-              KCONFIG_SEED=$SEED KCONFIG_ALLCONFIG=configs/all.config make randconfig
-              ./tools/build/build UNIT_TEST_STYLE=min
+              KCONFIG_SEED=$SEED KCONFIG_ALLCONFIG=configs/all.config make randconfig || FAIL=1
+              ./tools/build/build UNIT_TEST_STYLE=min || FAIL=1
             done
+            exit $FAIL
           '
