@@ -263,10 +263,10 @@ static DeckInfo* owBackendGetNextDeck(void) {
 
     } else {
 #ifdef CONFIG_DEBUG
-        OW_BACKEND_DEBUG("OneWire deck %d has corrupt memory. Using dummy driver in DEBUG mode.\n", currentDeck);
+        OW_BACKEND_DEBUG("OneWire deck %d has corrupt or blank memory. Using dummy driver in DEBUG mode.\n", currentDeck);
         deckBuffer.driver = &dummyDriver;
 #else
-        OW_BACKEND_DEBUG("OneWire deck %d has corrupt memory. Skipping.\n", currentDeck);
+        OW_BACKEND_DEBUG("OneWire deck %d has corrupt or blank memory. Skipping.\n", currentDeck);
         currentDeck++;
         return NULL;
 #endif
