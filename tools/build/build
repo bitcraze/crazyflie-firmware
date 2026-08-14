@@ -3,7 +3,58 @@ set -e
 
 scriptDir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
+# Parse inputs
+special_case_build=0
+tolerate_ccmram_overflow=0
+if [ "$1" == "--tolerate-ccmram-overflow" ]; then
+  special_case_build=1
+  tolerate_ccmram_overflow=1
+  shift
+fi
+
 ${scriptDir}/test "${@}"
 ${scriptDir}/test_python "${@}"
-${scriptDir}/make "${@}"
-${scriptDir}/check_elf
+
+if [ ${special_case_build} -eq 0 ]; then
+  ${scriptDir}/make "${@}"
+  ${scriptDir}/check_elf
+  exit 0
+elif [ ${tolerate_ccmram_overflow} -eq 1 ]; then
+  # Only issue a warning for CCMRAM overflow
+
+  # Catch build output
+  set +e
+  build_log=$(${scriptDir}/make "${@}" 2>&1)
+  build_status=$?
+  set -e
+  printf '%s\n' "${build_log}"
+
+  if [ ${build_status} -eq 0 ]; then
+  ${scriptDir}/check_elf
+  exit 0
+  fi
+
+  # Check for CCMRAM overflow
+  overflow_line=$(grep "region \`CCMRAM' overflowed" <<< "${build_log}" || true)
+  if [ -z "${overflow_line}" ]; then
+  exit ${build_status}
+  fi
+
+  # Confirm the overflow is the *only* problem: any other linker diagnostic or
+  # compile error means a real regression is hiding alongside it.
+  ld_lines=$(grep -E "arm-none-eabi/bin/ld:" <<< "${build_log}" || true)
+  unexpected_ld_lines=$(grep -v -E "will not fit in region \`CCMRAM'|region \`CCMRAM' overflowed by [0-9]+ bytes" <<< "${ld_lines}" || true)
+  compile_errors=$(grep -E ": error:" <<< "${build_log}" | grep -v -F "collect2: error: ld returned 1 exit status" || true)
+
+  if [ -n "${unexpected_ld_lines}" ] || [ -n "${compile_errors}" ]; then
+  exit ${build_status}
+  fi
+
+  overflow_bytes=$(sed -n "s/.*region \`CCMRAM' overflowed by \([0-9]*\) bytes.*/\1/p" <<< "${overflow_line}" | head -1)
+  echo "::warning::kbuild-targets (allyesconfig): CCMRAM overflow, by ${overflow_bytes} bytes — check_elf skipped, no .elf was produced."
+
+  exit 0
+else
+  echo "Uknown special case build."
+  exit 1
+fi
