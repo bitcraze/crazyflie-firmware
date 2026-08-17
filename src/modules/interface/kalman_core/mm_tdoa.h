@@ -30,3 +30,15 @@
 
 // Measurements of a UWB Tx/Rx
 void kalmanCoreUpdateWithTdoa(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa, const uint32_t nowMs, OutlierFilterTdoaState_t* outlierFilterState);
+
+// Innovation (error = measured - predicted distance difference) of a TDoA
+// measurement against the current state, without updating anything.
+// Returns NAN in the degenerate case (state coincides with an anchor), where
+// the firmware skips the sample entirely. Used by the Python bindings to
+// replay logged data with an externalized (pluggable) outlier filter.
+float kalmanCoreTdoaInnovation(const kalmanCoreData_t* this, const tdoaMeasurement_t* tdoa);
+
+// TDoA measurement update with NO outlier filter: the caller has already
+// decided the sample is good. No-op in the degenerate case. Bindings-replay
+// companion of kalmanCoreTdoaInnovation; not used by the flight code path.
+void kalmanCoreUpdateWithTdoaUnfiltered(kalmanCoreData_t* this, tdoaMeasurement_t* tdoa);
