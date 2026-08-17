@@ -1126,4 +1126,15 @@ STATS_CNT_RATE_LOG_ADD(spiReBps, &spiReadRate)
  * @brief Data write rate to the SD card [bytes/s]
  */
 STATS_CNT_RATE_LOG_ADD(fatWrBps, &fatWriteRate)
+/**
+ * @brief Number of events requested to be written to the uSD card during the current/last log run
+ */
+LOG_ADD(LOG_UINT32, eventsRequested, &usdLogStats.eventsRequested)
+/**
+ * @brief Number of events actually written to the uSD card during the current/last log run.
+ *
+ * If lower than eventsRequested, events were dropped and the log is
+ * incomplete; do not trust lossless replay of that log.
+ */
+LOG_ADD(LOG_UINT32, eventsWritten, &usdLogStats.eventsWritten)
 LOG_GROUP_STOP(usd)
