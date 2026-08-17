@@ -121,6 +121,9 @@ typedef struct usdLogConfig_s {
 typedef struct usdLogStats_s {
   uint32_t eventsRequested;
   uint32_t eventsWritten;
+  // FatFS FRESULT of the first failed write of the current/last log run,
+  // 0 if none. Lets a run be checked for completeness on the drone.
+  uint8_t writeError;
 } usdLogStats_t;
 
 // Ring buffer
@@ -811,8 +814,15 @@ static void usdWriteData(const void *data, size_t size)
 {
   UINT bytesWritten;
   FRESULT status = f_write(&logFile, data, size, &bytesWritten);
-  if (status != FR_OK) {
-    DEBUG_PRINT("usd deck write failure %d\n", status);
+  if (status != FR_OK || bytesWritten < size) {
+    DEBUG_PRINT("usd deck write failure %d (%u of %u B)\n",
+                status, (unsigned)bytesWritten, (unsigned)size);
+    // Keep the first error of the run; later writes of the same burst can
+    // report follow-up errors. A short write with FR_OK means a full volume,
+    // which f_write itself reports as FR_DENIED.
+    if (usdLogStats.writeError == 0) {
+      usdLogStats.writeError = (status != FR_OK) ? (uint8_t)status : (uint8_t)FR_DENIED;
+    }
     enableLogging = false;
   } else {
     crc32Update(&crcContext, data, size);
@@ -835,6 +845,7 @@ static void usdWriteTask(void* prm)
       // reset stats
       usdLogStats.eventsRequested = 0;
       usdLogStats.eventsWritten = 0;
+      usdLogStats.writeError = 0;
 
       // reset the buffer
       xSemaphoreTake(logBufferMutex, portMAX_DELAY);
@@ -1138,4 +1149,12 @@ LOG_ADD(LOG_UINT32, eventsRequested, &usdLogStats.eventsRequested)
  * incomplete; do not trust lossless replay of that log.
  */
 LOG_ADD(LOG_UINT32, eventsWritten, &usdLogStats.eventsWritten)
+/**
+ * @brief FatFS error (FRESULT) of the first failed SD write of the current/last
+ *        log run, 0 if none.
+ *
+ * A write failure stops the log; a run with a non-zero writeError is
+ * incomplete and must not be used for replay.
+ */
+LOG_ADD(LOG_UINT8, writeError, &usdLogStats.writeError)
 LOG_GROUP_STOP(usd)
