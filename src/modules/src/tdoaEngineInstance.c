@@ -114,4 +114,19 @@ PARAM_ADD_CORE(PARAM_UINT8, logOthrId, &tdoaEngineState.stats.newRemoteAnchorId)
 // It only happens when the LPS system mode is changed to TDoA2 or TDoA3 though, and as this is
 // not a frequent action, we chose to expose it anyway.
 PARAM_ADD(PARAM_UINT8, matchAlgo, &tdoaEngineState.matchingAlgorithm)
+
+/**
+ * @brief Enable logging of all TDoA anchor-pair candidates (0 = off, non-zero = on).
+ *
+ * When enabled, every processed packet emits one "estTdoaCand" event trigger
+ * per valid candidate pair, before the matching algorithm collapses the
+ * candidates to a single pair. This records all candidate pairs (normally
+ * discarded) to the uSD deck for offline replay and A/B testing of the
+ * selection policy. All valid candidates are always logged so the log is a
+ * complete record; there is no partial mode. Note that this increases the
+ * event rate to the uSD deck considerably. Check for dropped events after a
+ * run by comparing the usd.eventsRequested and usd.eventsAccepted log
+ * variables.
+ */
+PARAM_ADD(PARAM_UINT8, logCand, &tdoaEngineState.candidateLogEnable)
 PARAM_GROUP_STOP(tdoaEngine)
