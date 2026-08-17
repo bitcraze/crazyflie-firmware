@@ -46,13 +46,11 @@
 static bool isInit = false;
 static xQueueHandle crtpPacketDelivery;
 STATIC_MEM_QUEUE_ALLOC(crtpPacketDelivery, 16, sizeof(CRTPPacket));
-static uint8_t sendBuffer[64];
+static USBPacket sendStage;
 
 static int usblinkSendPacket(CRTPPacket *p);
 static int usblinkSetEnable(bool enable);
 static int usblinkReceivePacket(CRTPPacket *p);
-
-STATIC_MEM_TASK_ALLOC(usblinkTask, USBLINK_TASK_STACKSIZE);
 
 static struct crtpLinkOperations usblinkOp =
 {
@@ -61,30 +59,16 @@ static struct crtpLinkOperations usblinkOp =
   .receivePacket     = usblinkReceivePacket,
 };
 
-/* Radio task handles the CRTP packet transfers as well as the radio link
- * specific communications (eg. Scann and ID ports, communication error handling
- * and so much other cool things that I don't have time for it ...)
- */
-static USBPacket usbIn;
-static CRTPPacket p;
-static void usblinkTask(void *param)
+xQueueHandle usblinkGetCrtpDeliveryQueue(void)
 {
-  while(1)
-  {
-    // Fetch a USB packet off the queue
-    usbGetDataBlocking(&usbIn);
-    p.size = usbIn.size - 1;
-    memcpy(&p.raw, usbIn.data, usbIn.size);
-    // This queuing will copy a CRTP packet size from usbIn
-    xQueueSend(crtpPacketDelivery, &p, portMAX_DELAY);
-  }
-
+  return crtpPacketDelivery;
 }
 
 static int usblinkReceivePacket(CRTPPacket *p)
 {
   if (xQueueReceive(crtpPacketDelivery, p, M2T(100)) == pdTRUE)
   {
+    usbResumeRx();
     ledseqRun(&seq_linkUp);
     return 0;
   }
@@ -94,22 +78,16 @@ static int usblinkReceivePacket(CRTPPacket *p)
 
 static int usblinkSendPacket(CRTPPacket *p)
 {
-  int dataSize;
-
   ASSERT(p->size < SYSLINK_MTU);
+  ASSERT(p->size <= CRTP_MAX_DATA_SIZE);
 
-  sendBuffer[0] = p->header;
-
-  if (p->size <= CRTP_MAX_DATA_SIZE)
-  {
-    memcpy(&sendBuffer[1], p->data, p->size);
-  }
-  dataSize = p->size + 1;
-
+  sendStage.size = p->size + 1;
+  sendStage.data[0] = p->header;
+  memcpy(&sendStage.data[1], p->data, p->size);
 
   ledseqRun(&seq_linkDown);
 
-  return usbSendData(dataSize, sendBuffer);
+  return usbSendData(&sendStage);
 }
 
 static int usblinkSetEnable(bool enable)
@@ -126,13 +104,11 @@ void usblinkInit()
   if(isInit)
     return;
 
-  // Initialize the USB peripheral
-  usbInit();
-
+  // Queue must exist before usbInit, since the OUT-EP ISR writes into it.
   crtpPacketDelivery = STATIC_MEM_QUEUE_CREATE(crtpPacketDelivery);
   DEBUG_QUEUE_MONITOR_REGISTER(crtpPacketDelivery);
 
-  STATIC_MEM_TASK_CREATE(usblinkTask, usblinkTask, USBLINK_TASK_NAME, NULL, USBLINK_TASK_PRI);
+  usbInit();
 
   isInit = true;
 }

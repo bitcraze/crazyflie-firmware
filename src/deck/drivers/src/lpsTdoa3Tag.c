@@ -362,7 +362,7 @@ static void processTwoWayRanging(tdoaAnchorContext_t* anchorCtx, const uint32_t 
             .z = position.z,
           };
 
-          if (ctx.useTwrForPositionEstimation) {
+          if (ctx.useTwrForPositionEstimation && locoEnableEstimator) {
             estimatorEnqueueDistance(&measurement);
             STATS_CNT_RATE_EVENT(&ctx.cntTwrToEstimator);
           }
@@ -616,7 +616,7 @@ static uint32_t onEvent(dwDevice_t *dev, uwbEvent_t event) {
 }
 
 static void sendTdoaToEstimatorCallback(tdoaMeasurement_t* tdoaMeasurement) {
-  if (ctx.isTdoaActive) {
+  if (ctx.isTdoaActive && locoEnableEstimator) {
     // Override the default standard deviation set by the TDoA engine.
     tdoaMeasurement->stdDev = ctx.tdoaStdDev;
 

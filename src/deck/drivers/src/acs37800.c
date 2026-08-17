@@ -205,7 +205,7 @@ static void ascFindAndSetAddress(void)
 
 static void asc37800Init(DeckInfo *info)
 {
-  uint8_t dummy;
+  uint8_t dummy = 0;
   uint32_t val;
 
   if (isInit) {

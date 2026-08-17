@@ -1,3 +1,4 @@
+#include <string.h>
 
 #include "stabilizer_types.h"
 
@@ -39,6 +40,15 @@ bool controllerPidTest(void)
   return pass;
 }
 
+static void controllerPidReinitialize(const state_t *state)
+{
+  positionControllerResetAllPID(state->position.x, state->position.y, state->position.z);
+  positionControllerResetAllfilters();
+  attitudeControllerResetAllPID(state->attitude.roll, state->attitude.pitch, state->attitude.yaw);
+  attitudeDesired.roll  = state->attitude.roll;
+  attitudeDesired.pitch = state->attitude.pitch;
+}
+
 static float capAngle(float angle) {
   float result = angle;
 
@@ -53,12 +63,24 @@ static float capAngle(float angle) {
   return result;
 }
 
+static bool setpointModeChanged(const setpoint_t *setpoint)
+{
+  static setpoint_mode_t previous_mode; // zero-init triggers reset on first tick
+  bool is_mode_changed = (memcmp(&setpoint->mode, &previous_mode, sizeof(previous_mode)) != 0);
+  previous_mode = setpoint->mode;
+  return is_mode_changed;
+}
+
 void controllerPid(control_t *control, const setpoint_t *setpoint,
                                          const sensorData_t *sensors,
                                          const state_t *state,
                                          const stabilizerStep_t stabilizerStep)
 {
   control->controlMode = controlModeLegacy;
+
+  if (setpointModeChanged(setpoint)) {
+    controllerPidReinitialize(state); // To prevent control bump
+  }
 
   if (RATE_DO_EXECUTE(ATTITUDE_RATE, stabilizerStep)) {
     // Rate-controled YAW is moving YAW angle setpoint
@@ -108,16 +130,12 @@ void controllerPid(control_t *control, const setpoint_t *setpoint,
                                 attitudeDesired.roll, attitudeDesired.pitch, attitudeDesired.yaw,
                                 &rateDesired.roll, &rateDesired.pitch, &rateDesired.yaw);
 
-    // For roll and pitch, if velocity mode, overwrite rateDesired with the setpoint
-    // value. Also reset the PID to avoid error buildup, which can lead to unstable
-    // behavior if level mode is engaged later
+    // For roll and pitch, if velocity mode, overwrite rateDesired with the setpoint value
     if (setpoint->mode.roll == modeVelocity) {
       rateDesired.roll = setpoint->attitudeRate.roll;
-      attitudeControllerResetRollAttitudePID(state->attitude.roll);
     }
     if (setpoint->mode.pitch == modeVelocity) {
       rateDesired.pitch = setpoint->attitudeRate.pitch;
-      attitudeControllerResetPitchAttitudePID(state->attitude.pitch);
     }
 
     // TODO: Investigate possibility to subtract gyro drift.
@@ -154,8 +172,7 @@ void controllerPid(control_t *control, const setpoint_t *setpoint,
     cmd_pitch = control->pitch;
     cmd_yaw = control->yaw;
 
-    attitudeControllerResetAllPID(state->attitude.roll, state->attitude.pitch, state->attitude.yaw);
-    positionControllerResetAllPID(state->position.x, state->position.y, state->position.z);
+    controllerPidReinitialize(state);
 
     // Reset the calculated YAW angle for rate control
     attitudeDesired.yaw = state->attitude.yaw;

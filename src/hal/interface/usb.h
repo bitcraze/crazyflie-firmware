@@ -63,23 +63,17 @@ bool usbTest(void);
 struct crtpLinkOperations * usbGetLink();
 
 /**
- * Get data from rx queue with timeout.
- * @param in  Pointer to USBPacket structure to store data
- *
- * @return true if byte received, false if timout reached.
+ * Re-arm the CF OUT endpoint if RX was halted by a full CRTP delivery
+ * queue. Called by the link layer after dequeuing a packet.
  */
-bool usbGetDataBlocking(USBPacket *in);
+void usbResumeRx(void);
 
 /**
- * Sends raw data using a lock. Should be used from
- * exception functions and for debugging when a lot of data
- * should be transfered.
- * @param[in] size  Number of bytes to send
- * @param[in] data  Pointer to data
+ * Enqueue a packet for transmission on the CF IN endpoint.
  *
- * @note If UART Crtp link is activated this function does nothing
+ * @return true on success, false on queue-full timeout (100 ms).
  */
-bool usbSendData(uint32_t size, uint8_t* data);
+bool usbSendData(USBPacket *pkt);
 
 
 #define DEVICE_CLASS_CDC                        0x02

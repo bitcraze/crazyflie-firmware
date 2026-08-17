@@ -532,3 +532,17 @@ config DECK_COLORLED
     default y
     help
         Enables the support for Color LED deck.
+
+config DECK_BCCAM
+    depends on DECK_BACKEND_DECKCTRL
+    bool "Support for WiFi camera deck"
+    default y
+    help
+        Enables the support for the WiFi camera deck
+
+config DECK_BCCAM_DEBUG
+    depends on DECK_BCCAM
+    bool "Enable WiFi camera deck debug prints"
+    default n
+    help
+        Enable extra debug prints for the WiFi camera deck driver.

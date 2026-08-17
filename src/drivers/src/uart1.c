@@ -31,10 +31,12 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "semphr.h"
+#include "task.h"
 
 /*ST includes */
 #include "stm32fxxx.h"
 
+#include "autoconf.h"
 #include "config.h"
 #include "nvic.h"
 #include "uart1.h"
@@ -46,7 +48,9 @@
 /** This uart is conflicting with SPI2 DMA used in sensors_bmi088_spi_bmp3xx.c
  *  which is used in CF-Bolt. So for other products this can be enabled.
  */
-//#define ENABLE_UART1_DMA
+#if !defined(CONFIG_SENSORS_BMI088_SPI)
+#define ENABLE_UART1_DMA
+#endif
 
 #define QUEUE_LENGTH 64
 static xQueueHandle uart1queue;
@@ -54,6 +58,8 @@ STATIC_MEM_QUEUE_ALLOC(uart1queue, QUEUE_LENGTH, sizeof(uint8_t));
 
 static bool isInit = false;
 static bool hasOverrun = false;
+static uart1RxCallback_t rxCallback;
+static uart1ErrorCallback_t errorCallback;
 
 #ifdef ENABLE_UART1_DMA
 static xSemaphoreHandle uartBusy;
@@ -61,9 +67,7 @@ static StaticSemaphore_t uartBusyBuffer;
 static xSemaphoreHandle waitUntilSendDone;
 static StaticSemaphore_t waitUntilSendDoneBuffer;
 static DMA_InitTypeDef DMA_InitStructureShare;
-static uint8_t dmaBuffer[64];
 static bool    isUartDmaInitialized;
-static uint32_t initialDMACount;
 #endif
 
 /**
@@ -82,9 +86,8 @@ static void uart1DmaInit(void)
 
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
 
-  // USART TX DMA Channel Config
+  // USART TX DMA Channel Config. DMA_Memory0BaseAddr is set per call.
   DMA_InitStructureShare.DMA_PeripheralBaseAddr = (uint32_t)&UART1_TYPE->DR;
-  DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)dmaBuffer;
   DMA_InitStructureShare.DMA_MemoryInc = DMA_MemoryInc_Enable;
   DMA_InitStructureShare.DMA_MemoryBurst = DMA_MemoryBurst_Single;
   DMA_InitStructureShare.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
@@ -182,9 +185,82 @@ void uart1InitWithParity(const uint32_t baudrate, const uart1Parity_t parity)
   isInit = true;
 }
 
+void uart1SetBaudrate(const uint32_t baudrate)
+{
+  if (!isInit) {
+    return;
+  }
+
+  USART_InitTypeDef USART_InitStructure;
+
+  USART_Cmd(UART1_TYPE, DISABLE);
+
+  USART_InitStructure.USART_BaudRate            = baudrate;
+  USART_InitStructure.USART_Mode                = USART_Mode_Rx | USART_Mode_Tx;
+  USART_InitStructure.USART_WordLength          = USART_WordLength_8b;
+  USART_InitStructure.USART_StopBits            = USART_StopBits_1;
+  USART_InitStructure.USART_Parity              = USART_Parity_No;
+  USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+  USART_Init(UART1_TYPE, &USART_InitStructure);
+
+  USART_Cmd(UART1_TYPE, ENABLE);
+}
+
 bool uart1Test(void)
 {
   return isInit;
+}
+
+static uint32_t uart1DisableIrq(void)
+{
+  const uint32_t irqWasEnabled = NVIC_GetEnableIRQ(UART1_IRQ);
+  NVIC_DisableIRQ(UART1_IRQ);
+  return irqWasEnabled;
+}
+
+static void uart1RestoreIrq(uint32_t irqWasEnabled)
+{
+  if (irqWasEnabled != 0) {
+    NVIC_EnableIRQ(UART1_IRQ);
+  }
+}
+
+void uart1SetRxCallback(uart1RxCallback_t callback)
+{
+  const uint32_t irqWasEnabled = uart1DisableIrq();
+  rxCallback = callback;
+  uart1RestoreIrq(irqWasEnabled);
+}
+
+void uart1ClearRxCallback(void)
+{
+  uart1SetRxCallback(NULL);
+}
+
+void uart1SetErrorCallback(uart1ErrorCallback_t callback)
+{
+  const uint32_t irqWasEnabled = uart1DisableIrq();
+  errorCallback = callback;
+  uart1RestoreIrq(irqWasEnabled);
+}
+
+void uart1ClearErrorCallback(void)
+{
+  uart1SetErrorCallback(NULL);
+}
+
+void uart1SetCallbacks(uart1RxCallback_t rx_callback,
+                       uart1ErrorCallback_t error_callback)
+{
+  const uint32_t irqWasEnabled = uart1DisableIrq();
+  rxCallback = rx_callback;
+  errorCallback = error_callback;
+  uart1RestoreIrq(irqWasEnabled);
+}
+
+void uart1ClearCallbacks(void)
+{
+  uart1SetCallbacks(NULL, NULL);
 }
 
 bool uart1GetDataWithTimeout(uint8_t *c, const uint32_t timeoutTicks)
@@ -224,6 +300,35 @@ void uart1SendData(uint32_t size, uint8_t* data)
   }
 }
 
+bool uart1SendDataWaitComplete(uint32_t size,
+                               const uint8_t* data,
+                               uint32_t timeoutTicks)
+{
+  if (!isInit || (size > 0 && data == NULL)) {
+    return false;
+  }
+
+  const TickType_t deadline = xTaskGetTickCount() + timeoutTicks;
+  for (uint32_t i = 0; i < size; i++) {
+    while (!(UART1_TYPE->SR & USART_FLAG_TXE)) {
+      if ((int32_t)(xTaskGetTickCount() - deadline) >= 0) {
+        return false;
+      }
+    }
+    UART1_TYPE->DR = (data[i] & 0x00FF);
+  }
+
+  if (size > 0) {
+    while (!(UART1_TYPE->SR & USART_FLAG_TC)) {
+      if ((int32_t)(xTaskGetTickCount() - deadline) >= 0) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
 #ifdef ENABLE_UART1_DMA
 void uart1SendDataDmaBlocking(uint32_t size, uint8_t* data)
 {
@@ -232,10 +337,8 @@ void uart1SendDataDmaBlocking(uint32_t size, uint8_t* data)
     xSemaphoreTake(uartBusy, portMAX_DELAY);
     // Wait for DMA to be free
     while(DMA_GetCmdStatus(UART1_DMA_STREAM) != DISABLE);
-    //Copy data in DMA buffer
-    memcpy(dmaBuffer, data, size);
+    DMA_InitStructureShare.DMA_Memory0BaseAddr = (uint32_t)data;
     DMA_InitStructureShare.DMA_BufferSize = size;
-    initialDMACount = size;
     // Init new DMA stream
     DMA_Init(UART1_DMA_STREAM, &DMA_InitStructureShare);
     // Enable the Transfer Complete interrupt
@@ -251,6 +354,16 @@ void uart1SendDataDmaBlocking(uint32_t size, uint8_t* data)
   }
 }
 #endif
+
+void uart1SendDmaIfAvailable(uint32_t size, uint8_t* data)
+{
+#ifdef ENABLE_UART1_DMA
+  ASSERT_DMA_SAFE(data);
+  uart1SendDataDmaBlocking(size, data);
+#else
+  uart1SendData(size, data);
+#endif
+}
 
 int uart1Putchar(int ch)
 {
@@ -300,21 +413,40 @@ void __attribute__((used)) DMA1_Stream3_IRQHandler(void)
 
 void __attribute__((used)) USART3_IRQHandler(void)
 {
-  if (USART_GetITStatus(UART1_TYPE, USART_IT_RXNE))
+  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+  const uint32_t status = UART1_TYPE->SR;
+  const bool hasRxData = (status & USART_FLAG_RXNE) != 0;
+  const bool hasError = ((status & USART_FLAG_ORE) != 0) ||
+                        ((status & USART_FLAG_NE) != 0) ||
+                        ((status & USART_FLAG_FE) != 0) ||
+                        ((status & USART_FLAG_PE) != 0);
+
+  if (hasRxData)
   {
-    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
     uint8_t rxData = USART_ReceiveData(UART1_TYPE) & 0x00FF;
-    xQueueSendFromISR(uart1queue, &rxData, &xHigherPriorityTaskWoken);
-    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-  } else {
+    if (rxCallback != NULL) {
+      rxCallback(rxData, &xHigherPriorityTaskWoken);
+    } else {
+      xQueueSendFromISR(uart1queue, &rxData, &xHigherPriorityTaskWoken);
+    }
+  }
+
+  if (hasError) {
     /** if we get here, the error is most likely caused by an overrun!
      * - PE (Parity error), FE (Framing error), NE (Noise error), ORE (OverRun error)
      * - and IDLE (Idle line detected) pending bits are cleared by software sequence:
      * - reading USART_SR register followed reading the USART_DR register.
      */
-    asm volatile ("" : "=m" (UART1_TYPE->SR) : "r" (UART1_TYPE->SR)); // force non-optimizable reads
-    asm volatile ("" : "=m" (UART1_TYPE->DR) : "r" (UART1_TYPE->DR)); // of these two registers
+    if (!hasRxData) {
+      asm volatile ("" : "=m" (UART1_TYPE->SR) : "r" (UART1_TYPE->SR)); // force non-optimizable reads
+      asm volatile ("" : "=m" (UART1_TYPE->DR) : "r" (UART1_TYPE->DR)); // of these two registers
+    }
 
     hasOverrun = true;
+    if (errorCallback != NULL) {
+      errorCallback(&xHigherPriorityTaskWoken);
+    }
   }
+
+  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
