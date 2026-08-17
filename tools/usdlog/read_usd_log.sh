@@ -13,10 +13,17 @@
 #
 # Usage:
 #   tools/usdlog/read_usd_log.sh <uri> <output.bin> [--replay <anchors.yaml>]
+#   tools/usdlog/read_usd_log.sh <uri> --check-only
 #
 # Examples:
 #   tools/usdlog/read_usd_log.sh radio://0/100/2M/F00D2BEFED run01.bin
 #   tools/usdlog/read_usd_log.sh usb://0 run01.bin --replay anchors.yaml
+#   tools/usdlog/read_usd_log.sh radio://0/100/2M/F00D2BEFED --check-only
+#
+# --check-only runs the integrity gates (dropped events, SD write errors,
+# non-zero file size) and stops logging, but transfers no data. Use it before
+# pulling the card by hand: radio readback of a multi-MB log takes far longer
+# than reading the card directly, but the counters only exist on the drone.
 #
 set -euo pipefail
 
@@ -24,15 +31,27 @@ CFCLI="${CFCLI:-cfcli}"
 
 if [[ $# -lt 2 ]]; then
   echo "Usage: $0 <uri> <output.bin> [--replay <anchors.yaml>]" >&2
+  echo "       $0 <uri> --check-only" >&2
   exit 2
 fi
 
 URI="$1"
-OUT="$2"
-shift 2
+CHECK_ONLY=0
+OUT=""
+if [[ "$2" == "--check-only" ]]; then
+  CHECK_ONLY=1
+  shift 2
+else
+  OUT="$2"
+  shift 2
+fi
 
 REPLAY_ANCHORS=""
 if [[ "${1:-}" == "--replay" ]]; then
+  if [[ "$CHECK_ONLY" == "1" ]]; then
+    echo "!! --replay needs a downloaded log; it cannot be combined with --check-only." >&2
+    exit 2
+  fi
   REPLAY_ANCHORS="${2:?--replay needs an anchors.yaml path}"
 fi
 
@@ -100,6 +119,14 @@ if [[ -z "$SIZE" || "$SIZE" == "0" ]]; then
   exit 1
 fi
 
+if [[ "$CHECK_ONLY" == "1" ]]; then
+  echo ">> OK: integrity checks passed; log is $SIZE bytes and closed."
+  echo "   Logging is stopped, so the card can be pulled safely."
+  echo "   Replay it with:"
+  echo "     python3 -m tools.usdlog.replay_tdoa <log.bin> --anchors anchors.yaml"
+  exit 0
+fi
+
 echo ">> Reading $SIZE bytes from MicroSD into $OUT ..."
 "$CFCLI" -u "$URI" mem read MicroSD --offset 0 --length "$SIZE" --output "$OUT"
 
@@ -108,6 +135,18 @@ echo ">> Done. Wrote $OUT ($(wc -c < "$OUT") bytes)."
 if [[ -n "$REPLAY_ANCHORS" ]]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-  echo ">> Replaying $OUT against $REPLAY_ANCHORS ..."
-  ( cd "$REPO_ROOT" && python3 -m tools.usdlog.replay_tdoa "$OUT" --anchors "$REPLAY_ANCHORS" )
+  # The replay needs numpy and the cffirmware bindings built for the *same*
+  # interpreter (see bindings/README). The repo venv has both; a bare python3
+  # usually has neither. Override with PYTHON=... if you keep them elsewhere.
+  PYTHON="${PYTHON:-}"
+  if [[ -z "$PYTHON" ]]; then
+    if [[ -x "$REPO_ROOT/.venv/bin/python" ]]; then
+      PYTHON="$REPO_ROOT/.venv/bin/python"
+    else
+      PYTHON="python3"
+    fi
+  fi
+  echo ">> Replaying $OUT against $REPLAY_ANCHORS (using $PYTHON) ..."
+  ( cd "$REPO_ROOT" && PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}build" \
+      "$PYTHON" -m tools.usdlog.replay_tdoa "$OUT" --anchors "$REPLAY_ANCHORS" )
 fi
