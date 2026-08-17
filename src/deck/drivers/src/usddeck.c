@@ -483,9 +483,10 @@ static void usddeckWriteEventData(const usdLogEventConfig_t* cfg, const uint8_t*
     return;
   }
 
-  ++usdLogStats.eventsRequested;
-
   xSemaphoreTake(logBufferMutex, portMAX_DELAY);
+
+  // Incremented from several task contexts, so keep it under the mutex.
+  ++usdLogStats.eventsRequested;
 
   // trigger writing once there is some data
   if (logBuffer.size > 0 && xHandleWriteTask) {
