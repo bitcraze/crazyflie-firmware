@@ -143,10 +143,16 @@ static float distanceBetweenAnchorsSquared(const point_t* a, const point_t* b) {
 }
 
 static bool isGeometryGoodEnough(const tdoaAnchorContext_t* anchorCtx, const tdoaAnchorContext_t* otherAnchorCtx, const double candidateDistanceDiff) {
+  // The measurement is h(p) = |p - A1| - |p - A2|. Its gradient wrt the tag position p is
+  // grad(h) = u1 - u2, where u1, u2 are the unit vectors from each anchor towards the tag (i.e.
+  // the lines of sight). The true measurement sensitivity is:
+  //   |grad(h)| = |u1 - u2| = 2 * sin(theta / 2)
+  // with theta the angle between those two lines of sight.
+  //
   // A candidate is rejected if the ratio between the measured distance diff and the distance
-  // between the anchors is at or above distanceRatioLimit - this indicates bad pair geometry.
-  // This is a rough estimation of the measurement sensitivity.
-
+  // between the anchors is at or above distanceRatioLimit - this indicates bad pair geometry,
+  // and inversed approximates the measurement sensitivity.
+  
   point_t anchorPosition;
   point_t otherAnchorPosition;
 
@@ -166,7 +172,15 @@ static bool isGeometryGoodEnough(const tdoaAnchorContext_t* anchorCtx, const tdo
   return ratioSquared < sq(distanceRatioLimit);
 }
 
-TESTABLE_STATIC bool matchRandomAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx, const bool doExcludeId, const uint8_t excludedId, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T, const double locodeckTsFreq, double* distanceDiff) {
+TESTABLE_STATIC bool matchRandomAnchor(tdoaEngineState_t* engineState,
+                                       tdoaAnchorContext_t* otherAnchorCtx,
+                                       const tdoaAnchorContext_t* anchorCtx,
+                                       const bool doExcludeId,
+                                       const uint8_t excludedId,
+                                       const int64_t txAn_in_cl_An,
+                                       const int64_t rxAn_by_T_in_cl_T,
+                                       const double locodeckTsFreq,
+                                       double* distanceDiff) {
   engineState->matching.offset++;
   int remoteCount = 0;
   tdoaStorageGetRemoteSeqNrList(anchorCtx, &remoteCount, engineState->matching.seqNr, engineState->matching.id);
@@ -176,6 +190,7 @@ TESTABLE_STATIC bool matchRandomAnchor(tdoaEngineState_t* engineState, tdoaAncho
   // Loop over the candidates and pick the first one that is useful
   // An offset (updated for each call) is added to make sure we start at
   // different positions in the list and vary which candidate to choose
+  // Reject a candidate if geometry is not good enough.
   for (int i = engineState->matching.offset; i < (remoteCount + engineState->matching.offset); i++) {
     uint8_t index = i % remoteCount;
     const uint8_t candidateAnchorId = engineState->matching.id[index];
@@ -183,7 +198,6 @@ TESTABLE_STATIC bool matchRandomAnchor(tdoaEngineState_t* engineState, tdoaAncho
       if (tdoaStorageGetCreateAnchorCtx(engineState->anchorInfoArray, candidateAnchorId, now_ms, otherAnchorCtx)) {
         if (engineState->matching.seqNr[index] == tdoaStorageGetSeqNr(otherAnchorCtx) && tdoaStorageGetRemoteTimeOfFlight(anchorCtx, candidateAnchorId)) {
           const double candidateDistanceDiff = calcDistanceDiff(otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, locodeckTsFreq);
-
           if (!isGeometryGoodEnough(anchorCtx, otherAnchorCtx, candidateDistanceDiff)) {
             STATS_CNT_RATE_EVENT(&engineState->stats.geometryRejected);
             continue;
@@ -200,12 +214,20 @@ TESTABLE_STATIC bool matchRandomAnchor(tdoaEngineState_t* engineState, tdoaAncho
   return false;
 }
 
-static bool matchYoungestAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx, const bool doExcludeId, const uint8_t excludedId, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T, const double locodeckTsFreq, double* distanceDiff) {
+static bool matchYoungestAnchor(tdoaEngineState_t* engineState,
+                                tdoaAnchorContext_t* otherAnchorCtx,
+                                const tdoaAnchorContext_t* anchorCtx,
+                                const bool doExcludeId,
+                                const uint8_t excludedId,
+                                const int64_t txAn_in_cl_An,
+                                const int64_t rxAn_by_T_in_cl_T,
+                                const double locodeckTsFreq,
+                                double* distanceDiff) {
     int remoteCount = 0;
     tdoaStorageGetRemoteSeqNrList(anchorCtx, &remoteCount, engineState->matching.seqNr, engineState->matching.id);
 
     uint32_t now_ms = anchorCtx->currentTime_ms;
-    uint32_t youmgestUpdateTime = 0;
+    uint32_t youngestUpdateTime = 0;
     int bestId = -1;
 
     for (int index = 0; index < remoteCount; index++) {
@@ -214,9 +236,9 @@ static bool matchYoungestAnchor(tdoaEngineState_t* engineState, tdoaAnchorContex
         if (tdoaStorageGetRemoteTimeOfFlight(anchorCtx, candidateAnchorId)) {
           if (tdoaStorageGetCreateAnchorCtx(engineState->anchorInfoArray, candidateAnchorId, now_ms, otherAnchorCtx)) {
             uint32_t updateTime = tdoaStorageGetLastUpdateTime(otherAnchorCtx);
-            if (updateTime > youmgestUpdateTime) {
+            if (updateTime > youngestUpdateTime) {
               if (engineState->matching.seqNr[index] == tdoaStorageGetSeqNr(otherAnchorCtx)) {
-                youmgestUpdateTime = updateTime;
+                youngestUpdateTime = updateTime;
                 bestId = candidateAnchorId;
               }
             }
@@ -235,7 +257,15 @@ static bool matchYoungestAnchor(tdoaEngineState_t* engineState, tdoaAnchorContex
     return false;
 }
 
-static bool findSuitableAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx, const bool doExcludeId, const uint8_t excludedId, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T, const double locodeckTsFreq, double* distanceDiff) {
+static bool findSuitableAnchor(tdoaEngineState_t* engineState,
+                               tdoaAnchorContext_t* otherAnchorCtx,
+                               const tdoaAnchorContext_t* anchorCtx,
+                               const bool doExcludeId,
+                               const uint8_t excludedId,
+                               const int64_t txAn_in_cl_An,
+                               const int64_t rxAn_by_T_in_cl_T,
+                               const double locodeckTsFreq,
+                               double* distanceDiff) {
   bool result = false;
 
   if (tdoaStorageGetClockCorrection(anchorCtx) > 0.0) {
