@@ -55,12 +55,8 @@ The implementation must handle
 #include "test_support.h"
 #include "param.h"
 
-// Default limit for the measured/anchor-distance ratio used by matchRandomAnchor(), needs
-// tuning against field data. Exposed as the tdoaEngine.distRatio parameter.
 #define TDOA_ENGINE_DEFAULT_DISTANCE_RATIO_LIMIT 0.85f
 
-// Candidates with a measured/anchor-distance ratio at or above this limit are
-// rejected as bad geometry (matchRandomAnchor/TDoA3 only), see isGeometryGoodEnough()
 static float distanceRatioLimit = TDOA_ENGINE_DEFAULT_DISTANCE_RATIO_LIMIT;
 
 void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms, tdoaEngineSendTdoaToEstimator sendTdoaToEstimator, const double locodeckTsFreq, const tdoaEngineMatchingAlgorithm_t matchingAlgorithm) {
@@ -287,6 +283,8 @@ PARAM_GROUP_START(tdoaEngine)
 /**
  * @brief Anchor pair candidates with a measured-distance / anchor-distance ratio at or
  * above this limit are rejected as bad geometry (TDoA3/matchRandomAnchor only).
+ * The value is in range [0, 1], where a value closer to one means letting through more
+ * measurements. Reasonable range is [0.6, 0.98].
  */
 PARAM_ADD(PARAM_FLOAT, distRatio, &distanceRatioLimit)
 PARAM_GROUP_STOP(tdoaEngine)
