@@ -142,8 +142,6 @@ static float distanceBetweenAnchorsSquared(const point_t* a, const point_t* b) {
   return sq(a->x - b->x) + sq(a->y - b->y) + sq(a->z - b->z);
 }
 
-// Returns false (candidate rejected) if
-// either anchor position is unknown.
 static bool isGeometryGoodEnough(const tdoaAnchorContext_t* anchorCtx, const tdoaAnchorContext_t* otherAnchorCtx, const double candidateDistanceDiff) {
   // A candidate is rejected if the ratio between the measured distance diff and the distance
   // between the anchors is at or above distanceRatioLimit - this indicates bad pair geometry.
@@ -151,11 +149,18 @@ static bool isGeometryGoodEnough(const tdoaAnchorContext_t* anchorCtx, const tdo
 
   point_t anchorPosition;
   point_t otherAnchorPosition;
-  if (!tdoaStorageGetAnchorPosition(anchorCtx, &anchorPosition) || !tdoaStorageGetAnchorPosition(otherAnchorCtx, &otherAnchorPosition)) {
+
+  // Return false (candidate rejected) if either anchor position is unknown.
+  if (!tdoaStorageGetAnchorPosition(anchorCtx, &anchorPosition) || !tdoaStorageGetAnchorPosition(otherAnchorCtx, &otherAnchorPosition)) {  
     return false;
   }
 
   const float anchorDistanceSquared = distanceBetweenAnchorsSquared(&anchorPosition, &otherAnchorPosition);
+  if (anchorDistanceSquared <= 0.0f) {
+    // Anchors at (near) identical positions - geometry is degenerate, reject to avoid division by zero
+    return false;
+  }
+
   const float distanceDiffSquared = sq((float)candidateDistanceDiff);
   const float ratioSquared = distanceDiffSquared / anchorDistanceSquared;
   return ratioSquared < sq(distanceRatioLimit);
