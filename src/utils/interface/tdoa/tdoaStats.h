@@ -11,9 +11,7 @@ typedef struct {
   statsCntRateLogger_t contextMissCount;
   statsCntRateLogger_t timeIsGood;
   statsCntRateLogger_t suitableDataFound;
-
-  // Packets where all candidates were rejected by the anchor pair geometry check
-  statsCntRateLogger_t geometryRejectedTEST;
+  statsCntRateLogger_t geometryRejected; // Rate for measurement pairs that was rejected due to bad geometry
 
   // Anchor ids to use for stats
   uint8_t anchorId; // The id of the anchor to log

@@ -171,7 +171,6 @@ TESTABLE_STATIC bool matchRandomAnchor(tdoaEngineState_t* engineState, tdoaAncho
   tdoaStorageGetRemoteSeqNrList(anchorCtx, &remoteCount, engineState->matching.seqNr, engineState->matching.id);
 
   uint32_t now_ms = anchorCtx->currentTime_ms;
-  bool wasRejectedByGeometry = false; // TEST stat only
 
   // Loop over the candidates and pick the first one that is useful
   // An offset (updated for each call) is added to make sure we start at
@@ -185,7 +184,7 @@ TESTABLE_STATIC bool matchRandomAnchor(tdoaEngineState_t* engineState, tdoaAncho
           const double candidateDistanceDiff = calcDistanceDiff(otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, locodeckTsFreq);
 
           if (!isGeometryGoodEnough(anchorCtx, otherAnchorCtx, candidateDistanceDiff)) {
-            wasRejectedByGeometry = true; // TEST stat only
+            STATS_CNT_RATE_EVENT(&engineState->stats.geometryRejected);
             continue;
           }
 
@@ -195,12 +194,6 @@ TESTABLE_STATIC bool matchRandomAnchor(tdoaEngineState_t* engineState, tdoaAncho
       }
     }
   }
-
-  // TEST stat only, from here...
-  if (wasRejectedByGeometry) {
-    STATS_CNT_RATE_EVENT(&engineState->stats.geometryRejectedTEST);
-  }
-  // ...to here
 
   otherAnchorCtx->anchorInfo = 0;
   return false;

@@ -64,7 +64,7 @@ STATS_CNT_RATE_LOG_ADD(stFound, &tdoaEngineState.stats.suitableDataFound)
  * @brief TEST: rate of packets where all anchor pair candidates were rejected by the
  * geometry filter (TDoA3/matchRandomAnchor only) [1/s]
  */
-STATS_CNT_RATE_LOG_ADD(stGeometryTEST, &tdoaEngineState.stats.geometryRejectedTEST)
+STATS_CNT_RATE_LOG_ADD(stGeometryTEST, &tdoaEngineState.stats.geometryRejected)
 
 /**
  * @brief Rate of packets where the time stamp is used to update the clock correction factor for an anchor [1/s]
