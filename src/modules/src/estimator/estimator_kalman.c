@@ -524,8 +524,6 @@ LOG_GROUP_STOP(kalman)
 
 LOG_GROUP_START(outlierf)
   LOG_ADD(LOG_INT32, lhWin, &sweepOutlierFilterState.openingWindowMs)
-  LOG_ADD(LOG_FLOAT, tdoaIntegrator, &outlierFilterTdoaState.integrator)
-  LOG_ADD(LOG_UINT8, tdoaFilterOpen, &outlierFilterTdoaState.isFilterOpen)
 LOG_GROUP_STOP(outlierf)
 
 /**
