@@ -131,7 +131,7 @@ static lhSystemStatus_t systemStatusWs;
 static lhSystemStatus_t ledInternalStatus = statusToEstimator;
 
 static const uint32_t SYSTEM_STATUS_UPDATE_INTERVAL = FIFTH_SECOND;
-static uint32_t nextUpdateTimeOfSystemStatus = 6000;
+static uint32_t nextUpdateTimeOfSystemStatus = 0;
 
 static uint16_t pulseWidth[PULSE_PROCESSOR_N_SENSORS];
 pulseProcessor_t lighthouseCoreState;
@@ -277,7 +277,7 @@ void lighthouseCoreSetSystemType(const lighthouseBaseStationType_t type)
 
 static void uart1RxISRCallback(uint8_t rxByte) {
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
-  static char data[UART_FRAME_LENGTH];
+  static uint8_t data[UART_FRAME_LENGTH];
   static int index = 0;
   static int syncCounter = 0;
 
@@ -322,7 +322,7 @@ static void uart1RxISRCallback(uint8_t rxByte) {
 }
 
 TESTABLE_STATIC bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
-  if (xQueueReceive(lhFramePacketQueue, frame, M2T(LH_GET_FRAME_TIMEOUT)) == pdTRUE) {
+  if (xQueueReceive(lhFramePacketQueue, frame, LH_GET_FRAME_TIMEOUT) == pdTRUE) {
     STATS_CNT_RATE_EVENT_DEBUG(&serialFrameRate);
     return true;
   }
@@ -595,6 +595,7 @@ void lighthouseCoreTask(void *param) {
     if (getUartFrameRaw(&frame)) {      
       const uint32_t now_ms = T2M(xTaskGetTickCount());
       lastFrameTs = now_ms;
+      uartSynchronized = true;
 
       // If a sync frame is getting through, we are only receiving sync frames. So nothing else. Reset state
       if(frame.isSyncFrame && previousWasSyncFrame) {
@@ -616,6 +617,7 @@ void lighthouseCoreTask(void *param) {
 
       updateSystemStatus(now_ms);
     } else {
+       uartSynchronized = false;
        lighthouseTransmitProcessTimeout();
     }
   }
