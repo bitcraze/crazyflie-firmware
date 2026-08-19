@@ -95,7 +95,7 @@ static void queuePush(const lighthouseUartFrame_t* frameToPush) {
   }
 }
 
-static void uart1RegisterRxCallbackStub(uart1RxCallback_t cb, int cmock_num_calls) {
+static void uart1SetRxCallbackStub(uart1RxCallback_t cb, int cmock_num_calls) {
   (void)cmock_num_calls;
   registeredUart1RxCallback = cb;
 }
@@ -119,7 +119,7 @@ void setUp(void) {
 
   lighthouseStorageInitializeSystemTypeFromStorage_Expect();
   lighthousePositionEstInit_Expect();
-  uart1RegisterRxCallback_StubWithCallback(uart1RegisterRxCallbackStub);
+  uart1SetRxCallback_StubWithCallback(uart1SetRxCallbackStub);
   lighthouseCoreInit();
 
   TEST_ASSERT_NOT_NULL(registeredUart1RxCallback);
@@ -340,7 +340,7 @@ static void uart1SetSequence(char* sequence, int length) {
     // Feed bytes through the registered RX callback so uart1RxISRCallback code is exercised.
     if (registeredUart1RxCallback != NULL) {
       for (int i = 0; i < length; i++) {
-        registeredUart1RxCallback((uint8_t)sequence[i]);
+        registeredUart1RxCallback((uint8_t)sequence[i], NULL);
       }
     }
 
