@@ -107,3 +107,50 @@ def test_filter_known_anchors_drops_samples_referencing_unknown_anchors():
     kept, n_skipped = filter_known_anchors(samples, anchor_positions)
     assert kept == [samples[0]]
     assert n_skipped == 2
+
+
+def test_ground_truth_interpolation_and_scoring():
+    # Interpolation and scoring live in the CLI module; importing it must
+    # not require the cffirmware bindings.
+    from tools.usdlog.replay_tdoa import _interp_ground_truth, score_trajectory
+
+    gt = [(100.0, (0.0, 0.0, 0.0)), (200.0, (1.0, 0.0, 0.0))]
+
+    assert _interp_ground_truth(gt, 150.0) == (0.5, 0.0, 0.0)
+    assert _interp_ground_truth(gt, 100.0) == (0.0, 0.0, 0.0)
+    assert _interp_ground_truth(gt, 99.0) is None
+    assert _interp_ground_truth(gt, 201.0) is None
+
+    # Trajectory exactly on the ground truth scores zero error
+    trajectory = [(100.0, (0.0, 0.0, 0.0)), (150.0, (0.5, 0.0, 0.0))]
+    metrics, errors = score_trajectory(trajectory, gt, flyaway_threshold_m=0.3)
+    assert metrics['n'] == 2
+    assert metrics['rms'] == 0.0
+    assert metrics['flyaway_frac'] == 0.0
+
+    # A 1 m error on one of two samples is reflected in max and flyaway_frac
+    trajectory = [(100.0, (0.0, 0.0, 0.0)), (150.0, (0.5, 1.0, 0.0))]
+    metrics, errors = score_trajectory(trajectory, gt, flyaway_threshold_m=0.3)
+    assert metrics['max'] == 1.0
+    assert metrics['flyaway_frac'] == 0.5
+
+
+def test_extract_ground_truth_drops_origin_and_held_positions():
+    from tools.usdlog.replay_tdoa import extract_ground_truth
+
+    # The crossing-beam position is recomputed well below the rate the
+    # fixedFrequency block is sampled at, so the log repeats the value held
+    # since the last update. Only the first sample of each run is a real
+    # observation. The leading all-zero sample is the firmware's "no crossing
+    # beam" placeholder.
+    log_data = {'fixedFrequency': {
+        'timestamp': [10.0, 20.0, 30.0, 40.0, 50.0],
+        'lighthouse.x': [0.0, 1.0, 1.0, 2.0, 2.0],
+        'lighthouse.y': [0.0, 0.0, 0.0, 0.0, 0.0],
+        'lighthouse.z': [0.0, 1.0, 1.0, 1.0, 1.0],
+    }}
+
+    assert extract_ground_truth(log_data) == [
+        (20.0, (1.0, 0.0, 1.0)),
+        (40.0, (2.0, 0.0, 1.0)),
+    ]
