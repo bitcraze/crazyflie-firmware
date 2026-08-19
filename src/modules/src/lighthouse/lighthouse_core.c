@@ -151,7 +151,7 @@ static volatile bool deckIsFlashed = false;
 // The time (in ms) of the latest received UART frame, sync frames included
 static volatile uint32_t lastFrameTs = 0;
 
-static void uart1RxISRCallback(uint8_t rxByte);
+static void uart1RxISRCallback(uint8_t rxByte, BaseType_t *xHigherPriorityTaskWoken);
 
 uint8_t lighthouseCoreDeckStatus() {
   // If the deck never flashed/booted we can't trust its state to probe it
@@ -188,7 +188,7 @@ void lighthouseCoreInit() {
   lighthouseStorageInitializeSystemTypeFromStorage();
   lighthousePositionEstInit();
   
-  uart1RegisterRxCallback(uart1RxISRCallback);
+  uart1SetRxCallback(uart1RxISRCallback);
 
   for (int i = 0; i < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; i++) {
     modifyBit(&baseStationAvailabledMap, i, true);
@@ -275,8 +275,7 @@ void lighthouseCoreSetSystemType(const lighthouseBaseStationType_t type)
   lighthouseUpdateSystemType();
 }
 
-static void uart1RxISRCallback(uint8_t rxByte) {
-  portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+static void uart1RxISRCallback(uint8_t rxByte, BaseType_t *xHigherPriorityTaskWoken) {
   static uint8_t data[UART_FRAME_LENGTH];
   static int index = 0;
   static int syncCounter = 0;
@@ -313,10 +312,7 @@ static void uart1RxISRCallback(uint8_t rxByte) {
     bool isFrameValid = (isPaddingZero || frameIsr.isSyncFrame);
 
     if (isFrameValid) {
-      xQueueSendFromISR(lhFramePacketQueue, &frameIsr, &xHigherPriorityTaskWoken);
-#ifndef UNIT_TEST_MODE
-      portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-#endif
+      xQueueSendFromISR(lhFramePacketQueue, &frameIsr, xHigherPriorityTaskWoken);
     }
   }
 }

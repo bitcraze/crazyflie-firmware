@@ -285,11 +285,6 @@ void uart1GetBytesWithDefaultTimeout(uint32_t size, uint8_t* data)
   }
 }
 
-void uart1RegisterRxCallback(uart1RxCallback_t cb)
-{
-  rxCallback = cb;
-}
-
 void uart1SendData(uint32_t size, uint8_t* data)
 {
   uint32_t i;
