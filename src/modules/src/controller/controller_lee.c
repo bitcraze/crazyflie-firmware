@@ -23,11 +23,18 @@ SOFTWARE.
 */
 
 /*
-This controller is based on the following publication:
+This controller is based on the following publications:
 
-Taeyoung Lee, Melvin Leok, and N. Harris McClamroch
-Geometric Tracking Control of a Quadrotor UAV on SE(3)
-CDC 2010
+[1] Taeyoung Lee, Melvin Leok, and N. Harris McClamroch
+Control of Complex Maneuvers for a Quadrotor UAV using Geometric Methods on SE(3)
+CDC 2010, updated on arXiv 2011
+https://arxiv.org/pdf/1003.2005
+
+[2] Farhad Goodarzi, Daewon Lee, Taeyoung Lee
+Geometric Nonlinear PID Control of a Quadrotor UAV on SE(3)
+ECC 2013
+https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=6669644
+
 
 * Difference to Mellinger:
   * Different angular velocity error
@@ -57,13 +64,15 @@ static controllerLee_t g_self = {
   .Kpos_P_limit = 100,
   .Kpos_D = {4.0, 4.0, 4.0}, // Kv in paper
   .Kpos_D_limit = 100,
-  .Kpos_I = {0.0, 0.0, 0.0}, // not in paper
+  .Kpos_I = {1.0, 1.0, 1.0}, // not in paper
   .Kpos_I_limit = 2,
+  .c_pos_multiplier = 3.6, // c1 in [2], used to scale the integral error
 
   // Attitude PID
   .KR = {0.007, 0.007, 0.008},
   .Komega = {0.00115, 0.00115, 0.002},
-  .KI = {0.03, 0.03, 0.03},
+  .KI = {0.0005, 0.0005, 0.0005},
+  .c_att_multiplier = 0.8, // c2 in [2], used to scale the integral error
 };
 
 static inline struct vec vclampscl(struct vec value, float min, float max) {
@@ -71,6 +80,10 @@ static inline struct vec vclampscl(struct vec value, float min, float max) {
     clamp(value.x, min, max),
     clamp(value.y, min, max),
     clamp(value.z, min, max));
+}
+
+static inline struct vec mvee(struct mat33 R) {
+	return mkvec(R.m[2][1], R.m[0][2], R.m[1][0]);
 }
 
 void controllerLeeReset(controllerLee_t* self)
@@ -104,6 +117,14 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
 
   // uint64_t startTime = usecTimestamp();
 
+  // States
+  struct vec statePos = mkvec(state->position.x, state->position.y, state->position.z); // position in the world frame (m)
+  struct vec stateVel = mkvec(state->velocity.x, state->velocity.y, state->velocity.z); // velocity in the world frame (m/s)
+  struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
+  self->rpy = quat2rpy(q);
+  struct mat33 R = quat2rotmat(q); // rotation matrix from the world frame to the body frame
+  self->omega = mkvec(radians(sensors->gyro.x), radians(sensors->gyro.y), radians(sensors->gyro.z)); // angular velocity in the body frame (rad/s)
+
   float dt = (float)(1.0f/ATTITUDE_RATE);
   // struct vec dessnap = vzero();
   // Address inconsistency in firmware where we need to compute our own desired yaw angle
@@ -125,53 +146,36 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
       || setpoint->mode.z == modeAbs) {
     struct vec pos_d = mkvec(setpoint->position.x, setpoint->position.y, setpoint->position.z);
     struct vec vel_d = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);
-    struct vec acc_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z + GRAVITY_MAGNITUDE);
-    struct vec statePos = mkvec(state->position.x, state->position.y, state->position.z);
-    struct vec stateVel = mkvec(state->velocity.x, state->velocity.y, state->velocity.z);
+    struct vec acc_d = mkvec(setpoint->acceleration.x, setpoint->acceleration.y, setpoint->acceleration.z);
 
     // errors
     struct vec pos_e = vclampscl(vsub(pos_d, statePos), -self->Kpos_P_limit, self->Kpos_P_limit);
     struct vec vel_e = vclampscl(vsub(vel_d, stateVel), -self->Kpos_D_limit, self->Kpos_D_limit);
-    self->i_error_pos = vadd(self->i_error_pos, vscl(dt, pos_e));
+    self->i_error_pos = vadd(self->i_error_pos, vscl(dt, vadd(vel_e, vscl(self->c_pos_multiplier, pos_e))));
+    self->i_error_pos = vclampscl(self->i_error_pos, -self->Kpos_I_limit, self->Kpos_I_limit);
     self->p_error = pos_e;
     self->v_error = vel_e;
 
-    struct vec F_d = vadd4(
-      acc_d,
-      veltmul(self->Kpos_D, vel_e),
+    struct vec F_d = vscl(self->mass, vadd(vadd4(
       veltmul(self->Kpos_P, pos_e),
-      veltmul(self->Kpos_I, self->i_error_pos));
+      veltmul(self->Kpos_D, vel_e),
+      veltmul(self->Kpos_I, self->i_error_pos),
+      acc_d),
+      vscl(GRAVITY_MAGNITUDE, vbasis(2))));
 
-    struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
-    struct mat33 R = quat2rotmat(q);
-    struct vec z  = vbasis(2);
-    control->thrustSi = self->mass*vdot(F_d , mvmul(R, z));
-    self->thrustSi = control->thrustSi;
+    self->thrustSi = vdot(F_d , mvmul(R, vbasis(2)));
+
     // Reset the accumulated error while on the ground
-    if (control->thrustSi < 0.01f) {
+    if (self->thrustSi < 0.01f) {
       controllerLeeReset(self);
     }
 
     // Compute Desired Rotation matrix
-    float normFd = control->thrustSi;
+    struct vec b1_d = mkvec(cosf(desiredYaw), sinf(desiredYaw), 0);
+    struct vec b3_d = self->thrustSi > 0 ? vnormalize(F_d) : vbasis(2);
+    struct vec b2_d = vnormalize(vcross(b3_d, b1_d));
 
-    struct vec xdes = vbasis(0);
-    struct vec ydes = vbasis(1);
-    struct vec zdes = vbasis(2);
-   
-    if (normFd > 0) {
-      zdes = vnormalize(F_d);
-    } 
-    struct vec xcdes = mkvec(cosf(desiredYaw), sinf(desiredYaw), 0); 
-    struct vec zcrossx = vcross(zdes, xcdes);
-    float normZX = vmag(zcrossx);
-
-    if (normZX > 0) {
-      ydes = vnormalize(zcrossx);
-    } 
-    xdes = vcross(ydes, zdes);
-    
-    self->R_des = mcolumns(xdes, ydes, zdes);
+    self->R_des = mcolumns(vcross(b2_d, b3_d), b2_d, b3_d);
 
   } else {
     if (setpoint->mode.z == modeDisable) {
@@ -186,72 +190,56 @@ void controllerLee(controllerLee_t* self, control_t *control, const setpoint_t *
       }
     }
     const float max_thrust = powerDistributionGetMaxThrust(); // N
-    control->thrustSi = setpoint->thrust / UINT16_MAX * max_thrust;
+    self->thrustSi = setpoint->thrust / UINT16_MAX * max_thrust;
 
-    struct quat q = rpy2quat(mkvec(
+    self->R_des = quat2rotmat(rpy2quat(mkvec(
         radians(setpoint->attitude.roll),
         -radians(setpoint->attitude.pitch), // This is in the legacy coordinate system where pitch is inverted
-        desiredYaw));
-    self->R_des = quat2rotmat(q);
+        desiredYaw)));
   }
 
   // Attitude controller
 
-  // current rotation [R]
-  struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
-  self->rpy = quat2rpy(q);
-  struct mat33 R = quat2rotmat(q);
-
   // desired rotation [Rdes]
-  struct quat q_des = mat2quat(self->R_des);
-  self->rpy_des = quat2rpy(q_des);
+  self->rpy_des = quat2rpy(mat2quat(self->R_des));
 
   // rotation error
-  struct mat33 eRM = msub(mmul(mtranspose(self->R_des), R), mmul(mtranspose(R), self->R_des));
+  struct vec eR = vscl(0.5f, mvee(msub(
+    mmul(mtranspose(self->R_des), R),
+    mmul(mtranspose(R), self->R_des))));
 
-  struct vec eR = vscl(0.5f, mkvec(eRM.m[2][1], eRM.m[0][2], eRM.m[1][0]));
+  // Compute desired omega (TODO, zero for now)
+  struct vec omega_des = vzero();
 
-  // angular velocity
-  self->omega = mkvec(
-    radians(sensors->gyro.x),
-    radians(sensors->gyro.y),
-    radians(sensors->gyro.z));
-
-  // Compute desired omega
-  struct vec xdes = mcolumn(self->R_des, 0);
-  struct vec ydes = mcolumn(self->R_des, 1);
-  struct vec zdes = mcolumn(self->R_des, 2);
-  struct vec hw = vzero();
-  // Desired Jerk and snap for now are zeros vector
-  struct vec desJerk = mkvec(setpoint->jerk.x, setpoint->jerk.y, setpoint->jerk.z);
-
-  if (control->thrustSi != 0) {
-    struct vec tmp = vsub(desJerk, vscl(vdot(zdes, desJerk), zdes));
-    hw = vscl(self->mass/control->thrustSi, tmp);
+  if (setpoint->mode.roll == modeVelocity) {
+    omega_des.x = radians(setpoint->attitudeRate.roll);
   }
-  struct vec z_w = mkvec(0,0,1); 
-  float desiredYawRate = radians(setpoint->attitudeRate.yaw) * vdot(zdes,z_w);
-  struct vec omega_des = mkvec(-vdot(hw,ydes), vdot(hw,xdes), desiredYawRate);
-  
+  if (setpoint->mode.pitch == modeVelocity) {
+    omega_des.y = radians(setpoint->attitudeRate.pitch);
+  }
+  if (setpoint->mode.yaw == modeVelocity) {
+    omega_des.z = radians(setpoint->attitudeRate.yaw);
+  }
+
   self->omega_r = mvmul(mmul(mtranspose(R), self->R_des), omega_des);
 
   struct vec omega_error = vsub(self->omega, self->omega_r);
   
   // Integral part on angle
-  self->i_error_att = vadd(self->i_error_att, vscl(dt, eR));
+  self->i_error_att = vadd(self->i_error_att, vscl(dt, vadd(omega_error, vscl(self->c_att_multiplier, eR))));
 
   // compute moments
-  // M = -kR eR - kw ew + w x Jw - J(w x wr)
-  self->u = vadd4(
+  self->torqueSi = vadd4(
     vneg(veltmul(self->KR, eR)),
     vneg(veltmul(self->Komega, omega_error)),
     vneg(veltmul(self->KI, self->i_error_att)),
-    vcross(self->omega, veltmul(self->J, self->omega)));
+    vcross(self->omega_r, veltmul(self->J, self->omega_r)));
 
   control->controlMode = controlModeForceTorque;
-  control->torque[0] = self->u.x;
-  control->torque[1] = self->u.y;
-  control->torque[2] = self->u.z;
+  control->thrustSi = self->thrustSi;
+  control->torque[0] = self->torqueSi.x;
+  control->torque[1] = self->torqueSi.y;
+  control->torque[2] = self->torqueSi.z;
 
   // ticks = usecTimestamp() - startTime;
 }
@@ -319,25 +307,10 @@ PARAM_GROUP_STOP(ctrlLee)
 
 LOG_GROUP_START(ctrlLee)
 
-LOG_ADD(LOG_FLOAT, KR_x, &g_self.KR.x)
-LOG_ADD(LOG_FLOAT, KR_y, &g_self.KR.y)
-LOG_ADD(LOG_FLOAT, KR_z, &g_self.KR.z)
-LOG_ADD(LOG_FLOAT, Kw_x, &g_self.Komega.x)
-LOG_ADD(LOG_FLOAT, Kw_y, &g_self.Komega.y)
-LOG_ADD(LOG_FLOAT, Kw_z, &g_self.Komega.z)
-
-LOG_ADD(LOG_FLOAT,Kpos_Px, &g_self.Kpos_P.x)
-LOG_ADD(LOG_FLOAT,Kpos_Py, &g_self.Kpos_P.y)
-LOG_ADD(LOG_FLOAT,Kpos_Pz, &g_self.Kpos_P.z)
-LOG_ADD(LOG_FLOAT,Kpos_Dx, &g_self.Kpos_D.x)
-LOG_ADD(LOG_FLOAT,Kpos_Dy, &g_self.Kpos_D.y)
-LOG_ADD(LOG_FLOAT,Kpos_Dz, &g_self.Kpos_D.z)
-
-
 LOG_ADD(LOG_FLOAT, thrustSi, &g_self.thrustSi)
-LOG_ADD(LOG_FLOAT, torquex, &g_self.u.x)
-LOG_ADD(LOG_FLOAT, torquey, &g_self.u.y)
-LOG_ADD(LOG_FLOAT, torquez, &g_self.u.z)
+LOG_ADD(LOG_FLOAT, torquex, &g_self.torqueSi.x)
+LOG_ADD(LOG_FLOAT, torquey, &g_self.torqueSi.y)
+LOG_ADD(LOG_FLOAT, torquez, &g_self.torqueSi.z)
 
 // current angles
 LOG_ADD(LOG_FLOAT, rpyx, &g_self.rpy.x)
