@@ -40,9 +40,7 @@ void kalmanCoreUpdateWithPose(kalmanCoreData_t* this, poseMeasurement_t *pose)
   // compute orientation error
   struct quat const q_ekf = mkquat(this->q[1], this->q[2], this->q[3], this->q[0]);
   struct quat const q_measured = mkquat(pose->quat.x, pose->quat.y, pose->quat.z, pose->quat.w);
-  // The error state D0..D2 is a body-frame perturbation: kalmanCoreFinalize()
-  // folds it back in as q_ekf * dq. The residual is therefore the body-frame
-  // error q_ekf^-1 * q_measured, matching h[D0..D2] = I below.
+  // Body-frame residual: kalmanCoreFinalize() folds the error state back in as q_ekf * dq
   struct quat const q_residual = qqmul(qinv(q_ekf), q_measured);
   // small angle approximation, see eq. 141 in http://mars.cs.umn.edu/tr/reports/Trawny05b.pdf
   struct vec const err_quat = vscl(2.0f / q_residual.w, quatimagpart(q_residual));
