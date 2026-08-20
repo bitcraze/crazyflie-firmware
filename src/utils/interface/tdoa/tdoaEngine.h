@@ -11,8 +11,10 @@
 #define TDOA_ENGINE_MEASUREMENT_NOISE_STD 0.15f
 #endif
 
+#ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
 // 0 = unlimited
 #define TDOA_ENGINE_DEFAULT_MAX_RATE_HZ 0.0f
+#endif
 
 typedef void (*tdoaEngineSendTdoaToEstimator)(tdoaMeasurement_t* tdoaMeasurement);
 
@@ -26,13 +28,17 @@ typedef struct {
   // State
   tdaoAnchorInfoArray_t anchorInfoArray;
   tdoaStats_t stats;
+#ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
   uint32_t lastForwardedTime_ms;
+#endif
 
   // Configuration
   tdoaEngineSendTdoaToEstimator sendTdoaToEstimator;
   double locodeckTsFreq;
   tdoaEngineMatchingAlgorithm_t matchingAlgorithm;
+#ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
   float maxRateHz;
+#endif
 
   // Matching algorithm data
   struct {
