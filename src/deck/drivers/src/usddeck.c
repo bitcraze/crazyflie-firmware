@@ -842,14 +842,12 @@ static void usdWriteTask(void* prm)
   while (!in_shutdown) {
     vTaskSuspend(NULL);
     if (enableLogging) {
-      // reset stats
+      // Reset under the mutex; producers update the counters under it too.
+      xSemaphoreTake(logBufferMutex, portMAX_DELAY);
+      ringBuffer_reset(&logBuffer);
       usdLogStats.eventsRequested = 0;
       usdLogStats.eventsWritten = 0;
       usdLogStats.writeError = 0;
-
-      // reset the buffer
-      xSemaphoreTake(logBufferMutex, portMAX_DELAY);
-      ringBuffer_reset(&logBuffer);
       xSemaphoreGive(logBufferMutex);
 
       xSemaphoreTake(logFileMutex, portMAX_DELAY);
