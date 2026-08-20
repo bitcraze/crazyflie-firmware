@@ -60,7 +60,7 @@ static controllerMellinger_t g_self = {
   // Z Position
   .kp_z = 1.25,       // P
   .kd_z = 0.4,        // D
-  .ki_z = 0.05,       // I
+  .ki_z = 1.5f,       // I
   .i_range_z  = 0.4,
 
   // Attitude
@@ -89,6 +89,73 @@ static controllerMellinger_t g_self = {
   .i_error_m_z = 0,
 };
 
+// Previous Ki values for integral rescaling when gains are changed at runtime
+static struct {
+  float ki_xy;
+  float ki_z;
+  float ki_m_xy;
+  float ki_m_z;
+} s_previousKi = {
+  .ki_xy   = 0.05f,
+  .ki_z    = 0.5f,
+  .ki_m_xy = 0.0f,
+  .ki_m_z  = 500.0f,
+};
+
+// Saved params for change/reset functionality (position, attitude, yaw)
+static struct {
+  float kp_xy;
+  float kd_xy;
+  float ki_xy;
+  float i_range_xy;
+  float kp_z;
+  float kd_z;
+  float ki_z;
+  float i_range_z;
+  float kR_xy;
+  float kw_xy;
+  float ki_m_xy;
+  float i_range_m_xy;
+  float kd_omega_rp;
+  float kR_z;
+  float kw_z;
+  float ki_m_z;
+  float i_range_m_z;
+} s_previousParams = {
+  .kp_xy        = 0.4f,
+  .kd_xy        = 0.2f,
+  .ki_xy        = 0.05f,
+  .i_range_xy   = 2.0f,
+  .kp_z         = 1.25f,
+  .kd_z         = 0.4f,
+  .ki_z         = 0.05f,
+  .i_range_z    = 0.4f,
+  .kR_xy        = 70000.0f,
+  .kw_xy        = 20000.0f,
+  .ki_m_xy      = 0.0f,
+  .i_range_m_xy = 1.0f,
+  .kd_omega_rp  = 200.0f,
+  .kR_z         = 60000.0f,
+  .kw_z         = 12000.0f,
+  .ki_m_z       = 500.0f,
+  .i_range_m_z  = 1500.0f,
+};
+
+static struct {
+  float pos_kp;
+  float pos_ki;
+  float pos_kd;
+  float att_kp;
+  float att_ki;
+  float att_kd;
+} precLandMelParams = {
+  .pos_kp = 1.0f,
+  .pos_ki = 0.7f,
+  .pos_kd = 0.1f,
+  .att_kp = 100000.0f,
+  .att_ki = 0.0f,
+  .att_kd = 10000.0f,
+};
 
 void controllerMellingerReset(controllerMellinger_t* self)
 {
@@ -106,11 +173,66 @@ void controllerMellingerInit(controllerMellinger_t* self)
   *self = g_self;
 
   controllerMellingerReset(self);
+
+  // Initialize previous values to current values
+  s_previousKi.ki_xy = self->ki_xy;
+  s_previousKi.ki_z = self->ki_z;
+  s_previousKi.ki_m_xy = self->ki_m_xy;
+  s_previousKi.ki_m_z = self->ki_m_z;
+
+  s_previousParams.kp_xy = self->kp_xy;
+  s_previousParams.kd_xy = self->kd_xy;
+  s_previousParams.ki_xy = self->ki_xy;
+  s_previousParams.i_range_xy = self->i_range_xy;
+  s_previousParams.kp_z = self->kp_z;
+  s_previousParams.kd_z = self->kd_z;
+  s_previousParams.ki_z = self->ki_z;
+  s_previousParams.i_range_z = self->i_range_z;
+  s_previousParams.kR_xy = self->kR_xy;
+  s_previousParams.kw_xy = self->kw_xy;
+  s_previousParams.ki_m_xy = self->ki_m_xy;
+  s_previousParams.i_range_m_xy = self->i_range_m_xy;
+  s_previousParams.kd_omega_rp = self->kd_omega_rp;
+  s_previousParams.kR_z = self->kR_z;
+  s_previousParams.kw_z = self->kw_z;
+  s_previousParams.ki_m_z = self->ki_m_z;
+  s_previousParams.i_range_m_z = self->i_range_m_z;
 }
 
 bool controllerMellingerTest(controllerMellinger_t* self)
 {
   return true;
+}
+
+// Rescale integral accumulators when integral gains change so that the
+// controller output does not jump.  Mirrors rescaleIntegralIfKiChanged()
+// from position_controller_pid.c.
+static void handleKiUpdates(controllerMellinger_t *self)
+{
+  // XY position integrals (both use ki_xy)
+  if (self->ki_xy != s_previousKi.ki_xy) {
+    float scale = s_previousKi.ki_xy / (self->ki_xy + 1e-6f);
+    self->i_error_x *= scale;
+    self->i_error_y *= scale;
+    s_previousKi.ki_xy = self->ki_xy;
+  }
+  // Z position integral
+  if (self->ki_z != s_previousKi.ki_z) {
+    self->i_error_z *= s_previousKi.ki_z / (self->ki_z + 1e-6f);
+    s_previousKi.ki_z = self->ki_z;
+  }
+  // Roll/pitch attitude integrals (both use ki_m_xy)
+  if (self->ki_m_xy != s_previousKi.ki_m_xy) {
+    float scale = s_previousKi.ki_m_xy / (self->ki_m_xy + 1e-6f);
+    self->i_error_m_x *= scale;
+    self->i_error_m_y *= scale;
+    s_previousKi.ki_m_xy = self->ki_m_xy;
+  }
+  // Yaw attitude integral
+  if (self->ki_m_z != s_previousKi.ki_m_z) {
+    self->i_error_m_z *= s_previousKi.ki_m_z / (self->ki_m_z + 1e-6f);
+    s_previousKi.ki_m_z = self->ki_m_z;
+  }
 }
 
 void controllerMellinger(controllerMellinger_t* self, control_t *control, const setpoint_t *setpoint,
@@ -135,6 +257,9 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   if (!RATE_DO_EXECUTE(ATTITUDE_RATE, stabilizerStep)) {
     return;
   }
+
+  // Rescale integral terms if any Ki gain was changed since the last cycle
+  handleKiUpdates(self);
 
   dt = (float)(1.0f/ATTITUDE_RATE);
   struct vec setpointPos = mkvec(setpoint->position.x, setpoint->position.y, setpoint->position.z);
@@ -353,6 +478,106 @@ void controllerMellingerFirmware(control_t *control, const setpoint_t *setpoint,
 }
 
 
+void controllerMellingerEnterPreciseLand(void)
+{
+  // Mellinger position params order: kp_xy, kd_xy, ki_xy, i_range_xy, kp_z, kd_z, ki_z, i_range_z
+  controllerMellingerChangePosParams(precLandMelParams.pos_kp, precLandMelParams.pos_kd, precLandMelParams.pos_ki, NAN,
+                                     NAN, NAN, NAN, NAN);
+
+  controllerMellingerChangeAttParams(precLandMelParams.att_kp, precLandMelParams.att_kd, precLandMelParams.att_ki, NAN, NAN);
+}
+
+void controllerMellingerExitPreciseLand(void)
+{
+  controllerMellingerResetParamsToPrevious();
+}
+
+
+// ---------------------------------------------------------------------------
+// Parameter change / reset functions
+// Mirrors positionControllerChangePosPIDParams() / resetPosPIDParamsToPrevious()
+// from position_controller_pid.c, extended to cover position, attitude and yaw.
+// ---------------------------------------------------------------------------
+
+void controllerMellingerChangePosParams(
+    float kp_xy, float kd_xy, float ki_xy, float i_range_xy,
+    float kp_z,  float kd_z,  float ki_z,  float i_range_z)
+{
+  // Save current values before overwriting
+  s_previousParams.kp_xy      = g_self.kp_xy;
+  s_previousParams.kd_xy      = g_self.kd_xy;
+  s_previousParams.ki_xy      = g_self.ki_xy;
+  s_previousParams.i_range_xy = g_self.i_range_xy;
+  s_previousParams.kp_z       = g_self.kp_z;
+  s_previousParams.kd_z       = g_self.kd_z;
+  s_previousParams.ki_z       = g_self.ki_z;
+  s_previousParams.i_range_z  = g_self.i_range_z;
+
+  if (!isnan(kp_xy)     && !isinf(kp_xy))     g_self.kp_xy      = kp_xy;
+  if (!isnan(kd_xy)     && !isinf(kd_xy))     g_self.kd_xy      = kd_xy;
+  if (!isnan(ki_xy)     && !isinf(ki_xy))     g_self.ki_xy      = ki_xy;
+  if (!isnan(i_range_xy)&& !isinf(i_range_xy))g_self.i_range_xy = i_range_xy;
+  if (!isnan(kp_z)      && !isinf(kp_z))      g_self.kp_z       = kp_z;
+  if (!isnan(kd_z)      && !isinf(kd_z))      g_self.kd_z       = kd_z;
+  if (!isnan(ki_z)      && !isinf(ki_z))      g_self.ki_z       = ki_z;
+  if (!isnan(i_range_z) && !isinf(i_range_z)) g_self.i_range_z  = i_range_z;
+}
+
+void controllerMellingerChangeAttParams(
+    float kR_xy, float kw_xy, float ki_m_xy, float i_range_m_xy, float kd_omega_rp)
+{
+  s_previousParams.kR_xy        = g_self.kR_xy;
+  s_previousParams.kw_xy        = g_self.kw_xy;
+  s_previousParams.ki_m_xy      = g_self.ki_m_xy;
+  s_previousParams.i_range_m_xy = g_self.i_range_m_xy;
+  s_previousParams.kd_omega_rp  = g_self.kd_omega_rp;
+
+  if (!isnan(kR_xy)        && !isinf(kR_xy))        g_self.kR_xy        = kR_xy;
+  if (!isnan(kw_xy)        && !isinf(kw_xy))        g_self.kw_xy        = kw_xy;
+  if (!isnan(ki_m_xy)      && !isinf(ki_m_xy))      g_self.ki_m_xy      = ki_m_xy;
+  if (!isnan(i_range_m_xy) && !isinf(i_range_m_xy)) g_self.i_range_m_xy = i_range_m_xy;
+  if (!isnan(kd_omega_rp)  && !isinf(kd_omega_rp))  g_self.kd_omega_rp  = kd_omega_rp;
+}
+
+void controllerMellingerChangeYawParams(
+    float kR_z, float kw_z, float ki_m_z, float i_range_m_z)
+{
+  s_previousParams.kR_z        = g_self.kR_z;
+  s_previousParams.kw_z        = g_self.kw_z;
+  s_previousParams.ki_m_z      = g_self.ki_m_z;
+  s_previousParams.i_range_m_z = g_self.i_range_m_z;
+
+  if (!isnan(kR_z)       && !isinf(kR_z))       g_self.kR_z        = kR_z;
+  if (!isnan(kw_z)       && !isinf(kw_z))        g_self.kw_z        = kw_z;
+  if (!isnan(ki_m_z)     && !isinf(ki_m_z))      g_self.ki_m_z      = ki_m_z;
+  if (!isnan(i_range_m_z)&& !isinf(i_range_m_z)) g_self.i_range_m_z = i_range_m_z;
+}
+
+void controllerMellingerResetParamsToPrevious(void)
+{
+  // Position
+  g_self.kp_xy      = s_previousParams.kp_xy;
+  g_self.kd_xy      = s_previousParams.kd_xy;
+  g_self.ki_xy      = s_previousParams.ki_xy;
+  g_self.i_range_xy = s_previousParams.i_range_xy;
+  g_self.kp_z       = s_previousParams.kp_z;
+  g_self.kd_z       = s_previousParams.kd_z;
+  g_self.ki_z       = s_previousParams.ki_z;
+  g_self.i_range_z  = s_previousParams.i_range_z;
+  // Attitude (roll/pitch)
+  g_self.kR_xy        = s_previousParams.kR_xy;
+  g_self.kw_xy        = s_previousParams.kw_xy;
+  g_self.ki_m_xy      = s_previousParams.ki_m_xy;
+  g_self.i_range_m_xy = s_previousParams.i_range_m_xy;
+  g_self.kd_omega_rp  = s_previousParams.kd_omega_rp;
+  // Yaw
+  g_self.kR_z        = s_previousParams.kR_z;
+  g_self.kw_z        = s_previousParams.kw_z;
+  g_self.ki_m_z      = s_previousParams.ki_m_z;
+  g_self.i_range_m_z = s_previousParams.i_range_m_z;
+}
+
+
 /**
  * Tunning variables for the full state Mellinger Controller
  */
@@ -434,6 +659,39 @@ PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, i_range_m_xy, &g_self.i_range_m_xy)
  */
 PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, i_range_m_z, &g_self.i_range_m_z)
 PARAM_GROUP_STOP(ctrlMel)
+
+
+/**
+ * Gains temporarily applied to the Mellinger controller during a precise landing
+ * (see plan_precise_land() / land_precise), restored to their previous values afterward.
+ */
+PARAM_GROUP_START(precLandMel)
+/**
+ * @brief Precise-landing position proportional gain (xy)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, posKp, &precLandMelParams.pos_kp)
+/**
+ * @brief Precise-landing position integral gain (xy)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, posKi, &precLandMelParams.pos_ki)
+/**
+ * @brief Precise-landing position derivative gain (xy)
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, posKd, &precLandMelParams.pos_kd)
+/**
+ * @brief Precise-landing attitude proportional gain
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, attKp, &precLandMelParams.att_kp)
+/**
+ * @brief Precise-landing attitude integral gain
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, attKi, &precLandMelParams.att_ki)
+/**
+ * @brief Precise-landing attitude derivative gain
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, attKd, &precLandMelParams.att_kd)
+PARAM_GROUP_STOP(precLandMel)
+
 
 /**
  * Logging variables for the command and reference signals for the

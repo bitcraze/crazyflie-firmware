@@ -54,6 +54,9 @@ enum trajectory_state
 	TRAJECTORY_STATE_LANDING         = 3,
 	// Not producing setpoints but also not wanting motors off.
 	TRAJECTORY_STATE_DISABLED        = 4,
+	// Same as TRAJECTORY_STATE_LANDING, but for plan_precise_land()'s multi-segment
+	// hover-then-descend trajectory with temporary controller gain overrides.
+	TRAJECTORY_STATE_PRECISE_LANDING = 5,
 };
 
 enum trajectory_type
@@ -74,7 +77,7 @@ struct planner
 	};
 
 	struct piecewise_traj planned_trajectory; // trajectory for on-board planning
-	struct poly4d pieces[1]; // the on-board planner requires a single piece, only
+	struct poly4d pieces[3]; // the on-board planner requires at most three pieces, only
 };
 
 // initialize the planner
@@ -107,6 +110,10 @@ int plan_takeoff(struct planner *p, struct vec curr_pos, float curr_yaw, float h
 
 // start a landing trajectory.
 int plan_land(struct planner *p, struct vec curr_pos, float curr_yaw, float hover_height, float hover_yaw, float duration, float t);
+
+// start a precise-landing trajectory: hover `hover_offset` above the target for
+// `hover_duration` seconds with temporarily-tuned controller gains, and then descend.
+int plan_precise_land(struct planner *p, struct vec curr_pos, float curr_yaw, float hover_height, float hover_yaw, float duration, float hover_offset, float hover_duration, float t);
 
 // move to a given position, then hover there.
 int plan_go_to(struct planner *p, bool relative, bool linear, struct vec hover_pos, float hover_yaw, float duration, float t);

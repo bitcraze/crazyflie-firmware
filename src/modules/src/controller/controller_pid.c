@@ -1,4 +1,5 @@
 #include <string.h>
+#include <math.h>
 
 #include "stabilizer_types.h"
 
@@ -24,6 +25,17 @@ static float r_roll;
 static float r_pitch;
 static float r_yaw;
 static float accelz;
+
+static struct {
+  float kp;
+  float ki;
+  float kd;
+} precLandPidParams = {
+  .kp = 5.123533f,
+  .ki = 1.905738f,
+  .kd = 1.0f,
+};
+
 
 void controllerPidInit(void)
 {
@@ -179,6 +191,19 @@ void controllerPid(control_t *control, const setpoint_t *setpoint,
   }
 }
 
+void controllerPidEnterPreciseLand(void)
+{
+  positionControllerChangePosPIDParams(precLandPidParams.kp, precLandPidParams.ki, precLandPidParams.kd, NAN,
+                                        precLandPidParams.kp, precLandPidParams.ki, precLandPidParams.kd, NAN,
+                                        NAN, NAN, NAN, NAN);
+}
+
+void controllerPidExitPreciseLand(void)
+{
+  resetPosPIDParamsToPrevious();
+}
+
+
 /**
  * Logging variables for the command and reference signals for the
  * altitude PID controller
@@ -245,3 +270,23 @@ LOG_ADD(LOG_FLOAT, pitchRate, &rateDesired.pitch)
  */
 LOG_ADD(LOG_FLOAT, yawRate,   &rateDesired.yaw)
 LOG_GROUP_STOP(controller)
+
+
+/**
+ * Gains temporarily applied to the position PID controller during a precise landing
+ * (see plan_precise_land() / land_precise), restored to their previous values afterward.
+ */
+PARAM_GROUP_START(precLandPid)
+/**
+ * @brief Precise-landing position proportional gain
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, kp, &precLandPidParams.kp)
+/**
+ * @brief Precise-landing position integral gain
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, ki, &precLandPidParams.ki)
+/**
+ * @brief Precise-landing position derivative gain
+ */
+PARAM_ADD_CORE(PARAM_FLOAT, kd, &precLandPidParams.kd)
+PARAM_GROUP_STOP(precLandPid)
