@@ -23,11 +23,13 @@ typedef struct {
   // State
   tdaoAnchorInfoArray_t anchorInfoArray;
   tdoaStats_t stats;
+  uint32_t lastForwardedTime_ms;
 
   // Configuration
   tdoaEngineSendTdoaToEstimator sendTdoaToEstimator;
   double locodeckTsFreq;
   tdoaEngineMatchingAlgorithm_t matchingAlgorithm;
+  float maxRateHz;
 
   // Matching algorithm data
   struct {
