@@ -120,7 +120,8 @@ typedef struct usdLogConfig_s {
 
 typedef struct usdLogStats_s {
   uint32_t eventsRequested;
-  uint32_t eventsWritten;
+  // Events that fit in the log buffer; the rest were dropped.
+  uint32_t eventsAccepted;
   // FRESULT of the first failed write or close of the run, 0 if none.
   uint8_t writeError;
 } usdLogStats_t;
@@ -528,7 +529,7 @@ static void usddeckWriteEventData(const usdLogEventConfig_t* cfg, const uint8_t*
         break;
       }
     }
-    ++usdLogStats.eventsWritten;
+    ++usdLogStats.eventsAccepted;
   }
   xSemaphoreGive(logBufferMutex);
 }
@@ -849,7 +850,7 @@ static void usdWriteTask(void* prm)
       xSemaphoreTake(logBufferMutex, portMAX_DELAY);
       ringBuffer_reset(&logBuffer);
       usdLogStats.eventsRequested = 0;
-      usdLogStats.eventsWritten = 0;
+      usdLogStats.eventsAccepted = 0;
       usdLogStats.writeError = 0;
       xSemaphoreGive(logBufferMutex);
 
@@ -1043,7 +1044,7 @@ static void usdWriteTask(void* prm)
         DEBUG_PRINT("Wrote %ld B to: %s (%ld of %ld events)\n",
           lastFileSize,
           usdLogConfig.filename,
-          usdLogStats.eventsWritten,
+          usdLogStats.eventsAccepted,
           usdLogStats.eventsRequested);
 
         xSemaphoreGive(logFileMutex);
@@ -1144,22 +1145,21 @@ STATS_CNT_RATE_LOG_ADD(spiReBps, &spiReadRate)
  */
 STATS_CNT_RATE_LOG_ADD(fatWrBps, &fatWriteRate)
 /**
- * @brief Number of events requested to be written to the uSD card during the current/last log run
+ * @brief Number of events offered to the uSD log during the current/last run
  */
 LOG_ADD(LOG_UINT32, eventsRequested, &usdLogStats.eventsRequested)
 /**
- * @brief Number of events actually written to the uSD card during the current/last log run.
+ * @brief Number of events accepted into the uSD log buffer during the current/last run
  *
- * If lower than eventsRequested, events were dropped and the log is
- * incomplete; do not trust lossless replay of that log.
+ * Counted on entry into the buffer, not on the card. Fewer than eventsRequested
+ * means events were dropped and the log is incomplete.
  */
-LOG_ADD(LOG_UINT32, eventsWritten, &usdLogStats.eventsWritten)
+LOG_ADD(LOG_UINT32, eventsAccepted, &usdLogStats.eventsAccepted)
 /**
- * @brief FatFS error (FRESULT) of the first failed SD write or file close of
- *        the current/last log run, 0 if none.
+ * @brief FRESULT of the first failed SD write or file close of the current/last run, 0 if none
  *
- * A failure stops the log; a run with a non-zero writeError is
- * incomplete and must not be used for replay.
+ * Non-zero means the log is truncated. Only final once the writer has closed
+ * the file, some time after usd.logging reads 0.
  */
 LOG_ADD(LOG_UINT8, writeError, &usdLogStats.writeError)
 LOG_GROUP_STOP(usd)
