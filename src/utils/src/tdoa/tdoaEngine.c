@@ -59,6 +59,7 @@ void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms, tdoaE
   engineState->sendTdoaToEstimator = sendTdoaToEstimator;
   engineState->locodeckTsFreq = locodeckTsFreq;
   engineState->matchingAlgorithm = matchingAlgorithm;
+  engineState->maxRateHz = TDOA_ENGINE_DEFAULT_MAX_RATE_HZ;
 
   engineState->matching.offset = 0;
   engineState->lastForwardedTime_ms = 0;

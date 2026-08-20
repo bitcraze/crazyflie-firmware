@@ -117,7 +117,7 @@ PARAM_ADD(PARAM_UINT8, matchAlgo, &tdoaEngineState.matchingAlgorithm)
 
 /**
  * @brief Max rate at which TDoA measurements are forwarded to the estimator, aggregated over all
- * anchors [Hz]. 0 (default) = unlimited.
+ * anchors [Hz]. 0 = unlimited.
  */
-PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, maxRateHz, &tdoaEngineState.maxRateHz)
+PARAM_ADD(PARAM_FLOAT, maxRateHz, &tdoaEngineState.maxRateHz)
 PARAM_GROUP_STOP(tdoaEngine)
