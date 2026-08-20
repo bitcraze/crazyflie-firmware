@@ -121,8 +121,7 @@ typedef struct usdLogConfig_s {
 typedef struct usdLogStats_s {
   uint32_t eventsRequested;
   uint32_t eventsWritten;
-  // FatFS FRESULT of the first failed write of the current/last log run,
-  // 0 if none. Lets a run be checked for completeness on the drone.
+  // FRESULT of the first failed write or close of the run, 0 if none.
   uint8_t writeError;
 } usdLogStats_t;
 
@@ -810,6 +809,14 @@ static bool handleMemRead(const uint8_t internal_id, const uint32_t memAddr, con
   return result;
 }
 
+// Keep the first error of the run; it is the one that says what went wrong.
+static void usdRecordWriteError(FRESULT status)
+{
+  if (usdLogStats.writeError == 0) {
+    usdLogStats.writeError = (uint8_t)status;
+  }
+}
+
 static void usdWriteData(const void *data, size_t size)
 {
   UINT bytesWritten;
@@ -817,12 +824,8 @@ static void usdWriteData(const void *data, size_t size)
   if (status != FR_OK || bytesWritten < size) {
     DEBUG_PRINT("usd deck write failure %d (%u of %u B)\n",
                 status, (unsigned)bytesWritten, (unsigned)size);
-    // Keep the first error of the run; later writes of the same burst can
-    // report follow-up errors. A short write with FR_OK means a full volume,
-    // which f_write itself reports as FR_DENIED.
-    if (usdLogStats.writeError == 0) {
-      usdLogStats.writeError = (status != FR_OK) ? (uint8_t)status : (uint8_t)FR_DENIED;
-    }
+    // A short write with FR_OK means a full volume.
+    usdRecordWriteError((status != FR_OK) ? status : FR_DENIED);
     enableLogging = false;
   } else {
     crc32Update(&crcContext, data, size);
@@ -1024,8 +1027,12 @@ static void usdWriteTask(void* prm)
         uint32_t crcValue = crc32Out(&crcContext);
         usdWriteData(&crcValue, sizeof(crcValue));
 
-        // close file
-        f_close(&logFile);
+        // f_close syncs the FIL buffer, so it can fail like a write does.
+        FRESULT closeStatus = f_close(&logFile);
+        if (closeStatus != FR_OK) {
+          DEBUG_PRINT("usd deck close failure %d\n", closeStatus);
+          usdRecordWriteError(closeStatus);
+        }
 
         // Update file size for fast query
         FILINFO info;
@@ -1148,10 +1155,10 @@ LOG_ADD(LOG_UINT32, eventsRequested, &usdLogStats.eventsRequested)
  */
 LOG_ADD(LOG_UINT32, eventsWritten, &usdLogStats.eventsWritten)
 /**
- * @brief FatFS error (FRESULT) of the first failed SD write of the current/last
- *        log run, 0 if none.
+ * @brief FatFS error (FRESULT) of the first failed SD write or file close of
+ *        the current/last log run, 0 if none.
  *
- * A write failure stops the log; a run with a non-zero writeError is
+ * A failure stops the log; a run with a non-zero writeError is
  * incomplete and must not be used for replay.
  */
 LOG_ADD(LOG_UINT8, writeError, &usdLogStats.writeError)
