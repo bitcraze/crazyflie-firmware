@@ -3,10 +3,6 @@
 
 #include "unity.h"
 
-// These tests pin the operand order of qqmul(): it returns the Hamilton
-// product q*p, and callers such as mm_pose.c depend on that order to get a
-// body-frame attitude error rather than a global one.
-
 static void assertQuatEqual(struct quat expected, struct quat actual) {
   TEST_ASSERT_FLOAT_WITHIN(1e-5f, expected.x, actual.x);
   TEST_ASSERT_FLOAT_WITHIN(1e-5f, expected.y, actual.y);
@@ -34,7 +30,7 @@ void testThatQqmulReturnsTheHamiltonProductInArgumentOrder() {
 
 void testThatQqmulComposesRotationsRightToLeft() {
   // Fixture: qvrot(qqmul(q, p), v) must equal qvrot(q, qvrot(p, v)),
-  // i.e. p is applied first. This is the property callers actually rely on.
+  // i.e. p is applied first.
   struct quat q = qaxisangle(mkvec(1, 0, 0), M_PI_2_F);
   struct quat p = qaxisangle(mkvec(0, 1, 0), M_PI_2_F);
   struct vec v = mkvec(0, 0, 1);
@@ -61,18 +57,17 @@ void testThatQqmulWithInverseYieldsIdentity() {
 }
 
 void testThatQqmulAppliesBodyFramePerturbationOnTheRight() {
-  // Fixture: this is the property mm_pose.c depends on. With q_ekf mapping
-  // body to world, a body-frame perturbation composes on the right, so the
-  // body-frame residual is q_ekf^-1 * q_measured.
-  // q_measured is written out by hand rather than composed with qqmul(), so
-  // that building the fixture and unwinding it cannot cancel a reversed order.
-  struct quat qEkf = qaxisangle(mkvec(0, 0, 1), M_PI_2_F);
-  struct quat delta = qaxisangle(mkvec(1, 0, 0), M_PI_2_F);
-  struct quat qMeasured = mkquat(0.5f, 0.5f, 0.5f, 0.5f); // qEkf * delta
+  // Fixture: with q mapping body to world, a body-frame perturbation composes
+  // on the right, so it is recovered as q^-1 * qComposed. qComposed is written
+  // out by hand rather than composed with qqmul(), so that building the
+  // fixture and unwinding it cannot cancel a reversed order.
+  struct quat q = qaxisangle(mkvec(0, 0, 1), M_PI_2_F);
+  struct quat dq = qaxisangle(mkvec(1, 0, 0), M_PI_2_F);
+  struct quat qComposed = mkquat(0.5f, 0.5f, 0.5f, 0.5f); // q * dq
 
   // Test
-  struct quat residual = qqmul(qinv(qEkf), qMeasured);
+  struct quat recovered = qqmul(qinv(q), qComposed);
 
   // Assert: we recover the body-frame perturbation, not a yaw-rotated version
-  assertQuatEqual(delta, residual);
+  assertQuatEqual(dq, recovered);
 }
