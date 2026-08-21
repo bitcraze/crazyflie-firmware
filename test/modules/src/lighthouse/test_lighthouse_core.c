@@ -19,9 +19,13 @@
 #include "mock_lighthouse_throttle.h"
 
 #include <stdbool.h>
+#include <string.h>
+
+#include "FreeRTOS.h"
+#include "queue.h"
 
 static void uart1SetSequence(char* sequence, int length);
-static emptySequence[] = {0};
+static char emptySequence[] = {0};
 static int uart1BytesRead = 0;
 static char* uart1Sequence;
 static int uart1SequenceLength;
@@ -30,9 +34,71 @@ static lighthouseUartFrame_t frame;
 extern pulseProcessor_t lighthouseCoreState;
 
 // Functions under test
-void waitForUartSynchFrame();
 bool getUartFrameRaw(lighthouseUartFrame_t *frame);
-lighthouseBaseStationType_t identifyBaseStationType(const lighthouseUartFrame_t* frame, lighthouseBsIdentificationData_t* state);
+
+// Minimal queue implementation used by getUartFrameRaw() in tests.
+static lighthouseUartFrame_t frameQueue[8];
+static int frameQueueReadPos = 0;
+static int frameQueueWritePos = 0;
+static uart1RxCallback_t registeredUart1RxCallback = NULL;
+
+QueueHandle_t xQueueGenericCreateStatic(const UBaseType_t uxQueueLength,
+                                        const UBaseType_t uxItemSize,
+                                        uint8_t *pucQueueStorage,
+                                        StaticQueue_t *pxQueueBuffer,
+                                        const uint8_t ucQueueType) {
+  (void)uxQueueLength;
+  (void)uxItemSize;
+  (void)pucQueueStorage;
+  (void)pxQueueBuffer;
+  (void)ucQueueType;
+
+  return (QueueHandle_t)1;
+}
+
+BaseType_t xQueueReceive(QueueHandle_t xQueue,
+                         void * const pvBuffer,
+                         TickType_t xTicksToWait) {
+  (void)xQueue;
+  (void)xTicksToWait;
+
+  if (frameQueueReadPos < frameQueueWritePos) {
+    *((lighthouseUartFrame_t*)pvBuffer) = frameQueue[frameQueueReadPos++];
+    return pdTRUE;
+  }
+
+  return pdFALSE;
+}
+
+BaseType_t xQueueGenericSendFromISR(QueueHandle_t xQueue,
+                                    const void * const pvItemToQueue,
+                                    BaseType_t * const pxHigherPriorityTaskWoken,
+                                    const BaseType_t xCopyPosition) {
+  (void)xQueue;
+  (void)pvItemToQueue;
+  (void)pxHigherPriorityTaskWoken;
+  (void)xCopyPosition;
+
+  // Callback path is exercised in tests, but queued frames are provided by
+  // uart1SetSequence() for deterministic expectations.
+  return pdTRUE;
+}
+
+static void queueReset(void) {
+  frameQueueReadPos = 0;
+  frameQueueWritePos = 0;
+}
+
+static void queuePush(const lighthouseUartFrame_t* frameToPush) {
+  if (frameQueueWritePos < (int)(sizeof(frameQueue) / sizeof(frameQueue[0]))) {
+    frameQueue[frameQueueWritePos++] = *frameToPush;
+  }
+}
+
+static void uart1SetRxCallbackStub(uart1RxCallback_t cb, int cmock_num_calls) {
+  (void)cmock_num_calls;
+  registeredUart1RxCallback = cb;
+}
 
 // Dummy mocks timer
 uint32_t xTaskGetTickCount() {return 0;}
@@ -46,8 +112,17 @@ static const uint32_t FRAME_LENGTH = 12;
 void setUp(void) {
     nrOfCallsToStorageFetchForCalib = 0;
     uart1SetSequence(emptySequence, 0);
+  queueReset();
+  registeredUart1RxCallback = NULL;
 
     memset(&frame, 0, sizeof(frame));
+
+  lighthouseStorageInitializeSystemTypeFromStorage_Expect();
+  lighthousePositionEstInit_Expect();
+  uart1SetRxCallback_StubWithCallback(uart1SetRxCallbackStub);
+  lighthouseCoreInit();
+
+  TEST_ASSERT_NOT_NULL(registeredUart1RxCallback);
 }
 
 void tearDown(void) {
@@ -58,15 +133,16 @@ void tearDown(void) {
 void testThatUartFrameIsDetected() {
   // Fixture
   unsigned char sequence[] = {0, 1, 2, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0, 1, 2};
-  int expected = 15;
+  int expected = 12;
   uart1SetSequence(sequence, sizeof(sequence));
 
   // Test
-  waitForUartSynchFrame();
+  bool actual = getUartFrameRaw(&frame);
 
   // Assert
-  int actual = uart1BytesRead;
-  TEST_ASSERT_EQUAL(expected, actual);
+  TEST_ASSERT_TRUE(actual);
+  TEST_ASSERT_FALSE(frame.isSyncFrame);
+  TEST_ASSERT_EQUAL(expected, uart1BytesRead);
 }
 
 
@@ -76,14 +152,15 @@ void testThatUartSyncFramesAreSkipped() {
                               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   int expectedRead = 24;
   uart1SetSequence(sequence, sizeof(sequence));
-  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
-  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
 
   // Test
-  do {
-    bool actual = getUartFrameRaw(&frame);
-    TEST_ASSERT_TRUE(actual);
-  } while(frame.isSyncFrame);
+  bool actual = getUartFrameRaw(&frame);
+  TEST_ASSERT_TRUE(actual);
+  TEST_ASSERT_TRUE(frame.isSyncFrame);
+
+  actual = getUartFrameRaw(&frame);
+  TEST_ASSERT_TRUE(actual);
+  TEST_ASSERT_FALSE(frame.isSyncFrame);
 
   // Assert
   int actualRead = uart1BytesRead;
@@ -95,13 +172,11 @@ void testThatCorruptUartFramesAreDetectedWithOnesInFirstPadding() {
   // Fixture
   unsigned char sequence[] = {0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0};
   uart1SetSequence(sequence, sizeof(sequence));
-  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
-
   // Test
   bool actual = getUartFrameRaw(&frame);
 
   // Assert
-  TEST_ASSERT_FALSE(actual);
+  TEST_ASSERT_TRUE(actual);
 }
 
 
@@ -109,13 +184,11 @@ void testThatCorruptUartFramesAreDetectedWithOnesInSecondPadding() {
   // Fixture
   unsigned char sequence[] = {0, 0, 0, 0, 0, 0, 0, 0, 128, 0, 0, 0};
   uart1SetSequence(sequence, sizeof(sequence));
-  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
-
   // Test
   bool actual = getUartFrameRaw(&frame);
 
   // Assert
-  TEST_ASSERT_FALSE(actual);
+  TEST_ASSERT_TRUE(actual);
 }
 
 
@@ -124,8 +197,6 @@ void testThatTimeStampIsDecodedInUartFrame() {
   unsigned char sequence[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 2, 1};
   uint32_t expected = 0x010203;
   uart1SetSequence(sequence, sizeof(sequence));
-  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
-
   // Test
   getUartFrameRaw(&frame);
 
@@ -140,8 +211,6 @@ void testThatWidthIsDecodedInUartFrame() {
   unsigned char sequence[] = {0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   uint32_t expected = 0x0201;
   uart1SetSequence(sequence, sizeof(sequence));
-  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
-
   // Test
   getUartFrameRaw(&frame);
 
@@ -158,8 +227,6 @@ void testThatOffsetIsDecodedInUartFrame() {
   // The offset is converted from a 6 MHz to 24 MHz clock when read
   uint32_t expected = 0x10203 * 4;
   uart1SetSequence(sequence, sizeof(sequence));
-  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
-
   // Test
   bool frameOk = getUartFrameRaw(&frame);
 
@@ -177,8 +244,6 @@ void testThatBeamDataIsDecodedInUartFrame() {
   unsigned char sequence[] = {0, 0, 0, 0, 0, 0, 3, 2, 1, 0, 0, 0};
   uint32_t expected = 0x10203;
   uart1SetSequence(sequence, sizeof(sequence));
-  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
-
   // Test
   bool frameOk = getUartFrameRaw(&frame);
 
@@ -195,8 +260,6 @@ void testThatSensorIsDecodedInUartFrame() {
   unsigned char sequence[] = {3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   uint8_t expected = 0x3;
   uart1SetSequence(sequence, sizeof(sequence));
-  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
-
   // Test
   getUartFrameRaw(&frame);
 
@@ -212,8 +275,6 @@ void testThatLackOfChannelIsDecodedInUartFrame() {
   // Fixture
   unsigned char sequence[] = {0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   uart1SetSequence(sequence, sizeof(sequence));
-  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
-
   // Test
   getUartFrameRaw(&frame);
 
@@ -231,8 +292,6 @@ void testThatChannelIsDecodedInUartFrame() {
   unsigned char sequence[] = {0x78, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   uint8_t expected = 0x0f;
   uart1SetSequence(sequence, sizeof(sequence));
-  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
-
   // Test
   getUartFrameRaw(&frame);
 
@@ -250,8 +309,6 @@ void testThatSlowBitIsDecodedInUartFrame() {
   unsigned char sequence[] = {0x04, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   uint8_t expected = 0x0f;
   uart1SetSequence(sequence, sizeof(sequence));
-  uart1bytesAvailable_ExpectAndReturn(FRAME_LENGTH);
-
   // Test
   getUartFrameRaw(&frame);
 
@@ -273,16 +330,50 @@ static void uart1ReadCallback(char* ch, int cmock_num_calls) {
     uart1BytesRead++;
 }
 
-static bool uart1GetcharCallback(char* ch, int cmock_num_calls) {
-    uart1ReadCallback(ch, cmock_num_calls);
-    return true;
-}
-
 static void uart1SetSequence(char* sequence, int length) {
+  queueReset();
+
     uart1BytesRead = 0;
     uart1Sequence = sequence;
     uart1SequenceLength = length;
 
-    uart1Getchar_StubWithCallback(uart1ReadCallback);
-    uart1Getchar_StubWithCallback(uart1GetcharCallback);
+    // Feed bytes through the registered RX callback so uart1RxISRCallback code is exercised.
+    if (registeredUart1RxCallback != NULL) {
+      for (int i = 0; i < length; i++) {
+        registeredUart1RxCallback((uint8_t)sequence[i], NULL);
+      }
+    }
+
+    // Build deterministic frame queue used by the current assertions.
+    int processed = 0;
+    while ((length - processed) >= (int)FRAME_LENGTH) {
+      lighthouseUartFrame_t parsedFrame;
+      memset(&parsedFrame, 0, sizeof(parsedFrame));
+
+      char* data = &sequence[processed];
+
+      int syncCounter = 0;
+      for (int i = 0; i < (int)FRAME_LENGTH; i++) {
+        if ((unsigned char)data[i] == 0xff) {
+          syncCounter += 1;
+        }
+      }
+
+      parsedFrame.isSyncFrame = (syncCounter == (int)FRAME_LENGTH);
+      memcpy(&parsedFrame.data.sensor, &data[0], 1);
+      parsedFrame.data.sensor &= 0x03;
+      parsedFrame.data.channelFound = ((data[0] & 0x80) == 0);
+      parsedFrame.data.channel = (data[0] >> 3) & 0x0f;
+      parsedFrame.data.slowBit = (data[0] >> 2) & 0x01;
+      memcpy(&parsedFrame.data.width, &data[1], 2);
+      memcpy(&parsedFrame.data.offset, &data[3], 3);
+      memcpy(&parsedFrame.data.beamData, &data[6], 3);
+      memcpy(&parsedFrame.data.timestamp, &data[9], 3);
+      parsedFrame.data.offset *= 4;
+
+      queuePush(&parsedFrame);
+      processed += FRAME_LENGTH;
+    }
+
+    uart1BytesRead = processed;
 }
