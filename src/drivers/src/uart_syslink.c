@@ -447,16 +447,20 @@ static void uartslkDmaRXIsr(void)
     }
     else if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
     {
+#ifdef CONFIG_RADIO_ASSERT_ON_COM_PROBLEM
       // Only assert if debugger is not connected
       ASSERT(0); // Queue overflow
+#endif
     }
   }
   else
   { // Checksum error
     if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
     {
+#ifdef CONFIG_RADIO_ASSERT_ON_COM_PROBLEM
       // Only assert if debugger is not connected
       ASSERT(0);
+#endif
     }
   }
 
@@ -527,8 +531,10 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
       rxState = waitForFirstStart; //Checksum error
       if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
       {
+#ifdef CONFIG_RADIO_ASSERT_ON_COM_PROBLEM
         // Only assert if debugger is not connected
         ASSERT(0);
+#endif
       }
     }
     break;
@@ -545,14 +551,18 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
       }
       else if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
       {
+#ifdef CONFIG_RADIO_ASSERT_ON_COM_PROBLEM
         // Only assert if debugger is not connected
         ASSERT(0); // Queue overflow
+#endif
       }
     }
     else
     {
       rxState = waitForFirstStart; //Checksum error
+#ifdef CONFIG_RADIO_ASSERT_ON_COM_PROBLEM
       ASSERT(0);
+#endif
     }
     rxState = waitForFirstStart;
     break;
