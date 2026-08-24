@@ -45,9 +45,21 @@ Response: [0x00, source_id, enabled, result]
 ```
 
 `enabled` is 0 or 1. `result` is zero on success or an errno-compatible status.
+Before the source catalog is frozen, a valid request returns `EAGAIN` in the
+normal response's `result` field. Clients must be prepared to retry it after
+the Crazyflie finishes starting.
+
+An empty request is not answered. A request with an unknown command byte gets
+the two-byte response `[command, ENOSYS]`; a known command with an invalid
+payload gets `[command, EINVAL]`. This short error form lets clients distinguish
+unsupported future commands from malformed versions of known commands.
+
 Disabling a source does not discard an already accepted upstream frame; it
 withholds upstream credit until the source is enabled and downstream CRTP
-capacity is available.
+capacity is available. A successful single-source or all-source disable
+response is a transmit-ordering barrier: a sourced packet that was accepted
+before disable is queued ahead of the response, and no sourced packet for the
+disabled source is queued after it until that source is enabled again.
 
 ## Channel 3: source TOC
 
@@ -60,6 +72,8 @@ GET_ITEM response: [0x00, source_id, source_path ...]
 
 GET_INFO request:  [0x01]
 GET_INFO response: [0x01, source_count, catalog_crc_u32_le]
+
+Error response:    [command, errno]
 ```
 
 The source path occupies the remainder of `GET_ITEM`; it is not NUL terminated.
@@ -70,6 +84,10 @@ display and filtering, not stable device identity.
 The catalog is frozen for the Crazyflie boot. IDs are contiguous from zero and
 remain assigned if a source becomes temporarily unavailable. The CRC is the
 firmware CRC-32 over each entry in ID order as `[id byte][source path bytes]`.
+Before freeze, a valid `GET_INFO` or `GET_ITEM` request returns `EAGAIN`; clients
+must retry after startup. An unknown item returns `ENOENT`. As on channel 2, an
+empty request is not answered, an unknown command returns `ENOSYS`, and a known
+command with an invalid payload returns `EINVAL`.
 
 ## Camera Deck binding
 
