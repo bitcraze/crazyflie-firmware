@@ -168,9 +168,9 @@ jobs:
               fi
             done
             if [ "$FAIL_COUNT" -eq 0 ]; then
-              echo "All $RANDOM_BUILD_COUNT random builds passed!"
+              echo "SUCCESS! All $RANDOM_BUILD_COUNT random builds passed!"
             else
-              echo "ERROR: $FAIL_COUNT/$RANDOM_BUILD_COUNT random builds failed!"
+              echo "FAIL! $FAIL_COUNT/$RANDOM_BUILD_COUNT random builds failed!"
             fi
             exit $FAIL_COUNT
           '
