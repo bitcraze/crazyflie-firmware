@@ -10,13 +10,13 @@
 #include "queue.h"
 #include "semphr.h"
 #include "task.h"
+#include "console.h"
+#include "crtp.h"
 
 #if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
 #include "static_mem.h"
 #include "system.h"
 #include "uart1.h"
-#include "console.h"
-#include "crtp.h"
 
 #define DEBUG_MODULE "BCCAM"
 #include "debug.h"
@@ -80,16 +80,6 @@ static uint16_t control_malformed_logged;
 uint8_t bccam_uart_service_link_state_log;
 static bccam_uart_service_status_t service_status_cache;
 
-#if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
-static xQueueHandle request_queue;
-static xQueueHandle rx_queue;
-static TaskHandle_t bcCamUartTaskHandle;
-static volatile BaseType_t rx_queue_overflow_pending;
-typedef struct {
-  BaseType_t *higher_priority_task_woken;
-} bccam_uart_rx_collector_isr_context_t;
-static bccam_uart_rx_collector_t rx_collector;
-static bccam_uart_rx_collector_isr_context_t rx_collector_context;
 /** Console source ID assigned to deck:bcCam, or -1 if registration failed. */
 static int console_source_id = -1;
 /** Staging buffer for one accepted Camera Console frame. */
@@ -104,6 +94,17 @@ static bool console_frame_pending;
 static bool console_release_pending;
 /** True when completing console_frame must schedule a slot release. */
 static bool console_frame_needs_release;
+
+#if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
+static xQueueHandle request_queue;
+static xQueueHandle rx_queue;
+static TaskHandle_t bcCamUartTaskHandle;
+static volatile BaseType_t rx_queue_overflow_pending;
+typedef struct {
+  BaseType_t *higher_priority_task_woken;
+} bccam_uart_rx_collector_isr_context_t;
+static bccam_uart_rx_collector_t rx_collector;
+static bccam_uart_rx_collector_isr_context_t rx_collector_context;
 STATIC_MEM_QUEUE_ALLOC(request_queue,
                        BCCAM_UART_REQUEST_QUEUE_LENGTH,
                        sizeof(bccam_uart_request_t));
@@ -1052,11 +1053,26 @@ static void poll_firmware_link_at(uint32_t now_ticks) {
   update_service_status_cache();
 }
 
-#if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
 /** Return true for transient Console forwarding backpressure results. */
 static bool temporary_console_result(int result) {
   return result == BCCAM_UART_ERR_TRANSACTION_BUSY ||
          result == BCCAM_UART_ERR_NO_CREDIT;
+}
+
+/** Publish Console receive credit only while the source remains enabled. */
+static int publish_console_credit_if_enabled(bool release_consumed_slot,
+                                             bool *published) {
+  int result = BCCAM_UART_OK;
+  *published = false;
+  taskENTER_CRITICAL();
+  if (consoleSourceIsEnabled((uint8_t)console_source_id)) {
+    result = release_consumed_slot ?
+      bccam_uart_runtime_release_console_rx(&firmware_client.runtime) :
+      bccam_uart_runtime_open_console_rx(&firmware_client.runtime);
+    *published = result == BCCAM_UART_OK;
+  }
+  taskEXIT_CRITICAL();
+  return result;
 }
 
 /** Advance the best-effort Camera Console to CRTP forwarding state machine. */
@@ -1088,9 +1104,9 @@ static int forward_console(void) {
   }
 
   if (console_release_pending) {
-    const int result = bccam_uart_runtime_release_console_rx(
-      &firmware_client.runtime);
-    if (result == BCCAM_UART_OK) {
+    bool published = false;
+    const int result = publish_console_credit_if_enabled(true, &published);
+    if (published) {
       console_release_pending = false;
     }
     return result;
@@ -1103,7 +1119,8 @@ static int forward_console(void) {
     &length, &present);
   if (result != BCCAM_UART_OK || !present) {
     if (result == BCCAM_UART_OK && enabled) {
-      result = bccam_uart_runtime_open_console_rx(&firmware_client.runtime);
+      bool published = false;
+      result = publish_console_credit_if_enabled(false, &published);
     }
     return result;
   }
@@ -1121,7 +1138,6 @@ static int forward_console(void) {
   }
   return BCCAM_UART_OK;
 }
-#endif
 
 static bool handle_rx_event(const bccam_uart_rx_event_t *event) {
   if (event == NULL || !is_rx_firmware_state(service_state)) {
@@ -1446,6 +1462,12 @@ void bccam_uart_service_test_reset(void) {
   test_bootloader_enter_result_forced = false;
   test_bootloader_enter_result = false;
   test_console_diagnostics_active = false;
+  console_source_id = -1;
+  console_frame_length = 0u;
+  console_frame_offset = 0u;
+  console_frame_pending = false;
+  console_release_pending = false;
+  console_frame_needs_release = false;
   bccam_firmware_uart_client_init(&firmware_client, &deck_controller);
   bccam_firmware_uart_client_test_trace_reset();
   reset_flash_session();
@@ -1498,6 +1520,14 @@ void bccam_uart_service_test_set_bootloader_enter_result(bool result) {
 
 void bccam_uart_service_test_set_console_diagnostics_active(bool active) {
   test_console_diagnostics_active = active;
+}
+
+void bccam_uart_service_test_set_console_source_id(int source_id) {
+  console_source_id = source_id;
+}
+
+int bccam_uart_service_test_forward_console(void) {
+  return forward_console();
 }
 
 void bccam_uart_service_test_poll_once(void) {

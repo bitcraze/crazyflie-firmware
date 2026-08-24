@@ -106,6 +106,8 @@ bool consoleSourceIsEnabled(uint8_t sourceId);
  *
  * The bytes are canonically UTF-8 console data, but a chunk may split a code
  * point or contain invalid bytes. The data is copied before this call returns.
+ * The enabled-state check and CRTP enqueue are ordered with runtime disable:
+ * a successful disable response cannot overtake an accepted chunk.
  *
  * @param sourceId Boot-lifetime source ID returned by consoleSourceRegister().
  * @param data Non-NULL buffer containing the chunk to send.
@@ -116,6 +118,11 @@ bool consoleSourceIsEnabled(uint8_t sourceId);
  *         is too large, or the queue cannot accept the packet immediately.
  */
 bool consoleSourceSend(uint8_t sourceId, const uint8_t *data, size_t length);
+
+#ifdef UNIT_TEST_MODE
+/** Reset Console module state between host tests. */
+void consoleResetForTest(void);
+#endif
 
 /**
  * Macro implementing consolePrintf with eprintf

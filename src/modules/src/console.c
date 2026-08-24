@@ -87,6 +87,8 @@ static bool isInit;
 static void addBufferFullMarker();
 /** Handle sourced Console control and catalog CRTP requests. */
 static void consoleCrtpCallback(CRTPPacket *packet);
+/** Send a command-level errno response. */
+static void consoleSendCommandError(CRTPPacket *packet, uint8_t error);
 
 /**
  * Validate one NUL-terminated UTF-8 source path.
@@ -169,7 +171,7 @@ void consoleInit()
 
 int consoleSourceRegister(const char *path)
 {
-  if (sourcesFrozen || path == NULL || path[0] == '\0' || !validUtf8(path)) {
+  if (path == NULL || path[0] == '\0' || !validUtf8(path)) {
     return -1;
   }
 
@@ -189,25 +191,38 @@ int consoleSourceRegister(const char *path)
   if (segmentStart || length > (CRTP_MAX_DATA_SIZE - 2u)) {
     return -1;
   }
+  int result = -1;
+  taskENTER_CRITICAL();
+  if (sourcesFrozen) {
+    taskEXIT_CRITICAL();
+    return result;
+  }
   for (uint8_t i = 0u; i < sourceCount; i++) {
     if (strcmp(sources[i].path, path) == 0) {
-      return i;
+      result = i;
+      taskEXIT_CRITICAL();
+      return result;
     }
   }
   if (sourceCount >= CONSOLE_SOURCE_MAX) {
-    return -1;
+    taskEXIT_CRITICAL();
+    return result;
   }
 
   const uint8_t id = sourceCount++;
   memcpy(sources[id].path, path, length + 1u);
   sources[id].pathLength = (uint8_t)length;
   sources[id].enabled = false;
-  return id;
+  result = id;
+  taskEXIT_CRITICAL();
+  return result;
 }
 
 void consoleSourceFreeze(void)
 {
+  taskENTER_CRITICAL();
   sourcesFrozen = true;
+  taskEXIT_CRITICAL();
 }
 
 bool consoleSourceIsEnabled(uint8_t sourceId)
@@ -223,8 +238,7 @@ bool consoleSourceIsEnabled(uint8_t sourceId)
 
 bool consoleSourceSend(uint8_t sourceId, const uint8_t *data, size_t length)
 {
-  if (!consoleSourceIsEnabled(sourceId) || data == NULL ||
-      length > (CRTP_MAX_DATA_SIZE - 1u)) {
+  if (data == NULL || length > (CRTP_MAX_DATA_SIZE - 1u)) {
     return false;
   }
 
@@ -234,8 +248,27 @@ bool consoleSourceSend(uint8_t sourceId, const uint8_t *data, size_t length)
   };
   packet.data[0] = sourceId;
   memcpy(&packet.data[1], data, length);
-  return crtpSendPacket(&packet) == pdTRUE;
+
+  bool accepted = false;
+  taskENTER_CRITICAL();
+  if (sourceId < sourceCount && sources[sourceId].enabled) {
+    accepted = crtpSendPacket(&packet) == pdTRUE;
+  }
+  taskEXIT_CRITICAL();
+  return accepted;
 }
+
+#ifdef UNIT_TEST_MODE
+void consoleResetForTest(void)
+{
+  memset(sources, 0, sizeof(sources));
+  sourceCount = 0u;
+  sourcesFrozen = false;
+  messageSendingIsPending = false;
+  synch = NULL;
+  isInit = false;
+}
+#endif
 
 /** Return the firmware CRC-32 of the frozen source catalog. */
 static uint32_t consoleCatalogCrc(void)
@@ -249,14 +282,34 @@ static uint32_t consoleCatalogCrc(void)
   return crc32Out(&context);
 }
 
+static void consoleSendCommandError(CRTPPacket *packet, uint8_t error)
+{
+  packet->size = 2u;
+  packet->data[1] = error;
+  (void)crtpSendPacketBlock(packet);
+}
+
 static void consoleCrtpCallback(CRTPPacket *packet)
 {
-  if (packet->channel == CONSOLE_CHANNEL_CONTROL && packet->size == 3u &&
-      packet->data[0] == CONSOLE_CMD_SET_ENABLED && packet->data[2] <= 1u) {
+  if (packet->channel == CONSOLE_CHANNEL_CONTROL) {
+    if (packet->size == 0u) {
+      return;
+    }
+    if (packet->data[0] != CONSOLE_CMD_SET_ENABLED) {
+      consoleSendCommandError(packet, ENOSYS);
+      return;
+    }
+    if (packet->size != 3u || packet->data[2] > 1u) {
+      consoleSendCommandError(packet, EINVAL);
+      return;
+    }
+
     const uint8_t sourceId = packet->data[1];
     uint8_t result = 0u;
     taskENTER_CRITICAL();
-    if (sourceId == CONSOLE_SOURCE_ALL) {
+    if (!sourcesFrozen) {
+      result = EAGAIN;
+    } else if (sourceId == CONSOLE_SOURCE_ALL) {
       for (uint8_t i = 0u; i < sourceCount; i++) {
         sources[i].enabled = packet->data[2] != 0u;
       }
@@ -275,16 +328,40 @@ static void consoleCrtpCallback(CRTPPacket *packet)
   if (packet->channel != CONSOLE_CHANNEL_TOC || packet->size == 0u) {
     return;
   }
-  if (packet->data[0] == CONSOLE_TOC_GET_INFO && packet->size == 1u) {
+  if (packet->data[0] == CONSOLE_TOC_GET_INFO) {
+    if (packet->size != 1u) {
+      consoleSendCommandError(packet, EINVAL);
+      return;
+    }
+  } else if (packet->data[0] == CONSOLE_TOC_GET_ITEM) {
+    if (packet->size != 2u) {
+      consoleSendCommandError(packet, EINVAL);
+      return;
+    }
+  } else {
+    consoleSendCommandError(packet, ENOSYS);
+    return;
+  }
+
+  bool frozen;
+  taskENTER_CRITICAL();
+  frozen = sourcesFrozen;
+  taskEXIT_CRITICAL();
+  if (!frozen) {
+    consoleSendCommandError(packet, EAGAIN);
+    return;
+  }
+  if (packet->data[0] == CONSOLE_TOC_GET_INFO) {
     const uint32_t crc = consoleCatalogCrc();
     packet->size = 6u;
     packet->data[1] = sourceCount;
     memcpy(&packet->data[2], &crc, sizeof(crc));
     (void)crtpSendPacketBlock(packet);
-  } else if (packet->data[0] == CONSOLE_TOC_GET_ITEM && packet->size == 2u) {
+  } else {
     const uint8_t sourceId = packet->data[1];
     if (sourceId >= sourceCount) {
-      packet->size = 1u;
+      consoleSendCommandError(packet, ENOENT);
+      return;
     } else {
       const size_t length = sources[sourceId].pathLength;
       memcpy(&packet->data[2], sources[sourceId].path, length);

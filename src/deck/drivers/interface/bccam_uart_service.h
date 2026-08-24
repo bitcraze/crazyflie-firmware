@@ -103,6 +103,8 @@ void bccam_uart_service_test_set_bootloader_enter_result(bool result);
  *               client is consuming a bound Console service; false otherwise.
  */
 void bccam_uart_service_test_set_console_diagnostics_active(bool active);
+void bccam_uart_service_test_set_console_source_id(int source_id);
+int bccam_uart_service_test_forward_console(void);
 void bccam_uart_service_test_poll_once(void);
 void bccam_uart_service_test_handle_rx_event(
   const bccam_uart_rx_event_t *event);
