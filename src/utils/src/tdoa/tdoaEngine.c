@@ -52,6 +52,7 @@ The implementation must handle
 #include "tdoaStats.h"
 #include "clockCorrectionEngine.h"
 #include "physicalConstants.h"
+#include "usec_time.h"
 
 void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms, tdoaEngineSendTdoaToEstimator sendTdoaToEstimator, const double locodeckTsFreq, const tdoaEngineMatchingAlgorithm_t matchingAlgorithm) {
   tdoaStorageInitialize(engineState->anchorInfoArray);
@@ -61,7 +62,7 @@ void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms, tdoaE
   engineState->matchingAlgorithm = matchingAlgorithm;
 #ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
   engineState->maxRateHz = TDOA_ENGINE_DEFAULT_MAX_RATE_HZ;
-  engineState->lastForwardedTime_ms = 0;
+  engineState->lastForwardedTime_us = 0;
 #endif
 
   engineState->matching.offset = 0;
@@ -228,16 +229,17 @@ void tdoaEngineGetAnchorCtxForPacketProcessing(tdoaEngineState_t* engineState, c
 // Rate-limits the aggregate stream of measurements forwarded to the estimator, across all anchors.
 // maxRateHz <= 0 disables the limit. The shared timer is reset as soon as a packet is let through,
 // even if matching later fails to produce a measurement.
-static bool isForwardRateLimited(tdoaEngineState_t* engineState, const uint32_t now_ms, const float maxRateHz) {
+static bool isForwardRateLimited(tdoaEngineState_t* engineState, const float maxRateHz) {
   if (maxRateHz <= 0.0f) {
     return false;
   }
 
-  const uint32_t minPeriod_ms = (uint32_t)(1000.0f / maxRateHz);
-  if (engineState->lastForwardedTime_ms != 0 && (now_ms - engineState->lastForwardedTime_ms) < minPeriod_ms) {
+  const uint64_t now_us = usecTimestamp();
+  const uint64_t minPeriod_us = (uint64_t)(1000000.0f / maxRateHz);
+  if (engineState->lastForwardedTime_us != 0 && (now_us - engineState->lastForwardedTime_us) < minPeriod_us) {
     return true;
   } else {
-    engineState->lastForwardedTime_ms = now_ms;
+    engineState->lastForwardedTime_us = now_us;
     return false;
   }
 }
@@ -253,7 +255,7 @@ bool tdoaEngineProcessPacketFiltered(tdoaEngineState_t* engineState, tdoaAnchorC
     STATS_CNT_RATE_EVENT(&engineState->stats.timeIsGood);
 
 #ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
-    if (!isForwardRateLimited(engineState, anchorCtx->currentTime_ms, engineState->maxRateHz)) {
+    if (!isForwardRateLimited(engineState, engineState->maxRateHz)) {
 #endif
       tdoaAnchorContext_t otherAnchorCtx;
       if (findSuitableAnchor(engineState, &otherAnchorCtx, anchorCtx, doExcludeId, excludedId)) {

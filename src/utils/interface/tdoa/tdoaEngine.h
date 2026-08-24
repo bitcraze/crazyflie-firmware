@@ -29,7 +29,7 @@ typedef struct {
   tdaoAnchorInfoArray_t anchorInfoArray;
   tdoaStats_t stats;
 #ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
-  uint32_t lastForwardedTime_ms;
+  uint64_t lastForwardedTime_us;
 #endif
 
   // Configuration
