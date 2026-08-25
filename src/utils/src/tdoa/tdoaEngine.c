@@ -239,7 +239,7 @@ static bool isForwardRateLimited(tdoaEngineState_t* engineState, const float max
   if (engineState->lastForwardedTime_us != 0 && (now_us - engineState->lastForwardedTime_us) < minPeriod_us) {
     return true;
   } else {
-    engineState->lastForwardedTime_us = now_us;
+    engineState->lastForwardedTime_us += minPeriod_us;
     return false;
   }
 }
