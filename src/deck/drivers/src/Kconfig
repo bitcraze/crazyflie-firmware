@@ -278,11 +278,11 @@ config DECK_LIGHTHOUSE_MAX_N_BS
       valid for Lighthouse V2.
 
 config DECK_LIGHTHOUSE_MAX_RATE
-  int "Max sweeps used per second"
+  int "Max measurement sampels used per second"
   depends on DECK_LIGHTHOUSE
   default 50
   help
-      Set the max number of lighthouse sweeps used (Hz).
+      Set the max number of lighthouse measurements sent to the estimator (Hz).
 
 config DECK_LOCO
     bool "Support the Loco positioning deck"
