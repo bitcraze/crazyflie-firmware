@@ -445,23 +445,23 @@ static void uartslkDmaRXIsr(void)
         xQueueSendFromISR(syslinkPacketDelivery, (void *)&slp, &xHigherPriorityTaskWoken);
       }
     }
+#ifdef CONFIG_RADIO_ASSERT_ON_COM_PROBLEM
     else if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
     {
-#ifdef CONFIG_RADIO_ASSERT_ON_COM_PROBLEM
       // Only assert if debugger is not connected
       ASSERT(0); // Queue overflow
-#endif
     }
+#endif
   }
   else
   { // Checksum error
+#ifdef CONFIG_RADIO_ASSERT_ON_COM_PROBLEM
     if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
     {
-#ifdef CONFIG_RADIO_ASSERT_ON_COM_PROBLEM
       // Only assert if debugger is not connected
       ASSERT(0);
-#endif
     }
+#endif
   }
 
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
@@ -529,13 +529,13 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
     else
     {
       rxState = waitForFirstStart; //Checksum error
+#ifdef CONFIG_RADIO_ASSERT_ON_COM_PROBLEM
       if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
       {
-#ifdef CONFIG_RADIO_ASSERT_ON_COM_PROBLEM
         // Only assert if debugger is not connected
         ASSERT(0);
-#endif
       }
+#endif
     }
     break;
   case waitForChksum2:
@@ -549,13 +549,13 @@ void uartslkHandleDataFromISR(uint8_t c, BaseType_t * const pxHigherPriorityTask
           xQueueSendFromISR(syslinkPacketDelivery, (void *)&slp, pxHigherPriorityTaskWoken);
         }
       }
+#ifdef CONFIG_RADIO_ASSERT_ON_COM_PROBLEM
       else if(!(CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk))
       {
-#ifdef CONFIG_RADIO_ASSERT_ON_COM_PROBLEM
         // Only assert if debugger is not connected
         ASSERT(0); // Queue overflow
-#endif
       }
+#endif
     }
     else
     {
