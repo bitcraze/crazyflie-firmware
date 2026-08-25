@@ -278,7 +278,7 @@ config DECK_LIGHTHOUSE_MAX_N_BS
       valid for Lighthouse V2.
 
 config DECK_LIGHTHOUSE_MAX_RATE
-  int "Max measurement sampels used per second"
+  int "Max measurement samples used per second"
   depends on DECK_LIGHTHOUSE
   default 50
   help
