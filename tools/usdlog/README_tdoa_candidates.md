@@ -38,6 +38,8 @@ different policies on identical data.
   out along with everything else non-essential.
 - `read_usd_log.sh` — stop logging, run the integrity gates over the link and
   optionally pull the log off the drone. The entry point at the end of a run.
+- `anchors_from_cfcli.py` — turn `cfcli loco display` output into the anchors
+  YAML the replay needs.
 - `replay_tdoa.py` — replay a captured log and score policies against the
   reference.
 
@@ -95,9 +97,17 @@ be written over the air.
 1: {x: 3.0, y: -4.08, z: 0.2}
 ```
 
-Take the positions from your anchor survey, or read them off the drone (the
-Loco Positioning tab in cfclient shows them). It has to match the system the
-log was recorded in — replay geometry is only as good as this file.
+Take the positions from your anchor survey, or read them off the drone, which
+is what the drone is actually using and therefore the thing replay has to
+agree with:
+
+```
+cfcli -u "$CF_URI" loco display | python3 -m tools.usdlog.anchors_from_cfcli > anchors.yaml
+```
+
+Inactive or invalid anchors are skipped. It has to match the system the log was
+recorded in — replay geometry is only as good as this file, and a stale one
+shows up as a replay that diverges from ground truth for no visible reason.
 
 ## Per-run loop
 
