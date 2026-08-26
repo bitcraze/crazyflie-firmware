@@ -55,7 +55,9 @@ config RADIO_ASSERT_ON_COM_PROBLEM
   default y
   help
       In case of any radio communication problem, such as queue overflow 
-      or checksum error, assert. This will make the Crazyflie cut the motor
-      power so it might not be always wanted.
+      or checksum error, assert. This is often a sign of a overloaded system.
+      Since the assert will make the Crazyflie cut power to the motors, 
+      this might not always be wanted and it might be better to
+      sactifice communcation.
 
 endmenu
