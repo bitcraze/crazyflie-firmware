@@ -42,6 +42,14 @@ different policies on identical data.
   YAML the replay needs.
 - `replay_tdoa.py` — replay a captured log and score policies against the
   reference.
+- `tdoa_experiment.py` — sweep a grid of (policy, outlier filter, TDoA model,
+  std) on one log, scored on a train/validate time split so tuning cannot
+  overfit the segment it was tuned on.
+
+Plotting lives in `../tdoa_plot/plot_tdoa.py`, which draws the replayed
+trajectory, the live on-drone estimate and the Lighthouse ground truth on the
+same axes. It is a separate `uv` project because it needs matplotlib, which
+nothing else here does.
 
 The replay machinery itself lives in `bindings/util/`: `tdoa_replay.py` is the
 interface, with `tdoa_selection.py`, `tdoa_outlier.py` and `tdoa_std.py` holding
@@ -240,6 +248,33 @@ export CF_URI=radio://0/100/2M/F00D2BEFED
 
 Add your own by subclassing `SelectionPolicy` in
 `bindings/util/tdoa_selection.py`.
+
+## Plotting and sweeping
+
+`replay_tdoa.py` prints a scored table. To see the trajectories:
+
+```
+uv run --project tools/tdoa_plot tools/tdoa_plot/plot_tdoa.py \
+    log02 --anchors anchors.yaml
+```
+
+To search combinations rather than compare a handful, `tdoa_experiment.py` takes
+a YAML grid and scores every entry on a train/validate time split, so a setting
+tuned on the first half is reported on the second:
+
+```
+- {policy: baseline, filter: integrator, model: standard, std: 0.15}
+- {policy: median,   filter: mad_window, model: standard, std: 0.30}
+```
+
+```
+python3 -m tools.usdlog.tdoa_experiment log02 \
+    --anchors anchors.yaml --grid grid.yaml --out results.csv
+```
+
+Each replay runs in a fresh forked worker: the robust TDoA model keeps
+M-estimation state in a process-wide static buffer, so runs must not share a
+process.
 
 ## Checking that a capture is intact
 
