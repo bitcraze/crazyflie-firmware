@@ -124,17 +124,34 @@ export CF_URI=radio://0/100/2M/F00D2BEFED
    actually in effect. A typo in `config.txt` shows up here and nowhere else
    until the log comes back missing the events you wanted.
 
-2. **Arm logging**, on the same connection:
+2. **Arm logging**, on the same connection. **`usd.logging` must be the last
+   thing you send, and nothing may follow it:**
 
    ```
-   cfcli -u "$CF_URI" param set tdoaEngine.logCand=1,usd.logging=1
+   cfcli -u "$CF_URI" param set tdoaEngine.logCand=1
+   # ... any other params for this run ...
+   cfcli -u "$CF_URI" param set usd.logging=1      # LAST. Do not talk to it after this.
    ```
+
+   Order is not stylistic. With `config.txt` subscribed to `estAcceleration`
+   and `estGyroscope`, events fire per IMU sample at 1 kHz each, and
+   `usddeckWriteEventData` calls `vTaskResume()` on the SD write task for every
+   one of them. A CRTP packet arriving into that load can find
+   `crtpPacketDelivery` already full, and `radiolink.c:171` asserts — observed
+   in practice, and it takes the drone down hard enough that it stops answering
+   the radio and needs a power cycle. Setting `usd.logging` last means no packet
+   ever arrives during the loaded window.
+
+   `tdoaEngine.logCand` is safe to set early: `usddeckWriteEventData` returns
+   immediately while `enableLogging` is 0, so candidate events cost nothing
+   until logging is actually on.
 
    Neither parameter carries `PARAM_PERSISTENT`, so `param set --store` cannot
    persist them: both have to be set over a link after every boot. The one
    exception is `usd.logging`, which can be armed from the card instead by
-   setting *enable logging on startup* (line 4 of `config.txt`) to `1`. Both
-   live in RAM, so they survive the disconnect in the next step, but not a
+   setting *enable logging on startup* (line 4 of `config.txt`) to `1` — which
+   also sidesteps the ordering problem entirely, since then no link is involved.
+   Both live in RAM, so they survive the disconnect in the next step, but not a
    reboot or a battery swap.
 
 3. **Disconnect the radio** and fly or move the drone inside Loco and reference
@@ -156,6 +173,13 @@ export CF_URI=radio://0/100/2M/F00D2BEFED
    ```
    tools/usdlog/read_usd_log.sh "$CF_URI" --check-only
    ```
+
+   If you flew by hand, this connection lands on a drone that is *still
+   logging* — the loaded state described in step 2. It is a single short
+   command and it stops logging first, but if the drone asserts instead of
+   answering, power cycle and read the card directly: the log is already on it,
+   only the counters are lost. Flights run by the onboard app have already
+   cleared `usd.logging` at touchdown, so this does not apply to them.
 
    This sets `usd.logging = 0`, which is what closes the file (until then the
    uSD memory reports a size of 0), runs all three integrity gates and prints

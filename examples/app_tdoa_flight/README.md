@@ -69,17 +69,28 @@ export CF_URI=radio://0/100/2M/F00D2BEFED
 cfcli -u "$CF_URI" --csv param get \
     deck.bcLoco,deck.bcLighthouse4,deck.bcUSD,usd.canLog
 
-# 2. Set the envelope once per session (see below), then arm logging and pick
-#    a sequence
-cfcli -u "$CF_URI" param set tdoaEngine.logCand=1,usd.logging=1
-cfcli -u "$CF_URI" param set tdoaFlight.seq=2,tdoaFlight.delay=10
+# 2. Pick a sequence and arm candidate logging
+cfcli -u "$CF_URI" param set tdoaEngine.logCand=1
+cfcli -u "$CF_URI" param set tdoaFlight.seq=2,tdoaFlight.delay=15
 
-# 3. Trigger, then disconnect immediately -- the countdown is your window
+# 3. Trigger, then start logging LAST and send nothing after it
 cfcli -u "$CF_URI" param set tdoaFlight.start=1
+cfcli -u "$CF_URI" param set usd.logging=1
 
 # 4. After it lands, verify the capture over a link
 tools/usdlog/read_usd_log.sh "$CF_URI" --check-only
 ```
+
+`usd.logging` goes last on purpose. Once logging is running the uSD write task
+is resumed on every event -- including `estAcceleration` and `estGyroscope`,
+which fire per IMU sample at 1 kHz -- and a CRTP packet arriving into that load
+can overflow `crtpPacketDelivery` and assert at `radiolink.c:171`, taking the
+drone down hard enough to need a power cycle. Sending it last means nothing
+arrives during the loaded window. `tdoaEngine.logCand` is safe earlier, since
+event writes return immediately while `enableLogging` is 0.
+
+The countdown is started by `start=1`, so `delay` has to cover the one remaining
+command plus getting clear. 15 s is comfortable.
 
 `tdoaFlight.start` is an edge trigger: the app clears it back to 0 as soon as it
 accepts, so reading it back tells you nothing. Watch `tdoaFlight.state` instead.
