@@ -239,8 +239,8 @@ static bool isForwardRateLimited(tdoaEngineState_t* engineState, const float max
   if (engineState->lastForwardedTime_us != 0 && (now_us - engineState->lastForwardedTime_us) < minPeriod_us) {
     return true;
   } else {
-    if (engineState->lastForwardedTime_us < minPeriod_us) { // No measurement has yet been forwarded
-      // Initiate window
+    if (now_us > engineState->lastForwardedTime_us + 2*minPeriod_us) { // Long time since last measurement, or no measurement has yet been forwarded
+      // Reset window
       engineState->lastForwardedTime_us = now_us;
     }
     else {
