@@ -2,7 +2,14 @@
 name = "tdoa-plot"
 version = "0.1.0"
 description = "Plot replayed (cffirmware bindings) vs live vs Lighthouse ground-truth trajectories from a Crazyflie uSD log"
-requires-python = ">=3.10"
+# Pinned to the interpreter the repo venv uses, because this tool imports the
+# cffirmware SWIG extension out of ../../build. That .so is ABI-locked to one
+# CPython version, and `make bindings_python` only ever builds it for whatever
+# interpreter was used. Left open, uv picks the newest Python on the machine,
+# loads a stale .so built for it months ago, and fails with an AttributeError
+# on a symbol the regenerated cffirmware.py expects. Bump this in step with
+# the repo venv, or pass --rebuild-bindings once to build the .so for yours.
+requires-python = ">=3.13,<3.14"
 dependencies = [
     "matplotlib>=3.7",
     "numpy>=1.24",
