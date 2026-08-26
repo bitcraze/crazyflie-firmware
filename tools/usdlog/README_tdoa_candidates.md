@@ -29,11 +29,13 @@ different policies on identical data.
   on (TDoA3 + Lighthouse as ground truth + uSD).
 - `config_tdoa_candidates.txt` / `config_tdoa_candidates_lean.txt` — uSD card
   configs. The lean one drops the live estimate and the baseline measurement,
-  for when the full one overruns the ring buffer. The full one also records
-  four `tdoaFlight.*` variables so a capture flown by the optional onboard app
-  says which sequence it was; the uSD deck skips log variables it does not
-  know, so those lines are harmless on a build without the app. The lean config
-  leaves them out along with everything else non-essential.
+  for when the full one overruns the ring buffer. The full one also subscribes
+  to `on:tdoaFlightStep` so a capture flown by the optional onboard app says
+  which sequence it was and where each step began; it is an event rather than a
+  periodic variable, so it costs a few dozen records per run rather than
+  bandwidth at the sample rate. The uSD deck skips events it does not know, so
+  that line is harmless on a build without the app. The lean config leaves it
+  out along with everything else non-essential.
 - `read_usd_log.sh` — stop logging, run the integrity gates over the link and
   optionally pull the log off the drone. The entry point at the end of a run.
 - `replay_tdoa.py` — replay a captured log and score policies against the

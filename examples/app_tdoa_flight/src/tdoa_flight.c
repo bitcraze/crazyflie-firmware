@@ -31,6 +31,7 @@
 #include "task.h"
 
 #include "crtp_commander_high_level.h"
+#include "eventtrigger.h"
 #include "log.h"
 #include "param.h"
 #include "pm.h"
@@ -98,6 +99,26 @@ static uint8_t abortLog      = abortNone;
 static uint8_t seqLog        = 0;
 static uint8_t stepLog       = 0;
 
+/* Emitted on every state or step change, which is a few dozen times in a whole
+ * flight. This is deliberately an event and not a periodic log variable: the
+ * values change a handful of times per run, so sampling them alongside the
+ * 50 Hz block would spend ring buffer bandwidth -- the resource whose overrun
+ * silently puts holes in the capture -- on repeating what is already known.
+ *
+ * It is also strictly more informative: the event carries the exact timestamp
+ * of each transition, so the log can be segmented by flight step, which
+ * periodic sampling only approximates to within a sample period. */
+EVENTTRIGGER(tdoaFlightStep, uint8, seq, uint8, step, uint8, state, uint8, abortR)
+
+static void emitFlightEvent(void)
+{
+  eventTrigger_tdoaFlightStep_payload.seq = seqLog;
+  eventTrigger_tdoaFlightStep_payload.step = stepLog;
+  eventTrigger_tdoaFlightStep_payload.state = stateLog;
+  eventTrigger_tdoaFlightStep_payload.abortR = abortLog;
+  eventTrigger(&eventTrigger_tdoaFlightStep);
+}
+
 // --- Params -----------------------------------------------------------------
 
 static uint8_t  pStart    = 0;      // write 1 to trigger; cleared on accept
@@ -147,6 +168,7 @@ static void enterState(const flightState_t next)
 {
   stateLog = (uint8_t)next;
   stateEnteredTick = xTaskGetTickCount();
+  emitFlightEvent();
 }
 
 static float mapXY(const float n) { return n * pWorkXY; }
@@ -508,6 +530,7 @@ static void tick(void)
         }
         stepIndex++;
         stepLog = stepIndex;
+        emitFlightEvent();
       }
 
       flightStep_t step;

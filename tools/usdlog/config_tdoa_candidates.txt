@@ -23,18 +23,6 @@ stateEstimate.x
 stateEstimate.y
 stateEstimate.z
 
-# --- Which flight this is, when examples/app_tdoa_flight is built in ----------
-# Makes each capture self-identifying: without these you land with log00..log07
-# and no record of which was the spiral. Costs 4 bytes per sample.
-#
-# Safe to leave in either way: the uSD deck prints "Unknown log variable" and
-# skips names the firmware does not have, so this file still parses (and
-# usd.canLog still reads 1) on a build without the app.
-tdoaFlight.seq
-tdoaFlight.state
-tdoaFlight.abortR
-tdoaFlight.step
-
 # --- All TDoA anchor-pair candidates (needs param tdoaEngine.logCand > 0) -----
 # The upstream, per-candidate event. Payload carries group/idA/idB/distanceDiff/
 # isSelected, so no extra log variables are needed.
@@ -42,6 +30,16 @@ on:estTdoaCand
 
 # --- Baseline: the single TDoA measurement the live algorithm selected --------
 on:estTDOA
+
+# --- Which flight this is, when examples/app_tdoa_flight is built in ----------
+# Fires on each state/step change -- a few dozen times per run -- so the capture
+# says which sequence it was and where each step began. An event, not a log
+# variable in the block above: these change a handful of times per flight, so
+# sampling them at 50 Hz would spend ring buffer bandwidth repeating a constant.
+#
+# Harmless on a build without the app: the uSD deck prints "Unknown event" and
+# skips it, so this file still parses and usd.canLog still reads 1.
+on:tdoaFlightStep
 
 # --- IMU, needed to drive the Kalman replay offline ---------------------------
 on:estAcceleration

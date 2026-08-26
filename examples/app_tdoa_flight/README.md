@@ -149,19 +149,29 @@ also has a still position, but its variance is still shrinking.
 
 ## Reading the outcome
 
-The app publishes four log variables. Add them to `config.txt` and every capture
-says what it is:
+The app fires an event, `tdoaFlightStep`, on every state and step change,
+carrying `seq`, `step`, `state` and `abortR`. One line in `config.txt` and every
+capture says which sequence it was and where each step began:
 
 ```
-tdoaFlight.seq
-tdoaFlight.state
-tdoaFlight.abortR
-tdoaFlight.step
+on:tdoaFlightStep
 ```
 
-This costs nothing in compatibility — `usddeck.c` prints `Unknown log variable`
-and skips names it does not have, leaving `usd.canLog` at 1, so the same
-`config.txt` still works on firmware built without this app.
+An event rather than log variables in the 50 Hz block, deliberately: these
+change a few dozen times in a whole flight, so sampling them periodically would
+spend ring buffer bandwidth — the resource whose overrun silently puts holes in
+the capture — on repeating a constant. The event is also strictly more
+informative, since it carries the exact timestamp of each transition and lets
+the log be segmented by flight step; periodic sampling only resolves that to
+within a sample period.
+
+Costs nothing in compatibility: `usddeck.c` prints `Unknown event` and skips
+names it does not have, leaving `usd.canLog` at 1, so the same `config.txt`
+still works on firmware built without this app.
+
+The same four values are also plain log variables in the `tdoaFlight` group, for
+watching a run live over a link with `cfcli log print`. Those cost nothing
+unless a `config.txt` asks for them.
 
 `state`: 0 idle, 1 countdown, 2 waiting for estimator lock, 3 arming,
 4 taking off, 5 running, 6 landing, 7 done, 8 aborted.
