@@ -57,6 +57,13 @@ typedef struct {
   float tFade;
   float tFadeTarget;
   float tFadeRemaining;
+  float blinkFreq;
+  uint8_t blinkDutyMax;
+  uint8_t blinkDutyMin;
+  uint8_t blinkIntMax;
+  uint8_t blinkIntMin;
+  float blinkCycleTime;
+  uint8_t blinkIntensity;
   uint8_t deckTemperature;
   uint8_t throttlePercentage;
   uint8_t ledPosition;
@@ -266,6 +273,14 @@ static void colorLedDeckInit(DeckInfo *info, colorLedContext_t *ctx, const char 
   ctx->tFadeTarget = 0.0f;
   ctx->tFadeRemaining = 0.0f;
 
+  ctx->blinkFreq = 0.0f;
+  ctx->blinkDutyMax = 0;
+  ctx->blinkDutyMin = 0;
+  ctx->blinkIntMax = 255;
+  ctx->blinkIntMin = 0;
+  ctx->blinkCycleTime = 0.0f;
+  ctx->blinkIntensity = 255;
+  
   ctx->isInit = true;
 }
 
@@ -516,8 +531,8 @@ static void task(void *param) {
         lastCurrentPoll = xTaskGetTickCount();
       }
       
-      // Send color updates when changed color or when fade in progress
-      if (ctx->currentWrgb8888 != ctx->wrgb8888) {
+      // Send color updates when changed color or when fade in progress or when blinking is active
+      if ((ctx->currentWrgb8888 != ctx->wrgb8888) || ctx->blinkFreq > 0.0f) {
 
         if (ctx->targetWrgb8888 != ctx->wrgb8888) {
           ctx->tFadeRemaining = ctx->tFade;
@@ -526,26 +541,54 @@ static void task(void *param) {
           ctx->targetWrgb8888 = ctx->wrgb8888;
         }
 
+        if (ctx->blinkFreq > 0.0f) {
+          // Update blink cycle time
+          ctx->blinkCycleTime += loopInterval/1000.0f*ctx->blinkFreq;
+          if (ctx->blinkCycleTime >= 1.0f) {
+            ctx->blinkCycleTime -= 1.0f;
+          }
+
+          // Update blink intensity based on current cycle time
+          float blinkDutyTrans = (255.0f - ctx->blinkDutyMax - ctx->blinkDutyMin) / 2.0f;
+          if (ctx->blinkCycleTime < ctx->blinkDutyMax / 255.0f) {
+            // Max intensity
+            ctx->blinkIntensity = ctx->blinkIntMax;
+          } else if (ctx->blinkCycleTime < (ctx->blinkDutyMax + blinkDutyTrans)/255.0f) {
+            // Falling edge
+            ctx->blinkIntensity = ctx->blinkIntMax - (ctx->blinkIntMax - ctx->blinkIntMin) * (ctx->blinkCycleTime*255.0f - ctx->blinkDutyMax) / (blinkDutyTrans);
+          } else if (ctx->blinkCycleTime < (ctx->blinkDutyMax + blinkDutyTrans + ctx->blinkDutyMin)/255.0f) {
+            // Min intensity
+            ctx->blinkIntensity = ctx->blinkIntMin;
+          } else {
+            // Rising edge
+            ctx->blinkIntensity = ctx->blinkIntMin + (ctx->blinkIntMax - ctx->blinkIntMin) * (ctx->blinkCycleTime*255.0f - (ctx->blinkDutyMax + blinkDutyTrans + ctx->blinkDutyMin)) / (blinkDutyTrans);
+          }
+
+        } else {
+          ctx->blinkCycleTime = 0.0f;
+          ctx->blinkIntensity = 255;
+        }
+
         wrgb_t input;
         if (ctx->tFadeRemaining > 0.0f) {
           float alpha = ctx->tFadeRemaining / ctx->tFadeTarget;
                     
-          input.w = alpha * ((ctx->initialWrgb8888 >> 24) & 0xFF) + (1-alpha) * ((ctx->targetWrgb8888 >> 24) & 0xFF);
-          input.r = alpha * ((ctx->initialWrgb8888 >> 16) & 0xFF) + (1-alpha) * ((ctx->targetWrgb8888 >> 16) & 0xFF);
-          input.g = alpha * ((ctx->initialWrgb8888 >> 8) & 0xFF) + (1-alpha) * ((ctx->targetWrgb8888 >> 8) & 0xFF);
-          input.b = alpha * (ctx->initialWrgb8888 & 0xFF) + (1-alpha) * (ctx->targetWrgb8888 & 0xFF);
+          input.w = ctx->blinkIntensity / 255.0f * (alpha * ((ctx->initialWrgb8888 >> 24) & 0xFF) + (1-alpha) * ((ctx->targetWrgb8888 >> 24) & 0xFF));
+          input.r = ctx->blinkIntensity / 255.0f * (alpha * ((ctx->initialWrgb8888 >> 16) & 0xFF) + (1-alpha) * ((ctx->targetWrgb8888 >> 16) & 0xFF));
+          input.g = ctx->blinkIntensity / 255.0f * (alpha * ((ctx->initialWrgb8888 >> 8) & 0xFF) + (1-alpha) * ((ctx->targetWrgb8888 >> 8) & 0xFF));
+          input.b = ctx->blinkIntensity / 255.0f * (alpha * (ctx->initialWrgb8888 & 0xFF) + (1-alpha) * (ctx->targetWrgb8888 & 0xFF));
           
-          ctx->tFadeRemaining -= 0.01f;
+          ctx->tFadeRemaining -= loopInterval/1000.0f;
           
         } else {
         
           ctx->tFadeRemaining = 0.0f;
           
           // Unpack to struct (format: 0xWWRRGGBB)
-          input.w = (ctx->targetWrgb8888 >> 24) & 0xFF;
-          input.r = (ctx->targetWrgb8888 >> 16) & 0xFF;
-          input.g = (ctx->targetWrgb8888 >> 8) & 0xFF;
-          input.b = ctx->targetWrgb8888 & 0xFF;
+          input.w = ctx->blinkIntensity / 255.0f * ((ctx->targetWrgb8888 >> 24) & 0xFF);
+          input.r = ctx->blinkIntensity / 255.0f * ((ctx->targetWrgb8888 >> 16) & 0xFF);
+          input.g = ctx->blinkIntensity / 255.0f * ((ctx->targetWrgb8888 >> 8) & 0xFF);
+          input.b = ctx->blinkIntensity / 255.0f * (ctx->targetWrgb8888 & 0xFF);
         }
         
         ctx->currentWrgb8888 = (input.w << 24) + (input.r << 16) + (input.g << 8) + input.b;
@@ -786,6 +829,31 @@ PARAM_ADD(PARAM_UINT8, brightCorr, &contexts[BOTTOM_IDX].brightnessCorr)
  */
 PARAM_ADD(PARAM_FLOAT, tfade, &contexts[BOTTOM_IDX].tFade)
 
+/**
+ * @brief Blink effect frequency in Hz for bottom deck. 0=off, >0=blink frequency
+ */
+PARAM_ADD(PARAM_FLOAT, blinkFreq, &contexts[BOTTOM_IDX].blinkFreq)
+
+/**
+ * @brief Blink effect max intensity for bottom deck. 0=0%, 255=100% of target WRGB value.
+ */
+PARAM_ADD(PARAM_UINT8, blinkIntMax, &contexts[BOTTOM_IDX].blinkIntMax)
+
+/**
+ * @brief Blink effect min intensity for bottom deck. 0=0%, 255=100% of target WRGB value.
+ */
+PARAM_ADD(PARAM_UINT8, blinkIntMin, &contexts[BOTTOM_IDX].blinkIntMin)
+
+/**
+ * @brief Blink effect time at max intensity for bottom deck. 0=0%, 255=100% of blink period.
+ */
+PARAM_ADD(PARAM_UINT8, blinkDutyMax, &contexts[BOTTOM_IDX].blinkDutyMax)
+
+/**
+ * @brief Blink effect time at min intensity for bottom deck. 0=0%, 255=100% of blink period.
+ */
+PARAM_ADD(PARAM_UINT8, blinkDutyMin, &contexts[BOTTOM_IDX].blinkDutyMin)
+
 PARAM_GROUP_STOP(colorLedBot)
 
 // Top deck parameters
@@ -805,6 +873,32 @@ PARAM_ADD(PARAM_UINT8, brightCorr, &contexts[TOP_IDX].brightnessCorr)
  * @brief Time to fade into the new color for top deck
  */
 PARAM_ADD(PARAM_FLOAT, tfade, &contexts[TOP_IDX].tFade)
+
+
+/**
+ * @brief Blink effect frequency in Hz for bottom deck. 0=off, >0=blink frequency
+ */
+PARAM_ADD(PARAM_FLOAT, blinkFreq, &contexts[TOP_IDX].blinkFreq)
+
+/**
+ * @brief Blink effect max intensity for bottom deck. 0=0%, 255=100% of target WRGB value.
+ */
+PARAM_ADD(PARAM_UINT8, blinkIntMax, &contexts[TOP_IDX].blinkIntMax)
+
+/**
+ * @brief Blink effect min intensity for bottom deck. 0=0%, 255=100% of target WRGB value.
+ */
+PARAM_ADD(PARAM_UINT8, blinkIntMin, &contexts[TOP_IDX].blinkIntMin)
+
+/**
+ * @brief Blink effect time at max intensity for bottom deck. 0=0%, 255=100% of blink period.
+ */
+PARAM_ADD(PARAM_UINT8, blinkDutyMax, &contexts[TOP_IDX].blinkDutyMax)
+
+/**
+ * @brief Blink effect time at min intensity for bottom deck. 0=0%, 255=100% of blink period.
+ */
+PARAM_ADD(PARAM_UINT8, blinkDutyMin, &contexts[TOP_IDX].blinkDutyMin)
 
 PARAM_GROUP_STOP(colorLedTop)
 
