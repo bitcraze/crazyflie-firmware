@@ -29,6 +29,7 @@
 #include "log.h"
 #include "param.h"
 #include "static_mem.h"
+#include "autoconf.h"
 
 NO_DMA_CCM_SAFE_ZERO_INIT tdoaEngineState_t tdoaEngineState;
 
@@ -120,4 +121,12 @@ PARAM_ADD_CORE(PARAM_UINT8, logOthrId, &tdoaEngineState.stats.newRemoteAnchorId)
 // It only happens when the LPS system mode is changed to TDoA2 or TDoA3 though, and as this is
 // not a frequent action, we chose to expose it anyway.
 PARAM_ADD(PARAM_UINT8, matchAlgo, &tdoaEngineState.matchingAlgorithm)
+
+#ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
+/**
+ * @brief Max rate at which TDoA measurements are forwarded to the estimator, aggregated over all
+ * anchors [Hz]. 0 = unlimited.
+ */
+PARAM_ADD(PARAM_FLOAT, maxRateHz, &tdoaEngineState.maxRateHz)
+#endif
 PARAM_GROUP_STOP(tdoaEngine)

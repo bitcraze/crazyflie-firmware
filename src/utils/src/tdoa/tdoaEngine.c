@@ -54,6 +54,7 @@ The implementation must handle
 #include "physicalConstants.h"
 #include "test_support.h"
 #include "param.h"
+#include "usec_time.h"
 
 #define TDOA_ENGINE_DEFAULT_DISTANCE_RATIO_LIMIT 0.85f
 
@@ -65,6 +66,10 @@ void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms, tdoaE
   engineState->sendTdoaToEstimator = sendTdoaToEstimator;
   engineState->locodeckTsFreq = locodeckTsFreq;
   engineState->matchingAlgorithm = matchingAlgorithm;
+#ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
+  engineState->maxRateHz = TDOA_ENGINE_DEFAULT_MAX_RATE_HZ;
+  engineState->lastForwardedTime_us = 0;
+#endif
 
   engineState->matching.offset = 0;
 }
@@ -295,6 +300,32 @@ void tdoaEngineGetAnchorCtxForPacketProcessing(tdoaEngineState_t* engineState, c
   }
 }
 
+#ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
+// Rate-limits the aggregate stream of measurements forwarded to the estimator, across all anchors.
+// maxRateHz <= 0 disables the limit. The shared timer is reset as soon as a packet is let through,
+// even if matching later fails to produce a measurement.
+static bool isForwardRateLimited(tdoaEngineState_t* engineState, const float maxRateHz) {
+  if (maxRateHz <= 0.0f) {
+    return false;
+  }
+
+  const uint64_t now_us = usecTimestamp();
+  const uint64_t minPeriod_us = (uint64_t)(1000000.0f / maxRateHz);
+  if (engineState->lastForwardedTime_us != 0 && (now_us - engineState->lastForwardedTime_us) < minPeriod_us) {
+    return true;
+  } else {
+    if (now_us > engineState->lastForwardedTime_us + 2*minPeriod_us) { // Long time since last measurement, or no measurement has yet been forwarded
+      // Reset window
+      engineState->lastForwardedTime_us = now_us;
+    }
+    else {
+      engineState->lastForwardedTime_us += minPeriod_us;
+    }
+    return false;
+  }
+}
+#endif
+
 void tdoaEngineProcessPacket(tdoaEngineState_t* engineState, tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
   tdoaEngineProcessPacketFiltered(engineState, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, false, 0);
 }
@@ -304,12 +335,17 @@ bool tdoaEngineProcessPacketFiltered(tdoaEngineState_t* engineState, tdoaAnchorC
   if (timeIsGood) {
     STATS_CNT_RATE_EVENT(&engineState->stats.timeIsGood);
 
-    tdoaAnchorContext_t otherAnchorCtx;
-    double tdoaDistDiff = 0.0;
-    if (findSuitableAnchor(engineState, &otherAnchorCtx, anchorCtx, doExcludeId, excludedId, txAn_in_cl_An, rxAn_by_T_in_cl_T, engineState->locodeckTsFreq, &tdoaDistDiff)) {
-      STATS_CNT_RATE_EVENT(&engineState->stats.suitableDataFound);
-      enqueueTDOA(&otherAnchorCtx, anchorCtx, tdoaDistDiff, engineState);
+#ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
+    if (!isForwardRateLimited(engineState, engineState->maxRateHz)) {
+#endif
+      tdoaAnchorContext_t otherAnchorCtx;
+      double tdoaDistDiff = 0.0;
+      if (findSuitableAnchor(engineState, &otherAnchorCtx, anchorCtx, doExcludeId, excludedId, txAn_in_cl_An, rxAn_by_T_in_cl_T, engineState->locodeckTsFreq, &tdoaDistDiff)) {
+        STATS_CNT_RATE_EVENT(&engineState->stats.suitableDataFound);
+        enqueueTDOA(&otherAnchorCtx, anchorCtx, tdoaDistDiff, engineState);
+#ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
     }
+#endif
   }
   return timeIsGood;
 }
