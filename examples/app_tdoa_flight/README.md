@@ -33,21 +33,32 @@ too tight to rely on. The app arms immediately before takeoff instead.
 
 ## Build
 
-Merge this app's config fragment alongside the capture fragment and point `OOT`
-at this directory. The root Makefile has `objs-y += $(OOT)`, so the normal
-in-tree build flow still applies:
+From this directory, two commands:
 
 ```
+cd examples/app_tdoa_flight
 make cf21bl_defconfig        # or cf2_defconfig
-./scripts/kconfig/merge_config.sh -m -O build build/.config \
-    tools/usdlog/tdoa3_lh_groundtruth.conf \
-    examples/app_tdoa_flight/app-config
-make olddefconfig
-make OOT=$PWD/examples/app_tdoa_flight -j$(nproc)
+make -j$(nproc)              # -> build/cf21bl.bin
 ```
 
-`make olddefconfig` is not optional — `merge_config.sh -m` skips the resolution
-pass, so without it the build stops and interviews you about new symbols.
+`make <platform>_defconfig` configures and `make` builds; the split is there
+because the first step is what you repeat when you change a fragment. It applies
+the platform defconfig, merges `../../tools/usdlog/tdoa3_lh_groundtruth.conf`
+and `app-config` on top, and runs `olddefconfig` to resolve the result. That
+last pass is not optional — `merge_config.sh -m` skips it by design, and without
+it the build stops and interviews you about the symbols the capture fragment
+unlocks.
+
+Output goes to `./build`, so this coexists with a normal build in the repo root
+rather than fighting over `build/.config`.
+
+The `Makefile` here does **not** include `tools/make/oot.mk`, whose `all` target
+runs `oldconfig` rather than `olddefconfig` and would put that interview back.
+It calls the root build directly with `OOT=$(CURDIR)`, which works because the
+root Makefile has `objs-y += $(OOT)`.
+
+All the `cfcli` and `tools/usdlog/` commands below are run **from the repo
+root**, not from here.
 
 ## Flying a run
 

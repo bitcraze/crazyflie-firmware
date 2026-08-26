@@ -29,7 +29,11 @@ different policies on identical data.
   on (TDoA3 + Lighthouse as ground truth + uSD).
 - `config_tdoa_candidates.txt` / `config_tdoa_candidates_lean.txt` — uSD card
   configs. The lean one drops the live estimate and the baseline measurement,
-  for when the full one overruns the ring buffer.
+  for when the full one overruns the ring buffer. The full one also records
+  four `tdoaFlight.*` variables so a capture flown by the optional onboard app
+  says which sequence it was; the uSD deck skips log variables it does not
+  know, so those lines are harmless on a build without the app. The lean config
+  leaves them out along with everything else non-essential.
 - `read_usd_log.sh` — stop logging, run the integrity gates over the link and
   optionally pull the log off the drone. The entry point at the end of a run.
 - `replay_tdoa.py` — replay a captured log and score policies against the
@@ -134,6 +138,15 @@ export CF_URI=radio://0/100/2M/F00D2BEFED
 3. **Disconnect the radio** and fly or move the drone inside Loco and reference
    coverage. A radio link degrades Loco performance, so keep it off during the
    run.
+
+   Flying by hand or from a link-free onboard app are both fine here. If you
+   want the latter, `examples/app_tdoa_flight/` flies predefined sequences on a
+   trigger param and lands itself; see its README. It is optional and nothing
+   in this directory depends on it: it never *starts* logging, so step 2 above
+   is unchanged. It does clear `usd.logging` at touchdown (its
+   `tdoaFlight.stopLog`, default on) so the file is closed even if the battery
+   goes flat before you reconnect — step 4 sets it to 0 anyway, so this changes
+   nothing you do here.
 
 4. **Stop logging and verify the capture — while the drone is still powered,
    and before pulling the card:**

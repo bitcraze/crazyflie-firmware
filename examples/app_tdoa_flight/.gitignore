@@ -1,3 +1,6 @@
 build/
 *.o
 .*.cmd
+# merge_config.sh writes its scratch file into the directory it runs from,
+# and the Makefile runs it from here.
+.tmp.config.*
