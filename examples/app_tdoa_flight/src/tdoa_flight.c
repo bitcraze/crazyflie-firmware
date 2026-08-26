@@ -50,7 +50,8 @@
 #define LOCK_SAMPLES         40      // 2 s of estimator variance at TICK_MS
 #define LOCK_TIMEOUT_MS      40000
 
-#define ARM_TIMEOUT_MS       6000    // arming request -> supervisorIsArmed()
+#define ARM_TIMEOUT_MS       8000    // arming request -> supervisorCanFly()
+                                     // (ARMING_SPINUP_TIMEOUT_MS is 2000)
 #define TAKEOFF_HEIGHT_M     0.6f
 #define TAKEOFF_DURATION_S   3.0f
 #define TAKEOFF_TIMEOUT_MS   10000
@@ -485,8 +486,22 @@ static void tick(void)
     case flightArming:
       if (!supervisorIsArmed()) {
         supervisorRequestArming(true);
+      }
+
+      /* Armed is not the same as allowed to fly, and waiting for the wrong one
+       * fails every takeoff. supervisorIsArmed() returns isArmingActivated,
+       * which is true the instant the request above returns; the state machine
+       * still has to pass the motor spinup check (ARMING_SPINUP_TIMEOUT_MS,
+       * 2000) before reaching supervisorStateReadyToFly. Until it does,
+       * supervisorCanFly() is false, stabilizer.c:333 holds the high level
+       * commander blocked via crtpCommanderBlock(!canFly), and every takeoff
+       * returns EBUSY at crtp_commander_high_level.c:498. So gate on canFly,
+       * and require armed too, since canFly is also true in
+       * supervisorStateLanded when nothing is armed at all. */
+      if (!(supervisorIsArmed() && supervisorCanFly())) {
         if (msSince(stateEnteredTick) > ARM_TIMEOUT_MS) {
-          DEBUG_PRINT("could not arm\n");
+          DEBUG_PRINT("could not arm (armed=%d canFly=%d)\n",
+                      supervisorIsArmed(), supervisorCanFly());
           abortLog = abortCannotArm;
           enterState(flightAborted);
         }
