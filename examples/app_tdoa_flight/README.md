@@ -132,6 +132,7 @@ log, so it retroactively renames every capture you already have.
 | `tdoaFlight.zLo` | 0.5 | Height that sequence z = 0.0 maps to (m). |
 | `tdoaFlight.zHi` | 2.0 | Height that sequence z = 1.0 maps to (m). |
 | `tdoaFlight.lockThr` | 0.05 | Largest peak-to-peak movement allowed in any Kalman position variance over 2 s before takeoff. |
+| `tdoaFlight.armWait` | 1500 | Milliseconds to let the motors settle at idle after arming, before commanding takeoff. |
 
 Keep `workXY` inside `fenceXY` with margin: the geofence is measured on the
 *estimate*, which is exactly what is under suspicion, so it is a backstop and
@@ -147,6 +148,7 @@ There is no radio during the run, so every abort has to be onboard:
 | condition | response |
 | --- | --- |
 | Estimator variance not converged before takeoff | refuse to arm |
+| Supervisor never reaches `canFly` within 8 s | refuse to take off |
 | `usd.canLog == 0` (and `reqLog`) | refuse to arm |
 | Geofence breach | land |
 | `supervisorIsTumbled()` | motors off immediately |
@@ -158,6 +160,17 @@ There is no radio during the run, so every abort has to be onboard:
 Takeoff is gated on the Kalman position **variances** having stopped moving, not
 on the position having stopped moving: a diverged filter on a stationary drone
 also has a still position, but its variance is still shrinking.
+
+Arming waits for `supervisorCanFly()`, not `supervisorIsArmed()`. Those are not
+the same thing: `supervisorIsArmed()` returns the arming *request* flag, set
+synchronously by `supervisorRequestArming()`, while the supervisor state machine
+still has to pass the motor spinup check before reaching
+`supervisorStateReadyToFly`. Until it does, `stabilizer.c:333` holds the high
+level commander blocked and every takeoff returns `EBUSY`.
+
+`tdoaFlight.armWait` then adds a settle delay on top, because `canFly` goes true
+before the motors are usefully spinning — brushless ESCs need a moment at idle
+before they track a thrust ramp cleanly.
 
 `tdoaFlight.lockThr` sets how still is still enough. The default of 0.05 is
 sized for TDoA, which is far noisier than the 0.001 the Bitcraze demos use

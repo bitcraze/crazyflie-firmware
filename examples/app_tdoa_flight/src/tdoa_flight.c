@@ -129,6 +129,7 @@ static uint8_t  pDelayS   = 10;
 static uint8_t  pStopLog  = 1;      // clear usd.logging at touchdown
 static uint8_t  pReqLog   = 1;      // refuse to fly if usd.canLog is 0
 static uint16_t pSeed     = 1;
+static uint16_t pArmWaitMs = 1500;  // settle time after canFly, before takeoff
 
 /* Largest peak-to-peak movement allowed in any Kalman position variance over
  * the LOCK_SAMPLES window before takeoff.
@@ -159,6 +160,8 @@ static uint32_t stepDurationMs;
 static uint8_t  stepIndex;
 static uint8_t  runningSeq;
 static bool     landCommandIssued;
+static bool     armReadySeen;
+static uint32_t armReadyTick;
 
 static float lockData[LOCK_SAMPLES][3];
 static uint8_t lockCount;
@@ -416,6 +419,7 @@ static void tick(void)
         stepLog = 0;
         runningSeq = pSeq;
         seqLog = pSeq;
+        armReadySeen = false;
         DEBUG_PRINT("triggered: seq %u, arming in %u s\n", pSeq, pDelayS);
         enterState(flightCountdown);
       }
@@ -499,12 +503,27 @@ static void tick(void)
        * and require armed too, since canFly is also true in
        * supervisorStateLanded when nothing is armed at all. */
       if (!(supervisorIsArmed() && supervisorCanFly())) {
+        armReadySeen = false;
         if (msSince(stateEnteredTick) > ARM_TIMEOUT_MS) {
           DEBUG_PRINT("could not arm (armed=%d canFly=%d)\n",
                       supervisorIsArmed(), supervisorCanFly());
           abortLog = abortCannotArm;
           enterState(flightAborted);
         }
+        break;
+      }
+
+      /* canFly flips as soon as the supervisor reaches ReadyToFly, which is
+       * earlier than the motors are usefully spinning -- on a brushless
+       * platform the ESCs need a moment at idle before they track a thrust
+       * ramp cleanly. Asking for a takeoff into that window gives a ragged
+       * lift-off at best. Let them settle first. */
+      if (!armReadySeen) {
+        armReadySeen = true;
+        armReadyTick = xTaskGetTickCount();
+        DEBUG_PRINT("armed, letting motors settle for %u ms\n", pArmWaitMs);
+      }
+      if (msSince(armReadyTick) < (uint32_t)pArmWaitMs) {
         break;
       }
 
@@ -706,6 +725,12 @@ PARAM_ADD(PARAM_FLOAT, zHi, &pZHi)
  * watch the live value in the tdoaFlight.lockSpr log variable to pick one.
  */
 PARAM_ADD(PARAM_FLOAT, lockThr, &pLockThr)
+/**
+ * @brief Milliseconds to let the motors settle at idle after the supervisor
+ * allows flight, before commanding takeoff. Brushless ESCs need a moment
+ * before they track a thrust ramp cleanly.
+ */
+PARAM_ADD(PARAM_UINT16, armWait, &pArmWaitMs)
 PARAM_GROUP_STOP(tdoaFlight)
 
 /**
