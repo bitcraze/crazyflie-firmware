@@ -59,6 +59,10 @@ void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms, tdoaE
   engineState->sendTdoaToEstimator = sendTdoaToEstimator;
   engineState->locodeckTsFreq = locodeckTsFreq;
   engineState->matchingAlgorithm = matchingAlgorithm;
+#ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
+  engineState->maxRateHz = TDOA_ENGINE_DEFAULT_MAX_RATE_HZ;
+  engineState->lastForwardedTime_ms = 0;
+#endif
 
   engineState->matching.offset = 0;
 }
@@ -220,6 +224,25 @@ void tdoaEngineGetAnchorCtxForPacketProcessing(tdoaEngineState_t* engineState, c
   }
 }
 
+#ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
+// Rate-limits the aggregate stream of measurements forwarded to the estimator, across all anchors.
+// maxRateHz <= 0 disables the limit. The shared timer is reset as soon as a packet is let through,
+// even if matching later fails to produce a measurement.
+static bool isForwardRateLimited(tdoaEngineState_t* engineState, const uint32_t now_ms, const float maxRateHz) {
+  if (maxRateHz <= 0.0f) {
+    return false;
+  }
+
+  const uint32_t minPeriod_ms = (uint32_t)(1000.0f / maxRateHz);
+  if (engineState->lastForwardedTime_ms != 0 && (now_ms - engineState->lastForwardedTime_ms) < minPeriod_ms) {
+    return true;
+  } else {
+    engineState->lastForwardedTime_ms = now_ms;
+    return false;
+  }
+}
+#endif
+
 void tdoaEngineProcessPacket(tdoaEngineState_t* engineState, tdoaAnchorContext_t* anchorCtx, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T) {
   tdoaEngineProcessPacketFiltered(engineState, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, false, 0);
 }
@@ -229,12 +252,18 @@ bool tdoaEngineProcessPacketFiltered(tdoaEngineState_t* engineState, tdoaAnchorC
   if (timeIsGood) {
     STATS_CNT_RATE_EVENT(&engineState->stats.timeIsGood);
 
-    tdoaAnchorContext_t otherAnchorCtx;
-    if (findSuitableAnchor(engineState, &otherAnchorCtx, anchorCtx, doExcludeId, excludedId)) {
-      STATS_CNT_RATE_EVENT(&engineState->stats.suitableDataFound);
-      double tdoaDistDiff = calcDistanceDiff(&otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, engineState->locodeckTsFreq);
-      enqueueTDOA(&otherAnchorCtx, anchorCtx, tdoaDistDiff, engineState);
+#ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
+    if (!isForwardRateLimited(engineState, anchorCtx->currentTime_ms, engineState->maxRateHz)) {
+#endif
+      tdoaAnchorContext_t otherAnchorCtx;
+      if (findSuitableAnchor(engineState, &otherAnchorCtx, anchorCtx, doExcludeId, excludedId)) {
+        STATS_CNT_RATE_EVENT(&engineState->stats.suitableDataFound);
+        double tdoaDistDiff = calcDistanceDiff(&otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, engineState->locodeckTsFreq);
+        enqueueTDOA(&otherAnchorCtx, anchorCtx, tdoaDistDiff, engineState);
+      }
+#ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
     }
+#endif
   }
   return timeIsGood;
 }
