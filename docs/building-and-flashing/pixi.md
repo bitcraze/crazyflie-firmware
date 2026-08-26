@@ -7,6 +7,8 @@ The [pixi package manager](https://pixi.sh) can be used to build and flash the f
 All that is needed is to have pixi installed, following the [pixi installation instructions](https://pixi.sh/latest/#installation).
 
 > On Windows, pixi isn't supported for this project (the ARM toolchain and `ncurses` dependencies aren't built for `win-64`). Use WSL instead: [enable WSL](https://docs.microsoft.com/en-us/windows/wsl/install), then follow the instructions below from inside your WSL Ubuntu shell.
+>
+> Note that `make cload` still invokes the native Windows `python.exe` rather than the WSL one, so that it can access the radio USB dongle from within WSL. This means pixi only covers the compilation stage on Windows: a native Python install with the Crazyflie client library is still required to flash the Crazyflie.
 
 All commands below should be run from the root of the crazyflie-firmware project.
 
