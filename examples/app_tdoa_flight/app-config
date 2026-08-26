@@ -1,0 +1,9 @@
+# Enable the app entry point so appMain() in src/tdoa_flight.c is started.
+#
+# Merge this alongside tools/usdlog/tdoa3_lh_groundtruth.conf, then build with
+# OOT pointing at this directory -- see README.md.
+CONFIG_APP_ENABLE=y
+CONFIG_APP_PRIORITY=1
+# The default (300) is not enough: the sequence interpreter keeps a lock-detect
+# window and a step struct on the stack on top of the float maths.
+CONFIG_APP_STACKSIZE=500

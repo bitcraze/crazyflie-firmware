@@ -23,6 +23,18 @@ stateEstimate.x
 stateEstimate.y
 stateEstimate.z
 
+# --- Which flight this is, when examples/app_tdoa_flight is built in ----------
+# Makes each capture self-identifying: without these you land with log00..log07
+# and no record of which was the spiral. Costs 4 bytes per sample.
+#
+# Safe to leave in either way: the uSD deck prints "Unknown log variable" and
+# skips names the firmware does not have, so this file still parses (and
+# usd.canLog still reads 1) on a build without the app.
+tdoaFlight.seq
+tdoaFlight.state
+tdoaFlight.abortR
+tdoaFlight.step
+
 # --- All TDoA anchor-pair candidates (needs param tdoaEngine.logCand > 0) -----
 # The upstream, per-candidate event. Payload carries group/idA/idB/distanceDiff/
 # isSelected, so no extra log variables are needed.
