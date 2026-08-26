@@ -22,8 +22,9 @@
 #
 # --check-only runs the integrity gates (dropped events, SD write errors,
 # non-zero file size) and stops logging, but transfers no data. Use it before
-# pulling the card by hand: radio readback of a multi-MB log takes far longer
-# than reading the card directly, but the counters only exist on the drone.
+# pulling the card by hand: the counters only exist on the drone, but radio
+# readback of a typical log takes 30+ minutes, versus seconds with a card
+# reader. Prefer --check-only plus a card reader.
 #
 set -euo pipefail
 
@@ -128,6 +129,10 @@ if [[ "$CHECK_ONLY" == "1" ]]; then
 fi
 
 echo ">> Reading $SIZE bytes from MicroSD into $OUT ..."
+echo "   Expect 30+ minutes for a typical log. The integrity checks above are"
+echo "   already done and the card still holds the full log, so Ctrl-C here is"
+echo "   safe -- but delete the partial $OUT if you abort, or it will look"
+echo "   like a short capture."
 "$CFCLI" -u "$URI" mem read MicroSD --offset 0 --length "$SIZE" --output "$OUT"
 
 echo ">> Done. Wrote $OUT ($(wc -c < "$OUT") bytes)."

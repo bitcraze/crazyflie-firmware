@@ -151,13 +151,19 @@ export CF_URI=radio://0/100/2M/F00D2BEFED
    *Checking that a capture is intact* below for how to read the result — the
    exit code alone is not sufficient.
 
-   To pull the log over the link in the same pass instead of reading the card
-   by hand — slower for large logs, but hands-free:
+   **Then pull the card and copy the file with a card reader.** Do *not* read
+   the log over the air unless you are prepared to wait 30+ minutes for a
+   typical log. The transfer holds the radio for its whole duration; a card
+   reader does it in seconds. The over-the-air form is for when the drone is
+   out of reach, not for routine use:
 
    ```
-   tools/usdlog/read_usd_log.sh "$CF_URI" run01.bin
+   tools/usdlog/read_usd_log.sh "$CF_URI" run01.bin                        # 30+ min
    tools/usdlog/read_usd_log.sh "$CF_URI" run01.bin --replay anchors.yaml
    ```
+
+   `--check-only` transfers no log data and is unaffected by any of this; it
+   is the only step that must happen over the link.
 
 5. **Replay and compare policies**:
 
