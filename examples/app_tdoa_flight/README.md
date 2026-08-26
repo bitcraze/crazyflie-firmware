@@ -131,6 +131,7 @@ log, so it retroactively renames every capture you already have.
 | `tdoaFlight.workXY` | 2.0 | Half-width of the working box (m); sequence +-1.0 maps here. |
 | `tdoaFlight.zLo` | 0.5 | Height that sequence z = 0.0 maps to (m). |
 | `tdoaFlight.zHi` | 2.0 | Height that sequence z = 1.0 maps to (m). |
+| `tdoaFlight.lockThr` | 0.05 | Largest peak-to-peak movement allowed in any Kalman position variance over 2 s before takeoff. |
 
 Keep `workXY` inside `fenceXY` with margin: the geofence is measured on the
 *estimate*, which is exactly what is under suspicion, so it is a backstop and
@@ -157,6 +158,32 @@ There is no radio during the run, so every abort has to be onboard:
 Takeoff is gated on the Kalman position **variances** having stopped moving, not
 on the position having stopped moving: a diverged filter on a stationary drone
 also has a still position, but its variance is still shrinking.
+
+`tdoaFlight.lockThr` sets how still is still enough. The default of 0.05 is
+sized for TDoA, which is far noisier than the 0.001 the Bitcraze demos use
+against Lighthouse and Flow — a resting drone in this rig measured ~0.0125
+peak-to-peak on `kalman.varPX` over 2 s, so a threshold near 0.001 never passes.
+
+If a run sits at `state = 2` and never arms, that is this gate. Watch
+`tdoaFlight.lockSpr`, which is the live value being compared against the
+threshold, and set `lockThr` above what your system actually does:
+
+```
+cfcli -u "$CF_URI" --csv log print tdoaFlight.state,tdoaFlight.lockSpr
+```
+
+Raising it far enough will always let the drone arm, which is the point and also
+the hazard: this gate is what stops a takeoff on a diverged estimate. Before
+raising it, check that the estimate is right at all — with Lighthouse in
+ground-truth mode you can compare directly:
+
+```
+cfcli -u "$CF_URI" --csv log print stateEstimate.x,stateEstimate.y,stateEstimate.z,lighthouse.x,lighthouse.y,lighthouse.z
+```
+
+Those should agree to a few centimetres on a resting drone. If they do not, the
+anchor positions stored on the drone (`cfcli loco display`) probably do not
+match the room, and no threshold will make flying safe.
 
 ## Reading the outcome
 

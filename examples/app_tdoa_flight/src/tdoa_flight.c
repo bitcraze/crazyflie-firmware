@@ -48,7 +48,6 @@
 #define SETTLE_MS            3000    // let the system come up before touching params
 
 #define LOCK_SAMPLES         40      // 2 s of estimator variance at TICK_MS
-#define LOCK_THRESHOLD       0.001f
 #define LOCK_TIMEOUT_MS      40000
 
 #define ARM_TIMEOUT_MS       6000    // arming request -> supervisorIsArmed()
@@ -98,6 +97,7 @@ static uint8_t stateLog      = flightIdle;
 static uint8_t abortLog      = abortNone;
 static uint8_t seqLog        = 0;
 static uint8_t stepLog       = 0;
+static float   lockSpreadLog = 0.0f;   // live peak-to-peak, for tuning pLockThr
 
 /* Emitted on every state or step change, which is a few dozen times in a whole
  * flight. This is deliberately an event and not a periodic log variable: the
@@ -128,6 +128,15 @@ static uint8_t  pDelayS   = 10;
 static uint8_t  pStopLog  = 1;      // clear usd.logging at touchdown
 static uint8_t  pReqLog   = 1;      // refuse to fly if usd.canLog is 0
 static uint16_t pSeed     = 1;
+
+/* Largest peak-to-peak movement allowed in any Kalman position variance over
+ * the LOCK_SAMPLES window before takeoff.
+ *
+ * Sized for TDoA, which is much noisier than the 0.001 the Bitcraze demos use
+ * against Lighthouse and Flow: measured spread on a resting drone in this rig
+ * was ~0.0125 on varPX over 2 s, so anything near 0.001 never passes. Watch
+ * tdoaFlight.lockSpr to see the live value and pick a number for your system. */
+static float pLockThr = 0.05f;
 
 static float pFenceXY = 2.5f;
 static float pFenceZ  = 2.5f;
@@ -208,6 +217,7 @@ static bool hasEstimatorLock(void)
     return false;
   }
 
+  float worst = 0.0f;
   for (int axis = 0; axis < 3; axis++) {
     float lo = FLT_MAX;
     float hi = -FLT_MAX;
@@ -215,11 +225,10 @@ static bool hasEstimatorLock(void)
       lo = fminf(lo, lockData[i][axis]);
       hi = fmaxf(hi, lockData[i][axis]);
     }
-    if ((hi - lo) >= LOCK_THRESHOLD) {
-      return false;
-    }
+    worst = fmaxf(worst, hi - lo);
   }
-  return true;
+  lockSpreadLog = worst;
+  return worst < pLockThr;
 }
 
 // --- Sequence access --------------------------------------------------------
@@ -676,6 +685,12 @@ PARAM_ADD(PARAM_FLOAT, zLo, &pZLo)
  * @brief Height that sequence z = 1.0 maps to (m).
  */
 PARAM_ADD(PARAM_FLOAT, zHi, &pZHi)
+/**
+ * @brief Largest peak-to-peak movement allowed in any Kalman position variance
+ * over a 2 s window before takeoff. Raise it if the run never leaves state 2;
+ * watch the live value in the tdoaFlight.lockSpr log variable to pick one.
+ */
+PARAM_ADD(PARAM_FLOAT, lockThr, &pLockThr)
 PARAM_GROUP_STOP(tdoaFlight)
 
 /**
@@ -704,4 +719,10 @@ LOG_ADD(LOG_UINT8, seq, &seqLog)
  * @brief Index of the step currently being flown.
  */
 LOG_ADD(LOG_UINT8, step, &stepLog)
+/**
+ * @brief Live peak-to-peak movement of the Kalman position variances over the
+ * lock window, the value compared against tdoaFlight.lockThr. Only meaningful
+ * while state is 2 (waiting for estimator lock).
+ */
+LOG_ADD(LOG_FLOAT, lockSpr, &lockSpreadLog)
 LOG_GROUP_STOP(tdoaFlight)
