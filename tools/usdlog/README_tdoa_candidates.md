@@ -30,6 +30,8 @@ different policies on identical data.
 - `config_tdoa_candidates.txt` / `config_tdoa_candidates_lean.txt` — uSD card
   configs. The lean one drops the live estimate and the baseline measurement,
   for when the full one overruns the ring buffer.
+- `read_usd_log.sh` — stop logging, run the integrity gates over the link and
+  optionally pull the log off the drone. The entry point at the end of a run.
 - `replay_tdoa.py` — replay a captured log and score policies against the
   reference.
 
@@ -56,6 +58,9 @@ the pluggable policies, filters and noise models.
 - Host: SWIG and the Python firmware bindings, built with `make
   bindings_python` (see `docs/building-and-flashing/build.md`). Replay
   imports `cffirmware` from `build/`.
+- Host: the Rust `cfcli` on `PATH` (tested with 0.12.0). Every on-drone step
+  below is a `cfcli` call, directly or through `read_usd_log.sh`. Point at a
+  different binary with `CFCLI=/path/to/cfcli`.
 
 **1. Build the firmware**
 
@@ -90,29 +95,71 @@ log was recorded in — replay geometry is only as good as this file.
 
 ## Per-run loop
 
-1. **Arm logging** over a brief connection, before the run:
+Every on-drone step is a `cfcli` call. Set the URI once; `cfcli scan --csv`
+lists the drones the radio can see.
+
+```
+export CF_URI=radio://0/100/2M/F00D2BEFED
+```
+
+1. **Pre-flight, over a brief connection.** All four of these must read
+   non-zero, or the run produces nothing usable:
 
    ```
-   tdoaEngine.logCand = 1
-   usd.logging        = 1
+   cfcli -u "$CF_URI" --csv param get \
+       deck.bcLoco,deck.bcLighthouse4,deck.bcUSD,usd.canLog
    ```
 
-   Set both with whatever you use to set params. `usd.logging` can also be
-   armed from the card by setting *enable on startup* to `1` in `config.txt`.
-   `tdoaEngine.logCand` is not persistent, so a fully link-free run needs a
-   persistent param or an app to set it on boot.
+   Each `deck.*` is non-zero once that deck's driver has initialised.
+   `deck.bcLoco` reading 0 with this build almost always means an unmodified
+   deck — see the prerequisites. `usd.canLog` is the one that is easy to
+   overlook: it only goes non-zero after the card mounted *and* `config.txt`
+   parsed without error, so it is the single check that the card config is
+   actually in effect. A typo in `config.txt` shows up here and nowhere else
+   until the log comes back missing the events you wanted.
 
-2. **Disconnect the radio** and fly or move the drone inside Loco and reference
+2. **Arm logging**, on the same connection:
+
+   ```
+   cfcli -u "$CF_URI" param set tdoaEngine.logCand=1,usd.logging=1
+   ```
+
+   Neither parameter carries `PARAM_PERSISTENT`, so `param set --store` cannot
+   persist them: both have to be set over a link after every boot. The one
+   exception is `usd.logging`, which can be armed from the card instead by
+   setting *enable logging on startup* (line 4 of `config.txt`) to `1`. Both
+   live in RAM, so they survive the disconnect in the next step, but not a
+   reboot or a battery swap.
+
+3. **Disconnect the radio** and fly or move the drone inside Loco and reference
    coverage. A radio link degrades Loco performance, so keep it off during the
    run.
 
-3. **Stop logging and read the log back.** Setting `usd.logging = 0` closes the
-   file; until then the uSD memory reports a size of 0. Then either pull the
-   card, or read the file over the link from the `MicroSD` memory. Before
-   pulling the card, check the run is intact while you still have a link — see
-   below.
+4. **Stop logging and verify the capture — while the drone is still powered,
+   and before pulling the card:**
 
-4. **Replay and compare policies**:
+   ```
+   tools/usdlog/read_usd_log.sh "$CF_URI" --check-only
+   ```
+
+   This sets `usd.logging = 0`, which is what closes the file (until then the
+   uSD memory reports a size of 0), runs all three integrity gates and prints
+   the resulting log size. It transfers no log data, so it is fast even for a
+   multi-MB capture. Only pull the card once it has passed: the counters it
+   reads live in drone RAM and are gone after a power cycle, so pulling the
+   card first throws away the only evidence that the log is intact. See
+   *Checking that a capture is intact* below for how to read the result — the
+   exit code alone is not sufficient.
+
+   To pull the log over the link in the same pass instead of reading the card
+   by hand — slower for large logs, but hands-free:
+
+   ```
+   tools/usdlog/read_usd_log.sh "$CF_URI" run01.bin
+   tools/usdlog/read_usd_log.sh "$CF_URI" run01.bin --replay anchors.yaml
+   ```
+
+5. **Replay and compare policies**:
 
    ```
    PYTHONPATH=build python3 -m tools.usdlog.replay_tdoa run01.bin \
@@ -143,6 +190,36 @@ Add your own by subclassing `SelectionPolicy` in
 
 Replay conclusions are only worth as much as the log, and both ways a log can
 go wrong are silent.
+
+`read_usd_log.sh` runs every gate below; the rest of this section is what it
+checks and why. Its exit codes:
+
+| exit | meaning |
+| --- | --- |
+| `0` | logging stopped, gates passed, file closed and non-empty |
+| `1` | a gate failed — the message on stderr names which one |
+| `2` | usage error (bad arguments) |
+
+**Two failure paths are deliberately non-fatal, and automation has to handle
+them.** If a counter cannot be read at all — firmware built without it, or a
+link that drops the log subscription — the script warns and *continues*:
+
+```
+!! WARNING: could not read usd.eventsRequested/usd.eventsAccepted.
+!! WARNING: could not read usd.writeError (firmware without it?).
+```
+
+Either line means that gate did not run, and the script can still exit `0` with
+losslessness unverified. **Checking the exit status alone is not enough.**
+Require both of these on stdout before trusting a capture:
+
+```
+>> OK: no dropped events (eventsRequested = eventsAccepted = N).
+>> OK: no SD write failures.
+```
+
+Treat a `!! WARNING:` line as a failed run and investigate before flying again;
+it usually means the firmware on the drone is not the build described here.
 
 **Dropped events.** The uSD ring buffer drops events if the write task cannot
 keep up, which puts unflagged holes in the log. The firmware counts
