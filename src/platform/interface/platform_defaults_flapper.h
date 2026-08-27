@@ -42,6 +42,9 @@
 // Requires kbuild config ENABLE_AUTO_SHUTDOWN to be activated.
 #define DEFAULT_SYSTEM_SHUTDOWN_TIMEOUT_MIN       5
 
+#define HEALTH_DISABLE_PROP_TEST true
+#define HEALTH_DISABLE_BAT_TEST true
+
 // Default PID gains
 #define PID_ROLL_RATE_KP  50.0
 #define PID_ROLL_RATE_KI  0.0
