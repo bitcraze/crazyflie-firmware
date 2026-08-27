@@ -13,7 +13,7 @@
 
 #ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
 // 0 = unlimited
-#define TDOA_ENGINE_DEFAULT_MAX_RATE_HZ 0.0f
+#define TDOA_ENGINE_DEFAULT_MAX_RATE_HZ 100.0f // 100 enables robust kalman to run without degrading positioning performance based on Loco alone
 #endif
 
 typedef void (*tdoaEngineSendTdoaToEstimator)(tdoaMeasurement_t* tdoaMeasurement);
