@@ -343,6 +343,7 @@ bool tdoaEngineProcessPacketFiltered(tdoaEngineState_t* engineState, tdoaAnchorC
       if (findSuitableAnchor(engineState, &otherAnchorCtx, anchorCtx, doExcludeId, excludedId, txAn_in_cl_An, rxAn_by_T_in_cl_T, engineState->locodeckTsFreq, &tdoaDistDiff)) {
         STATS_CNT_RATE_EVENT(&engineState->stats.suitableDataFound);
         enqueueTDOA(&otherAnchorCtx, anchorCtx, tdoaDistDiff, engineState);
+      }
 #ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
     }
 #endif
@@ -359,3 +360,4 @@ PARAM_GROUP_START(tdoaEngine)
  */
 PARAM_ADD(PARAM_FLOAT, distRatio, &distanceRatioLimit)
 PARAM_GROUP_STOP(tdoaEngine)
+
