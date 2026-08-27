@@ -127,6 +127,11 @@ PARAM_ADD(PARAM_UINT8, matchAlgo, &tdoaEngineState.matchingAlgorithm)
  * event rate to the uSD deck considerably. Check for dropped events after a
  * run by comparing the usd.eventsRequested and usd.eventsAccepted log
  * variables.
+ *
+ * Initialised from CONFIG_DECK_LOCO_TDOA3_LOG_CANDIDATES (off unless that is
+ * set), so a build dedicated to capture can have it on from boot and needs no
+ * link to arm it. Not persistent: on a normal build it has to be set over a
+ * link after every boot.
  */
 PARAM_ADD(PARAM_UINT8, logCand, &tdoaEngineState.candidateLogEnable)
 PARAM_GROUP_STOP(tdoaEngine)

@@ -18,10 +18,12 @@ different policies on identical data.
   emitted at the matching stage in `src/utils/src/tdoa/tdoaEngine.c`. All
   candidates of one received packet share the same `group` value, and
   `isSelected` marks the one the live algorithm picked.
-- Param `tdoaEngine.logCand`, default `0` (off). Any non-zero value logs **all**
-  valid candidate pairs of every processed packet. There is no partial mode: the
-  log is always a complete record of what the matcher saw, so the selected pair
-  is always included.
+- Param `tdoaEngine.logCand`. Any non-zero value logs **all** valid candidate
+  pairs of every processed packet. There is no partial mode: the log is always a
+  complete record of what the matcher saw, so the selected pair is always
+  included. It initialises from `CONFIG_DECK_LOCO_TDOA3_LOG_CANDIDATES`, which
+  `tdoa3_lh_groundtruth.conf` sets — so on a build made from that fragment it is
+  **already on at boot** and needs no link. Upstream default is off.
 
 ## Files here
 
@@ -146,7 +148,7 @@ export CF_URI=radio://0/100/2M/F00D2BEFED
    thing you send, and nothing may follow it:**
 
    ```
-   cfcli -u "$CF_URI" param set tdoaEngine.logCand=1
+   cfcli -u "$CF_URI" param set tdoaEngine.logCand=1   # not needed on a build from tdoa3_lh_groundtruth.conf
    # ... any other params for this run ...
    cfcli -u "$CF_URI" param set usd.logging=1      # LAST. Do not talk to it after this.
    ```
@@ -165,12 +167,9 @@ export CF_URI=radio://0/100/2M/F00D2BEFED
    until logging is actually on.
 
    Neither parameter carries `PARAM_PERSISTENT`, so `param set --store` cannot
-   persist them: both have to be set over a link after every boot. The one
-   exception is `usd.logging`, which can be armed from the card instead by
-   setting *enable logging on startup* (line 4 of `config.txt`) to `1` — which
-   also sidesteps the ordering problem entirely, since then no link is involved.
-   Both live in RAM, so they survive the disconnect in the next step, but not a
-   reboot or a battery swap.
+   persist them; both live in RAM and survive the disconnect in the next step,
+   but not a reboot or a battery swap. Both can instead be armed at boot, which
+   is strictly better for capture work — see *Link-free capture* below.
 
 3. **Disconnect the radio** and fly or move the drone inside Loco and reference
    coverage. A radio link degrades Loco performance, so keep it off during the
@@ -234,6 +233,29 @@ export CF_URI=radio://0/100/2M/F00D2BEFED
    (rms / p95 / max / fraction above the fly-away threshold, plus the timestamp
    of the worst fly-away). With `--csv-dir`, each policy also gets a CSV holding
    the full trajectory and error series for plotting.
+
+## Link-free capture
+
+Every failure mode in step 2 above comes from having a link up while the drone
+is under event load. Both switches can be armed without one:
+
+- **Candidate logging**: build with `CONFIG_DECK_LOCO_TDOA3_LOG_CANDIDATES=y`,
+  which `tdoa3_lh_groundtruth.conf` already sets. `tdoaEngine.logCand` then
+  initialises to 1 and is on from the first packet after boot. It stays writable
+  at runtime, so a run can still turn it off.
+- **uSD logging**: set *enable logging on startup* (line 4 of `config.txt`) to
+  `1`. The card arms itself at mount time.
+
+With both, a capture is: power on, fly, land, power off. No `param set` at any
+point, so the `radiolink.c:171` assert cannot happen and the ordering rule in
+step 2 stops mattering. Step 1's preflight check and step 4's integrity gates
+are still worth a link — just not during the run.
+
+The cost is that every boot writes a new log file, whether or not you wanted
+one, and every boot burns a filename (`log00`, `log01`, …). For a session where
+essentially every power cycle is a capture, that is the right trade; for a build
+you also fly normally, it is not. That is why the upstream default of both is
+off and only the capture fragment turns them on.
 
 ## Selection policies
 

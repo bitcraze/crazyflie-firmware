@@ -75,7 +75,14 @@ void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms, tdoaE
 
   engineState->matching.offset = 0;
 
+  // Normally off: candidate logging costs uSD event bandwidth and is only
+  // wanted for capture runs. A build dedicated to capture can flip the initial
+  // value so that no link is needed to arm it (see the Kconfig help).
+#ifdef CONFIG_DECK_LOCO_TDOA3_LOG_CANDIDATES
+  engineState->candidateLogEnable = 1;
+#else
   engineState->candidateLogEnable = 0;
+#endif
   engineState->candidateLogGroup = 0;
 }
 

@@ -354,6 +354,23 @@ config DECK_LOCO_TDOA3_HYBRID_MODE
         Crazyflies can also transmit and thus do TWR, either for positioning them selfs or to act as an anchor for
         other Crazyflies.
 
+config DECK_LOCO_TDOA3_LOG_CANDIDATES
+    bool "Log all TDoA3 anchor-pair candidates by default"
+    depends on DECK_LOCO_ALGORITHM_TDOA3
+    default n
+    help
+        Start up with the tdoaEngine.logCand parameter enabled instead of
+        disabled, so that every valid anchor-pair candidate is emitted as an
+        "estTdoaCand" event trigger from the first packet after boot.
+
+        The parameter is still writable at runtime; this only changes the
+        value it is initialised to. Enable it for a build dedicated to
+        candidate capture, where the uSD card is also configured to start
+        logging on startup, so that a capture needs no radio link at all.
+
+        Costs event bandwidth to the uSD deck whenever logging is on. Leave
+        this off for normal builds. See tools/usdlog/README_tdoa_candidates.md.
+
 config DECK_LOCO_TDMA
     bool "Use Time Division Multiple Access"
     depends on DECK_LOCO_ALGORITHM_TWR
