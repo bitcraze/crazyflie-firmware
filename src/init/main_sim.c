@@ -31,6 +31,11 @@
  * which is Phase 4's job (see dev/implementation-plan.md in the
  * simulation_model project). This placeholder proves the entry point and
  * scheduler boot mechanics; Phase 4 replaces its body with the real call.
+ *
+ * Phase 2 adds instanceInit() (see instance_sim.h): CLI port argument and
+ * bind-before-scheduler-start UDP socket setup / port-in-use failure
+ * handling. The bound socket itself isn't used yet -- Phase 3's
+ * Communication component picks it up via instanceGetSocketFd().
  */
 
 #include "FreeRTOSConfig.h"
@@ -40,6 +45,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "instance_sim.h"
 
 /* Not "platform.h": that header pulls in motors.h and the STM32 hardware
  * chain via the shared platform.c dispatcher, which platform_sim.c
@@ -65,8 +72,7 @@ static void systemLaunch(void)
 
 int main(int argc, char **argv)
 {
-  (void)argc;
-  (void)argv;
+  instanceInit(argc, argv);
 
   int err = platformInit();
   if (err != 0) {
