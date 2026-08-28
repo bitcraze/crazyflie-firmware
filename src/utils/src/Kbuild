@@ -1,3 +1,9 @@
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+# Simmyflie Phase 3 (Communication): only the ASSERT()/DEBUG_PRINT backend
+# crtp.c/queuemonitor.c need (see cfassert_sim.c). The rest of this tree
+# (EEPROM config block, CRC, filters, ...) isn't needed yet.
+obj-y += cfassert_sim.o
+else
 obj-y += cfassert.o
 obj-y += clockCorrectionEngine.o
 obj-y += configblockeeprom.o
@@ -31,3 +37,4 @@ obj-y += version.o
 version-objs := version_gen.o
 src/utils/src/version_gen.c: src/utils/src/version.vtpl FORCE
 	 $(PYTHON) $(srctree)/tools/make/versionTemplate.py --crazyflie-base $(srctree) $< $@
+endif

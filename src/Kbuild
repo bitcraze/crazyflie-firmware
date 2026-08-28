@@ -1,8 +1,14 @@
 ifeq ($(CONFIG_PLATFORM_SIM),y)
-# Simmyflie build skeleton (Phase 1): boot the scheduler only, none of the
-# hardware-facing trees are wired in yet.
+# Simmyflie: Phase 1 boots the scheduler only. Phase 3 (Communication) adds
+# hal/, modules/, utils/ back in -- each one's own Kbuild trims its object
+# list down to just what Phase 3 needs (see their PLATFORM_SIM branches);
+# the rest of each tree (deck-facing HAL, the full modules/ firmware core,
+# etc.) is still Phase 4/5's job.
+obj-y += hal/
 obj-y += init/
+obj-y += modules/
 obj-y += platform/
+obj-y += utils/
 else
 obj-y += deck/
 obj-y += drivers/

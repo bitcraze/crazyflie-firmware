@@ -73,6 +73,10 @@ image_LDFLAGS += -Wl,-Map=$(PROG).map,--cref,--gc-sections
 
 INCLUDES += -I$(srctree)/src/config/sim
 INCLUDES += -I$(PORT)/utils
+# instance_sim.h (Phase 2) lives alongside main_sim.c in src/init/, not a
+# dedicated interface/ dir like the other INCLUDES below -- Communication
+# (Phase 3, src/hal/src/udplink_sim.c) needs instanceGetSocketFd() from it.
+INCLUDES += -I$(srctree)/src/init
 
 # src/config/sim must come before the common -I$(srctree)/src/config below
 # so our FreeRTOSConfig.h wins over the mainline one.

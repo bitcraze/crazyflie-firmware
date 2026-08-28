@@ -36,6 +36,14 @@
  * bind-before-scheduler-start UDP socket setup / port-in-use failure
  * handling. The bound socket itself isn't used yet -- Phase 3's
  * Communication component picks it up via instanceGetSocketFd().
+ *
+ * Phase 3 adds crtpInit()/commInit() (the CRTP port-dispatch layer and its
+ * udplinkGetLink() UDP transport) to this placeholder -- the real
+ * src/modules/src/system.c:systemLaunch() normally calls these itself, but
+ * that file isn't built under PLATFORM_SIM until Phase 4. The
+ * phase3VerifyMockInit() call is TEMPORARY verification scaffolding (see
+ * phase3_verify_mock.c) so the real `cfcli` can connect end-to-end; remove
+ * it once Phase 4 adds the real platformservice.c/log.c/param.c.
  */
 
 #include "FreeRTOSConfig.h"
@@ -47,6 +55,10 @@
 #include <stdlib.h>
 
 #include "instance_sim.h"
+#include "crtp.h"
+#include "comm.h"
+#include "udplink_sim.h"
+#include "phase3_verify_mock.h"
 
 /* Not "platform.h": that header pulls in motors.h and the STM32 hardware
  * chain via the shared platform.c dispatcher, which platform_sim.c
@@ -67,6 +79,11 @@ static void heartbeatTask(void *pvParameters)
 
 static void systemLaunch(void)
 {
+  crtpInit();
+  udplinkInit();
+  phase3VerifyMockInit();
+  commInit();
+
   xTaskCreate(heartbeatTask, "heartbeat", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 }
 

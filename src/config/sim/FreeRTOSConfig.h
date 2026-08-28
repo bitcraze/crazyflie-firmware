@@ -22,7 +22,14 @@
 #define configUSE_16_BIT_TICKS                 0
 #define configIDLE_SHOULD_YIELD                1
 #define configUSE_MUTEXES                      1
+/* configUSE_TIMERS stays off (no FreeRTOS software timers used yet) -- but
+ * static_mem.c's vApplicationGetTimerTaskMemory() references
+ * configTIMER_TASK_STACK_DEPTH unconditionally at compile time regardless,
+ * so it's still defined here. */
 #define configUSE_TIMERS                       0
+#define configTIMER_TASK_PRIORITY              1
+#define configTIMER_QUEUE_LENGTH               20
+#define configTIMER_TASK_STACK_DEPTH           (configMINIMAL_STACK_SIZE * 4)
 #define configCHECK_FOR_STACK_OVERFLOW         0
 #define configUSE_MALLOC_FAILED_HOOK           1
 #define configUSE_TASK_NOTIFICATIONS           1
@@ -30,7 +37,7 @@
 #define configMAX_CO_ROUTINE_PRIORITIES        ( 2 )
 #define configQUEUE_REGISTRY_SIZE              10
 #define configUSE_APPLICATION_TASK_TAG         0
-#define configSUPPORT_STATIC_ALLOCATION        0
+#define configSUPPORT_STATIC_ALLOCATION        1
 #define configSUPPORT_DYNAMIC_ALLOCATION       1
 
 #define INCLUDE_vTaskPrioritySet               1
@@ -50,5 +57,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #define configASSERT( x ) if( ( x ) == 0 ) { fprintf(stderr, "ASSERT FAILED %s:%d\n", __FILE__, __LINE__); abort(); }
+
+/* Milliseconds to OS ticks, matching mainline src/config/FreeRTOSConfig.h --
+ * configTICK_RATE_HZ above is 1000, so these are 1:1. */
+#define M2T(X) ((unsigned int)(X))
+#define F2T(X) ((unsigned int)((configTICK_RATE_HZ/(X))))
+#define T2M(X) ((unsigned int)(X))
+#define S2T(X) ((portTickType)((X) * configTICK_RATE_HZ))
+#define T2S(X) ((X) / (float)configTICK_RATE_HZ)
 
 #endif /* FREERTOS_CONFIG_H */
