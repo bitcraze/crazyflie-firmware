@@ -1,3 +1,9 @@
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+# Simmyflie build skeleton (Phase 1): boot the scheduler only, none of the
+# hardware-facing trees are wired in yet.
+obj-y += init/
+obj-y += platform/
+else
 obj-y += deck/
 obj-y += drivers/
 obj-y += hal/
@@ -6,3 +12,4 @@ obj-y += lib/
 obj-y += modules/
 obj-y += platform/
 obj-y += utils/
+endif

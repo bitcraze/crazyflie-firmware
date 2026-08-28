@@ -81,6 +81,13 @@ config PLATFORM_FLAPPER
     select SENSORS_BMI088_BMP3XX
     select SENSORS_BMI088_SPI
 
+config PLATFORM_SIM
+    bool "Build for the Linux simulator (Simmyflie)"
+    help
+        Native Linux build running on the vendored FreeRTOS POSIX port,
+        for the Simmyflie simulator. Not a real hardware platform: no
+        sensors/motors are compiled in yet.
+
 endchoice
 
 config ENABLE_THRUST_BAT_COMPENSATED

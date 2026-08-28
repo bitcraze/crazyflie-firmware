@@ -25,44 +25,11 @@ CLOAD_ARGS        ?=
 ARCH := stm32f4
 SRCARCH := stm32f4
 
-ARCH_CFLAGS += -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -g3
-ARCH_CFLAGS += -fno-math-errno -DARM_MATH_CM4 -D__FPU_PRESENT=1 -mfp16-format=ieee
-ARCH_CFLAGS += -Wno-array-bounds -Wno-stringop-overread
-ARCH_CFLAGS += -Wno-stringop-overflow
-ARCH_CFLAGS += -DSTM32F4XX -DSTM32F40_41xxx -DHSE_VALUE=8000000 -DUSE_STDPERIPH_DRIVER
-
-FREERTOS = $(srctree)/vendor/FreeRTOS
-PORT = $(FREERTOS)/portable/GCC/ARM_CM4F
-LIB = $(srctree)/src/lib
-PROCESSOR = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
-LINKER_DIR = $(srctree)/tools/make/F405/linker
-
-LDFLAGS = $(PROCESSOR)
-image_LDFLAGS += --specs=nosys.specs --specs=nano.specs -nostdlib
-image_LDFLAGS += -z noexecstack
-image_LDFLAGS += -Wl,-Map=$(PROG).map,--cref,--gc-sections,--undefined=uxTopUsedPriority
-image_LDFLAGS += -L$(srctree)/tools/make/F405/linker
-image_LDFLAGS += -T $(LINKER_DIR)/FLASH_CLOAD.ld
-
-INCLUDES += -I$(srctree)/vendor/CMSIS/CMSIS/Core/Include -I$(srctree)/vendor/CMSIS/CMSIS/DSP/Include
-INCLUDES += -I$(srctree)/vendor/libdw1000/inc
-INCLUDES += -I$(FREERTOS)/include -I$(PORT)
-INCLUDES += -I$(srctree)/src/config
-INCLUDES += -I$(srctree)/src/platform/interface
-INCLUDES += -I$(srctree)/src/deck/interface -I$(srctree)/src/deck/drivers/interface
-INCLUDES += -I$(srctree)/src/drivers/interface -I$(srctree)/src/drivers/bosch/interface
-INCLUDES += -I$(srctree)/src/drivers/esp32/interface
-INCLUDES += -I$(srctree)/src/hal/interface
-INCLUDES += -I$(srctree)/src/modules/interface -I$(srctree)/src/modules/interface/kalman_core -I$(srctree)/src/modules/interface/lighthouse  -I$(srctree)/src/modules/interface/outlierfilter
-INCLUDES += -I$(srctree)/src/modules/interface/cpx -I$(srctree)/src/modules/interface/p2pDTR -I$(srctree)/src/modules/interface/controller  -I$(srctree)/src/modules/interface/estimator
-INCLUDES += -I$(srctree)/src/utils/interface -I$(srctree)/src/utils/interface/kve -I$(srctree)/src/utils/interface/lighthouse -I$(srctree)/src/utils/interface/tdoa
-INCLUDES += -I$(LIB)/FatFS
-INCLUDES += -I$(LIB)/CMSIS/STM32F4xx/Include
-INCLUDES += -I$(LIB)/STM32_USB_Device_Library/Core/inc
-INCLUDES += -I$(LIB)/STM32_USB_OTG_Driver/inc
-INCLUDES += -I$(LIB)/STM32F4xx_StdPeriph_Driver/inc
-INCLUDES += -I$(LIB)/vl53l1 -I$(LIB)/vl53l1/core/inc
-INCLUDES += -I$(KBUILD_OUTPUT)/include/generated
+# NOTE: CONFIG_PLATFORM_SIM is not known yet at this point in the file --
+# CONFIG_* variables only become available after the auto.conf include
+# below -- so the ARCH_CFLAGS/FREERTOS/PORT/LDFLAGS/INCLUDES platform branch
+# lives further down, right after that include (matching where the existing
+# CONFIG_PLATFORM_* -> PLATFORM name conditionals already do the same).
 
 # Here we tell Kbuild where to look for Kbuild files which will tell the
 # buildsystem which sources to build
@@ -86,6 +53,72 @@ export KCONFIG_ALLCONFIG ?= configs/all.config
 KBUILD_OUTPUT ?= build
 
 -include $(KBUILD_OUTPUT)/include/config/auto.conf
+
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+
+# Simmyflie: native Linux build on the vendored FreeRTOS POSIX port. No
+# cross-compiler and no embedded link flags (see CONFIG_CROSS_COMPILE in
+# configs/sim_defconfig, which blanks the arm-none-eabi- default).
+# -Wno-unused-variable: the vendored FreeRTOS POSIX port (ThirdParty, not
+# ours to fix) has a couple of genuinely-unused locals.
+ARCH_CFLAGS += -g3 -pthread -D_GNU_SOURCE -Wno-unused-variable
+
+FREERTOS = $(srctree)/vendor/FreeRTOS
+PORT = $(FREERTOS)/portable/ThirdParty/GCC/Posix
+LIB = $(srctree)/src/lib
+
+LDFLAGS =
+image_LDFLAGS += -pthread
+image_LDFLAGS += -Wl,-Map=$(PROG).map,--cref,--gc-sections
+
+INCLUDES += -I$(srctree)/src/config/sim
+INCLUDES += -I$(PORT)/utils
+
+# src/config/sim must come before the common -I$(srctree)/src/config below
+# so our FreeRTOSConfig.h wins over the mainline one.
+
+else
+
+ARCH_CFLAGS += -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -g3
+ARCH_CFLAGS += -fno-math-errno -DARM_MATH_CM4 -D__FPU_PRESENT=1 -mfp16-format=ieee
+ARCH_CFLAGS += -Wno-array-bounds -Wno-stringop-overread
+ARCH_CFLAGS += -Wno-stringop-overflow
+ARCH_CFLAGS += -DSTM32F4XX -DSTM32F40_41xxx -DHSE_VALUE=8000000 -DUSE_STDPERIPH_DRIVER
+
+FREERTOS = $(srctree)/vendor/FreeRTOS
+PORT = $(FREERTOS)/portable/GCC/ARM_CM4F
+LIB = $(srctree)/src/lib
+PROCESSOR = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
+LINKER_DIR = $(srctree)/tools/make/F405/linker
+
+LDFLAGS = $(PROCESSOR)
+image_LDFLAGS += --specs=nosys.specs --specs=nano.specs -nostdlib
+image_LDFLAGS += -z noexecstack
+image_LDFLAGS += -Wl,-Map=$(PROG).map,--cref,--gc-sections,--undefined=uxTopUsedPriority
+image_LDFLAGS += -L$(srctree)/tools/make/F405/linker
+image_LDFLAGS += -T $(LINKER_DIR)/FLASH_CLOAD.ld
+
+endif
+
+INCLUDES += -I$(srctree)/vendor/CMSIS/CMSIS/Core/Include -I$(srctree)/vendor/CMSIS/CMSIS/DSP/Include
+INCLUDES += -I$(srctree)/vendor/libdw1000/inc
+INCLUDES += -I$(FREERTOS)/include -I$(PORT)
+INCLUDES += -I$(srctree)/src/config
+INCLUDES += -I$(srctree)/src/platform/interface
+INCLUDES += -I$(srctree)/src/deck/interface -I$(srctree)/src/deck/drivers/interface
+INCLUDES += -I$(srctree)/src/drivers/interface -I$(srctree)/src/drivers/bosch/interface
+INCLUDES += -I$(srctree)/src/drivers/esp32/interface
+INCLUDES += -I$(srctree)/src/hal/interface
+INCLUDES += -I$(srctree)/src/modules/interface -I$(srctree)/src/modules/interface/kalman_core -I$(srctree)/src/modules/interface/lighthouse  -I$(srctree)/src/modules/interface/outlierfilter
+INCLUDES += -I$(srctree)/src/modules/interface/cpx -I$(srctree)/src/modules/interface/p2pDTR -I$(srctree)/src/modules/interface/controller  -I$(srctree)/src/modules/interface/estimator
+INCLUDES += -I$(srctree)/src/utils/interface -I$(srctree)/src/utils/interface/kve -I$(srctree)/src/utils/interface/lighthouse -I$(srctree)/src/utils/interface/tdoa
+INCLUDES += -I$(LIB)/FatFS
+INCLUDES += -I$(LIB)/CMSIS/STM32F4xx/Include
+INCLUDES += -I$(LIB)/STM32_USB_Device_Library/Core/inc
+INCLUDES += -I$(LIB)/STM32_USB_OTG_Driver/inc
+INCLUDES += -I$(LIB)/STM32F4xx_StdPeriph_Driver/inc
+INCLUDES += -I$(LIB)/vl53l1 -I$(LIB)/vl53l1/core/inc
+INCLUDES += -I$(KBUILD_OUTPUT)/include/generated
 
 #
 # Special hack to handle float define. Kconfig has no float values
@@ -113,6 +146,10 @@ ifeq ($(CONFIG_PLATFORM_FLAPPER),y)
 PLATFORM = flapper
 endif
 
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+PLATFORM = sim
+endif
+
 
 PLATFORM  ?= cf2
 PROG ?= $(PLATFORM)
@@ -125,10 +162,15 @@ endif
 
 _all:
 
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+all: $(PROG).elf
+	@echo "Build for the sim platform!"
+else
 all: $(PROG).hex $(PROG).bin
 	@echo "Build for the $(PLATFORM) platform!"
 	@$(PYTHON) $(srctree)/tools/make/versionTemplate.py --crazyflie-base $(srctree) --print-version
 	@$(PYTHON) $(srctree)/tools/make/size.py $(SIZE) $(PROG).elf $(MEM_SIZE_FLASH_K) $(MEM_SIZE_RAM_K) $(MEM_SIZE_CCM_K)
+endif
 
 include tools/make/targets.mk
 

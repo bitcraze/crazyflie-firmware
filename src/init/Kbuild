@@ -1,2 +1,6 @@
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+obj-y += main_sim.o
+else
 obj-y += main.o
 obj-y += startup_stm32f40xx.o
+endif
