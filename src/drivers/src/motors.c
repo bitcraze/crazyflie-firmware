@@ -66,10 +66,9 @@ static DMA_InitTypeDef DMA_InitStructureShare;
 static uint32_t dshotDmaBuffer[NBR_OF_MOTORS][DSHOT_DMA_BUFFER_SIZE];
 static void motorsDshotSetup();
 static void motorsDshotOutputSetup(int id);
-static volatile uint32_t dmaWait;
 
 #define DSHOT_TELEMETRY_INVALID         (UINT16_MAX)
-#define DSHOT_ERPM_INVALID              (UINT16_MAX)
+#define DSHOT_RPM_INVALID              (UINT16_MAX)
 
 typedef enum {
   DSHOT_STATE_IDLE = 0,
@@ -89,7 +88,7 @@ static uint16_t dshotTelemetryPackets[NBR_OF_MOTORS] = {
   DSHOT_TELEMETRY_INVALID, DSHOT_TELEMETRY_INVALID, DSHOT_TELEMETRY_INVALID, DSHOT_TELEMETRY_INVALID
 };
 static uint16_t motorRPMs[NBR_OF_MOTORS] = {
-  DSHOT_ERPM_INVALID, DSHOT_ERPM_INVALID, DSHOT_ERPM_INVALID, DSHOT_ERPM_INVALID
+  DSHOT_RPM_INVALID, DSHOT_RPM_INVALID, DSHOT_RPM_INVALID, DSHOT_RPM_INVALID
 };
 #endif
 #endif
@@ -570,27 +569,32 @@ static uint16_t dshotDecodeTelemetryPacket(const uint32_t *buffer, uint32_t gcrE
   return decodedValue >> 4;
 }
 
-static uint16_t dshotDecodeTelemetryERPM(uint16_t valueGCR)
+static uint16_t dshotDecodeTelemetryRPM(uint16_t valueGCR)
 {
   uint16_t period;
   uint16_t rpm;
     
   // eRPM range
   if (valueGCR == 0x0fff) {
-    return DSHOT_ERPM_INVALID;
-  } else if (valueGCR == 0x0fff) {
-      return 0;
+    return 0;
   }
 
   // Convert value to 16 bit period from the GCR telemetry format (eeem mmmm mmmm)
   period = (valueGCR & 0x01ff) << ((valueGCR & 0xfe00) >> 9);
   if (!period) {
-      return DSHOT_ERPM_INVALID;
+      return DSHOT_RPM_INVALID;
   }
 
   // Convert period to rpm
   rpm = (uint16_t)((1000000UL * 60 * 2 / period) / (motorNbrOfPoles ));
   return rpm;
+}
+
+uint16_t motorsGetRPM(uint32_t motorId) {
+  if (motorId >= NBR_OF_MOTORS) {
+    return DSHOT_RPM_INVALID;
+  }
+  return motorRPMs[motorId];
 }
 #endif
 
@@ -604,10 +608,10 @@ static void motorsPrepareDshot(uint32_t id, uint16_t ratio)
 
   // Stop any ongoing DMA transfer
   DMA_Cmd(motorMap[id]->DMA_stream, DISABLE);  
-  // Wait for DMA to be free. Can happen at startup but doesn't seem to wait afterwards.
+  // If the DMA stream is not disabled yet there is a failure in the DSHOT state machine.
   while(DMA_GetCmdStatus(motorMap[id]->DMA_stream) != DISABLE)
   {
-    dmaWait++;
+    ASSERT(true);
   }
 
   // Scale 16 -> 11 bits
@@ -915,7 +919,7 @@ static void motorsDshotTransferEnded(int id)
     uint32_t gcrEdges = DSHOT_TELEMETRY_MAX_GCR_EDGES - motorMap[id]->DMA_stream->NDTR;
     if (gcrEdges > DSHOT_TELEMETRY_MIN_GCR_EDGES) {
       dshotTelemetryPackets[id] = dshotDecodeTelemetryPacket(dshotDmaInputBuffer[id], gcrEdges);
-      motorRPMs[id] = dshotDecodeTelemetryERPM(dshotTelemetryPackets[id]);
+      motorRPMs[id] = dshotDecodeTelemetryRPM(dshotTelemetryPackets[id]);
     }
   }
 #endif
