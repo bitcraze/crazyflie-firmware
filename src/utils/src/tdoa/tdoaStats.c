@@ -48,6 +48,7 @@ void tdoaStatsInit(tdoaStats_t* tdoaStats, uint32_t now_ms) {
   STATS_CNT_RATE_INIT(&tdoaStats->contextMissCount, STATS_INTERVAL);
   STATS_CNT_RATE_INIT(&tdoaStats->timeIsGood, STATS_INTERVAL);
   STATS_CNT_RATE_INIT(&tdoaStats->suitableDataFound, STATS_INTERVAL);
+  STATS_CNT_RATE_INIT(&tdoaStats->geometryRejected, STATS_INTERVAL);
 }
 
 void tdoaStatsUpdate(tdoaStats_t* tdoaStats, uint32_t now_ms) {
