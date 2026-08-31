@@ -94,6 +94,7 @@
 #define MAX_USD_LOG_EVENTS                (20)
 #define FIXED_FREQUENCY_EVENT_ID          (0xFFFF)
 #define FIXED_FREQUENCY_EVENT_NAME        "fixedFrequency"
+#define USD_LOG_FILE_INDEX_DIGITS          (3)
 
 
 /* set to true when graceful shutdown is triggered */
@@ -212,6 +213,23 @@ static void delayMs(UINT ms);
 
 static void usdLogTask(void* prm);
 static void usdWriteTask(void* prm);
+
+static bool incrementLogFileIndex(char* filename)
+{
+  const size_t filenameLength = strlen(filename);
+
+  for (size_t offset = 0; offset < USD_LOG_FILE_INDEX_DIGITS; offset++) {
+    char* digit = &filename[filenameLength - offset - 1];
+    if (*digit < '9') {
+      (*digit)++;
+      return true;
+    }
+
+    *digit = '0';
+  }
+
+  return false;
+}
 
 static STATS_CNT_RATE_DEFINE(spiWriteRate, 1000);
 static STATS_CNT_RATE_DEFINE(spiReadRate, 1000);
@@ -586,12 +604,11 @@ static void usdLogTask(void* prm)
       if (!line) break;
 
       int l = strlen(usdLogConfig.filename);
-      if (l > sizeof(usdLogConfig.filename) - 3) {
-        l = sizeof(usdLogConfig.filename) - 3;
+      if (l > sizeof(usdLogConfig.filename) - USD_LOG_FILE_INDEX_DIGITS - 1) {
+        l = sizeof(usdLogConfig.filename) - USD_LOG_FILE_INDEX_DIGITS - 1;
       }
-      usdLogConfig.filename[l] = '0';
-      usdLogConfig.filename[l+1] = '0';
-      usdLogConfig.filename[l+2] = 0;
+      memset(&usdLogConfig.filename[l], '0', USD_LOG_FILE_INDEX_DIGITS);
+      usdLogConfig.filename[l + USD_LOG_FILE_INDEX_DIGITS] = '\0';
 
       // enable on startup
       line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
@@ -843,25 +860,23 @@ static void usdWriteTask(void* prm)
       xSemaphoreTake(logFileMutex, portMAX_DELAY);
       lastFileSize = 0;
 
-      /* look for existing files and use first not existent combination
-       * of two chars */
+      /* Look for the first free three-digit file index. */
+      bool filenameAvailable = false;
       {
         FILINFO fno;
-        uint8_t NUL = 0;
-        while(usdLogConfig.filename[NUL] != '\0') {
-          NUL++;
-        }
-        while (f_stat(usdLogConfig.filename, &fno) == FR_OK) {
-          /* increase file */
-          switch(usdLogConfig.filename[NUL-1]) {
-            case '9':
-              usdLogConfig.filename[NUL-1] = '0';
-              usdLogConfig.filename[NUL-2]++;
-              break;
-            default:
-              usdLogConfig.filename[NUL-1]++;
+        do {
+          if (f_stat(usdLogConfig.filename, &fno) != FR_OK) {
+            filenameAvailable = true;
+            break;
           }
-        }
+        } while (incrementLogFileIndex(usdLogConfig.filename));
+      }
+
+      if (!filenameAvailable) {
+        DEBUG_PRINT("No free uSD log filename (000-999)\n");
+        enableLogging = false;
+        xSemaphoreGive(logFileMutex);
+        continue;
       }
 
       /* try to create file */
