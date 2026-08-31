@@ -5,6 +5,7 @@
 #include "deck_memory.h"
 #include "deck_core.h" // @NO_MODULE
 #include "bccam_uart_service.h"
+#include "console.h" // @NO_MODULE
 #include "bccam_bootloader_uart_client.h" // @NO_MODULE
 #include "deckctrl_gpio.h" // @NO_MODULE
 #include "mem.h" // @NO_MODULE
@@ -39,6 +40,18 @@ bool deckctrl_gpio_write(DeckInfo *info, DeckCtrlGPIOPin pin, uint32_t value) {
   (void)info; (void)pin; (void)value; return true;
 }
 void vTaskDelay(const TickType_t ticks) { (void)ticks; }
+void vPortEnterCritical(void) {}
+void vPortExitCritical(void) {}
+bool consoleSourceIsEnabled(uint8_t source_id) {
+  (void)source_id;
+  return false;
+}
+bool consoleSourceSend(uint8_t source_id, const uint8_t *data, size_t length) {
+  (void)source_id;
+  (void)data;
+  (void)length;
+  return false;
+}
 
 bool handleMemWrite(const uint8_t internal_id,
                     const uint32_t mem_addr,
