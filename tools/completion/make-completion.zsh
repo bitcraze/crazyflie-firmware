@@ -47,7 +47,7 @@ _cf_make() {
 
 	defconfig_targets=(${(f)"$(
 		for f in "$root"/configs/*_defconfig(N); do
-			print -r -- "${f:t}:defconfig (${f:t:r})"
+			print -r -- "${f:t}:defconfig (${${f:t}%_defconfig})"
 		done
 	)"})
 
