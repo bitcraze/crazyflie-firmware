@@ -3,6 +3,23 @@ import cffirmware
 
 TDOA_MODELS = ('standard', 'robust')
 
+# Photodiode positions on the Lighthouse deck, in the CF reference frame
+# (meters), indexed by sensorId. These mirror sensorDeckPositions in
+# src/modules/src/lighthouse/lighthouse_position_est.c; keep them in sync so the
+# emulator feeds the estimator the same geometry as the Crazyflie.
+SENSOR_POS_W = 0.015 / 2.0
+SENSOR_POS_L = 0.030 / 2.0
+SENSOR_POSITIONS = (
+    (-SENSOR_POS_L, SENSOR_POS_W, 0.0),
+    (-SENSOR_POS_L, -SENSOR_POS_W, 0.0),
+    (SENSOR_POS_L, SENSOR_POS_W, 0.0),
+    (SENSOR_POS_L, -SENSOR_POS_W, 0.0),
+)
+
+# Firmware default of the lighthouse.sweepStd2 parameter (sweepStdLh2 in
+# lighthouse_position_est.c). Override per instance to A/B it in replay.
+SWEEP_STD_LH2 = 0.001
+
 
 class EstimatorKalmanEmulator:
     """
@@ -25,9 +42,10 @@ class EstimatorKalmanEmulator:
     kalmanCoreRobustUpdateWithTdoa).
 
     """
-    def __init__(self, anchor_positions, tdoa_model='standard',
+    def __init__(self, anchor_positions=None, tdoa_model='standard',
                  outlier_filter=None, std_model=None,
-                 kalman_params=None) -> None:
+                 kalman_params=None, basestation_poses=None,
+                 basestation_calibration=None, sweep_std=SWEEP_STD_LH2) -> None:
         if tdoa_model not in TDOA_MODELS:
             raise ValueError(
                 f"unknown tdoa_model '{tdoa_model}', expected one of {TDOA_MODELS}")
@@ -38,10 +56,22 @@ class EstimatorKalmanEmulator:
         # {'procNoiseVel': 0.3} to A/B process-noise tuning in replay.
         self.kalman_params = kalman_params or {}
         self.anchor_positions = anchor_positions
+        # Lighthouse base station geometry and calibration, as returned by
+        # bindings/util/lighthouse_utils.load_lighthouse_calibration(). Required
+        # only if the log carries estSweepAngle samples.
+        self.basestation_poses = basestation_poses
+        self.basestation_calibration = basestation_calibration
+        self.sweep_std = sweep_std
+        # sweepAngleMeasurement_t holds geometry as pointers into C memory. It is
+        # constant per sensor and per base station, so allocate each once and
+        # reuse it rather than leaking an allocation on every sweep sample.
+        self._sensor_pos_cache = {}
+        self._rotor_geometry_cache = {}
         self.accSubSampler = cffirmware.Axis3fSubSampler_t()
         self.gyroSubSampler = cffirmware.Axis3fSubSampler_t()
         self.coreData = cffirmware.kalmanCoreData_t()
         self.outlierFilterState = cffirmware.OutlierFilterTdoaState_t()
+        self.outlierFilterLH = cffirmware.OutlierFilterLhState_t()
 
         self.TDOA_ENGINE_MEASUREMENT_NOISE_STD = 0.30
         self.PREDICT_RATE = 100
@@ -116,6 +146,7 @@ class EstimatorKalmanEmulator:
         # self.coreParams.AttitudeReversion = 0.001
 
         cffirmware.outlierFilterTdoaReset(self.outlierFilterState)
+        cffirmware.outlierFilterLighthouseReset(self.outlierFilterLH, self.now_ms)
         if self.outlier_filter is not None:
             self.outlier_filter.reset()
         if self.std_model is not None:
@@ -123,6 +154,49 @@ class EstimatorKalmanEmulator:
         cffirmware.kalmanCoreInit(self.coreData, self.coreParams, self.now_ms)
 
         self._is_initialized = True
+
+    def _sensor_pos(self, sensor_id):
+        """Return a cached vec3d of a deck sensor position in the CF frame."""
+        sensor_id = int(sensor_id)
+        vec = self._sensor_pos_cache.get(sensor_id)
+        if vec is None:
+            vec = cffirmware.make_vec3d(*SENSOR_POSITIONS[sensor_id])
+            self._sensor_pos_cache[sensor_id] = vec
+        return vec
+
+    def _rotor_geometry(self, base_station_id):
+        """Return cached (rotorPos, rotorRot, rotorRotInv) for a base station.
+
+        rotorRotInv is the transpose: for a rotation matrix the inverse and the
+        transpose are equal, which is what preProcessGeometryData() relies on in
+        lighthouse_position_est.c.
+        """
+        base_station_id = int(base_station_id)
+        geometry = self._rotor_geometry_cache.get(base_station_id)
+        if geometry is None:
+            if self.basestation_poses is None:
+                raise ValueError(
+                    'the log has estSweepAngle samples but no basestation_poses '
+                    'were given; load them with lighthouse_utils.'
+                    'load_lighthouse_calibration() on the YAML that '
+                    '"cfcli lh config read" writes')
+            pose = self.basestation_poses[base_station_id]
+            origin = pose['origin']
+            r = pose['rotation_matrix']
+            rotor_pos = cffirmware.make_vec3d(origin.x, origin.y, origin.z)
+            rotor_rot = cffirmware.make_mat3d(
+                r.i11, r.i12, r.i13,
+                r.i21, r.i22, r.i23,
+                r.i31, r.i32, r.i33,
+            )
+            rotor_rot_inv = cffirmware.make_mat3d(
+                r.i11, r.i21, r.i31,
+                r.i12, r.i22, r.i32,
+                r.i13, r.i23, r.i33,
+            )
+            geometry = (rotor_pos, rotor_rot, rotor_rot_inv)
+            self._rotor_geometry_cache[base_station_id] = geometry
+        return geometry
 
     def _update_queued_measurements(self, now_ms: int, sensor_samples):
         # Continue processing as long as there is data
@@ -179,6 +253,35 @@ class EstimatorKalmanEmulator:
                             self.coreData, tdoa, self.outlierFilterState)
                     else:
                         cffirmware.kalmanCoreUpdateWithTdoaUnfiltered(self.coreData, tdoa)
+
+        elif sample[0] == 'estSweepAngle':
+            sweep_data = sample[1]
+
+            sweep = cffirmware.sweepAngleMeasurement_t()
+            sweep.timestamp = int(sweep_data['timestamp'])
+            sweep.sensorId = int(sweep_data['sensorId'])
+            sweep.baseStationId = int(sweep_data['baseStationId'])
+            sweep.sweepId = int(sweep_data['sweepId'])
+            sweep.t = float(sweep_data['t'])
+            # The logged angle is the raw, uncompensated one: estimatePosition-
+            # SweepsLh2 passes measurement->angles[], not correctedAngles[], and
+            # the measurement model below predicts the raw angle too.
+            sweep.measuredSweepAngle = float(sweep_data['sweepAngle'])
+            sweep.stdDev = self.sweep_std
+
+            cffirmware.set_calibration_model(
+                sweep,
+                self.basestation_calibration[sweep.baseStationId][sweep.sweepId])
+
+            sweep.sensorPos = self._sensor_pos(sweep.sensorId)
+            rotor_pos, rotor_rot, rotor_rot_inv = self._rotor_geometry(
+                sweep.baseStationId)
+            sweep.rotorPos = rotor_pos
+            sweep.rotorRot = rotor_rot
+            sweep.rotorRotInv = rotor_rot_inv
+
+            cffirmware.kalmanCoreUpdateWithSweepAngles(
+                self.coreData, sweep, now_ms, self.outlierFilterLH)
 
         elif sample[0] == 'estAcceleration':
             acc_data = sample[1]
