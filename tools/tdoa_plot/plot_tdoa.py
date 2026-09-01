@@ -60,7 +60,8 @@ def load_series(args):
     import tools.usdlog.cfusdlog as cfusdlog
     from bindings.util.loco_utils import read_loco_anchor_positions
     from bindings.util.tdoa_replay import (
-        apply_policy, extract_imu_samples, extract_state_estimate, replay)
+        apply_policy, extract_imu_samples, extract_state_estimate, replay,
+        seed_initial_position)
     from bindings.util.tdoa_selection import build_candidate_groups, make_policy
     from tools.usdlog.replay_tdoa import extract_ground_truth
 
@@ -87,12 +88,36 @@ def load_series(args):
           + f', measurement model: {args.tdoa_model}, '
           f'outlier filter: {args.outlier_filter}'
           + (f' {filter_params}' if filter_params else '') + ') ...')
+    kalman_params = resolve_initial_position(args, log_data,
+                                             seed_initial_position)
     replayed = replay(anchor_positions, imu_samples, tdoa_samples,
                       {'tdoa_std': args.tdoa_std,
                        'tdoa_model': args.tdoa_model,
                        'outlier_filter': args.outlier_filter,
-                       'outlier_filter_params': filter_params})
+                       'outlier_filter_params': filter_params,
+                       'kalman_params': kalman_params})
     return replayed, live, gt
+
+
+def resolve_initial_position(args, log_data, seed_initial_position):
+    """Turn --init-from/--init-window-ms into kalmanCoreParams_t overrides.
+
+    Returns None (default origin init) for --init-from origin, or when the log
+    has no stateEstimate to seed from.
+    """
+    if args.init_from == 'origin':
+        return None
+    seed = seed_initial_position(log_data, window_ms=args.init_window_ms)
+    if seed is None:
+        print('WARNING: --init-from log, but this log has no stateEstimate.* '
+              '(lean capture config?); replay starts at the origin.')
+        return None
+    window = ('first sample' if args.init_window_ms <= 0
+              else f'median of first {args.init_window_ms:.0f} ms')
+    print(f"Seeding the replay at ({seed['initialX']:+.3f}, "
+          f"{seed['initialY']:+.3f}, {seed['initialZ']:+.3f}) m "
+          f'from the live estimate ({window}).')
+    return seed
 
 
 def parse_params(pairs):
@@ -207,6 +232,10 @@ def plot(replayed, live, gt, title, save_path=None):
 
 
 def main():
+    # Safe to import eagerly: tdoa_replay only imports cffirmware inside
+    # replay(), so this does not front-run ensure_bindings().
+    from bindings.util.tdoa_replay import DEFAULT_INIT_WINDOW_MS
+
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -237,11 +266,28 @@ def main():
     parser.add_argument('--tdoa-std', type=float, default=0.15,
                         help='TDoA measurement std dev [m] used in the Kalman '
                              'update (default: 0.15)')
+    parser.add_argument('--init-from', default='log',
+                        choices=('log', 'origin'),
+                        help='Where the replay starts: log seeds the Kalman '
+                             'initial position from the live stateEstimate at '
+                             'the start of the log, origin keeps the firmware '
+                             'default of (0, 0, 0). Use log whenever the '
+                             'anchor frame is not centred on the takeoff spot '
+                             '(default: log)')
+    parser.add_argument('--init-window-ms', type=float, default=None,
+                        metavar='MS',
+                        help='Length of the window at the log start that '
+                             '--init-from log takes the median over. 0 uses '
+                             'the single first sample. Keep it inside the '
+                             'stationary period before takeoff '
+                             f'(default: {DEFAULT_INIT_WINDOW_MS:.0f})')
     parser.add_argument('--save', default=None, metavar='PNG',
                         help='Save the figure to this file instead of showing it')
     parser.add_argument('--rebuild-bindings', action='store_true',
                         help='Force a rebuild of the cffirmware bindings')
     args = parser.parse_args()
+    if args.init_window_ms is None:
+        args.init_window_ms = DEFAULT_INIT_WINDOW_MS
 
     ensure_bindings(rebuild=args.rebuild_bindings)
     replayed, live, gt = load_series(args)

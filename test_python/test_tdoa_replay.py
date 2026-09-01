@@ -12,6 +12,7 @@ from bindings.util.tdoa_replay import (
     extract_state_estimate,
     filter_known_anchors,
     merge_samples,
+    seed_initial_position,
 )
 from bindings.util.tdoa_selection import build_candidate_groups, make_policy
 
@@ -154,3 +155,48 @@ def test_extract_ground_truth_drops_origin_and_held_positions():
         (20.0, (1.0, 0.0, 1.0)),
         (40.0, (2.0, 0.0, 1.0)),
     ]
+
+
+def _log_with_state_estimate(xs, ys, zs, timestamps):
+    return {'fixedFrequency': {
+        'timestamp': timestamps,
+        'stateEstimate.x': xs,
+        'stateEstimate.y': ys,
+        'stateEstimate.z': zs,
+    }}
+
+
+def test_seed_initial_position_medians_over_the_window():
+    # Sample at t=300 is outside a 200 ms window, and the 16.0 spike inside it
+    # is rejected by the median -- the point of not using a single sample.
+    log = _log_with_state_estimate(
+        xs=[1.0, 16.0, 1.2, 99.0],
+        ys=[2.0, 2.1, 2.2, 99.0],
+        zs=[3.0, 3.1, 3.2, 99.0],
+        timestamps=[100.0, 200.0, 300.0, 5000.0])
+    assert seed_initial_position(log, window_ms=150) == {
+        'initialX': pytest.approx(8.5),   # even count -> mean of the middle two
+        'initialY': pytest.approx(2.05),
+        'initialZ': pytest.approx(3.05),
+    }
+    assert seed_initial_position(log, window_ms=250) == {
+        'initialX': pytest.approx(1.2),   # median of {1.0, 16.0, 1.2}
+        'initialY': pytest.approx(2.1),
+        'initialZ': pytest.approx(3.1),
+    }
+
+
+def test_seed_initial_position_with_a_zero_window_uses_the_first_sample():
+    log = _log_with_state_estimate(
+        xs=[1.0, 16.0], ys=[2.0, 2.1], zs=[3.0, 3.1], timestamps=[100.0, 200.0])
+    assert seed_initial_position(log, window_ms=0) == {
+        'initialX': pytest.approx(1.0),
+        'initialY': pytest.approx(2.0),
+        'initialZ': pytest.approx(3.0),
+    }
+
+
+def test_seed_initial_position_without_a_state_estimate_block():
+    # The lean capture config drops stateEstimate.*; callers keep the origin.
+    assert seed_initial_position({}) is None
+    assert seed_initial_position({'fixedFrequency': {'timestamp': [1.0]}}) is None

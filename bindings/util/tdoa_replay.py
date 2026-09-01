@@ -55,6 +55,54 @@ def extract_state_estimate(log_data):
     ]
 
 
+DEFAULT_INIT_WINDOW_MS = 2000.0
+
+
+def seed_initial_position(log_data, window_ms=DEFAULT_INIT_WINDOW_MS):
+    """Kalman initial position taken from the live estimate at the log start.
+
+    ``kalmanCoreInit`` seeds the state from ``initialX/Y/Z``, which default to
+    the origin. That is fine when the anchor frame is centred on the takeoff
+    spot, but in a frame whose origin is metres away (a show grid, say) the
+    replay starts far from where the drone actually was, and the TDoA
+    measurement Jacobians spend the first seconds linearized about the wrong
+    point. Seeding from the drone's own estimate removes that transient.
+
+    The median over ``window_ms`` is used rather than the single first sample:
+    while the drone is still on the ground the live estimate jitters by a few
+    centimetres, and the median is immune to one bad sample at the log start.
+    ``window_ms=0`` selects the first sample alone.
+
+    Returns a dict suitable for merging into the ``kalman_params`` replay
+    parameter, or None when the log has no ``stateEstimate`` block (the lean
+    capture config drops it) -- in which case the caller keeps the default
+    origin init.
+    """
+    live = extract_state_estimate(log_data)
+    if not live:
+        return None
+
+    t_start = live[0][0]
+    window = [pos for t_ms, pos in live if t_ms - t_start <= window_ms]
+    if not window:
+        window = [live[0][1]]
+
+    return {
+        'initialX': _median(sorted(p[0] for p in window)),
+        'initialY': _median(sorted(p[1] for p in window)),
+        'initialZ': _median(sorted(p[2] for p in window)),
+    }
+
+
+def _median(sorted_values):
+    """Median of an already sorted sequence (mean of the middle two if even)."""
+    n = len(sorted_values)
+    mid = n // 2
+    if n % 2:
+        return sorted_values[mid]
+    return 0.5 * (sorted_values[mid - 1] + sorted_values[mid])
+
+
 def apply_policy(policy, groups):
     """Map candidate groups to 'estTDOA' samples using a selection policy.
 
@@ -139,6 +187,10 @@ def replay(anchor_positions, imu_samples, tdoa_samples, params=None):
                 (see bindings/util/tdoa_std.py). Absent -> constant tdoa_std.
             'std_model_params' (dict, optional): tuning-constant overrides
                 for the std model.
+            'kalman_params' (dict, optional): kalmanCoreParams_t field
+                overrides applied on top of kalmanCoreDefaultParams before
+                kalmanCoreInit, e.g. the initialX/Y/Z from
+                seed_initial_position, or {'procNoiseVel': 0.3}.
 
     Returns:
         [(t_ms, (x, y, z))] trajectory, one entry per 1 kHz iteration.
