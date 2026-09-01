@@ -1,0 +1,46 @@
+1        # config format version (must be 1)
+16384    # ring buffer size in bytes (increase if usd.* logs show dropped events)
+log      # log file name prefix
+0        # enable logging on startup (0/1); 0 -> start with: param set usd.logging 1
+
+# LH+TDoA -> TDoA-only handover capture. Pair with tdoa3_lh_fusion.conf.
+#
+# Logs both measurement streams that reach the estimator, so the replay
+# reconstructs covariance, yaw and outlier filter state rather than logging them.
+#
+# Not usable with config_tdoa_candidates.txt: lighthouse.x/y/z are only written
+# on the crossing-beam path (estimationMethod 0) and read 0.0 on a fused build.
+
+# Lighthouse sweep angles, raw/uncompensated as the LH2 measurement model
+# predicts them. Geometry and calibration are not in the log -- capture them in
+# the same session with:  cfcli -u "$CF_URI" lh config read -o lh-<site>.yaml
+# Check lighthouse.bsGeoVal / bsCalVal cover every base station before flying.
+on:estSweepAngle
+
+# All TDoA anchor-pair candidates (needs param tdoaEngine.logCand > 0).
+on:estTdoaCand
+
+# Baseline: the TDoA measurement the live algorithm selected.
+on:estTDOA
+
+# Flight sequence markers, when examples/app_tdoa_flight is built in.
+on:tdoaFlightStep
+
+# IMU, needed to drive the Kalman replay offline.
+on:estAcceleration
+acc.x
+acc.y
+acc.z
+on:estGyroscope
+gyro.x
+gyro.y
+gyro.z
+
+# Live estimate: seeds the replay's initial position and is the reference for
+# replay-vs-flight divergence. Neither is recoverable from the replay itself.
+on:fixedFrequency
+50       # Hz
+1        # mode: 1 = synchronous with stabilizer loop
+stateEstimate.x
+stateEstimate.y
+stateEstimate.z
