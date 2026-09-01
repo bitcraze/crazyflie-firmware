@@ -22,7 +22,7 @@ OOT_BUILD := $(CURDIR)/build
 
 # Merged onto the platform defconfig, in order. Later fragments win.
 OOT_FRAGMENTS := \
-	$(CRAZYFLIE_BASE)/tools/usdlog/tdoa3_lh_groundtruth.conf \
+	$(CRAZYFLIE_BASE)/tools/usdlog/tdoa3_lh_fusion.conf \
 	$(CURDIR)/app-config
 
 FW_MAKE := $(MAKE) -C $(CRAZYFLIE_BASE) KBUILD_OUTPUT=$(OOT_BUILD) OOT=$(OOT)

@@ -43,7 +43,7 @@ make -j$(nproc)              # -> build/cf21bl.bin
 
 `make <platform>_defconfig` configures and `make` builds; the split is there
 because the first step is what you repeat when you change a fragment. It applies
-the platform defconfig, merges `../../tools/usdlog/tdoa3_lh_groundtruth.conf`
+the platform defconfig, merges `../../tools/usdlog/tdoa3_lh_fusion.conf`
 and `app-config` on top, and runs `olddefconfig` to resolve the result. That
 last pass is not optional — `merge_config.sh -m` skips it by design, and without
 it the build stops and interviews you about the symbols the capture fragment
@@ -187,16 +187,28 @@ cfcli -u "$CF_URI" --csv log print tdoaFlight.state,tdoaFlight.lockSpr
 
 Raising it far enough will always let the drone arm, which is the point and also
 the hazard: this gate is what stops a takeoff on a diverged estimate. Before
-raising it, check that the estimate is right at all — with Lighthouse in
-ground-truth mode you can compare directly:
+raising it, check that the estimate is right at all.
+
+On this branch Lighthouse is fused rather than held out, so there is no
+independent reference on the drone to compare against — `lighthouse.x/y/z` are
+written only on the crossing-beam path and read 0.0 here. Put the drone on a
+known spot in the room and compare against that instead:
 
 ```
-cfcli -u "$CF_URI" --csv log print stateEstimate.x,stateEstimate.y,stateEstimate.z,lighthouse.x,lighthouse.y,lighthouse.z
+cfcli -u "$CF_URI" --csv log print stateEstimate.x,stateEstimate.y,stateEstimate.z,lighthouse.bsReceive
 ```
 
-Those should agree to a few centimetres on a resting drone. If they do not, the
-anchor positions stored on the drone (`cfcli loco display`) probably do not
-match the room, and no threshold will make flying safe.
+The position should agree with the marked spot to a few centimetres. If it does
+not, the anchor positions (`cfcli loco display`) or the base station geometry
+(`cfcli lh config read`) probably do not match the room, and no threshold will
+make flying safe. `bsReceive` is a bitmap of the base stations delivering data:
+a zero there means the estimate is TDoA-only where you are standing, which may
+be correct for the spot or may be the coverage problem you are hunting.
+
+Note that `lockThr` behaves differently here. Inside Lighthouse coverage the
+fused estimate is far tighter than the TDoA-only one the 0.05 default was sized
+for, so the gate passes easily — and passes on the strength of Lighthouse, not
+of the TDoA solution the flight is meant to exercise.
 
 ## Reading the outcome
 
