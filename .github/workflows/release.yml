@@ -52,7 +52,7 @@ jobs:
       id: get_release_version
       env:
         GITHUB_REF : ${{ github.ref }}
-      run: echo "release_version=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
+      run: echo "release_version=$(echo "${GITHUB_REF/refs\/tags\//}" | tr '/' '-')" >> $GITHUB_OUTPUT
 
     - name: Rename binary for upload
       run: cp build/${{ matrix.platform }}.bin build/${{ matrix.platform }}-${{ steps.get_release_version.outputs.release_version }}.bin
