@@ -55,10 +55,12 @@ jobs:
       run: echo "release_version=$(echo "${GITHUB_REF/refs\/tags\//}" | tr '/' '-')" >> $GITHUB_OUTPUT
 
     - name: Rename binary for upload
-      run: cp build/${{ matrix.platform }}.bin build/${{ matrix.platform }}-${{ steps.get_release_version.outputs.release_version }}.bin
+      run: |
+        mkdir -p release_assets
+        cp build/${{ matrix.platform }}.bin release_assets/${{ matrix.platform }}-${{ steps.get_release_version.outputs.release_version }}.bin
 
     - name: Upload ${{ matrix.platform }} bin
       uses: softprops/action-gh-release@e598afbe1493e6b1bafb1f389cabb956eab91231 # v3.0.3
       with:
         tag_name: ${{ github.ref }}
-        files: build/${{ matrix.platform }}-${{ steps.get_release_version.outputs.release_version }}.bin
+        files: release_assets/${{ matrix.platform }}-${{ steps.get_release_version.outputs.release_version }}.bin
