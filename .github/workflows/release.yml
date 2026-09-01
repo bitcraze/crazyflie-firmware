@@ -63,4 +63,6 @@ jobs:
       uses: softprops/action-gh-release@e598afbe1493e6b1bafb1f389cabb956eab91231 # v3.0.3
       with:
         tag_name: ${{ github.ref }}
+        draft: true
+        prerelease: true
         files: release_assets/${{ matrix.platform }}-${{ steps.get_release_version.outputs.release_version }}.bin
