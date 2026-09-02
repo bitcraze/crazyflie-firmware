@@ -5,11 +5,11 @@
  * interpreter in tdoa_flight.c. Add one here, bump nothing else -- the table at
  * the bottom is what tdoaFlight.seq indexes into.
  *
- * COORDINATES ARE NORMALISED, deliberately. x and y are fractions of
- * tdoaFlight.workXY (so +-1.0 is the edge of the working box) and z is a
- * fraction between tdoaFlight.zLo and tdoaFlight.zHi. Re-measuring the usable
- * Lighthouse volume is then a matter of setting three params: every sequence
- * rescales itself and no table below has to be touched.
+ * UNITS ARE IN THE MACRO NAME. _NORM is normalised: x and y are fractions of
+ * tdoaFlight.workXY (+-1.0 is the edge of the working box), z a fraction
+ * between tdoaFlight.zLo and tdoaFlight.zHi. Re-measuring the usable volume is
+ * then three params and no table below has to be touched. GOTO_REL is the
+ * exception: metres, so it does not rescale with the room.
  *
  * Spiral geometry, from plan_spiral_from() in src/modules/src/planner.c:
  *   - crtpCommanderHighLevelSpiral() never sets the planner's `clockwise`
@@ -34,9 +34,13 @@
 
 typedef enum {
   STEP_END = 0,   // terminator, required as the last entry
-  STEP_GOTO,      // a = x_n, b = y_n, c = z_n, d = yaw (rad), e = duration (s)
-  STEP_SPIRAL,    // a = phi (rad), b = r0_n, c = rf_n, d = dz (m), e = duration (s), flag = sideways
-  STEP_HOVER,     // e = duration (s); holds the current setpoint
+  STEP_GOTO_NORM,    // NORMALISED absolute: a = x_n, b = y_n, c = z_n,
+                     //   d = yaw (rad), e = duration (s)
+  STEP_GOTO_REL,     // METRES, relative: a = dx, b = dy, c = dz (all m),
+                     //   d = dyaw (rad), e = duration (s)
+  STEP_SPIRAL_NORM,  // NORMALISED: a = phi (rad), b = r0_n, c = rf_n,
+                     //   d = dz (m), e = duration (s), flag = sideways
+  STEP_HOVER,        // e = duration (s); holds the current setpoint
 } stepKind_t;
 
 typedef struct {
@@ -45,10 +49,15 @@ typedef struct {
   bool flag;
 } flightStep_t;
 
-#define GOTO(x, y, z, yaw, dur) \
-  { .kind = STEP_GOTO, .a = (x), .b = (y), .c = (z), .d = (yaw), .e = (dur), .flag = false }
-#define SPIRAL(phi, r0, rf, dz, dur, sideways) \
-  { .kind = STEP_SPIRAL, .a = (phi), .b = (r0), .c = (rf), .d = (dz), .e = (dur), .flag = (sideways) }
+#define GOTO_NORM(x, y, z, yaw, dur) \
+  { .kind = STEP_GOTO_NORM, .a = (x), .b = (y), .c = (z), .d = (yaw), .e = (dur), .flag = false }
+/* Metres, offset from the planner's current setpoint. World frame: dx/dy are
+ * not rotated by yaw. Can walk outside the geofence; nothing here clamps.
+ */
+#define GOTO_REL(dx, dy, dz, dyaw, dur) \
+  { .kind = STEP_GOTO_REL, .a = (dx), .b = (dy), .c = (dz), .d = (dyaw), .e = (dur), .flag = false }
+#define SPIRAL_NORM(phi, r0, rf, dz, dur, sideways) \
+  { .kind = STEP_SPIRAL_NORM, .a = (phi), .b = (r0), .c = (rf), .d = (dz), .e = (dur), .flag = (sideways) }
 #define HOVER(dur) \
   { .kind = STEP_HOVER, .a = 0, .b = 0, .c = 0, .d = 0, .e = (dur), .flag = false }
 #define END() \
@@ -67,7 +76,7 @@ typedef struct {
  * capture for calibrating tdoa-std against the observed measurement noise.
  */
 static const flightStep_t seqHover[] = {
-  GOTO(0.0f, 0.0f, 0.5f, 0.0f, 4.0f),
+  GOTO_NORM(0.0f, 0.0f, 0.5f, 0.0f, 4.0f),
   HOVER(90.0f),
   END(),
 };
@@ -80,20 +89,20 @@ static const flightStep_t seqHover[] = {
  * fly-away attributable.
  */
 static const flightStep_t seqBox[] = {
-  GOTO( 0.0f,  0.0f, 0.5f, 0.0f, 4.0f),
-  GOTO( 1.0f,  1.0f, 0.5f, 0.0f, 5.0f),
+  GOTO_NORM( 0.0f,  0.0f, 0.5f, 0.0f, 4.0f),
+  GOTO_NORM( 1.0f,  1.0f, 0.5f, 0.0f, 5.0f),
   HOVER(3.0f),
-  GOTO(-1.0f,  1.0f, 0.5f, 0.0f, 6.0f),
+  GOTO_NORM(-1.0f,  1.0f, 0.5f, 0.0f, 6.0f),
   HOVER(3.0f),
-  GOTO(-1.0f, -1.0f, 0.5f, 0.0f, 6.0f),
+  GOTO_NORM(-1.0f, -1.0f, 0.5f, 0.0f, 6.0f),
   HOVER(3.0f),
-  GOTO( 1.0f, -1.0f, 0.5f, 0.0f, 6.0f),
+  GOTO_NORM( 1.0f, -1.0f, 0.5f, 0.0f, 6.0f),
   HOVER(3.0f),
-  GOTO( 1.0f,  1.0f, 0.5f, 0.0f, 6.0f),
-  GOTO(-1.0f,  1.0f, 0.5f, 0.0f, 6.0f),
-  GOTO(-1.0f, -1.0f, 0.5f, 0.0f, 6.0f),
-  GOTO( 1.0f, -1.0f, 0.5f, 0.0f, 6.0f),
-  GOTO( 0.0f,  0.0f, 0.5f, 0.0f, 5.0f),
+  GOTO_NORM( 1.0f,  1.0f, 0.5f, 0.0f, 6.0f),
+  GOTO_NORM(-1.0f,  1.0f, 0.5f, 0.0f, 6.0f),
+  GOTO_NORM(-1.0f, -1.0f, 0.5f, 0.0f, 6.0f),
+  GOTO_NORM( 1.0f, -1.0f, 0.5f, 0.0f, 6.0f),
+  GOTO_NORM( 0.0f,  0.0f, 0.5f, 0.0f, 5.0f),
   END(),
 };
 
@@ -107,18 +116,18 @@ static const flightStep_t seqBox[] = {
  * Each r0 matches the previous rf to stay concentric.
  */
 static const flightStep_t seqSpiral[] = {
-  GOTO(0.0f, -0.40f, 0.35f, 0.0f, 5.0f),
-  SPIRAL(TDOA_FLIGHT_HALF_PI, 0.40f, 0.55f, 0.00f, 5.0f, false),
-  SPIRAL(TDOA_FLIGHT_HALF_PI, 0.55f, 0.70f, 0.00f, 5.0f, false),
-  SPIRAL(TDOA_FLIGHT_HALF_PI, 0.70f, 0.85f, 0.00f, 5.0f, false),
-  SPIRAL(TDOA_FLIGHT_HALF_PI, 0.85f, 1.00f, 0.00f, 5.0f, false),
-  SPIRAL(TDOA_FLIGHT_HALF_PI, 1.00f, 1.00f, 0.15f, 5.0f, false),
-  SPIRAL(TDOA_FLIGHT_HALF_PI, 1.00f, 1.00f, 0.15f, 5.0f, false),
-  SPIRAL(TDOA_FLIGHT_HALF_PI, 1.00f, 0.85f, 0.15f, 5.0f, false),
-  SPIRAL(TDOA_FLIGHT_HALF_PI, 0.85f, 0.70f, 0.15f, 5.0f, false),
-  SPIRAL(TDOA_FLIGHT_HALF_PI, 0.70f, 0.55f, 0.00f, 5.0f, false),
-  SPIRAL(TDOA_FLIGHT_HALF_PI, 0.55f, 0.40f, 0.00f, 5.0f, false),
-  GOTO(0.0f, 0.0f, 0.5f, 0.0f, 5.0f),
+  GOTO_NORM(0.0f, -0.40f, 0.35f, 0.0f, 5.0f),
+  SPIRAL_NORM(TDOA_FLIGHT_HALF_PI, 0.40f, 0.55f, 0.00f, 5.0f, false),
+  SPIRAL_NORM(TDOA_FLIGHT_HALF_PI, 0.55f, 0.70f, 0.00f, 5.0f, false),
+  SPIRAL_NORM(TDOA_FLIGHT_HALF_PI, 0.70f, 0.85f, 0.00f, 5.0f, false),
+  SPIRAL_NORM(TDOA_FLIGHT_HALF_PI, 0.85f, 1.00f, 0.00f, 5.0f, false),
+  SPIRAL_NORM(TDOA_FLIGHT_HALF_PI, 1.00f, 1.00f, 0.15f, 5.0f, false),
+  SPIRAL_NORM(TDOA_FLIGHT_HALF_PI, 1.00f, 1.00f, 0.15f, 5.0f, false),
+  SPIRAL_NORM(TDOA_FLIGHT_HALF_PI, 1.00f, 0.85f, 0.15f, 5.0f, false),
+  SPIRAL_NORM(TDOA_FLIGHT_HALF_PI, 0.85f, 0.70f, 0.15f, 5.0f, false),
+  SPIRAL_NORM(TDOA_FLIGHT_HALF_PI, 0.70f, 0.55f, 0.00f, 5.0f, false),
+  SPIRAL_NORM(TDOA_FLIGHT_HALF_PI, 0.55f, 0.40f, 0.00f, 5.0f, false),
+  GOTO_NORM(0.0f, 0.0f, 0.5f, 0.0f, 5.0f),
   END(),
 };
 
@@ -131,22 +140,36 @@ static const flightStep_t seqSpiral[] = {
  * a steady-state error estimate rather than a transient.
  */
 static const flightStep_t seqVertical[] = {
-  GOTO(0.0f, 0.0f, 0.00f, 0.0f, 4.0f),
+  GOTO_NORM(0.0f, 0.0f, 0.00f, 0.0f, 4.0f),
   HOVER(10.0f),
-  GOTO(0.0f, 0.0f, 0.33f, 0.0f, 4.0f),
+  GOTO_NORM(0.0f, 0.0f, 0.33f, 0.0f, 4.0f),
   HOVER(10.0f),
-  GOTO(0.0f, 0.0f, 0.66f, 0.0f, 4.0f),
+  GOTO_NORM(0.0f, 0.0f, 0.66f, 0.0f, 4.0f),
   HOVER(10.0f),
-  GOTO(0.0f, 0.0f, 1.00f, 0.0f, 4.0f),
+  GOTO_NORM(0.0f, 0.0f, 1.00f, 0.0f, 4.0f),
   HOVER(10.0f),
-  GOTO(0.7f, 0.7f, 1.00f, 0.0f, 6.0f),
+  GOTO_NORM(0.7f, 0.7f, 1.00f, 0.0f, 6.0f),
   HOVER(10.0f),
-  GOTO(0.7f, 0.7f, 0.50f, 0.0f, 4.0f),
+  GOTO_NORM(0.7f, 0.7f, 0.50f, 0.0f, 4.0f),
   HOVER(10.0f),
-  GOTO(0.7f, 0.7f, 0.00f, 0.0f, 4.0f),
+  GOTO_NORM(0.7f, 0.7f, 0.00f, 0.0f, 4.0f),
   HOVER(10.0f),
-  GOTO(0.0f, 0.0f, 0.50f, 0.0f, 6.0f),
+  GOTO_NORM(0.0f, 0.0f, 0.50f, 0.0f, 6.0f),
   END(),
+};
+
+/* 4 - Relative out-and-back along x, 7 m each way. Relative throughout, so it
+ * flies from wherever the drone took off and needs no origin calibration.
+ *
+ * NEEDS tdoaFlight.fenceXY RAISED to ~7.5; the 2.5 m default aborts mid-leg.
+ */
+static const flightStep_t seqRelRange[] = {
+  GOTO_REL( 0.0f, 0.0f, 0.4f, 0.0f, 2.0f),   // TAKEOFF_HEIGHT_M 0.6 -> 1.0 m
+  GOTO_REL(-7.0f, 0.0f, 0.0f, 0.0f, 4.0f),
+  HOVER(0.5f),
+  GOTO_REL(7.0f, 0.0f, 0.0f, 0.0f, 4.0f),
+  GOTO_REL( 0.0f, 0.0f, -0.4f, 0.0f, 2.0f),
+  END(),                                     // the app lands on its own
 };
 
 /* Table order defines tdoaFlight.seq. Appending is safe; reordering renames
@@ -161,6 +184,7 @@ static const flightSequence_t flightSequences[] = {
   { .name = "box",      .steps = seqBox },
   { .name = "spiral",   .steps = seqSpiral },
   { .name = "vertical", .steps = seqVertical },
+  { .name = "relrange", .steps = seqRelRange },
 };
 
 #define TDOA_FLIGHT_N_TABLE_SEQ \

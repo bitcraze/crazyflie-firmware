@@ -70,6 +70,8 @@ cfcli -u "$CF_URI" --csv param get \
     deck.bcLoco,deck.bcLighthouse4,deck.bcUSD,usd.canLog
 
 # 2. Pick a sequence and arm candidate logging
+# logCand is already 1 on a build from tdoa3_lh_fusion.conf, which sets
+# CONFIG_DECK_LOCO_TDOA3_LOG_CANDIDATES -- only needed without that fragment.
 cfcli -u "$CF_URI" param set tdoaEngine.logCand=1
 cfcli -u "$CF_URI" param set tdoaFlight.seq=2,tdoaFlight.delay=15
 
@@ -111,12 +113,16 @@ which motion produced it.
 | 1 | `box` | Two laps of a square with corner pauses. All transients, four distinct anchor geometries. |
 | 2 | `spiral` | Chained 90-degree spiral segments, expanding then contracting while climbing. Continuous motion, no stops. |
 | 3 | `vertical` | Height sweep at two horizontal positions. z is TDoA's weak axis, so this is where errors show first. |
-| 4 | random walk | Seeded pseudo-random waypoints. Same `tdoaFlight.seed` flies the same path, so an interesting run can be repeated exactly. |
+| 4 | `relrange` | Relative out-and-back along x, 7 m each way. **Needs `tdoaFlight.fenceXY` raised to ~7.5**; the 2.5 m default aborts mid-leg. |
+| 5 | random walk | Seeded pseudo-random waypoints. Same `tdoaFlight.seed` flies the same path, so an interesting run can be repeated exactly. |
 
-Sequence coordinates are **normalised**: x and y are fractions of
-`tdoaFlight.workXY` and z is a fraction between `tdoaFlight.zLo` and
-`tdoaFlight.zHi`. Re-measuring the usable volume is three params, and every
-sequence rescales itself.
+Units are in the macro name. `GOTO_NORM` / `SPIRAL_NORM` coordinates are
+**normalised**: x and y are fractions of `tdoaFlight.workXY` and z is a fraction
+between `tdoaFlight.zLo` and `tdoaFlight.zHi`, so re-measuring the usable volume
+is three params and every such sequence rescales itself. `GOTO_REL` is the
+exception — **metres**, offset from the planner's current setpoint — so a
+sequence built from it flies the same shape whatever `workXY` says, and keeping
+it inside `fenceXY` is on you.
 
 Adding one means adding an array and a table entry in `flight_sequences.h`.
 Appending is safe; **reordering is not** — the sequence index is recorded in the

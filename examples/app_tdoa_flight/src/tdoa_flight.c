@@ -278,7 +278,7 @@ static bool fetchStep(const uint8_t seq, const uint8_t idx, flightStep_t* out)
     randomLastY = y;
     randomLastZ = z;
 
-    const flightStep_t step = GOTO(x, y, z, 0.0f, duration);
+    const flightStep_t step = GOTO_NORM(x, y, z, 0.0f, duration);
     *out = step;
     return true;
   }
@@ -301,13 +301,19 @@ static bool startStep(const flightStep_t* step)
   int result = 0;
 
   switch (step->kind) {
-    case STEP_GOTO:
+    case STEP_GOTO_NORM:
       result = crtpCommanderHighLevelGoTo(mapXY(step->a), mapXY(step->b),
                                           mapZ(step->c), step->d, step->e,
                                           false);
       break;
 
-    case STEP_SPIRAL:
+    case STEP_GOTO_REL:
+      // Already metres, and mapZ's zLo floor must not be added to a delta.
+      result = crtpCommanderHighLevelGoTo(step->a, step->b, step->c,
+                                          step->d, step->e, true);
+      break;
+
+    case STEP_SPIRAL_NORM:
       result = crtpCommanderHighLevelSpiral(step->a, mapXY(step->b),
                                             mapXY(step->c), step->d, step->e,
                                             step->flag);
@@ -673,8 +679,8 @@ PARAM_ADD(PARAM_UINT8, start, &pStart)
  */
 PARAM_ADD(PARAM_UINT8, abort, &pAbort)
 /**
- * @brief Sequence index: 0 hover, 1 box, 2 spiral, 3 vertical, 4 seeded random
- * walk. Recorded in the log as tdoaFlight.seq.
+ * @brief Sequence index: 0 hover, 1 box, 2 spiral, 3 vertical, 4 relative
+ * range, 5 seeded random walk. Recorded in the log as tdoaFlight.seq.
  */
 PARAM_ADD(PARAM_UINT8, seq, &pSeq)
 /**
