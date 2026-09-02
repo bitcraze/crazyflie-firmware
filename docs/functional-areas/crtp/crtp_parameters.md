@@ -99,14 +99,15 @@ Request:
 
 | Byte | Field | Content |
 | ---- | ----- |---------|
-| 0    | ID    | ID of the parameter to read (uint8) |
+| 0–1  | ID    | ID of the parameter to read (uint16, little-endian) |
 
 Answer:
 
-| Byte | Field | Content |
-| ---- | ----- |---------|
-| 0    | ID    | ID of the parameter |
-| 1..  | value | Value of the parameter (size and format described in TOC) |
+| Byte | Field  | Content |
+| ---- | ------ |---------|
+| 0–1  | ID     | ID of the parameter |
+| 2    | result | 0 on success, [error number](crtp_error_numbers.md) on failure (packet ends here) |
+| 3..  | value  | Value of the parameter (only present on success; size and format described in TOC) |
 
 The read request is a simple packet on channel 1. Crazyflie answers with
 the value.
@@ -120,17 +121,26 @@ Request:
 
 | Byte | Field | Content |
 | ---- | ----- |---------|
-| 0    | ID    | ID of the parameter to write (uint8) |
-| 1..  | value | Value to write (size and format described in TOC) |
+| 0–1  | ID    | ID of the parameter to write (uint16, little-endian) |
+| 2..  | value | Value to write (size and format described in TOC) |
 
-Answer:
+Answer (success):
+
+Crazyflie echoes the request packet back unchanged, as an acknowledgement:
 
 | Byte | Field | Content |
 | ---- | ----- |---------|
-| 0    | ID    | ID of the parameter |
-| 1..  | value | Value of the parameter (size and format described in TOC) |
+| 0–1  | ID    | ID of the parameter |
+| 2..  | value | Value that was written (size and format described in TOC) |
 
-Crazyflie sends back the parameter value as an acknowledgement.
+Answer (failure, unknown ID):
+
+| Byte | Field  | Content |
+| ---- | ------ |---------|
+| 0–1  | ID     | ID of the parameter |
+| 2    | result | [error number](crtp_error_numbers.md) |
+
+If the parameter is read-only, the write is silently ignored and no answer is sent.
 
 ## Miscellaneous commands
 
