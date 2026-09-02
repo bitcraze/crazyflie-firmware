@@ -159,6 +159,48 @@ def merge_samples(*sample_lists):
     return merged
 
 
+def _run_replay(anchor_positions, imu_samples, tdoa_samples, params=None):
+    """Shared setup/loop for replay() and replay_full_state().
+
+    Yields (now_ms, state, coreData) per 1 kHz iteration, where state is the
+    externalized cffirmware.state_t and coreData is the emulator's
+    cffirmware.kalmanCoreData_t (valid only until the next iteration).
+
+    See replay() for the params dict.
+    """
+    from bindings.util.estimator_kalman_emulator import EstimatorKalmanEmulator
+
+    params = params or {}
+    outlier_filter = None
+    filter_name = params.get('outlier_filter')
+    if filter_name is not None:
+        from bindings.util.tdoa_outlier import make_outlier_filter
+        outlier_filter = make_outlier_filter(
+            filter_name, params.get('outlier_filter_params'))
+
+    std_model = None
+    std_model_name = params.get('std_model')
+    if std_model_name is not None:
+        from bindings.util.tdoa_std import make_std_model
+        std_model = make_std_model(std_model_name,
+                                   params.get('std_model_params'))
+
+    emulator = EstimatorKalmanEmulator(
+        anchor_positions, tdoa_model=params.get('tdoa_model', 'standard'),
+        outlier_filter=outlier_filter, std_model=std_model,
+        kalman_params=params.get('kalman_params'))
+    emulator.TDOA_ENGINE_MEASUREMENT_NOISE_STD = params.get('tdoa_std', DEFAULT_TDOA_STD)
+
+    tdoa_samples, n_skipped = filter_known_anchors(tdoa_samples, anchor_positions)
+    if n_skipped:
+        print(f'WARNING: skipped {n_skipped} TDoA samples referencing anchors '
+              f'not in the anchors file')
+    samples = merge_samples(imu_samples, tdoa_samples)
+    while len(samples):
+        now_ms, state = emulator.run_one_1khz_iteration(samples)
+        yield now_ms, state, emulator.coreData
+
+
 def replay(anchor_positions, imu_samples, tdoa_samples, params=None):
     """Run samples through the real firmware Kalman core.
 
@@ -195,39 +237,48 @@ def replay(anchor_positions, imu_samples, tdoa_samples, params=None):
     Returns:
         [(t_ms, (x, y, z))] trajectory, one entry per 1 kHz iteration.
     """
-    from bindings.util.estimator_kalman_emulator import EstimatorKalmanEmulator
+    return [(t_ms, (state.position.x, state.position.y, state.position.z))
+            for t_ms, state, _ in _run_replay(anchor_positions, imu_samples,
+                                              tdoa_samples, params)]
 
-    params = params or {}
-    outlier_filter = None
-    filter_name = params.get('outlier_filter')
-    if filter_name is not None:
-        from bindings.util.tdoa_outlier import make_outlier_filter
-        outlier_filter = make_outlier_filter(
-            filter_name, params.get('outlier_filter_params'))
 
-    std_model = None
-    std_model_name = params.get('std_model')
-    if std_model_name is not None:
-        from bindings.util.tdoa_std import make_std_model
-        std_model = make_std_model(std_model_name,
-                                   params.get('std_model_params'))
+def replay_full_state(anchor_positions, imu_samples, tdoa_samples, params=None):
+    """Like replay(), but with velocity, attitude and their Kalman std devs.
 
-    emulator = EstimatorKalmanEmulator(
-        anchor_positions, tdoa_model=params.get('tdoa_model', 'standard'),
-        outlier_filter=outlier_filter, std_model=std_model,
-        kalman_params=params.get('kalman_params'))
-    emulator.TDOA_ENGINE_MEASUREMENT_NOISE_STD = params.get('tdoa_std', DEFAULT_TDOA_STD)
+    Same args as replay(). Returns [(t_ms, state)] where state is a dict:
+        'position': (x, y, z) [m], world frame.
+        'velocity': (x, y, z) [m/s], quad body frame (matches the firmware's
+            own statePX/PY/PZ log variables -- paired with std_velocity
+            below, which is only meaningful in the same frame).
+        'attitude': (roll, pitch, yaw) [deg], legacy CF2 body coordinate
+            system (pitch inverted), same convention as stateEstimate.*.
+        'std_position': (x, y, z) [m], sqrt of the P diagonal.
+        'std_velocity': (x, y, z) [m/s] body frame, sqrt of the P diagonal.
+        'std_attitude': (roll, pitch, yaw) [deg], sqrt of the P diagonal for
+            the attitude-error states (D0, D1, D2), which approximate
+            roll/pitch/yaw uncertainty for small errors -- the same quantity
+            the firmware exposes as kalman.varD0/1/2.
+    """
+    import math
 
-    tdoa_samples, n_skipped = filter_known_anchors(tdoa_samples, anchor_positions)
-    if n_skipped:
-        print(f'WARNING: skipped {n_skipped} TDoA samples referencing anchors '
-              f'not in the anchors file')
-    samples = merge_samples(imu_samples, tdoa_samples)
-    if not samples:
-        return []
+    import cffirmware
+
+    idx = (cffirmware.KC_STATE_X, cffirmware.KC_STATE_Y, cffirmware.KC_STATE_Z,
+          cffirmware.KC_STATE_PX, cffirmware.KC_STATE_PY, cffirmware.KC_STATE_PZ,
+          cffirmware.KC_STATE_D0, cffirmware.KC_STATE_D1, cffirmware.KC_STATE_D2)
+
+    def std(core, i):
+        return math.sqrt(max(cffirmware.kalmanCoreGetP(core, idx[i], idx[i]), 0.0))
 
     trajectory = []
-    while len(samples):
-        now_ms, state = emulator.run_one_1khz_iteration(samples)
-        trajectory.append((now_ms, (state.position.x, state.position.y, state.position.z)))
+    for t_ms, state, core in _run_replay(anchor_positions, imu_samples,
+                                        tdoa_samples, params):
+        trajectory.append((t_ms, {
+            'position': (state.position.x, state.position.y, state.position.z),
+            'velocity': tuple(cffirmware.kalmanCoreGetS(core, idx[i]) for i in (3, 4, 5)),
+            'attitude': (state.attitude.roll, state.attitude.pitch, state.attitude.yaw),
+            'std_position': tuple(std(core, i) for i in (0, 1, 2)),
+            'std_velocity': tuple(std(core, i) for i in (3, 4, 5)),
+            'std_attitude': tuple(math.degrees(std(core, i)) for i in (6, 7, 8)),
+        }))
     return trajectory

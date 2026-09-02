@@ -52,16 +52,17 @@ def ensure_bindings(rebuild=False):
 
 
 def load_series(args):
-    """Decode the log and return (replayed, live, ground_truth) trajectories.
+    """Decode the log and return (replayed, replayed_full, live, ground_truth).
 
-    Each is a list of (t_ms, (x, y, z)); replayed is None when the log has no
-    candidate data to replay.
+    replayed is [(t_ms, (x, y, z))]; replayed_full is
+    [(t_ms, state_dict)] (see tdoa_replay.replay_full_state), or None when
+    the log has no candidate data to replay.
     """
     import tools.usdlog.cfusdlog as cfusdlog
     from bindings.util.loco_utils import read_loco_anchor_positions
     from bindings.util.tdoa_replay import (
-        apply_policy, extract_imu_samples, extract_state_estimate, replay,
-        seed_initial_position)
+        apply_policy, extract_imu_samples, extract_state_estimate,
+        replay_full_state, seed_initial_position)
     from bindings.util.tdoa_selection import build_candidate_groups, make_policy
     from tools.usdlog.replay_tdoa import extract_ground_truth
 
@@ -73,7 +74,7 @@ def load_series(args):
     if not groups:
         print('No estTdoaCand data found; plotting live estimate and '
               'ground truth only.')
-        return None, live, gt
+        return None, None, live, gt
 
     anchor_positions = read_loco_anchor_positions(args.anchors)
     imu_samples = extract_imu_samples(log_data)
@@ -90,13 +91,15 @@ def load_series(args):
           + (f' {filter_params}' if filter_params else '') + ') ...')
     kalman_params = resolve_initial_position(args, log_data,
                                              seed_initial_position)
-    replayed = replay(anchor_positions, imu_samples, tdoa_samples,
-                      {'tdoa_std': args.tdoa_std,
-                       'tdoa_model': args.tdoa_model,
-                       'outlier_filter': args.outlier_filter,
-                       'outlier_filter_params': filter_params,
-                       'kalman_params': kalman_params})
-    return replayed, live, gt
+    replayed_full = replay_full_state(
+        anchor_positions, imu_samples, tdoa_samples,
+        {'tdoa_std': args.tdoa_std,
+         'tdoa_model': args.tdoa_model,
+         'outlier_filter': args.outlier_filter,
+         'outlier_filter_params': filter_params,
+         'kalman_params': kalman_params})
+    replayed = [(t_ms, s['position']) for t_ms, s in replayed_full]
+    return replayed, replayed_full, live, gt
 
 
 def resolve_initial_position(args, log_data, seed_initial_position):
@@ -201,7 +204,7 @@ def print_stats(replayed, live, gt):
               f'max {vals[-1]:.3f} m')
 
 
-def plot(replayed, live, gt, title, save_path=None):
+def plot(replayed, live, gt, title, save_path=None, replayed_full=None):
     import matplotlib.pyplot as plt
 
     fig, axes = plt.subplots(3, 1, sharex=True, figsize=(12, 8))
@@ -217,6 +220,14 @@ def plot(replayed, live, gt, title, save_path=None):
             t = [s[0] / 1000.0 for s in traj]
             v = [s[1][dim] for s in traj]
             ax.plot(t, v, label=name, **style)
+        if replayed_full:
+            t = [s[0] / 1000.0 for s in replayed_full]
+            v = [s[1]['position'][dim] for s in replayed_full]
+            sd = [s[1]['std_position'][dim] for s in replayed_full]
+            ax.fill_between(t, [vi - sdi for vi, sdi in zip(v, sd)],
+                            [vi + sdi for vi, sdi in zip(v, sd)],
+                            color='tab:blue', alpha=0.2, lw=0,
+                            label='+/-1 std dev')
         ax.set_ylabel(f'{label} [m]')
         ax.grid(True, alpha=0.3)
     axes[0].legend(loc='upper right')
@@ -227,8 +238,38 @@ def plot(replayed, live, gt, title, save_path=None):
     if save_path:
         fig.savefig(save_path, dpi=150)
         print(f'Saved figure to {save_path}')
-    else:
-        plt.show()
+
+
+def plot_state_with_std(replayed_full, field, std_field, axis_labels, ylabel,
+                        title, save_path=None):
+    """Plot one state field (replayed only) as 3 subplots, one per axis.
+
+    Each subplot shows the replayed value with a shaded +/-1 std dev band
+    from the Kalman core covariance (std_field). replayed_full must be
+    non-empty.
+    """
+    import matplotlib.pyplot as plt
+
+    fig, axes = plt.subplots(3, 1, sharex=True, figsize=(12, 8))
+    t = [s[0] / 1000.0 for s in replayed_full]
+    for dim, (ax, label) in enumerate(zip(axes, axis_labels)):
+        v = [s[1][field][dim] for s in replayed_full]
+        sd = [s[1][std_field][dim] for s in replayed_full]
+        lo = [vi - sdi for vi, sdi in zip(v, sd)]
+        hi = [vi + sdi for vi, sdi in zip(v, sd)]
+        ax.plot(t, v, label='bindings estimate (replay)', color='tab:blue', lw=1.0)
+        ax.fill_between(t, lo, hi, color='tab:blue', alpha=0.2, lw=0,
+                        label='+/-1 std dev')
+        ax.set_ylabel(f'{label} [{ylabel}]')
+        ax.grid(True, alpha=0.3)
+    axes[0].legend(loc='upper right')
+    axes[0].set_title(title)
+    axes[-1].set_xlabel('time [s]')
+    fig.tight_layout()
+
+    if save_path:
+        fig.savefig(save_path, dpi=150)
+        print(f'Saved figure to {save_path}')
 
 
 def main():
@@ -282,7 +323,10 @@ def main():
                              'stationary period before takeoff '
                              f'(default: {DEFAULT_INIT_WINDOW_MS:.0f})')
     parser.add_argument('--save', default=None, metavar='PNG',
-                        help='Save the figure to this file instead of showing it')
+                        help='Save the figures instead of showing them, one '
+                             'file per plot window with this path\'s stem '
+                             'suffixed (e.g. out.png -> out_position.png, '
+                             'out_velocity.png, out_angles.png)')
     parser.add_argument('--rebuild-bindings', action='store_true',
                         help='Force a rebuild of the cffirmware bindings')
     args = parser.parse_args()
@@ -290,7 +334,7 @@ def main():
         args.init_window_ms = DEFAULT_INIT_WINDOW_MS
 
     ensure_bindings(rebuild=args.rebuild_bindings)
-    replayed, live, gt = load_series(args)
+    replayed, replayed_full, live, gt = load_series(args)
     if not (replayed or live or gt):
         sys.exit('Nothing to plot: no replayable candidates, no stateEstimate '
                  'and no Lighthouse data in this log.')
@@ -298,7 +342,31 @@ def main():
     title = (f'{Path(args.logfile).name}  '
              f'(selection policy: {args.selection_policy}, '
              f'model: {args.tdoa_model}, filter: {args.outlier_filter})')
-    plot(replayed, live, gt, title, save_path=args.save)
+
+    def save_path_for(suffix):
+        if not args.save:
+            return None
+        p = Path(args.save)
+        return str(p.with_name(f'{p.stem}_{suffix}{p.suffix}'))
+
+    plot(replayed, live, gt, title, save_path=save_path_for('position'),
+        replayed_full=replayed_full)
+    if replayed_full:
+        plot_state_with_std(replayed_full, 'velocity', 'std_velocity',
+                            ('vx (body)', 'vy (body)', 'vz (body)'), 'm/s',
+                            f'{title}  -  velocity',
+                            save_path=save_path_for('velocity'))
+        plot_state_with_std(replayed_full, 'attitude', 'std_attitude',
+                            ('roll', 'pitch', 'yaw'), 'deg',
+                            f'{title}  -  angles',
+                            save_path=save_path_for('angles'))
+    else:
+        print('No replay data; skipping velocity and angle plots '
+              '(they need estTdoaCand data to replay).')
+
+    if not args.save:
+        import matplotlib.pyplot as plt
+        plt.show()
 
 
 if __name__ == '__main__':

@@ -76,6 +76,15 @@ void poly4d_free(struct poly4d *p)
     free(p);
 }
 
+float kalmanCoreGetS(const kalmanCoreData_t *d, int i)
+{
+    return d->S[i];
+}
+float kalmanCoreGetP(const kalmanCoreData_t *d, int i, int j)
+{
+    return d->P[i][j];
+}
+
 struct vec vec2svec(struct vec3_s v)
 {
     return mkvec(v.x, v.y, v.z);
