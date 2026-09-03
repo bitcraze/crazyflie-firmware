@@ -17,6 +17,8 @@ Sample format (shared with EstimatorKalmanEmulator): ``(log_type, sample_dict)``
 where ``sample_dict`` always carries a ``'timestamp'`` in milliseconds.
 """
 
+import math
+
 DEFAULT_TDOA_STD = 0.15
 
 
@@ -32,6 +34,23 @@ def extract_imu_samples(log_data):
             sample = {name: values[i] for name, values in data.items()}
             samples.append((log_type, sample))
     return samples
+
+
+def extract_sweep_samples(log_data):
+    """Return Lighthouse sweep-angle samples in (log_type, sample_dict) form.
+
+    Reads the ``estSweepAngle`` event block written by estimator.c when the
+    Lighthouse deck feeds the estimator (estimationMethod 1, i.e. a build
+    without DECK_LIGHTHOUSE_AS_GROUNDTRUTH). Empty on a ground-truth build,
+    where the deck pushes a pre-computed crossing-beam position instead.
+    """
+    data = log_data.get('estSweepAngle')
+    if not data or 'timestamp' not in data:
+        return []
+    return [
+        ('estSweepAngle', {name: values[i] for name, values in data.items()})
+        for i in range(len(data['timestamp']))
+    ]
 
 
 def extract_state_estimate(log_data):
@@ -159,14 +178,20 @@ def merge_samples(*sample_lists):
     return merged
 
 
-def replay(anchor_positions, imu_samples, tdoa_samples, params=None):
+def replay(anchor_positions, imu_samples, tdoa_samples, params=None,
+           sweep_samples=None):
     """Run samples through the real firmware Kalman core.
 
     Args:
         anchor_positions: dict anchor id -> cffirmware.vec3_s (see
-            loco_utils.read_loco_anchor_positions).
+            loco_utils.read_loco_anchor_positions). May be None/empty for a
+            Lighthouse-only replay.
         imu_samples: from extract_imu_samples.
         tdoa_samples: from apply_policy (or synthetic, same shape).
+        sweep_samples: optional, from extract_sweep_samples. Merged into the
+            same stream, so the Kalman core sees Lighthouse and TDoA updates
+            interleaved on the logged clock -- which is the point when
+            replaying a LH+TDoA -> TDoA-only handover.
         params: optional dict of tuning parameters. Supported:
             'tdoa_std' (float, default 0.15): TDoA measurement std dev [m].
             'tdoa_model' (str, default 'standard'): TDoA measurement model.
@@ -191,6 +216,12 @@ def replay(anchor_positions, imu_samples, tdoa_samples, params=None):
                 overrides applied on top of kalmanCoreDefaultParams before
                 kalmanCoreInit, e.g. the initialX/Y/Z from
                 seed_initial_position, or {'procNoiseVel': 0.3}.
+            'basestation_poses', 'basestation_calibration' (dict, optional):
+                Lighthouse geometry and calibration, both as returned by
+                lighthouse_utils.load_lighthouse_calibration(). Required when
+                sweep_samples is non-empty.
+            'sweep_std' (float, optional): Lighthouse sweep-angle measurement
+                std dev [rad]; default is the firmware's lighthouse.sweepStd2.
 
     Returns:
         [(t_ms, (x, y, z))] trajectory, one entry per 1 kHz iteration.
@@ -212,22 +243,42 @@ def replay(anchor_positions, imu_samples, tdoa_samples, params=None):
         std_model = make_std_model(std_model_name,
                                    params.get('std_model_params'))
 
+    emulator_kwargs = {}
+    for key in ('basestation_poses', 'basestation_calibration', 'sweep_std'):
+        if params.get(key) is not None:
+            emulator_kwargs[key] = params[key]
+
     emulator = EstimatorKalmanEmulator(
         anchor_positions, tdoa_model=params.get('tdoa_model', 'standard'),
         outlier_filter=outlier_filter, std_model=std_model,
-        kalman_params=params.get('kalman_params'))
+        kalman_params=params.get('kalman_params'), **emulator_kwargs)
     emulator.TDOA_ENGINE_MEASUREMENT_NOISE_STD = params.get('tdoa_std', DEFAULT_TDOA_STD)
 
-    tdoa_samples, n_skipped = filter_known_anchors(tdoa_samples, anchor_positions)
+    n_before = len(tdoa_samples)
+    known = anchor_positions or {}
+    missing = sorted({i for _, m in tdoa_samples
+                      for i in (m['idA'], m['idB']) if i not in known})
+    tdoa_samples, n_skipped = filter_known_anchors(tdoa_samples, known)
     if n_skipped:
-        print(f'WARNING: skipped {n_skipped} TDoA samples referencing anchors '
-              f'not in the anchors file')
-    samples = merge_samples(imu_samples, tdoa_samples)
+        print(f'WARNING: skipped {n_skipped}/{n_before} TDoA samples '
+              f'({n_skipped / n_before * 100.0:.1f}%) referencing anchor id(s) '
+              f'{missing}, which are not in the anchors file. The drone ranged '
+              f'against them, so the replay is working from less data than the '
+              f'live estimate did.')
+    samples = merge_samples(imu_samples, tdoa_samples, sweep_samples or [])
     if not samples:
         return []
 
     trajectory = []
     while len(samples):
         now_ms, state = emulator.run_one_1khz_iteration(samples)
-        trajectory.append((now_ms, (state.position.x, state.position.y, state.position.z)))
+        pos = (state.position.x, state.position.y, state.position.z)
+        if not all(math.isfinite(v) for v in pos):
+            print(f'ERROR: the Kalman state went non-finite at '
+                  f'{now_ms / 1000.0:.1f} s; truncating the replay after '
+                  f'{len(trajectory)} iterations. The filter diverged -- the '
+                  f'trajectory up to here is still valid, everything after it '
+                  f'would have been NaN.')
+            break
+        trajectory.append((now_ms, pos))
     return trajectory
