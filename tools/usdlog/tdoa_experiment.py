@@ -16,6 +16,8 @@ The grid file is a YAML list of config dicts, e.g.::
 
     - {policy: baseline, filter: integrator, model: standard, std: 0.15}
     - {policy: median,   filter: mad_window, model: standard, std: 0.30}
+    - {policy: geometry, policy_params: {inner: round_robin, limit: 0.85},
+       filter: integrator, model: standard, std: 0.15}
 
 Each replay runs in a fresh forked worker process (the robust model keeps
 M-estimation state in a process-wide static buffer, so runs must not share a
@@ -37,7 +39,12 @@ from bindings.util.tdoa_replay import (
     extract_imu_samples,
     replay,
 )
-from bindings.util.tdoa_selection import build_candidate_groups, make_policy
+from bindings.util.tdoa_selection import (
+    annotate_oracle_error, annotate_pair_geometry,
+    annotate_remote_age,
+    build_candidate_groups,
+    make_policy,
+)
 
 FLYAWAY_THRESHOLD_M = 0.3
 TRAIN_FRACTION = 0.6
@@ -124,16 +131,56 @@ def config_label(config):
     return '/'.join(parts)
 
 
-def load_context(logfile, anchors_path, train_fraction=TRAIN_FRACTION):
+def annotate_for(configs, groups, anchor_positions, truth=None):
+    """Run only the annotate_* passes the grid's policies actually ask for.
+
+    Gate policies ('fresh', 'geometry') need a candidate key that
+    build_candidate_groups does not produce, and each declares which via its
+    ``requires``. A grid that names none of them leaves the candidates exactly
+    as built -- no extra keys, no extra passes -- so adding a gate policy to
+    the menu cannot change what a run without one does.
+
+    Returns the names of the passes that were run, for reporting.
+    """
+    needed = set()
+    for config in configs:
+        policy = make_policy(config['policy'], config.get('policy_params'))
+        needed.update(policy.requires)
+    if not needed:
+        return []
+
+    ran = []
+    if 'age_ms' in needed:
+        annotate_remote_age(groups)
+        ran.append('remote age')
+    if 'distance_ratio' in needed:
+        annotate_pair_geometry(groups, anchor_positions)
+        ran.append('pair geometry')
+    if 'oracle_error' in needed:
+        if not truth:
+            raise ValueError('the oracle policy needs ground truth; this log '
+                             'has no Lighthouse data')
+        annotate_oracle_error(groups, anchor_positions, truth)
+        ran.append('oracle error')
+    return ran
+
+
+def load_context(logfile, anchors_path, configs, train_fraction=TRAIN_FRACTION):
     from bindings.util.loco_utils import read_loco_anchor_positions
     log_data = cfusdlog.decode(logfile)
     _CTX['anchor_positions'] = read_loco_anchor_positions(anchors_path)
-    _CTX['groups'] = build_candidate_groups(log_data)
-    _CTX['imu_samples'] = extract_imu_samples(log_data)
+    groups = build_candidate_groups(log_data)
     gt = extract_ground_truth(log_data)
     _CTX['gt'] = gt
     if not gt:
         sys.exit('No ground truth in log; the experiment harness needs it.')
+    # After gt: the oracle policy is annotated from the ground truth itself.
+    ran = annotate_for(configs, groups, _CTX['anchor_positions'], gt)
+    if ran:
+        print(f'Annotated candidates for the gate policies in the grid: '
+              f'{", ".join(ran)}')
+    _CTX['groups'] = groups
+    _CTX['imu_samples'] = extract_imu_samples(log_data)
     t0, t1 = gt[0][0], gt[-1][0]
     _CTX['t_warmup_end_ms'] = t0 + WARMUP_S * 1000.0
     _CTX['t_split_ms'] = t0 + train_fraction * (t1 - t0)
@@ -189,7 +236,7 @@ def main():
     if not isinstance(configs, list):
         sys.exit('Grid file must be a YAML list of config dicts.')
 
-    load_context(args.logfile, args.anchors, args.train_fraction)
+    load_context(args.logfile, args.anchors, configs, args.train_fraction)
     t0 = _CTX['gt'][0][0] / 1000.0
     print(f'{len(configs)} configs; gt span {t0:.1f}-{_CTX["gt"][-1][0]/1000.0:.1f}s, '
           f'warmup ends {_CTX["t_warmup_end_ms"]/1000.0:.1f}s, '
