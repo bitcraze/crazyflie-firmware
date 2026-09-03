@@ -51,6 +51,7 @@ def ensure_bindings(rebuild=False):
     import cffirmware  # noqa: F401
 
 
+
 def load_series(args):
     """Decode the log and return (replayed, live, ground_truth) trajectories.
 
@@ -62,12 +63,27 @@ def load_series(args):
     from bindings.util.tdoa_replay import (
         apply_policy, extract_imu_samples, extract_state_estimate, replay,
         seed_initial_position)
-    from bindings.util.tdoa_selection import build_candidate_groups, make_policy
+    from bindings.util.tdoa_selection import (
+        FreshnessPolicy, GeometryPolicy, annotate_oracle_error,
+        annotate_pair_geometry, annotate_remote_age, build_candidate_groups,
+        make_policy, remote_age_blind_fraction)
     from tools.usdlog.replay_tdoa import extract_ground_truth
 
     log_data = cfusdlog.decode(args.logfile)
     live = extract_state_estimate(log_data)
     gt = extract_ground_truth(log_data)
+    if args.align_truth != 'none' and gt and live:
+        from bindings.util.tdoa_align import fit_alignment
+        reference = {'live': live}[args.align_truth]
+        alignment = fit_alignment(gt, reference, model=args.align_model)
+        if alignment is None:
+            print('Frame alignment: too few paired samples, skipping')
+        else:
+            gt = alignment.apply_trajectory(gt)
+            print(f'Frame alignment: mapped Lighthouse into the Loco frame '
+                  f'with a {args.align_model} fit against the '
+                  f'{args.align_truth} estimate')
+            print(alignment.describe())
 
     groups = build_candidate_groups(log_data)
     if not groups:
@@ -80,7 +96,81 @@ def load_series(args):
     policy_params = parse_params(args.policy_param)
     filter_params = parse_params(args.filter_param)
     policy = make_policy(args.selection_policy, policy_params)
+    if 'oracle_error' in policy.requires:
+        if args.oracle_reference == 'live':
+            # Scoring against the drone's OWN estimate instead of ground truth
+            # makes this a realizable policy rather than a bound: the firmware
+            # can compute each candidate's innovation before choosing, since it
+            # is two distances and a subtraction, no Kalman update needed. It
+            # approximates in-loop selection with a previous pass's trajectory,
+            # so it does not reproduce the self-confirming feedback that a true
+            # in-loop version would have -- treat it as optimistic until that
+            # is built.
+            if not live:
+                raise SystemExit('--oracle-reference live needs stateEstimate '
+                                 'in the log.')
+            reference, ref_name = live, "the drone's own live estimate"
+        else:
+            reference, ref_name = gt, 'Lighthouse ground truth'
+        if not reference:
+            raise SystemExit(
+                'The oracle selection policy scores candidates against ground '
+                'truth, and this log has no Lighthouse data (lighthouse.x/y/z '
+                'in the uSD fixedFrequency config, with base stations visible). '
+                'Without it there is nothing to be an oracle about.')
+        annotate_oracle_error(groups, anchor_positions, reference,
+                              max_gap_ms=args.oracle_max_gap_ms,
+                              score=args.oracle_score)
+        n_cand = sum(len(g['candidates']) for g in groups)
+        n_scored = sum(1 for g in groups for c in g['candidates']
+                       if c['oracle_error'] != float('inf'))
+        n_packets = sum(1 for g in groups
+                        if any(c['oracle_error'] != float('inf')
+                               for c in g['candidates']))
+        print(f'Oracle: scoring candidates against {len(reference)} samples of '
+              f'{ref_name} ({args.oracle_score} error, gaps wider than '
+              f'{args.oracle_max_gap_ms:.0f} ms left unscored)')
+        print(f'  scored {n_scored}/{n_cand} candidates '
+              f'({n_scored / max(n_cand, 1) * 100:.1f}%); '
+              f'{n_packets}/{len(groups)} packets '
+              f'({n_packets / max(len(groups), 1) * 100:.1f}%) have a scorable '
+              f'candidate, the rest fall back to the flown selection')
+    if args.distance_ratio_limit is not None:
+        annotate_pair_geometry(groups, anchor_positions)
+        policy = GeometryPolicy(inner=policy, limit=args.distance_ratio_limit)
+        n_cand = sum(len(g['candidates']) for g in groups)
+        n_good = sum(1 for g in groups for c in g['candidates']
+                     if c['distance_ratio'] < args.distance_ratio_limit)
+        n_packets_kept = sum(1 for g in groups
+                             if any(c['distance_ratio'] < args.distance_ratio_limit
+                                    for c in g['candidates']))
+        print(f'Geometry gate (firmware PR #1650): rejecting candidates whose '
+              f'|distanceDiff| is at or above {args.distance_ratio_limit:.2f} '
+              f'x the anchor-pair separation')
+        print(f'  kept {n_good}/{n_cand} candidates '
+              f'({n_good / max(n_cand, 1) * 100:.1f}%); '
+              f'{n_packets_kept}/{len(groups)} packets '
+              f'({n_packets_kept / max(len(groups), 1) * 100:.1f}%) still have '
+              f'a well-conditioned candidate')
+    if args.max_remote_age_ms is not None:
+        annotate_remote_age(groups)
+        policy = FreshnessPolicy(inner=policy, max_age_ms=args.max_remote_age_ms)
+        blind = remote_age_blind_fraction(log_data)
+        print(f'Freshness gate: dropping candidates whose remote anchor was '
+              f'last heard more than {args.max_remote_age_ms:.0f} ms ago'
+              + (f' (age is a proxy, blind to {blind * 100:.2f}% of packets, '
+                 f'so it only over-estimates)' if blind is not None else ''))
     tdoa_samples = apply_policy(policy, groups)
+    if args.max_remote_age_ms is not None:
+        n_cand = sum(len(g['candidates']) for g in groups)
+        n_fresh = sum(1 for g in groups for c in g['candidates']
+                      if c['age_ms'] <= args.max_remote_age_ms)
+        n_packets_kept = sum(1 for g in groups
+                             if any(c['age_ms'] <= args.max_remote_age_ms
+                                    for c in g['candidates']))
+        print(f'  kept {n_fresh}/{n_cand} candidates ({n_fresh / max(n_cand, 1) * 100:.1f}%); '
+              f'{n_packets_kept}/{len(groups)} packets '
+              f'({n_packets_kept / max(len(groups), 1) * 100:.1f}%) still have a fresh candidate')
     print(f'Replaying {len(tdoa_samples)} TDoA + {len(imu_samples)} IMU samples '
           f'through the firmware Kalman core '
           f'(selection policy: {args.selection_policy}'
@@ -124,17 +214,27 @@ def parse_params(pairs):
     """Parse repeated KEY=VALUE args into a dict, as int where possible.
 
     Tuning constants are numeric; sizes like WINDOW must stay int (they end
-    up as a deque maxlen).
+    up as a deque maxlen). ``KEY=none`` yields None, which several policies
+    take as "no limit" -- OraclePolicy's k=none feeds every candidate, and its
+    fallback=none drops unscorable packets instead of replaying the flown pair.
     """
     params = {}
     for pair in pairs or []:
         key, sep, value = pair.partition('=')
         if not sep:
             sys.exit(f"--*-param expects KEY=VALUE, got '{pair}'")
+        if value.lower() == 'none':
+            params[key] = None
+            continue
         try:
             params[key] = int(value)
         except ValueError:
-            params[key] = float(value)
+            try:
+                params[key] = float(value)
+            except ValueError:
+                # Not every tuning constant is numeric: FreshnessPolicy takes
+                # inner=<policy name>, for instance.
+                params[key] = value
     return params
 
 
@@ -235,6 +335,8 @@ def main():
     # Safe to import eagerly: tdoa_replay only imports cffirmware inside
     # replay(), so this does not front-run ensure_bindings().
     from bindings.util.tdoa_replay import DEFAULT_INIT_WINDOW_MS
+    from bindings.util.tdoa_selection import (
+        DEFAULT_DISTANCE_RATIO_LIMIT, DEFAULT_MAX_REMOTE_AGE_MS)
 
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -263,9 +365,75 @@ def main():
                         help='Outlier-filter tuning-constant override, '
                              'repeatable (e.g. --filter-param WINDOW=16 '
                              '--filter-param WARMUP=6 for pair_hampel)')
+    parser.add_argument('--align-truth', default='none',
+                        choices=('none', 'live'),
+                        help='Fit a rigid transform mapping the Lighthouse '
+                             'ground truth into the Loco anchor frame before '
+                             'anything is scored against it, removing the '
+                             'survey disagreement between the two systems. '
+                             "'live' fits against the onboard estimate, which "
+                             'is independent of whatever the replay is testing, '
+                             'so several policies can be compared under one '
+                             'alignment (default: none)')
+    parser.add_argument('--align-model', default='translation',
+                        choices=('translation', 'rigid', 'similarity'),
+                        help='Degrees of freedom for --align-truth: '
+                             "'translation' solves the origin offset only, "
+                             "'rigid' adds rotation, 'similarity' adds a "
+                             'uniform scale. Default is translation, because '
+                             'on these logs it is the only term that '
+                             'reproduces between flights - fitted rotation and '
+                             'scale vary flight to flight, which a real frame '
+                             'relationship cannot. Fit the wider models to '
+                             'check that, not to lower the residual')
+    parser.add_argument('--oracle-reference', default='truth',
+                        choices=('truth', 'live'),
+                        help="What --selection-policy oracle scores against. "
+                             "'truth' is Lighthouse, giving an upper bound no "
+                             "policy can reach. 'live' is the drone's own "
+                             'estimate, which the firmware has at selection '
+                             'time, turning the same machinery into a '
+                             'realizable minimum-innovation selector '
+                             '(default: truth)')
+    parser.add_argument('--oracle-score', default='measurement',
+                        choices=('measurement', 'position'),
+                        help="Objective for --selection-policy oracle: "
+                             "'measurement' minimises TDoA error against "
+                             "ground truth [m]; 'position' divides by the "
+                             "measurement Jacobian magnitude |h| = 2 sin(0.5 "
+                             "theta) so nearly-collinear anchor pairs, where a "
+                             "given measurement error displaces the estimate "
+                             "further, are penalised accordingly "
+                             "(default: measurement)")
+    parser.add_argument('--oracle-max-gap-ms', type=float, default=100.0,
+                        help='Refuse to interpolate ground truth across gaps '
+                             'wider than MS when scoring oracle candidates; '
+                             'those candidates stay unscored rather than being '
+                             'guessed at (default: 100)')
     parser.add_argument('--tdoa-std', type=float, default=0.15,
                         help='TDoA measurement std dev [m] used in the Kalman '
                              'update (default: 0.15)')
+    parser.add_argument('--max-remote-age-ms', type=float, default=None,
+                        metavar='MS',
+                        help='Drop candidates whose remote anchor was last '
+                             'heard more than MS ago, before the selection '
+                             'policy runs. Stale remote data is the dominant '
+                             'source of gross TDoA outliers (see '
+                             'bindings/util/tdoa_selection.annotate_remote_age); '
+                             f'{DEFAULT_MAX_REMOTE_AGE_MS:.0f} is a good '
+                             'starting point. Omitted: no freshness gate')
+    parser.add_argument('--distance-ratio-limit', type=float, default=None,
+                        metavar='RATIO',
+                        help='Reject candidates whose |distanceDiff| is at or '
+                             'above RATIO times the separation between the two '
+                             'anchors, before the selection policy runs. This '
+                             'is the anchor-pair geometry filter of firmware '
+                             'PR #1650 (matchRandomAnchor); the ratio nears 1 '
+                             'when the tag is close to the line through the '
+                             'pair, where the measurement carries little '
+                             'position information. The firmware default is '
+                             f'{DEFAULT_DISTANCE_RATIO_LIMIT}. Omitted: no '
+                             'geometry gate')
     parser.add_argument('--init-from', default='log',
                         choices=('log', 'origin'),
                         help='Where the replay starts: log seeds the Kalman '
