@@ -55,6 +55,22 @@ def extract_state_estimate(log_data):
     ]
 
 
+def extract_outlier_filter_window(log_data):
+    """The live TDoA outlier filter's open/closed state [(t_ms, is_open)]
+    from the fixedFrequency block.
+
+    Requires outlierf.tdoaWin in the uSD fixedFrequency config (the on-drone
+    outlierFilterTdoaState.isFilterOpen).
+    """
+    ff = log_data.get('fixedFrequency')
+    if not ff or 'timestamp' not in ff or 'outlierf.tdoaWin' not in ff:
+        return []
+    return [
+        (float(ff['timestamp'][i]), bool(ff['outlierf.tdoaWin'][i]))
+        for i in range(len(ff['timestamp']))
+    ]
+
+
 DEFAULT_INIT_WINDOW_MS = 2000.0
 
 
@@ -162,9 +178,14 @@ def merge_samples(*sample_lists):
 def _run_replay(anchor_positions, imu_samples, tdoa_samples, params=None):
     """Shared setup/loop for replay() and replay_full_state().
 
-    Yields (now_ms, state, coreData) per 1 kHz iteration, where state is the
-    externalized cffirmware.state_t and coreData is the emulator's
-    cffirmware.kalmanCoreData_t (valid only until the next iteration).
+    Yields (now_ms, state, coreData, filter_is_open, tdoa_events) per 1 kHz
+    iteration, where state is the externalized cffirmware.state_t, coreData
+    is the emulator's cffirmware.kalmanCoreData_t (valid only until the next
+    iteration), filter_is_open is the outlier filter's open/closed state
+    (see tdoa_outlier.OutlierFilter.is_open), or None when no outlier_filter
+    was configured or the filter has no such concept, and tdoa_events is the
+    list of TDoA measurements processed during this iteration (usually
+    empty; see EstimatorKalmanEmulator.tdoa_events for the dict shape).
 
     See replay() for the params dict.
     """
@@ -198,7 +219,8 @@ def _run_replay(anchor_positions, imu_samples, tdoa_samples, params=None):
     samples = merge_samples(imu_samples, tdoa_samples)
     while len(samples):
         now_ms, state = emulator.run_one_1khz_iteration(samples)
-        yield now_ms, state, emulator.coreData
+        filter_is_open = None if outlier_filter is None else outlier_filter.is_open
+        yield now_ms, state, emulator.coreData, filter_is_open, emulator.tdoa_events
 
 
 def replay(anchor_positions, imu_samples, tdoa_samples, params=None):
@@ -238,14 +260,16 @@ def replay(anchor_positions, imu_samples, tdoa_samples, params=None):
         [(t_ms, (x, y, z))] trajectory, one entry per 1 kHz iteration.
     """
     return [(t_ms, (state.position.x, state.position.y, state.position.z))
-            for t_ms, state, _ in _run_replay(anchor_positions, imu_samples,
-                                              tdoa_samples, params)]
+            for t_ms, state, _, _, _ in _run_replay(anchor_positions, imu_samples,
+                                                     tdoa_samples, params)]
 
 
 def replay_full_state(anchor_positions, imu_samples, tdoa_samples, params=None):
     """Like replay(), but with velocity, attitude and their Kalman std devs.
 
-    Same args as replay(). Returns [(t_ms, state)] where state is a dict:
+    Same args as replay(). Returns (trajectory, tdoa_innovations):
+
+    trajectory is [(t_ms, state)] where state is a dict:
         'position': (x, y, z) [m], world frame.
         'velocity': (x, y, z) [m/s], quad body frame (matches the firmware's
             own statePX/PY/PZ log variables -- paired with std_velocity
@@ -258,6 +282,26 @@ def replay_full_state(anchor_positions, imu_samples, tdoa_samples, params=None):
             the attitude-error states (D0, D1, D2), which approximate
             roll/pitch/yaw uncertainty for small errors -- the same quantity
             the firmware exposes as kalman.varD0/1/2.
+        'filter_open': the outlier filter's open/closed state (bool), or
+            None when no outlier_filter was configured or the filter has
+            no such concept (see tdoa_outlier.OutlierFilter.is_open).
+
+    tdoa_innovations is [{...}], one dict per TDoA measurement replayed, in
+    timestamp order:
+        'timestamp': measurement time [ms] (the group's packet time, see
+            apply_policy).
+        'idA', 'idB': the two anchor ids the measurement is a distance-
+            difference between.
+        'error': measured - predicted distanceDiff [m] (the Kalman
+            innovation, kalmanCoreTdoaInnovation), or NaN on degenerate
+            anchor/position geometry.
+        'std_dev': the measurement std dev [m] actually used for this
+            update (the std_model's output when one is configured, else
+            the constant tdoa_std).
+        'accepted': whether the outlier filter let this measurement update
+            the state, or None when no outlier_filter was configured (the
+            firmware's built-in gating then applies, but its per-sample
+            decision isn't observable here).
     """
     import math
 
@@ -271,8 +315,9 @@ def replay_full_state(anchor_positions, imu_samples, tdoa_samples, params=None):
         return math.sqrt(max(cffirmware.kalmanCoreGetP(core, idx[i], idx[i]), 0.0))
 
     trajectory = []
-    for t_ms, state, core in _run_replay(anchor_positions, imu_samples,
-                                        tdoa_samples, params):
+    tdoa_innovations = []
+    for t_ms, state, core, filter_is_open, tdoa_events in _run_replay(
+            anchor_positions, imu_samples, tdoa_samples, params):
         trajectory.append((t_ms, {
             'position': (state.position.x, state.position.y, state.position.z),
             'velocity': tuple(cffirmware.kalmanCoreGetS(core, idx[i]) for i in (3, 4, 5)),
@@ -280,5 +325,7 @@ def replay_full_state(anchor_positions, imu_samples, tdoa_samples, params=None):
             'std_position': tuple(std(core, i) for i in (0, 1, 2)),
             'std_velocity': tuple(std(core, i) for i in (3, 4, 5)),
             'std_attitude': tuple(math.degrees(std(core, i)) for i in (6, 7, 8)),
+            'filter_open': filter_is_open,
         }))
-    return trajectory
+        tdoa_innovations.extend(tdoa_events)
+    return trajectory, tdoa_innovations

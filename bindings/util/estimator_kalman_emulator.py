@@ -69,6 +69,11 @@ class EstimatorKalmanEmulator:
             time_ms = int(first_sample[1]['timestamp'])
             self._lazy_init(time_ms)
 
+        # TDoA measurements processed during this iteration, appended by
+        # _update_with_sample; read back by _run_replay to build the
+        # innovation trace (see tdoa_replay.replay_full_state).
+        self.tdoa_events = []
+
         # Simplification, assume always flying
         quad_is_flying = True
 
@@ -151,18 +156,22 @@ class EstimatorKalmanEmulator:
             tdoa.distanceDiff = float(tdoa_data['distanceDiff'])
             tdoa.stdDev = self.TDOA_ENGINE_MEASUREMENT_NOISE_STD
 
+            # Read-only (const kalmanCoreData_t*): safe to compute up front
+            # for every sample, independent of std_model/outlier_filter, so
+            # the innovation trace below always has a value (NaN on
+            # degenerate geometry).
+            error = cffirmware.kalmanCoreTdoaInnovation(self.coreData, tdoa)
+
             if self.std_model is not None:
-                # Innovation does not depend on stdDev, so it can inform the
-                # std model. NaN innovation (degenerate geometry) is skipped
-                # below on the filtered path; the std model just passes the
-                # base std through in that case.
-                error = cffirmware.kalmanCoreTdoaInnovation(self.coreData, tdoa)
                 tdoa.stdDev = self.std_model.stddev(tdoa, tdoa_data, error, now_ms)
 
+            accepted = None
             if self.outlier_filter is None:
                 # Built-in behavior: standard is gated by the C integrator
                 # filter inside kalmanCoreUpdateWithTdoa; robust ignores the
                 # filter state (ungated in the firmware too: robustTdoa = 1).
+                # Whether this particular sample was gated in/out is internal
+                # to that C call and not observable here, hence accepted=None.
                 if self.tdoa_model == 'robust':
                     cffirmware.kalmanCoreRobustUpdateWithTdoa(
                         self.coreData, tdoa, self.outlierFilterState)
@@ -170,15 +179,25 @@ class EstimatorKalmanEmulator:
                     cffirmware.kalmanCoreUpdateWithTdoa(
                         self.coreData, tdoa, now_ms, self.outlierFilterState)
             else:
-                error = cffirmware.kalmanCoreTdoaInnovation(self.coreData, tdoa)
                 # NaN = degenerate geometry; firmware skips the sample without
                 # consulting the filter, so neither do we.
-                if not math.isnan(error) and self.outlier_filter.validate(tdoa, error, now_ms):
+                accepted = not math.isnan(error) and self.outlier_filter.validate(
+                    tdoa, error, now_ms)
+                if accepted:
                     if self.tdoa_model == 'robust':
                         cffirmware.kalmanCoreRobustUpdateWithTdoa(
                             self.coreData, tdoa, self.outlierFilterState)
                     else:
                         cffirmware.kalmanCoreUpdateWithTdoaUnfiltered(self.coreData, tdoa)
+
+            self.tdoa_events.append({
+                'timestamp': tdoa_data['timestamp'],
+                'idA': tdoa.anchorIdA,
+                'idB': tdoa.anchorIdB,
+                'error': error,
+                'std_dev': tdoa.stdDev,
+                'accepted': accepted,
+            })
 
         elif sample[0] == 'estAcceleration':
             acc_data = sample[1]

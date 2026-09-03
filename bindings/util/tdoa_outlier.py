@@ -44,6 +44,12 @@ class OutlierFilter:
     """Base class. ``validate`` returns True if the update should be applied."""
     name = 'base'
 
+    # Whether the filter is currently wide open (letting everything through),
+    # mirroring the firmware's isFilterOpen / plotted as "outlier filter
+    # (onboard)" for the live log. None where the filter has no single
+    # open/closed concept (e.g. no gating, or per-anchor-pair state).
+    is_open = None
+
     def reset(self):
         """Reset internal state (called once before a replay run)."""
 
@@ -65,6 +71,10 @@ class IntegratorFilter(OutlierFilter):
 
     def reset(self):
         self._cffirmware.outlierFilterTdoaReset(self._state)
+
+    @property
+    def is_open(self):
+        return bool(self._state.isFilterOpen)
 
     def validate(self, tdoa, error, now_ms):
         return bool(self._cffirmware.outlierFilterTdoaValidateIntegrator(
