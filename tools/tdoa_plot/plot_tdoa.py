@@ -6,6 +6,8 @@ real firmware Kalman core (cffirmware bindings), the live on-drone estimate
 Run from this folder with uv (creates the venv and installs matplotlib etc.)::
 
     uv run plot_tdoa.py ../../run_validation.bin --anchors ../../anchors.yaml
+    uv run plot_tdoa.py ../../log13 --anchors ../../anchors.yaml \
+        --lighthouse ../../LH-cmbined-v3.yaml
 
 or from the repository root::
 
@@ -51,6 +53,31 @@ def ensure_bindings(rebuild=False):
     import cffirmware  # noqa: F401
 
 
+DEFAULT_LH_GAP_MS = 250.0
+
+
+def sweep_coverage_spans(sweep_samples, max_gap_ms=DEFAULT_LH_GAP_MS):
+    """Time spans [(t0_ms, t1_ms)] over which Lighthouse sweeps were arriving.
+
+    Sweeps land in bursts (one per sensor per base station per rotation), so
+    "coverage" is not a per-sample property: consecutive samples are merged
+    into one span until a gap longer than max_gap_ms appears. Anything shorter
+    than that is normal burst spacing, not a dropout.
+
+    Computed from the raw log rather than from what is replayed, so the spans
+    show where the drone actually had Lighthouse even on a TDoA-only replay.
+    """
+    times = sorted(float(s[1]['timestamp']) for s in sweep_samples)
+    if not times:
+        return []
+    spans = [[times[0], times[0]]]
+    for t in times[1:]:
+        if t - spans[-1][1] > max_gap_ms:
+            spans.append([t, t])
+        else:
+            spans[-1][1] = t
+    return [tuple(span) for span in spans]
+
 
 def load_series(args):
     """Decode the log and return (replayed, live, ground_truth) trajectories.
@@ -61,8 +88,8 @@ def load_series(args):
     import tools.usdlog.cfusdlog as cfusdlog
     from bindings.util.loco_utils import read_loco_anchor_positions
     from bindings.util.tdoa_replay import (
-        apply_policy, extract_imu_samples, extract_state_estimate, replay,
-        seed_initial_position)
+        apply_policy, extract_imu_samples, extract_state_estimate,
+        extract_sweep_samples, replay, seed_initial_position)
     from bindings.util.tdoa_selection import (
         FreshnessPolicy, GeometryPolicy, annotate_oracle_error,
         annotate_pair_geometry, annotate_remote_age, build_candidate_groups,
@@ -85,14 +112,52 @@ def load_series(args):
                   f'{args.align_truth} estimate')
             print(alignment.describe())
 
-    groups = build_candidate_groups(log_data)
-    if not groups:
-        print('No estTdoaCand data found; plotting live estimate and '
-              'ground truth only.')
-        return None, live, gt
+    lighthouse = None
+    sweep_samples = extract_sweep_samples(log_data)
+    lh_spans = sweep_coverage_spans(sweep_samples, args.lh_gap_ms)
+    if lh_spans:
+        covered = sum(t1 - t0 for t0, t1 in lh_spans)
+        t_first, t_last = lh_spans[0][0], lh_spans[-1][1]
+        window = t_last - t_first
+        print(f'Lighthouse coverage: {len(lh_spans)} span(s) between '
+              f'{t_first / 1000.0:.1f} s and {t_last / 1000.0:.1f} s, '
+              f'{covered / 1000.0:.1f} s of sweeps '
+              f'({covered / window * 100.0:.1f}% of that window; gaps longer '
+              f'than {args.lh_gap_ms:.0f} ms split a span)')
+        for t0, t1 in lh_spans:
+            print(f'  {t0 / 1000.0:8.1f} .. {t1 / 1000.0:8.1f} s '
+                  f'({(t1 - t0) / 1000.0:6.1f} s)')
+    if args.lighthouse:
+        from bindings.util.lighthouse_utils import load_lighthouse_calibration
+        lighthouse = load_lighthouse_calibration(args.lighthouse)
+        print(f'Lighthouse: replaying {len(sweep_samples)} sweep angles against '
+              f'{len(lighthouse[1])} base stations from {args.lighthouse}')
+    elif sweep_samples:
+        print(f'NOTE: the log has {len(sweep_samples)} estSweepAngle events but '
+              f'no --lighthouse YAML was given, so they are not replayed. The '
+              f'drone fused them live, so the replay will not match it.')
+        sweep_samples = []
 
-    anchor_positions = read_loco_anchor_positions(args.anchors)
+    groups = build_candidate_groups(log_data)
+    anchor_positions = (read_loco_anchor_positions(args.anchors)
+                        if args.anchors else None)
     imu_samples = extract_imu_samples(log_data)
+    if not groups:
+        if not sweep_samples:
+            print('No estTdoaCand data found; plotting live estimate and '
+                  'ground truth only.')
+            return None, live, gt, lh_spans
+        # Lighthouse-only replay: no candidates to select between, but the
+        # sweep angles alone still drive the Kalman core.
+        print('No estTdoaCand data found; replaying Lighthouse sweeps only.')
+        replayed = replay(anchor_positions, imu_samples, [],
+                          {'basestation_calibration': lighthouse[0],
+                           'basestation_poses': lighthouse[1],
+                           'sweep_std': args.sweep_std,
+                           'kalman_params': resolve_initial_position(
+                               args, log_data, seed_initial_position)},
+                          sweep_samples=sweep_samples)
+        return replayed, live, gt, lh_spans
     policy_params = parse_params(args.policy_param)
     filter_params = parse_params(args.filter_param)
     policy = make_policy(args.selection_policy, policy_params)
@@ -180,13 +245,18 @@ def load_series(args):
           + (f' {filter_params}' if filter_params else '') + ') ...')
     kalman_params = resolve_initial_position(args, log_data,
                                              seed_initial_position)
+    replay_params = {'tdoa_std': args.tdoa_std,
+                     'tdoa_model': args.tdoa_model,
+                     'outlier_filter': args.outlier_filter,
+                     'outlier_filter_params': filter_params,
+                     'kalman_params': kalman_params,
+                     'sweep_std': args.sweep_std}
+    if lighthouse is not None:
+        replay_params['basestation_calibration'] = lighthouse[0]
+        replay_params['basestation_poses'] = lighthouse[1]
     replayed = replay(anchor_positions, imu_samples, tdoa_samples,
-                      {'tdoa_std': args.tdoa_std,
-                       'tdoa_model': args.tdoa_model,
-                       'outlier_filter': args.outlier_filter,
-                       'outlier_filter_params': filter_params,
-                       'kalman_params': kalman_params})
-    return replayed, live, gt
+                      replay_params, sweep_samples=sweep_samples)
+    return replayed, live, gt, lh_spans
 
 
 def resolve_initial_position(args, log_data, seed_initial_position):
@@ -301,7 +371,7 @@ def print_stats(replayed, live, gt):
               f'max {vals[-1]:.3f} m')
 
 
-def plot(replayed, live, gt, title, save_path=None):
+def plot(replayed, live, gt, title, save_path=None, lh_spans=None):
     import matplotlib.pyplot as plt
 
     fig, axes = plt.subplots(3, 1, sharex=True, figsize=(12, 8))
@@ -311,6 +381,13 @@ def plot(replayed, live, gt, title, save_path=None):
         (replayed, 'bindings estimate (replay)', dict(color='tab:blue', lw=1.0)),
     ]
     for dim, (ax, label) in enumerate(zip(axes, 'xyz')):
+        # Behind the traces: the stretches where Lighthouse sweeps were
+        # arriving. Unshaded stretches are TDoA-only, so the boundary between
+        # them is the handover.
+        for i, (t0, t1) in enumerate(lh_spans or []):
+            ax.axvspan(t0 / 1000.0, t1 / 1000.0, color='darkgreen', alpha=0.12,
+                       lw=0, zorder=0,
+                       label='lighthouse received' if i == 0 else None)
         for traj, name, style in series:
             if not traj:
                 continue
@@ -343,7 +420,24 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('logfile',
                         help='uSD log file (binary) recorded on the Crazyflie')
-    parser.add_argument('--anchors', required=True,
+    parser.add_argument('--lighthouse', default=None,
+                        help='Lighthouse system config YAML (what "cfcli lh '
+                             'config read -o file.yaml" writes). Feeds the '
+                             'logged estSweepAngle events back through the '
+                             'firmware sweep-angle measurement model alongside '
+                             'the TDoA updates, reproducing a fusion build. '
+                             'Without it the sweeps in the log are ignored')
+    parser.add_argument('--lh-gap-ms', type=float, default=DEFAULT_LH_GAP_MS,
+                        help='Gap between consecutive sweep events [ms] above '
+                             'which the shaded "lighthouse received" band is '
+                             'broken. Sweeps arrive in bursts, so a small gap '
+                             'is normal spacing rather than a dropout '
+                             f'(default: {DEFAULT_LH_GAP_MS:.0f})')
+    parser.add_argument('--sweep-std', type=float, default=None,
+                        help='Lighthouse sweep-angle measurement std dev [rad] '
+                             '(firmware default: the lighthouse.sweepStd2 '
+                             'parameter, 0.001)')
+    parser.add_argument('--anchors', default=None,
                         help='YAML file mapping anchor id -> {x, y, z}')
     parser.add_argument('--selection-policy', default='baseline',
                         help='Anchor-pair selection policy for the replay '
@@ -454,11 +548,14 @@ def main():
     parser.add_argument('--rebuild-bindings', action='store_true',
                         help='Force a rebuild of the cffirmware bindings')
     args = parser.parse_args()
+    if not args.anchors and not args.lighthouse:
+        parser.error('give --anchors, --lighthouse, or both: '
+                     'there is nothing to position against otherwise')
     if args.init_window_ms is None:
         args.init_window_ms = DEFAULT_INIT_WINDOW_MS
 
     ensure_bindings(rebuild=args.rebuild_bindings)
-    replayed, live, gt = load_series(args)
+    replayed, live, gt, lh_spans = load_series(args)
     if not (replayed or live or gt):
         sys.exit('Nothing to plot: no replayable candidates, no stateEstimate '
                  'and no Lighthouse data in this log.')
@@ -466,7 +563,8 @@ def main():
     title = (f'{Path(args.logfile).name}  '
              f'(selection policy: {args.selection_policy}, '
              f'model: {args.tdoa_model}, filter: {args.outlier_filter})')
-    plot(replayed, live, gt, title, save_path=args.save)
+    plot(replayed, live, gt, title, save_path=args.save,
+         lh_spans=lh_spans)
 
 
 if __name__ == '__main__':

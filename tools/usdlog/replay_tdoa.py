@@ -17,6 +17,8 @@ Run from the repository root::
         --policies baseline all median --csv-dir replay_out
     python3 -m tools.usdlog.replay_tdoa run01.bin --anchors anchors.yaml \
         --policies baseline all --outlier-filters integrator none mad_window
+    python3 -m tools.usdlog.replay_tdoa run01.bin --anchors anchors.yaml \
+        --lighthouse lighthouse.yaml
 
 Requires the bindings to be built first (see bindings/README / build_python.sh)
 so that ``import cffirmware`` works.
@@ -31,6 +33,7 @@ from bindings.util.tdoa_replay import (
     apply_policy,
     extract_imu_samples,
     extract_state_estimate,
+    extract_sweep_samples,
     replay,
 )
 from bindings.util.tdoa_selection import (
@@ -79,12 +82,18 @@ def extract_ground_truth(log_data):
 
 
 def run_policy(policy, anchor_positions, imu_samples, groups, tdoa_std,
-               outlier_filter, tdoa_model):
+               outlier_filter, tdoa_model, sweep_samples=None,
+               lighthouse=None, sweep_std=None):
     """Run the Kalman replay for one policy/outlier-filter combination."""
     tdoa_samples = apply_policy(policy, groups)
-    return replay(anchor_positions, imu_samples, tdoa_samples,
-                  {'tdoa_std': tdoa_std, 'outlier_filter': outlier_filter,
-                   'tdoa_model': tdoa_model})
+    params = {'tdoa_std': tdoa_std, 'outlier_filter': outlier_filter,
+              'tdoa_model': tdoa_model, 'sweep_std': sweep_std}
+    if lighthouse is not None:
+        calibration, poses = lighthouse
+        params['basestation_calibration'] = calibration
+        params['basestation_poses'] = poses
+    return replay(anchor_positions, imu_samples, tdoa_samples, params,
+                  sweep_samples=sweep_samples)
 
 
 def _interp_ground_truth(gt, t_ms):
@@ -153,8 +162,18 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('logfile', help='uSD log file (binary) recorded on the Crazyflie')
-    parser.add_argument('--anchors', required=True,
+    parser.add_argument('--anchors', default=None,
                         help='YAML file mapping anchor id -> {x, y, z}')
+    parser.add_argument('--lighthouse', default=None,
+                        help='Lighthouse system config YAML (what "cfcli lh '
+                             'config read -o file.yaml" writes). Feeds the '
+                             'logged estSweepAngle events back through the '
+                             'firmware sweep-angle measurement model alongside '
+                             'the TDoA updates, reproducing a fusion build')
+    parser.add_argument('--sweep-std', type=float, default=None,
+                        help='Lighthouse sweep-angle measurement std dev [rad] '
+                             '(firmware default: the lighthouse.sweepStd2 '
+                             'parameter, 0.001)')
     parser.add_argument('--policies', nargs='+',
                         default=['baseline', 'all', 'median', 'round_robin'],
                         help='Selection policies to evaluate')
@@ -178,11 +197,29 @@ def main():
                         help='If set, write a per-policy trajectory+error CSV here')
     args = parser.parse_args()
 
+    if not args.anchors and not args.lighthouse:
+        parser.error('give --anchors, --lighthouse, or both: '
+                     'there is nothing to position against otherwise')
+
     log_data = cfusdlog.decode(args.logfile)
-    # Imported here: loco_utils needs the cffirmware bindings, which the pure
-    # helpers in this module (tested without bindings) must not depend on
-    from bindings.util.loco_utils import read_loco_anchor_positions
-    anchor_positions = read_loco_anchor_positions(args.anchors)
+    # Imported here: loco_utils and lighthouse_utils need the cffirmware
+    # bindings, which the pure helpers in this module (tested without
+    # bindings) must not depend on
+    anchor_positions = None
+    if args.anchors:
+        from bindings.util.loco_utils import read_loco_anchor_positions
+        anchor_positions = read_loco_anchor_positions(args.anchors)
+
+    lighthouse = None
+    sweep_samples = extract_sweep_samples(log_data)
+    if args.lighthouse:
+        from bindings.util.lighthouse_utils import load_lighthouse_calibration
+        lighthouse = load_lighthouse_calibration(args.lighthouse)
+    elif sweep_samples:
+        print(f'NOTE: the log has {len(sweep_samples)} estSweepAngle events but '
+              f'no --lighthouse YAML was given, so they are not replayed. The '
+              f'drone fused them live, so the replay will not match it.')
+        sweep_samples = []
 
     groups = build_candidate_groups(log_data)
     imu_samples = extract_imu_samples(log_data)
@@ -195,6 +232,8 @@ def main():
     print(f'  candidate pairs total:      {n_candidates}'
           + (f'  (avg {n_candidates / len(groups):.1f}/packet)' if groups else ''))
     print(f'  IMU samples:                {len(imu_samples)}')
+    print(f'  sweep-angle samples:        {len(sweep_samples)}'
+          + (f'  (from {len(lighthouse[1])} base stations)' if lighthouse else ''))
     print(f'  ground-truth samples:       {len(gt)}')
     check = verify_baseline_reconstruction(log_data)
     if check['n_est_tdoa']:
@@ -228,7 +267,10 @@ def main():
             policy = make_policy(name)
             trajectory = run_policy(policy, anchor_positions, imu_samples,
                                     groups, args.tdoa_std, filter_name,
-                                    args.tdoa_model)
+                                    args.tdoa_model,
+                                    sweep_samples=sweep_samples,
+                                    lighthouse=lighthouse,
+                                    sweep_std=args.sweep_std)
             metrics, _ = score_trajectory(trajectory, gt, args.flyaway_threshold)
             if (name == 'baseline' and filter_name == 'integrator'
                     and args.tdoa_model == 'standard' and live):
