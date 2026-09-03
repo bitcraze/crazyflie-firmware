@@ -277,6 +277,14 @@ config DECK_LIGHTHOUSE_MAX_N_BS
       Set the max number of base stations supported. NOTE: This is only
       valid for Lighthouse V2.
 
+config DECK_LIGHTHOUSE_MAX_RATE
+  int "Max measurement samples used per second"
+  depends on DECK_LIGHTHOUSE
+  default 50
+  range 0 65535
+  help
+      Set the max number of lighthouse measurements sent to the estimator (Hz).
+
 config DECK_LOCO
     bool "Support the Loco positioning deck"
     default y
@@ -344,6 +352,14 @@ config DECK_LOCO_LONGER_RANGE
     default n
     help
         Note that anchors need to be built with support for this as well
+
+config DECK_LOCO_TDOA_RATE_LIMIT
+    bool "Support rate limiting of TDoA measurements forwarded to the estimator (experimental)"
+    depends on DECK_LOCO
+    default y
+    help
+        Compile in the rate limiter that caps how often TDoA measurements,
+        aggregated over all anchors, are forwarded to the estimator.
 
 config DECK_LOCO_TDOA3_HYBRID_MODE
     bool "Support TDoA3 hybrid mode"

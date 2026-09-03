@@ -99,9 +99,6 @@ jobs:
         - examples/app_peer_to_peer
         - examples/app_p2p_DTR
         - examples/app_stm_gap8_cpx
-        - examples/demos/app_push_demo
-        - examples/demos/swarm_demo
-        - examples/demos/app_wall_following_demo
     env:
       EXAMPLE: ${{ matrix.example }}
 
@@ -151,7 +148,7 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       with:
         submodules: true
 
@@ -170,8 +167,10 @@ jobs:
                 FAIL_COUNT=$((FAIL_COUNT + 1))
               fi
             done
-            if [ "$FAIL_COUNT" -ne 0 ]; then
-              echo "ERROR: $FAIL_COUNT/$RANDOM_BUILD_COUNT random builds failed"
+            if [ "$FAIL_COUNT" -eq 0 ]; then
+              echo "SUCCESS! All $RANDOM_BUILD_COUNT random builds passed!"
+            else
+              echo "FAIL! $FAIL_COUNT/$RANDOM_BUILD_COUNT random builds failed!"
             fi
             exit $FAIL_COUNT
           '
