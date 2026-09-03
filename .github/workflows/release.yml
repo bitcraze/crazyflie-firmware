@@ -16,31 +16,21 @@ jobs:
 
   release:
     permissions:
-      contents: write  # for actions/create-release to create a release
+      contents: write  # for softprops/action-gh-release to create a release
     name: Create Release on Github
     runs-on: ubuntu-latest
     steps:
     - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@e598afbe1493e6b1bafb1f389cabb956eab91231 # v3.0.3
       with:
         tag_name: ${{ github.ref }}
-        release_name: ${{ github.ref }}
+        name: ${{ github.ref }}
         draft: true
         prerelease: true
-    - name: Release URL on file
-      run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
-    - name: Save Release URL File For Uploading Files
-      uses: actions/upload-artifact@v7
-      with:
-        name: release_url
-        path: release_url.txt
 
   upload:
     permissions:
-      contents: write  # for actions/upload-release-asset to upload release asset
+      contents: write  # for softprops/action-gh-release to upload release assets
     name: Upload Binaries to release
     needs: [release, read_targets_from_file]
     runs-on: ubuntu-latest
@@ -58,29 +48,21 @@ jobs:
     - name: Build
       run: docker run --rm -v ${PWD}:/module bitcraze/builder bash -c "make ${{ matrix.platform }}_defconfig && ./tools/build/build PLATFORM=${{ matrix.platform }} UNIT_TEST_STYLE=min"
 
-    - name: Load Release URL File from release job
-      uses: actions/download-artifact@v8
-      with:
-        name: release_url
-
-    - name: Get Release File Name & Upload URL
-      id: get_release_info
-      run: |
-        value=`cat release_url.txt`
-        echo "upload_url=$value" >> $GITHUB_OUTPUT
-
     - name: Get the version
       id: get_release_version
       env:
         GITHUB_REF : ${{ github.ref }}
-      run: echo "release_version=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
+      run: echo "release_version=$(echo "${GITHUB_REF/refs\/tags\//}" | tr '/' '-')" >> $GITHUB_OUTPUT
+
+    - name: Rename binary for upload
+      run: |
+        mkdir -p release_assets
+        cp build/${{ matrix.platform }}.bin release_assets/${{ matrix.platform }}-${{ steps.get_release_version.outputs.release_version }}.bin
 
     - name: Upload ${{ matrix.platform }} bin
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@e598afbe1493e6b1bafb1f389cabb956eab91231 # v3.0.3
       with:
-        upload_url: ${{ steps.get_release_info.outputs.upload_url }}
-        asset_path: build/${{ matrix.platform }}.bin
-        asset_name: ${{ matrix.platform }}-${{ steps.get_release_version.outputs.release_version }}.bin
-        asset_content_type: application/octet-stream
+        tag_name: ${{ github.ref }}
+        draft: true
+        prerelease: true
+        files: release_assets/${{ matrix.platform }}-${{ steps.get_release_version.outputs.release_version }}.bin
