@@ -185,7 +185,7 @@ static bool handleMemTesterWrite(const uint8_t internal_id, const uint32_t memAd
     if (actualData != expectedData) {
       // Log first error
       if (memTesterWriteErrorCount == 0) {
-        DEBUG_PRINT("Verification failed: expected: %d, actual: %d, addr: %lu\n", expectedData, actualData, addr);
+        DEBUG_PRINT("Verification failed: expected: %d, actual: %d, addr: %lu\n", expectedData, actualData, (unsigned long)addr);
       }
 
       memTesterWriteErrorCount++;
