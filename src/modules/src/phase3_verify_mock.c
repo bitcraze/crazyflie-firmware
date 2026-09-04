@@ -50,13 +50,17 @@
  *      count + u32 crc32), which this also matches.
  *   4. Param (2) ch.0: same TOC_INFO/V2 exchange as Log.
  *   5. Memory (4) ch.0 (CHAN_INFO): CMD_INFO_NBR -> reply nbr_of_mems=0
- *      (cflib/crazyflie/mem/__init__.py). Also directly satisfies
- *      requirements.md's "Port 4 Memory shall report zero memories/decks".
+ *      (cflib/crazyflie/mem/__init__.py). Retired in Phase 4.3 -- the real
+ *      mem.c/crtp_mem.c now own this port (see memInit()/crtpMemInit() in
+ *      main_sim.c's systemLaunch()), unmodified, so nbr_of_mems is now 1
+ *      (the always-registered memTester), matching real hardware with no
+ *      decks attached exactly -- not the 0 this mock replied with.
  *
  * Meant to be removed (or replaced wholesale) once Phase 4 adds the real
- * crtpservice.c/log.c/param.c/mem.c wiring. platformservice.c's real
- * wiring landed in Phase 4.2 -- see platformCommandProcess()/
- * versionCommandProcess() in platformservice.c instead of this file.
+ * crtpservice.c/log.c/param.c wiring. platformservice.c's and mem.c's real
+ * wiring landed in Phase 4.2/4.3 -- see platformCommandProcess()/
+ * versionCommandProcess() in platformservice.c and memSettingsProcess() in
+ * crtp_mem.c instead of this file.
  */
 
 #include "phase3_verify_mock.h"
@@ -72,9 +76,6 @@
 #define LOG_CMD_RESET_LOGGING 0x05
 
 #define LINK_SOURCE_CHANNEL 1
-
-#define MEM_CHAN_INFO     0
-#define MEM_CMD_INFO_NBR  0x01
 
 static void linkSourceCB(CRTPPacket *p)
 {
@@ -116,21 +117,9 @@ static void logCB(CRTPPacket *p)
   emptyTocCB(p);
 }
 
-static void memInfoCB(CRTPPacket *p)
-{
-  if (p->channel != MEM_CHAN_INFO || p->data[0] != MEM_CMD_INFO_NBR) {
-    return;
-  }
-
-  p->data[1] = 0; /* nbr_of_mems = 0 */
-  p->size = 2;
-  crtpSendPacketBlock(p);
-}
-
 void phase3VerifyMockInit(void)
 {
   crtpRegisterPortCB(CRTP_PORT_LINK, linkSourceCB);
   crtpRegisterPortCB(CRTP_PORT_LOG, logCB);
   crtpRegisterPortCB(CRTP_PORT_PARAM, emptyTocCB);
-  crtpRegisterPortCB(CRTP_PORT_MEM, memInfoCB);
 }

@@ -30,8 +30,9 @@
 /**
  * Registers the minimal CRTP handlers needed for the real, unmodified
  * cfcli binary's connect() sequence to succeed: Link (15) linkSource, and
- * empty Log (5) / Param (2) TOCs / Memory (4) info. Call after crtpInit().
+ * empty Log (5) / Param (2) TOCs. Call after crtpInit().
  * Platform (13) is real as of Phase 4.2 -- see platformserviceInit().
+ * Memory (4) is real as of Phase 4.3 -- see memInit()/crtpMemInit().
  */
 void phase3VerifyMockInit(void);
 

@@ -13,10 +13,15 @@ ifeq ($(CONFIG_PLATFORM_SIM),y)
 # supervisor_sim.o -- a stub for the 4 supervisor.h entry points
 # platformservice.c's deprecated arm/recover commands call; the real
 # supervisor.c isn't buildable yet (see supervisor_sim.c).
+# Phase 4.3 (Memory) adds mem.o/crtp_mem.o fully unmodified -- Simmyflie
+# reports CMD_INFO_NBR the same as real hardware with no decks attached
+# (nbr_of_mems=1, the always-registered memTester), not zero.
 obj-y += app_channel.o
 obj-y += comm.o
 obj-y += console.o
 obj-y += crtp.o
+obj-y += crtp_mem.o
+obj-y += mem.o
 obj-y += phase3_verify_mock.o
 obj-y += platformservice.o
 obj-y += queuemonitor.o

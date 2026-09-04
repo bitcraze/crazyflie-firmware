@@ -76,6 +76,13 @@
  * doesn't register a Platform callback anymore. ch.0 (arming) is inert
  * (see supervisor_sim.c) until Commander lands in 4.9; ch.1 (version) is
  * fully real.
+ *
+ * Phase 4.3 (Memory) adds the real memInit()/crtpMemInit()
+ * (mem.c/crtp_mem.c, port 4), retiring phase3_verify_mock.c's Memory
+ * handler, fully unmodified -- CMD_INFO_NBR now reports nbr_of_mems=1 (the
+ * always-registered memTester), matching real hardware with no decks
+ * attached exactly, not the zero a decks-only reading of requirements.md
+ * would suggest.
  */
 
 #include "FreeRTOSConfig.h"
@@ -103,6 +110,8 @@
 #include "console.h"
 #include "debug.h"
 #include "platformservice.h"
+#include "mem.h"
+#include "crtp_mem.h"
 
 /* Not "platform.h": that header pulls in motors.h and the STM32 hardware
  * chain via the shared platform.c dispatcher, which platform_sim.c
@@ -174,6 +183,10 @@ static void systemLaunch(void)
 
   platformserviceInit();
   DEBUG_PRINT("Simmyflie: Phase 4.2 platform service wired in\n");
+
+  memInit();
+  crtpMemInit();
+  DEBUG_PRINT("Simmyflie: Phase 4.3 memory wired in\n");
 
   xTaskCreate(heartbeatTask, "heartbeat", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 }
