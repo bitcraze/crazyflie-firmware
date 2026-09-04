@@ -141,6 +141,7 @@ bool supervisorCanFly() {
   supervisorMem.canFly = 
     (supervisorMem.state == supervisorStateReadyToFly) ||
     (supervisorMem.state == supervisorStateFlying) ||
+    (supervisorMem.state == supervisorStateWarningReturnToGeofence) ||
     (supervisorMem.state == supervisorStateWarningLevelOut) ||
     (supervisorMem.state == supervisorStateLanded);
 
@@ -470,6 +471,10 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
     supervisorRequestCrashRecovery(false);
   }
 
+  if (newState == supervisorStateWarningReturnToGeofence) {
+    DEBUG_PRINT("Warning: Outside of geofence, trying to return\n");
+  }
+
   if (newState != supervisorStateArming &&
       newState != supervisorStateReadyToFly &&
       newState != supervisorStateFlying &&
@@ -631,6 +636,12 @@ static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t
   if (conditions & SUPERVISOR_CB_DECK_FAULT) {
       this->infoBitfield |= 0x0800;  // a deck has reported a hardware fault
   }
+  if (conditions & SUPERVISOR_CB_GEOFENCE_WARNING) {
+      this->infoBitfield |= 0x1000;  // geofence warning zone triggered
+  }
+  if (conditions & SUPERVISOR_CB_GEOFENCE_STOP) {
+      this->infoBitfield |= 0x2000;  // geofence stop triggered
+  }
 }
 
 void supervisorUpdate(const sensorData_t *sensors, const setpoint_t *setpoint, const state_t *state, stabilizerStep_t stabilizerStep) {
@@ -657,20 +668,8 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t *setpoint, c
   }
 }
 
-bool geofenceTriggered = false;
-
-extern void geofenceTriggeredUpdate(bool status) {
-  if (status) {
-    geofenceTriggered = true;
-  } else {
-    geofenceTriggered = false;
-  }
-}
-
-bool geofenceActivated = false;
 void supervisorOverrideSetpoint(setpoint_t* setpoint, const state_t *state) {
   SupervisorMem_t* this = &supervisorMem;
-  geofenceActivated = false;
   switch(this->state){
     case supervisorStateArming:
       // Fall through
@@ -684,28 +683,22 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint, const state_t *state) {
         if (setpoint->mode.x == modeAbs) {
           if (setpoint->position.x < geofenceXmin) {
             setpoint->position.x = geofenceXmin;
-            geofenceActivated = true;
           } else if (setpoint->position.x > geofenceXmax) {
             setpoint->position.x = geofenceXmax;
-            geofenceActivated = true;
           }
         }
         if (setpoint->mode.y == modeAbs) {
           if (setpoint->position.y < geofenceYmin) {
             setpoint->position.y = geofenceYmin;
-            geofenceActivated = true;
           } else if (setpoint->position.y > geofenceYmax) {
             setpoint->position.y = geofenceYmax;
-            geofenceActivated = true;
           }
         }
         if (setpoint->mode.z == modeAbs) {
           if (setpoint->position.z < geofenceZmin) {
             setpoint->position.z = geofenceZmin;
-            geofenceActivated = true;
           } else if (setpoint->position.z > geofenceZmax) {
             setpoint->position.z = geofenceZmax;
-            geofenceActivated = true;
           }
         }
       }
@@ -716,28 +709,22 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint, const state_t *state) {
       if (setpoint->mode.x == modeAbs) {
         if (setpoint->position.x < geofenceXmin) {
           setpoint->position.x = geofenceXmin;
-          geofenceActivated = true;
         } else if (setpoint->position.x > geofenceXmax) {
           setpoint->position.x = geofenceXmax;
-          geofenceActivated = true;
         }
       }
       if (setpoint->mode.y == modeAbs) {
         if (setpoint->position.y < geofenceYmin) {
           setpoint->position.y = geofenceYmin;
-          geofenceActivated = true;
         } else if (setpoint->position.y > geofenceYmax) {
           setpoint->position.y = geofenceYmax;
-          geofenceActivated = true;
         }
       }
       if (setpoint->mode.z == modeAbs) {
         if (setpoint->position.z < geofenceZmin) {
           setpoint->position.z = geofenceZmin;
-          geofenceActivated = true;
         } else if (setpoint->position.z > geofenceZmax) {
           setpoint->position.z = geofenceZmax;
-          geofenceActivated = true;
         }
       }
 
@@ -747,12 +734,10 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint, const state_t *state) {
           setpoint->mode.x = modeAbs;
           setpoint->position.x = geofenceXmin+geofenceWarningZone/2;
           setpoint->velocity.x = 0;
-          geofenceActivated = true;
         } else if (state->position.x > geofenceXmax) {
           setpoint->mode.x = modeAbs;
           setpoint->position.x = geofenceXmax-geofenceWarningZone/2;
           setpoint->velocity.x = 0;
-          geofenceActivated = true;
         }
       }
       if (setpoint->mode.y == modeVelocity) {
@@ -760,12 +745,10 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint, const state_t *state) {
           setpoint->mode.y = modeAbs;
           setpoint->position.y = geofenceYmin+geofenceWarningZone/2;
           setpoint->velocity.y = 0;
-          geofenceActivated = true;
         } else if (state->position.y > geofenceYmax) {
           setpoint->mode.y = modeAbs;
           setpoint->position.y = geofenceYmax-geofenceWarningZone/2;
           setpoint->velocity.y = 0;
-          geofenceActivated = true;
         }
       }
       if (setpoint->mode.z == modeVelocity) {
@@ -773,12 +756,10 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint, const state_t *state) {
           setpoint->mode.z = modeAbs;
           setpoint->position.z = geofenceZmin+geofenceWarningZone/2;
           setpoint->velocity.z = 0;
-          geofenceActivated = true;
         } else if (state->position.z > geofenceZmax) {
           setpoint->mode.z = modeAbs;
           setpoint->position.z = geofenceZmax-geofenceWarningZone;
           setpoint->velocity.z = 0;
-          geofenceActivated = true;
         }
       }
 
@@ -801,7 +782,6 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint, const state_t *state) {
       memcpy(setpoint, &nullSetpoint, sizeof(nullSetpoint));
       break;
   }
-  geofenceTriggeredUpdate(geofenceActivated);
 }
 
 bool supervisorAreMotorsAllowedToRun() {
@@ -883,16 +863,14 @@ LOG_GROUP_START(supervisor)
  * Bit 9 = high level trajectory has finished
  * Bit 10 = high level control is disabled and not producing setpoints
  * Bit 11 = deck fault - a deck has reported a hardware fault
+ * Bit 12 = geofence warning - the Crazyflie is outside of the geofence but within the warning zone
+ * Bit 13 = geofence stop - the Crazyflie got outside of the geofence warning zone and has triggered the stop condition
  */
 LOG_ADD(LOG_UINT16, info, &supervisorMem.infoBitfield)
 /**
  * @brief Acceleration norm in Gs used by crash/tumble detection.
  */
 LOG_ADD(LOG_FLOAT, accNorm, &crashDetectionAccNorm)
-/**
- * @brief Indicates if the geofence has been triggered. 1=triggered, 0=not triggered
- */
-LOG_ADD(LOG_UINT8, geofTrig, &geofenceTriggered)
 LOG_GROUP_STOP(supervisor)
 
 

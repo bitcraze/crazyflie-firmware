@@ -57,8 +57,6 @@ static const char* const conditionNames[] = {
   "armed",
   "isFlying",
   "isTumbled",
-  "geofenceWarning",
-  "geofenceStop",
   "commanderWdtWarning",
   "commanderWdtTimeout",
   "emergencyStop",
@@ -69,6 +67,8 @@ static const char* const conditionNames[] = {
   "rpmAtArmingValid",
   "spinupTimeout",
   "motorsNotResponding",
+  "geofenceWarning",
+  "geofenceStop",
 };
 static_assert(sizeof(conditionNames) / sizeof(conditionNames[0]) == supervisorCondition_NrOfConditions);
 
@@ -147,7 +147,7 @@ static SupervisorStateTransition_t transitionsMotorsSpinup[] = {
   {
     .newState = supervisorStatePreFlChecksNotPassed,
 
-    .triggers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_SPINUP_TIMEOUT,
+    .triggers = SUPERVISOR_CB_IS_TUMBLED | SUPERVISOR_CB_SPINUP_TIMEOUT | SUPERVISOR_CB_GEOFENCE_WARNING | SUPERVISOR_CB_GEOFENCE_STOP,
     .negatedTriggers = SUPERVISOR_CB_ARMED,
     .triggerCombiner = supervisorAny,
 

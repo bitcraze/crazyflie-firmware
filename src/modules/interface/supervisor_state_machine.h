@@ -48,8 +48,6 @@ typedef enum {
   supervisorConditionArmed = 0,
   supervisorConditionIsFlying,
   supervisorConditionIsTumbled,
-  supervisorConditionGeofenceWarning,
-  supervisorConditionGeofenceStop,
   supervisorConditionCommanderWdtWarning,
   supervisorConditionCommanderWdtTimeout,
   supervisorConditionEmergencyStop,
@@ -60,6 +58,8 @@ typedef enum {
   supervisorConditionRPMatArmingValid,
   supervisorConditionSpinupTimeout,
   supervisorConditionMotorsNotResponding,
+  supervisorConditionGeofenceWarning,
+  supervisorConditionGeofenceStop,
   supervisorCondition_NrOfConditions,
 } supervisorConditions_t;
 
@@ -70,8 +70,6 @@ typedef uint32_t supervisorConditionBits_t;
 #define SUPERVISOR_CB_ARMED (1 << supervisorConditionArmed)
 #define SUPERVISOR_CB_IS_FLYING (1 << supervisorConditionIsFlying)
 #define SUPERVISOR_CB_IS_TUMBLED (1 << supervisorConditionIsTumbled)
-#define SUPERVISOR_CB_GEOFENCE_WARNING (1 << supervisorConditionGeofenceWarning)
-#define SUPERVISOR_CB_GEOFENCE_STOP (1 << supervisorConditionGeofenceStop)
 #define SUPERVISOR_CB_COMMANDER_WDT_WARNING (1 << supervisorConditionCommanderWdtWarning)
 #define SUPERVISOR_CB_COMMANDER_WDT_TIMEOUT (1 << supervisorConditionCommanderWdtTimeout)
 #define SUPERVISOR_CB_EMERGENCY_STOP (1 << supervisorConditionEmergencyStop)
@@ -82,6 +80,8 @@ typedef uint32_t supervisorConditionBits_t;
 #define SUPERVISOR_CB_RPM_AT_ARMING_VALID (1 << supervisorConditionRPMatArmingValid)
 #define SUPERVISOR_CB_SPINUP_TIMEOUT (1 << supervisorConditionSpinupTimeout)
 #define SUPERVISOR_CB_MOTORS_NOT_RESPONDING (1 << supervisorConditionMotorsNotResponding)
+#define SUPERVISOR_CB_GEOFENCE_WARNING (1 << supervisorConditionGeofenceWarning)
+#define SUPERVISOR_CB_GEOFENCE_STOP (1 << supervisorConditionGeofenceStop)
 
 
 // Enum that is used to describe how to combine the bits in the required field
