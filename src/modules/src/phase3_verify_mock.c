@@ -55,12 +55,19 @@
  *      main_sim.c's systemLaunch()), unmodified, so nbr_of_mems is now 1
  *      (the always-registered memTester), matching real hardware with no
  *      decks attached exactly -- not the 0 this mock replied with.
+ *   6. Param (2) ch.0: same TOC_INFO/V2 exchange as Log, empty TOC.
+ *      Retired in Phase 4.4 -- the real param_logic.c/param_task.c now own
+ *      this port (see paramInit() in main_sim.c's systemLaunch()),
+ *      unmodified, so the TOC now reports mem.c's real memTst.resetW entry
+ *      (and any others already linked in), not an empty one.
  *
  * Meant to be removed (or replaced wholesale) once Phase 4 adds the real
- * crtpservice.c/log.c/param.c wiring. platformservice.c's and mem.c's real
- * wiring landed in Phase 4.2/4.3 -- see platformCommandProcess()/
- * versionCommandProcess() in platformservice.c and memSettingsProcess() in
- * crtp_mem.c instead of this file.
+ * crtpservice.c/log.c wiring for its two remaining mocked pieces (Link
+ * source and Log). platformservice.c's, mem.c's, and param_logic.c's/
+ * param_task.c's real wiring landed in Phase 4.2/4.3/4.4 -- see
+ * platformCommandProcess()/versionCommandProcess() in platformservice.c,
+ * memSettingsProcess() in crtp_mem.c, and paramTOCProcess()/
+ * paramWriteProcess() in param_logic.c instead of this file.
  */
 
 #include "phase3_verify_mock.h"
@@ -121,5 +128,4 @@ void phase3VerifyMockInit(void)
 {
   crtpRegisterPortCB(CRTP_PORT_LINK, linkSourceCB);
   crtpRegisterPortCB(CRTP_PORT_LOG, logCB);
-  crtpRegisterPortCB(CRTP_PORT_PARAM, emptyTocCB);
 }

@@ -70,6 +70,7 @@ LIB = $(srctree)/src/lib
 LDFLAGS =
 image_LDFLAGS += -pthread
 image_LDFLAGS += -Wl,-Map=$(PROG).map,--cref,--gc-sections
+image_LDFLAGS += -T $(srctree)/tools/make/sim/linker/sim_toc_sections.ld
 
 INCLUDES += -I$(srctree)/src/config/sim
 INCLUDES += -I$(PORT)/utils

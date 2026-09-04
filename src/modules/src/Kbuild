@@ -16,12 +16,19 @@ ifeq ($(CONFIG_PLATFORM_SIM),y)
 # Phase 4.3 (Memory) adds mem.o/crtp_mem.o fully unmodified -- Simmyflie
 # reports CMD_INFO_NBR the same as real hardware with no decks attached
 # (nbr_of_mems=1, the always-registered memTester), not zero.
+# Phase 4.4 (Parameters) adds param_logic.o/param_task.o fully unmodified --
+# their _param_start/_param_stop/_sdata/_sidata/_stext linker-symbol
+# dependencies are supplied by tools/make/sim/linker/sim_toc_sections.ld
+# (see the Makefile's CONFIG_PLATFORM_SIM image_LDFLAGS), not a source
+# change.
 obj-y += app_channel.o
 obj-y += comm.o
 obj-y += console.o
 obj-y += crtp.o
 obj-y += crtp_mem.o
 obj-y += mem.o
+obj-y += param_logic.o
+obj-y += param_task.o
 obj-y += phase3_verify_mock.o
 obj-y += platformservice.o
 obj-y += queuemonitor.o

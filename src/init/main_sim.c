@@ -83,6 +83,16 @@
  * always-registered memTester), matching real hardware with no decks
  * attached exactly, not the zero a decks-only reading of requirements.md
  * would suggest.
+ *
+ * Phase 4.4 (Parameters) adds the real paramInit() (param_logic.c/
+ * param_task.c, port 2), retiring phase3_verify_mock.c's Param handler,
+ * fully unmodified -- see tools/make/sim/linker/sim_toc_sections.ld for how
+ * its _param_start/_param_stop (and paramGetDefault()'s
+ * _sdata/_sidata/_stext) linker-symbol dependencies are supplied on a host
+ * build with no custom ARM-style linker script. The TOC is non-empty
+ * already at this point: mem.c's memTst.resetW (added in 4.3, unmodified)
+ * is a real read-write parameter, so 4.4's round-trip check exercises it
+ * rather than hitting the "every parameter is RONLY" known-gap case.
  */
 
 #include "FreeRTOSConfig.h"
@@ -112,6 +122,7 @@
 #include "platformservice.h"
 #include "mem.h"
 #include "crtp_mem.h"
+#include "param_task.h"
 
 /* Not "platform.h": that header pulls in motors.h and the STM32 hardware
  * chain via the shared platform.c dispatcher, which platform_sim.c
@@ -187,6 +198,9 @@ static void systemLaunch(void)
   memInit();
   crtpMemInit();
   DEBUG_PRINT("Simmyflie: Phase 4.3 memory wired in\n");
+
+  paramInit();
+  DEBUG_PRINT("Simmyflie: Phase 4.4 parameters wired in\n");
 
   xTaskCreate(heartbeatTask, "heartbeat", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 }
