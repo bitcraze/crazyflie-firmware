@@ -178,6 +178,42 @@ endif
 
 include tools/make/targets.mk
 
+# Simmyflie: build the sim platform into build/sim/ using the same
+# configuration as the normal build (build/.config, e.g. after
+# 'make cf2_defconfig' and optionally 'make menuconfig'), with just the
+# sim-specific overrides from configs/sim_defconfig layered on top. Anything
+# that only makes sense for real hardware (decks, sensors, ... -- gated by
+# 'depends on PLATFORM_CF2' and friends in Kconfig) necessarily falls away
+# once the platform choice flips to PLATFORM_SIM; everything else (e.g.
+# controller/estimator selection) carries through unchanged.
+#
+# Kbuild's own generic goal-redirect (see tools/kbuild/Makefile.kbuild)
+# means this recipe actually runs with cwd == $(KBUILD_OUTPUT) (e.g. build/),
+# not the source tree root -- hence $(CURDIR) (this dir) for sim's own
+# output and $(srctree) (source root) for configs/sim_defconfig. The nested
+# builds below run in a scrubbed environment (env -i, PATH/HOME only), not
+# just with KBUILD_SRC/MAKEFLAGS cleared: this recipe is itself already
+# running inside one redirect for build/'s own (hardware) config, which by
+# this point has 'export'ed CC/CROSS_COMPILE/AS/LD/... (see
+# tools/kbuild/Makefile.kbuild) into THIS process's environment. Left in
+# place, those beat build/sim/'s own CONFIG_CROSS_COMPILE="" (Kbuild's
+# CROSS_COMPILE ?= ... only takes the Kconfig value when nothing already
+# set it) and silently link sim against the ARM cross compiler. The
+# explicit silentoldconfig between alldefconfig and the real build matters
+# for the same reason: on a brand new build/sim/, skipping straight to the
+# build would have it generate include/config/auto.conf itself mid-parse,
+# restart, and re-export CC from the pre-restart (still unconfigured) pass.
+.PHONY: sim
+sim:
+	@test -f .config || { echo "No configuration in $(CURDIR) -- run 'make cf2_defconfig' (or another *_defconfig) first."; exit 1; }
+	@mkdir -p sim
+	@cat .config $(srctree)/configs/sim_defconfig > sim/.config.seed
+	env -i PATH=$$PATH HOME=$$HOME KBUILD_OUTPUT=$(CURDIR)/sim KCONFIG_ALLCONFIG=$(CURDIR)/sim/.config.seed $(MAKE) -C $(srctree) alldefconfig
+	env -i PATH=$$PATH HOME=$$HOME KBUILD_OUTPUT=$(CURDIR)/sim $(MAKE) -C $(srctree) silentoldconfig
+	env -i PATH=$$PATH HOME=$$HOME KBUILD_OUTPUT=$(CURDIR)/sim $(MAKE) -C $(srctree)
+	cp sim/sim.elf sim.elf
+	@echo "Simmyflie built: $(CURDIR)/sim.elf"
+
 size:
 	@$(PYTHON) $(srctree)/tools/make/size.py $(SIZE) $(PROG).elf $(MEM_SIZE_FLASH_K) $(MEM_SIZE_RAM_K) $(MEM_SIZE_CCM_K)
 
@@ -273,4 +309,4 @@ python_wheel: build/cffirmware.py
 	$(PYTHON) bindings/setup.py bdist_wheel
 endif
 
-.PHONY: all clean build compile unit prep erase flash check_submodules trace openocd gdb halt reset flash_dfu flash_dfu_manual flash_verify cload size print_version clean_version bindings_python test_python python_wheel
+.PHONY: all sim clean build compile unit prep erase flash check_submodules trace openocd gdb halt reset flash_dfu flash_dfu_manual flash_verify cload size print_version clean_version bindings_python test_python python_wheel
