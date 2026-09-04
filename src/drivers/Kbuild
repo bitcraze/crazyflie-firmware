@@ -1,3 +1,11 @@
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+# Simmyflie Phase 4.0 (Foundation HAL stubs): src/ only (see its own Kbuild
+# for the trimmed sim object list). bosch/src/ and esp32/src/ are
+# hardware-only sensor/companion-chip drivers with no meaning off-target --
+# Phase 5's job if ever.
+obj-y += src/
+else
 obj-y += src/
 obj-y += bosch/src/
 obj-y += esp32/src/
+endif

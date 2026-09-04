@@ -1,3 +1,24 @@
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+# Simmyflie Phase 3 (Communication): the UDP CRTP link. Phase 4.0
+# (Foundation HAL stubs) adds buzzer.o (already fully portable -- reused
+# unmodified, no _sim.c needed), ledseq_sim.o, storage_sim.o, and
+# usec_time_sim.o. Phase 4.2 (Platform) adds syslink_sim.o, a no-op stub for
+# platformservice.c's setContinuousWave command -- real syslink.c talks to
+# the NRF companion chip, which doesn't exist in sim (see syslink_sim.c).
+# Phase 4.6 (Power management) adds pm_sim.o, a full HAL swap for
+# pm_stm32f4.c -- pm.h itself pulls in the STM32 hardware chain (via
+# deck.h), so this doesn't reuse the real interface header either (see
+# pm_sim.c). Just pmInit() and a fixed pm.vbat=4.2V log variable, no
+# charge/drain state machine.
+# The rest of this tree (sensors, radio, USB, ...) is Phase 5's job.
+obj-y += buzzer.o
+obj-y += ledseq_sim.o
+obj-y += pm_sim.o
+obj-y += storage_sim.o
+obj-y += syslink_sim.o
+obj-y += udplink_sim.o
+obj-y += usec_time_sim.o
+else
 obj-y += amg8833.o
 obj-y += buzzer.o
 obj-y += freeRTOSdebug.o
@@ -21,3 +42,4 @@ obj-y += usbd_desc.o
 obj-y += usblink.o
 obj-y += usb.o
 obj-y += usec_time.o
+endif

@@ -1,3 +1,19 @@
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+
+# FreeRTOS (Simmyflie: POSIX simulator port -- no CMSIS, no libdw1000).
+# Phase 4.5 (Logging) adds timers.o -- log.c's periodic log blocks need real
+# FreeRTOS software timers (configUSE_TIMERS flipped on in this platform's
+# FreeRTOSConfig.h; see that file's header comment).
+obj-y += FreeRTOS/list.o
+obj-y += FreeRTOS/queue.o
+obj-y += FreeRTOS/tasks.o
+obj-y += FreeRTOS/timers.o
+obj-y += FreeRTOS/portable/ThirdParty/GCC/Posix/port.o
+obj-y += FreeRTOS/portable/ThirdParty/GCC/Posix/utils/wait_for_event.o
+obj-y += FreeRTOS/portable/MemMang/heap_3.o
+
+else
+
 obj-y += CMSIS/CMSIS/DSP/Source/BasicMathFunctions/arm_abs_f32.o
 obj-y += CMSIS/CMSIS/DSP/Source/BasicMathFunctions/arm_abs_q15.o
 obj-y += CMSIS/CMSIS/DSP/Source/BasicMathFunctions/arm_abs_q31.o
@@ -284,3 +300,5 @@ obj-y += FreeRTOS/stream_buffer.o
 # libdw1000
 obj-y += libdw1000/src/libdw1000.o
 obj-y += libdw1000/src/libdw1000Spi.o
+
+endif

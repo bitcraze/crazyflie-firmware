@@ -1,3 +1,48 @@
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+# Simmyflie Phase 3 (Communication): the CRTP port-dispatch layer plus its
+# two portable-FreeRTOS-only dependencies, and comm.c (gated internally on
+# CONFIG_PLATFORM_SIM to skip the hardware links/CRTP subsystems it
+# otherwise wires in). phase3_verify_mock.o is TEMPORARY verification
+# scaffolding (see phase3_verify_mock.c), not part of the real Firmware
+# core -- Phase 4 replaces it piece by piece with the rest of this file's
+# object list (commander, log, param, platformservice, stabilizer, system,
+# ...). Phase 4.1 (Console) adds console.o -- the first real replacement,
+# gated internally for its one hardware-only dependency (see console.c).
+# Phase 4.2 (Platform) adds platformservice.o (gated internally, see
+# platformservice.c) plus its app_channel.o/worker.o dependencies, and
+# supervisor_sim.o -- a stub for the 4 supervisor.h entry points
+# platformservice.c's deprecated arm/recover commands call; the real
+# supervisor.c isn't buildable yet (see supervisor_sim.c).
+# Phase 4.3 (Memory) adds mem.o/crtp_mem.o fully unmodified -- Simmyflie
+# reports CMD_INFO_NBR the same as real hardware with no decks attached
+# (nbr_of_mems=1, the always-registered memTester), not zero.
+# Phase 4.4 (Parameters) adds param_logic.o/param_task.o fully unmodified --
+# their _param_start/_param_stop/_sdata/_sidata/_stext linker-symbol
+# dependencies are supplied by tools/make/sim/linker/sim_toc_sections.ld
+# (see the Makefile's CONFIG_PLATFORM_SIM image_LDFLAGS), not a source
+# change.
+# Phase 4.5 (Logging) adds log.o, also fully unmodified -- its
+# _log_start/_log_stop TOC-bounds are supplied by the same linker script
+# (extended to add a second .log output section alongside .param). Retires
+# phase3_verify_mock.c's Log handler, including the CMD_RESET_LOGGING ch.1
+# quirk Phase 3 hand-fixed in the mock: real log.c's CONTROL_RESET case
+# (logControlProcess()) already answers it correctly.
+obj-y += app_channel.o
+obj-y += comm.o
+obj-y += console.o
+obj-y += crtp.o
+obj-y += crtp_mem.o
+obj-y += log.o
+obj-y += mem.o
+obj-y += param_logic.o
+obj-y += param_task.o
+obj-y += phase3_verify_mock.o
+obj-y += platformservice.o
+obj-y += queuemonitor.o
+obj-y += static_mem.o
+obj-y += supervisor_sim.o
+obj-y += worker.o
+else
 obj-y += app_channel.o
 obj-$(CONFIG_APP_ENABLE) += app_handler.o
 obj-y += bootloader.o
@@ -58,3 +103,4 @@ obj-y += estimator/
 obj-y += cpx/
 obj-y += p2pDTR/
 obj-y += outlierfilter/
+endif

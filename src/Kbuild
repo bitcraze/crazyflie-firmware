@@ -1,3 +1,17 @@
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+# Simmyflie: Phase 1 boots the scheduler only. Phase 3 (Communication) adds
+# hal/, modules/, utils/ back in; Phase 4.0 (Foundation HAL stubs) adds
+# drivers/ -- each one's own Kbuild trims its object list down to just what
+# Phase 3/4 need (see their PLATFORM_SIM branches); the rest of each tree
+# (deck-facing HAL, the full modules/ firmware core, etc.) is still later
+# Phase 4/5 chunks' job.
+obj-y += drivers/
+obj-y += hal/
+obj-y += init/
+obj-y += modules/
+obj-y += platform/
+obj-y += utils/
+else
 obj-y += deck/
 obj-y += drivers/
 obj-y += hal/
@@ -6,3 +20,4 @@ obj-y += lib/
 obj-y += modules/
 obj-y += platform/
 obj-y += utils/
+endif

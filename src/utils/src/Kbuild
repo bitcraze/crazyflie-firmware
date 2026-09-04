@@ -1,3 +1,24 @@
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+# Simmyflie Phase 3 (Communication): the ASSERT()/DEBUG_PRINT backend
+# crtp.c/queuemonitor.c need (see cfassert_sim.c). Phase 4.0 (Foundation
+# HAL stubs) adds configblock_sim.o. Phase 4.1 (Console) adds debug.o/
+# eprintf.o -- both already fully hardware-free, so DEBUG_PRINT can route
+# through the new real console.c's consolePrintf() unmodified. Phase 4.2
+# (Platform) adds version_sim.o -- a placeholder for the real generated
+# version_gen.c, whose template pulls in param.h (not built until 4.4); see
+# version_sim.c. Phase 4.4 (Parameters) adds crc32.o -- param_logic.c hashes
+# its TOC with crc32CalculateBuffer(), already fully hardware-free. Phase 4.5
+# (Logging) adds num.o -- log.c's logRunBlock() uses single2half() for
+# LOG_FP16 values, already fully hardware-free. The rest of this tree
+# (filters, ...) isn't needed yet.
+obj-y += cfassert_sim.o
+obj-y += configblock_sim.o
+obj-y += crc32.o
+obj-y += debug.o
+obj-y += eprintf.o
+obj-y += num.o
+obj-y += version_sim.o
+else
 obj-y += cfassert.o
 obj-y += clockCorrectionEngine.o
 obj-y += configblockeeprom.o
@@ -31,3 +52,4 @@ obj-y += version.o
 version-objs := version_gen.o
 src/utils/src/version_gen.c: src/utils/src/version.vtpl FORCE
 	 $(PYTHON) $(srctree)/tools/make/versionTemplate.py --crazyflie-base $(srctree) $< $@
+endif

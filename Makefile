@@ -25,44 +25,11 @@ CLOAD_ARGS        ?=
 ARCH := stm32f4
 SRCARCH := stm32f4
 
-ARCH_CFLAGS += -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -g3
-ARCH_CFLAGS += -fno-math-errno -DARM_MATH_CM4 -D__FPU_PRESENT=1 -mfp16-format=ieee
-ARCH_CFLAGS += -Wno-array-bounds -Wno-stringop-overread
-ARCH_CFLAGS += -Wno-stringop-overflow
-ARCH_CFLAGS += -DSTM32F4XX -DSTM32F40_41xxx -DHSE_VALUE=8000000 -DUSE_STDPERIPH_DRIVER
-
-FREERTOS = $(srctree)/vendor/FreeRTOS
-PORT = $(FREERTOS)/portable/GCC/ARM_CM4F
-LIB = $(srctree)/src/lib
-PROCESSOR = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
-LINKER_DIR = $(srctree)/tools/make/F405/linker
-
-LDFLAGS = $(PROCESSOR)
-image_LDFLAGS += --specs=nosys.specs --specs=nano.specs -nostdlib
-image_LDFLAGS += -z noexecstack
-image_LDFLAGS += -Wl,-Map=$(PROG).map,--cref,--gc-sections,--undefined=uxTopUsedPriority
-image_LDFLAGS += -L$(srctree)/tools/make/F405/linker
-image_LDFLAGS += -T $(LINKER_DIR)/FLASH_CLOAD.ld
-
-INCLUDES += -I$(srctree)/vendor/CMSIS/CMSIS/Core/Include -I$(srctree)/vendor/CMSIS/CMSIS/DSP/Include
-INCLUDES += -I$(srctree)/vendor/libdw1000/inc
-INCLUDES += -I$(FREERTOS)/include -I$(PORT)
-INCLUDES += -I$(srctree)/src/config
-INCLUDES += -I$(srctree)/src/platform/interface
-INCLUDES += -I$(srctree)/src/deck/interface -I$(srctree)/src/deck/drivers/interface
-INCLUDES += -I$(srctree)/src/drivers/interface -I$(srctree)/src/drivers/bosch/interface
-INCLUDES += -I$(srctree)/src/drivers/esp32/interface
-INCLUDES += -I$(srctree)/src/hal/interface
-INCLUDES += -I$(srctree)/src/modules/interface -I$(srctree)/src/modules/interface/kalman_core -I$(srctree)/src/modules/interface/lighthouse  -I$(srctree)/src/modules/interface/outlierfilter
-INCLUDES += -I$(srctree)/src/modules/interface/cpx -I$(srctree)/src/modules/interface/p2pDTR -I$(srctree)/src/modules/interface/controller  -I$(srctree)/src/modules/interface/estimator
-INCLUDES += -I$(srctree)/src/utils/interface -I$(srctree)/src/utils/interface/kve -I$(srctree)/src/utils/interface/lighthouse -I$(srctree)/src/utils/interface/tdoa
-INCLUDES += -I$(LIB)/FatFS
-INCLUDES += -I$(LIB)/CMSIS/STM32F4xx/Include
-INCLUDES += -I$(LIB)/STM32_USB_Device_Library/Core/inc
-INCLUDES += -I$(LIB)/STM32_USB_OTG_Driver/inc
-INCLUDES += -I$(LIB)/STM32F4xx_StdPeriph_Driver/inc
-INCLUDES += -I$(LIB)/vl53l1 -I$(LIB)/vl53l1/core/inc
-INCLUDES += -I$(KBUILD_OUTPUT)/include/generated
+# NOTE: CONFIG_PLATFORM_SIM is not known yet at this point in the file --
+# CONFIG_* variables only become available after the auto.conf include
+# below -- so the ARCH_CFLAGS/FREERTOS/PORT/LDFLAGS/INCLUDES platform branch
+# lives further down, right after that include (matching where the existing
+# CONFIG_PLATFORM_* -> PLATFORM name conditionals already do the same).
 
 # Here we tell Kbuild where to look for Kbuild files which will tell the
 # buildsystem which sources to build
@@ -86,6 +53,77 @@ export KCONFIG_ALLCONFIG ?= configs/all.config
 KBUILD_OUTPUT ?= build
 
 -include $(KBUILD_OUTPUT)/include/config/auto.conf
+
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+
+# Simmyflie: native Linux build on the vendored FreeRTOS POSIX port. No
+# cross-compiler and no embedded link flags (see CONFIG_CROSS_COMPILE in
+# configs/sim_defconfig, which blanks the arm-none-eabi- default).
+# -Wno-unused-variable: the vendored FreeRTOS POSIX port (ThirdParty, not
+# ours to fix) has a couple of genuinely-unused locals.
+ARCH_CFLAGS += -g3 -pthread -D_GNU_SOURCE -Wno-unused-variable
+
+FREERTOS = $(srctree)/vendor/FreeRTOS
+PORT = $(FREERTOS)/portable/ThirdParty/GCC/Posix
+LIB = $(srctree)/src/lib
+
+LDFLAGS =
+image_LDFLAGS += -pthread
+image_LDFLAGS += -Wl,-Map=$(PROG).map,--cref,--gc-sections
+image_LDFLAGS += -T $(srctree)/tools/make/sim/linker/sim_toc_sections.ld
+
+INCLUDES += -I$(srctree)/src/config/sim
+INCLUDES += -I$(PORT)/utils
+# instance_sim.h (Phase 2) lives alongside main_sim.c in src/init/, not a
+# dedicated interface/ dir like the other INCLUDES below -- Communication
+# (Phase 3, src/hal/src/udplink_sim.c) needs instanceGetSocketFd() from it.
+INCLUDES += -I$(srctree)/src/init
+
+# src/config/sim must come before the common -I$(srctree)/src/config below
+# so our FreeRTOSConfig.h wins over the mainline one.
+
+else
+
+ARCH_CFLAGS += -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -g3
+ARCH_CFLAGS += -fno-math-errno -DARM_MATH_CM4 -D__FPU_PRESENT=1 -mfp16-format=ieee
+ARCH_CFLAGS += -Wno-array-bounds -Wno-stringop-overread
+ARCH_CFLAGS += -Wno-stringop-overflow
+ARCH_CFLAGS += -DSTM32F4XX -DSTM32F40_41xxx -DHSE_VALUE=8000000 -DUSE_STDPERIPH_DRIVER
+
+FREERTOS = $(srctree)/vendor/FreeRTOS
+PORT = $(FREERTOS)/portable/GCC/ARM_CM4F
+LIB = $(srctree)/src/lib
+PROCESSOR = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
+LINKER_DIR = $(srctree)/tools/make/F405/linker
+
+LDFLAGS = $(PROCESSOR)
+image_LDFLAGS += --specs=nosys.specs --specs=nano.specs -nostdlib
+image_LDFLAGS += -z noexecstack
+image_LDFLAGS += -Wl,-Map=$(PROG).map,--cref,--gc-sections,--undefined=uxTopUsedPriority
+image_LDFLAGS += -L$(srctree)/tools/make/F405/linker
+image_LDFLAGS += -T $(LINKER_DIR)/FLASH_CLOAD.ld
+
+endif
+
+INCLUDES += -I$(srctree)/vendor/CMSIS/CMSIS/Core/Include -I$(srctree)/vendor/CMSIS/CMSIS/DSP/Include
+INCLUDES += -I$(srctree)/vendor/libdw1000/inc
+INCLUDES += -I$(FREERTOS)/include -I$(PORT)
+INCLUDES += -I$(srctree)/src/config
+INCLUDES += -I$(srctree)/src/platform/interface
+INCLUDES += -I$(srctree)/src/deck/interface -I$(srctree)/src/deck/drivers/interface
+INCLUDES += -I$(srctree)/src/drivers/interface -I$(srctree)/src/drivers/bosch/interface
+INCLUDES += -I$(srctree)/src/drivers/esp32/interface
+INCLUDES += -I$(srctree)/src/hal/interface
+INCLUDES += -I$(srctree)/src/modules/interface -I$(srctree)/src/modules/interface/kalman_core -I$(srctree)/src/modules/interface/lighthouse  -I$(srctree)/src/modules/interface/outlierfilter
+INCLUDES += -I$(srctree)/src/modules/interface/cpx -I$(srctree)/src/modules/interface/p2pDTR -I$(srctree)/src/modules/interface/controller  -I$(srctree)/src/modules/interface/estimator
+INCLUDES += -I$(srctree)/src/utils/interface -I$(srctree)/src/utils/interface/kve -I$(srctree)/src/utils/interface/lighthouse -I$(srctree)/src/utils/interface/tdoa
+INCLUDES += -I$(LIB)/FatFS
+INCLUDES += -I$(LIB)/CMSIS/STM32F4xx/Include
+INCLUDES += -I$(LIB)/STM32_USB_Device_Library/Core/inc
+INCLUDES += -I$(LIB)/STM32_USB_OTG_Driver/inc
+INCLUDES += -I$(LIB)/STM32F4xx_StdPeriph_Driver/inc
+INCLUDES += -I$(LIB)/vl53l1 -I$(LIB)/vl53l1/core/inc
+INCLUDES += -I$(KBUILD_OUTPUT)/include/generated
 
 #
 # Special hack to handle float define. Kconfig has no float values
@@ -113,6 +151,10 @@ ifeq ($(CONFIG_PLATFORM_FLAPPER),y)
 PLATFORM = flapper
 endif
 
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+PLATFORM = sim
+endif
+
 
 PLATFORM  ?= cf2
 PROG ?= $(PLATFORM)
@@ -125,12 +167,53 @@ endif
 
 _all:
 
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+all: $(PROG).elf
+	@echo "Build for the sim platform!"
+else
 all: $(PROG).hex $(PROG).bin
 	@echo "Build for the $(PLATFORM) platform!"
 	@$(PYTHON) $(srctree)/tools/make/versionTemplate.py --crazyflie-base $(srctree) --print-version
 	@$(PYTHON) $(srctree)/tools/make/size.py $(SIZE) $(PROG).elf $(MEM_SIZE_FLASH_K) $(MEM_SIZE_RAM_K) $(MEM_SIZE_CCM_K)
+endif
 
 include tools/make/targets.mk
+
+# Simmyflie: build the sim platform into build/sim/ using the same
+# configuration as the normal build (build/.config, e.g. after
+# 'make cf2_defconfig' and optionally 'make menuconfig'), with just the
+# sim-specific overrides from configs/sim_defconfig layered on top. Anything
+# that only makes sense for real hardware (decks, sensors, ... -- gated by
+# 'depends on PLATFORM_CF2' and friends in Kconfig) necessarily falls away
+# once the platform choice flips to PLATFORM_SIM; everything else (e.g.
+# controller/estimator selection) carries through unchanged.
+#
+# Kbuild's own generic goal-redirect (see tools/kbuild/Makefile.kbuild)
+# means this recipe actually runs with cwd == $(KBUILD_OUTPUT) (e.g. build/),
+# not the source tree root -- hence $(CURDIR) (this dir) for sim's own
+# output and $(srctree) (source root) for configs/sim_defconfig. The nested
+# builds below run in a scrubbed environment (env -i, PATH/HOME only), not
+# just with KBUILD_SRC/MAKEFLAGS cleared: this recipe is itself already
+# running inside one redirect for build/'s own (hardware) config, which by
+# this point has 'export'ed CC/CROSS_COMPILE/AS/LD/... (see
+# tools/kbuild/Makefile.kbuild) into THIS process's environment. Left in
+# place, those beat build/sim/'s own CONFIG_CROSS_COMPILE="" (Kbuild's
+# CROSS_COMPILE ?= ... only takes the Kconfig value when nothing already
+# set it) and silently link sim against the ARM cross compiler. The
+# explicit silentoldconfig between alldefconfig and the real build matters
+# for the same reason: on a brand new build/sim/, skipping straight to the
+# build would have it generate include/config/auto.conf itself mid-parse,
+# restart, and re-export CC from the pre-restart (still unconfigured) pass.
+.PHONY: sim
+sim:
+	@test -f .config || { echo "No configuration in $(CURDIR) -- run 'make cf2_defconfig' (or another *_defconfig) first."; exit 1; }
+	@mkdir -p sim
+	@cat .config $(srctree)/configs/sim_defconfig > sim/.config.seed
+	env -i PATH=$$PATH HOME=$$HOME KBUILD_OUTPUT=$(CURDIR)/sim KCONFIG_ALLCONFIG=$(CURDIR)/sim/.config.seed $(MAKE) -C $(srctree) alldefconfig
+	env -i PATH=$$PATH HOME=$$HOME KBUILD_OUTPUT=$(CURDIR)/sim $(MAKE) -C $(srctree) silentoldconfig
+	env -i PATH=$$PATH HOME=$$HOME KBUILD_OUTPUT=$(CURDIR)/sim $(MAKE) -C $(srctree)
+	cp sim/sim.elf sim.elf
+	@echo "Simmyflie built: $(CURDIR)/sim.elf"
 
 size:
 	@$(PYTHON) $(srctree)/tools/make/size.py $(SIZE) $(PROG).elf $(MEM_SIZE_FLASH_K) $(MEM_SIZE_RAM_K) $(MEM_SIZE_CCM_K)
@@ -227,4 +310,4 @@ python_wheel: build/cffirmware.py
 	$(PYTHON) bindings/setup.py bdist_wheel
 endif
 
-.PHONY: all clean build compile unit prep erase flash check_submodules trace openocd gdb halt reset flash_dfu flash_dfu_manual flash_verify cload size print_version clean_version bindings_python test_python python_wheel
+.PHONY: all sim clean build compile unit prep erase flash check_submodules trace openocd gdb halt reset flash_dfu flash_dfu_manual flash_verify cload size print_version clean_version bindings_python test_python python_wheel
