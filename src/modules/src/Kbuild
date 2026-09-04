@@ -4,10 +4,12 @@ ifeq ($(CONFIG_PLATFORM_SIM),y)
 # CONFIG_PLATFORM_SIM to skip the hardware links/CRTP subsystems it
 # otherwise wires in). phase3_verify_mock.o is TEMPORARY verification
 # scaffolding (see phase3_verify_mock.c), not part of the real Firmware
-# core -- Phase 4 replaces it with the rest of this file's object list
-# (commander, console, log, param, platformservice, stabilizer, system,
-# ...).
+# core -- Phase 4 replaces it piece by piece with the rest of this file's
+# object list (commander, log, param, platformservice, stabilizer, system,
+# ...). Phase 4.1 (Console) adds console.o -- the first real replacement,
+# gated internally for its one hardware-only dependency (see console.c).
 obj-y += comm.o
+obj-y += console.o
 obj-y += crtp.o
 obj-y += phase3_verify_mock.o
 obj-y += queuemonitor.o

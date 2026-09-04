@@ -57,6 +57,16 @@
  * locally rather than via their real headers (i2cdev.h/watchdog.h), which
  * pull in the STM32 stm32fxxx.h register chain -- same reasoning as
  * platformInit() below; see i2cdev_sim.c/watchdog_sim.c.
+ *
+ * Phase 4.1 (Console) adds the real consoleInit()/console.c, the first
+ * CRTP-visible piece of Firmware core proper (port 0) -- retires debug.h's
+ * Phase-3-era "no console.c yet, print DEBUG_PRINT straight to stdout"
+ * branch, so DEBUG_PRINT now routes through consolePrintf() like real
+ * hardware. heartbeatTask's periodic line is DEBUG_PRINT'd (in addition to
+ * its existing local printf) so a client connecting at any point after boot
+ * -- not just in the boot-banner's narrow window -- still observes console
+ * output, since Simmyflie is the UDP server and a boot-time DEBUG_PRINT sent
+ * before the client's first packet has no known peer to reach yet.
  */
 
 #include "FreeRTOSConfig.h"
@@ -81,6 +91,8 @@
 #include "ledseq.h"
 #include "buzzer.h"
 #include "usec_time.h"
+#include "console.h"
+#include "debug.h"
 
 /* Not "platform.h": that header pulls in motors.h and the STM32 hardware
  * chain via the shared platform.c dispatcher, which platform_sim.c
@@ -100,8 +112,12 @@ static void heartbeatTask(void *pvParameters)
   TickType_t lastWake = xTaskGetTickCount();
   for (;;) {
     vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(1000));
-    printf("Simmyflie: scheduler alive, tick=%lu\n", (unsigned long)xTaskGetTickCount());
+    unsigned long tick = (unsigned long)xTaskGetTickCount();
+    printf("Simmyflie: scheduler alive, tick=%lu\n", tick);
     fflush(stdout);
+    /* Same line, over CRTP console (port 0) -- see the Phase 4.1 doc
+     * comment above for why this is periodic rather than boot-once. */
+    DEBUG_PRINT("Simmyflie: scheduler alive, tick=%lu\n", tick);
   }
 }
 
@@ -139,6 +155,10 @@ static void systemLaunch(void)
   udplinkInit();
   phase3VerifyMockInit();
   commInit();
+
+  debugInit();
+  consoleInit();
+  DEBUG_PRINT("Simmyflie: Phase 4.1 console wired in\n");
 
   foundationHalStubsInit();
 

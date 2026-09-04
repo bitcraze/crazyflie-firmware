@@ -1,10 +1,14 @@
 ifeq ($(CONFIG_PLATFORM_SIM),y)
 # Simmyflie Phase 3 (Communication): the ASSERT()/DEBUG_PRINT backend
 # crtp.c/queuemonitor.c need (see cfassert_sim.c). Phase 4.0 (Foundation
-# HAL stubs) adds configblock_sim.o. The rest of this tree (CRC, filters,
-# ...) isn't needed yet.
+# HAL stubs) adds configblock_sim.o. Phase 4.1 (Console) adds debug.o/
+# eprintf.o -- both already fully hardware-free, so DEBUG_PRINT can route
+# through the new real console.c's consolePrintf() unmodified. The rest of
+# this tree (CRC, filters, ...) isn't needed yet.
 obj-y += cfassert_sim.o
 obj-y += configblock_sim.o
+obj-y += debug.o
+obj-y += eprintf.o
 else
 obj-y += cfassert.o
 obj-y += clockCorrectionEngine.o
