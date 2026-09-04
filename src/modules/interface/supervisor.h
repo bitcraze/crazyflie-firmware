@@ -39,9 +39,10 @@ uint16_t supervisorGetInfoBitfield(void);
  *
  * @param sensors        Latest sensor data
  * @param setpoint       Current setpoint
+ * @param state          Latest state estimate
  * @param stabilizerStep Stabilizer step for rate control
  */
-void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, stabilizerStep_t stabilizerStep);
+void supervisorUpdate(const sensorData_t *sensors, const setpoint_t *setpoint, const state_t *state, stabilizerStep_t stabilizerStep);
 
 /**
  * @brief Replace the values in the current setpoint, if required.
@@ -50,8 +51,9 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, s
  * if may replace values in the current setpoint.
  *
  * @param setpoint The current setpoint
+ * @param state    Latest state estimate
  */
-void supervisorOverrideSetpoint(setpoint_t* setpoint);
+void supervisorOverrideSetpoint(setpoint_t* setpoint, const state_t *state);
 
 /**
  * @brief Check if it is OK to spin the motors
