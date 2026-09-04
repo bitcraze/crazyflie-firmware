@@ -27,6 +27,8 @@ with the docker builder image and the toolbelt
 
         tb make unit
 
+Note that a bare `rake` run will fail even though `make unit` succeeds.
+
 ## Running one unit test
 
 When working with one specific file it is often convenient to run only one unit test
