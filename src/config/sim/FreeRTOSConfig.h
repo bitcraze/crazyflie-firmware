@@ -22,11 +22,17 @@
 #define configUSE_16_BIT_TICKS                 0
 #define configIDLE_SHOULD_YIELD                1
 #define configUSE_MUTEXES                      1
-/* configUSE_TIMERS stays off (no FreeRTOS software timers used yet) -- but
- * static_mem.c's vApplicationGetTimerTaskMemory() references
- * configTIMER_TASK_STACK_DEPTH unconditionally at compile time regardless,
- * so it's still defined here. */
-#define configUSE_TIMERS                       0
+/* configUSE_TIMERS was off through Phase 4.4 (no FreeRTOS software timers
+ * used yet -- 4.0's ledseq_sim.c no-op'd the whole LED-sequence surface
+ * rather than turn these on for no client-visible benefit). Phase 4.5
+ * (Logging) is the first genuine need: log.c's periodic log blocks are
+ * built on xTimerCreateStatic()/xTimerChangePeriod()/xTimerStart() et al.,
+ * with no sim-friendly alternative to swap in (unlike ledseq, there's no
+ * "narrower stub" that still streams periodic values as Use case 3 needs).
+ * static_mem.c's vApplicationGetTimerTaskMemory() already referenced
+ * configTIMER_TASK_STACK_DEPTH unconditionally at compile time regardless
+ * of this setting, so no new define was needed for that part. */
+#define configUSE_TIMERS                       1
 #define configTIMER_TASK_PRIORITY              1
 #define configTIMER_QUEUE_LENGTH               20
 #define configTIMER_TASK_STACK_DEPTH           (configMINIMAL_STACK_SIZE * 4)

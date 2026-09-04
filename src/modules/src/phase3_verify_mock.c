@@ -47,7 +47,12 @@
  *      Log (5) ch.0: TOC_INFO -> reply required (toc.py::TocFetcher). An
  *      empty TOC (0 items) is fine -- no further per-item exchange needed.
  *      Protocol version 12 >= 4 makes cflib use the V2 wire format (u16
- *      count + u32 crc32), which this also matches.
+ *      count + u32 crc32), which this also matches. Retired in Phase 4.5 --
+ *      the real log.c now owns this port (see logInit() in main_sim.c's
+ *      systemLaunch()), unmodified, so the TOC now reports crtp.c's/mem.c's
+ *      real log variables (and any others already linked in), not an empty
+ *      one -- and the CMD_RESET_LOGGING ack comes from log.c's own
+ *      logControlProcess() CONTROL_RESET case, not this mock.
  *   4. Param (2) ch.0: same TOC_INFO/V2 exchange as Log.
  *   5. Memory (4) ch.0 (CHAN_INFO): CMD_INFO_NBR -> reply nbr_of_mems=0
  *      (cflib/crazyflie/mem/__init__.py). Retired in Phase 4.3 -- the real
@@ -62,12 +67,13 @@
  *      (and any others already linked in), not an empty one.
  *
  * Meant to be removed (or replaced wholesale) once Phase 4 adds the real
- * crtpservice.c/log.c wiring for its two remaining mocked pieces (Link
- * source and Log). platformservice.c's, mem.c's, and param_logic.c's/
- * param_task.c's real wiring landed in Phase 4.2/4.3/4.4 -- see
+ * crtpservice.c wiring for its one remaining mocked piece (Link source).
+ * platformservice.c's, mem.c's, param_logic.c's/param_task.c's, and log.c's
+ * real wiring landed in Phase 4.2/4.3/4.4/4.5 -- see
  * platformCommandProcess()/versionCommandProcess() in platformservice.c,
- * memSettingsProcess() in crtp_mem.c, and paramTOCProcess()/
- * paramWriteProcess() in param_logic.c instead of this file.
+ * memSettingsProcess() in crtp_mem.c, paramTOCProcess()/paramWriteProcess()
+ * in param_logic.c, and logTOCProcess()/logControlProcess() in log.c
+ * instead of this file.
  */
 
 #include "phase3_verify_mock.h"
@@ -75,12 +81,6 @@
 #include <string.h>
 
 #include "crtp.h"
-
-#define TOC_CHANNEL       0
-#define TOC_INFO          0x03
-
-#define LOG_SETTINGS_CHANNEL 1
-#define LOG_CMD_RESET_LOGGING 0x05
 
 #define LINK_SOURCE_CHANNEL 1
 
@@ -96,36 +96,7 @@ static void linkSourceCB(CRTPPacket *p)
   crtpSendPacketBlock(p);
 }
 
-static void emptyTocCB(CRTPPacket *p)
-{
-  if (p->channel != TOC_CHANNEL || p->data[0] != TOC_INFO) {
-    return;
-  }
-
-  /* toc_len = 0 (data[1..2]), crc32 = 0 (data[3..6]) */
-  memset(&p->data[1], 0, 6);
-  p->size = 7;
-  crtpSendPacketBlock(p);
-}
-
-static void logCB(CRTPPacket *p)
-{
-  if (p->channel == LOG_SETTINGS_CHANNEL && p->data[0] == LOG_CMD_RESET_LOGGING) {
-    /* cflib's log.py refresh_toc() blocks on this ack (id, error_status=0)
-     * before it will send the TOC_INFO request on channel 0 -- see
-     * _new_packet_cb()'s CMD_RESET_LOGGING branch. */
-    p->data[1] = 0; /* id, unused by cflib's check */
-    p->data[2] = 0; /* error_status = 0 (success) */
-    p->size = 3;
-    crtpSendPacketBlock(p);
-    return;
-  }
-
-  emptyTocCB(p);
-}
-
 void phase3VerifyMockInit(void)
 {
   crtpRegisterPortCB(CRTP_PORT_LINK, linkSourceCB);
-  crtpRegisterPortCB(CRTP_PORT_LOG, logCB);
 }

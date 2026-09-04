@@ -21,11 +21,18 @@ ifeq ($(CONFIG_PLATFORM_SIM),y)
 # dependencies are supplied by tools/make/sim/linker/sim_toc_sections.ld
 # (see the Makefile's CONFIG_PLATFORM_SIM image_LDFLAGS), not a source
 # change.
+# Phase 4.5 (Logging) adds log.o, also fully unmodified -- its
+# _log_start/_log_stop TOC-bounds are supplied by the same linker script
+# (extended to add a second .log output section alongside .param). Retires
+# phase3_verify_mock.c's Log handler, including the CMD_RESET_LOGGING ch.1
+# quirk Phase 3 hand-fixed in the mock: real log.c's CONTROL_RESET case
+# (logControlProcess()) already answers it correctly.
 obj-y += app_channel.o
 obj-y += comm.o
 obj-y += console.o
 obj-y += crtp.o
 obj-y += crtp_mem.o
+obj-y += log.o
 obj-y += mem.o
 obj-y += param_logic.o
 obj-y += param_task.o

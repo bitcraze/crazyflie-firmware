@@ -1,6 +1,9 @@
 /*
  * sim_toc_sections.ld - linker symbol shims for CONFIG_PLATFORM_SIM
- * (Simmyflie), Phase 4.4.
+ * (Simmyflie), Phase 4.4. Phase 4.5 (Logging) adds the same treatment for
+ * log.c's _log_start/_log_stop -- identical reasoning, just a second
+ * TOC-shaped array (LOG_GROUP_START(...)'s ".log.NAME" input sections
+ * instead of PARAM_GROUP_START(...)'s ".param.NAME" ones).
  *
  * Real hardware links against tools/make/F405/linker/*.ld, whose explicit
  * SECTIONS block gathers each PARAM_GROUP_START(...)'s per-group
@@ -52,6 +55,14 @@ SECTIONS
     KEEP(*(.param))
     KEEP(*(.param.*))
     _param_stop = .;
+  }
+
+  .log : ALIGN(4)
+  {
+    _log_start = .;
+    KEEP(*(.log))
+    KEEP(*(.log.*))
+    _log_stop = .;
   }
 
   .sim_toc_after_bss : ALIGN(4)

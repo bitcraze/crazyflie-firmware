@@ -93,6 +93,17 @@
  * already at this point: mem.c's memTst.resetW (added in 4.3, unmodified)
  * is a real read-write parameter, so 4.4's round-trip check exercises it
  * rather than hitting the "every parameter is RONLY" known-gap case.
+ *
+ * Phase 4.5 (Logging) adds the real logInit() (log.c, port 5), retiring
+ * phase3_verify_mock.c's Log handler -- including the CMD_RESET_LOGGING
+ * ch.1 quirk Phase 3 hand-fixed in the mock, since real log.c's
+ * logControlProcess() CONTROL_RESET case already answers it correctly, no
+ * special-casing needed. Fully unmodified -- log.c's own _log_start/
+ * _log_stop TOC-bounds are supplied by the same sim_toc_sections.ld linker
+ * script 4.4 added, now with a second .log output section alongside .param.
+ * The TOC is non-empty already at this point too: crtp.c's crtp.rxRate/
+ * txRate and mem.c's memTst.errCntW (both unmodified, already linked in)
+ * are real log variables, so no new one was needed for this chunk either.
  */
 
 #include "FreeRTOSConfig.h"
@@ -123,6 +134,8 @@
 #include "mem.h"
 #include "crtp_mem.h"
 #include "param_task.h"
+#include "log.h"
+#include "worker.h"
 
 /* Not "platform.h": that header pulls in motors.h and the STM32 hardware
  * chain via the shared platform.c dispatcher, which platform_sim.c
@@ -192,6 +205,8 @@ static void systemLaunch(void)
 
   foundationHalStubsInit();
 
+  workerInit();
+
   platformserviceInit();
   DEBUG_PRINT("Simmyflie: Phase 4.2 platform service wired in\n");
 
@@ -201,6 +216,9 @@ static void systemLaunch(void)
 
   paramInit();
   DEBUG_PRINT("Simmyflie: Phase 4.4 parameters wired in\n");
+
+  logInit();
+  DEBUG_PRINT("Simmyflie: Phase 4.5 logging wired in\n");
 
   xTaskCreate(heartbeatTask, "heartbeat", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 }
