@@ -157,6 +157,86 @@ void testCatalogStreamsDescriptorsAndBindsOpaqueControlHandle(void) {
   TEST_ASSERT_EQUAL_MEMORY("bitcraze.control", descriptor.contract_id, 16);
 }
 
+/** Verify discovery and receive credit for an opaque Console handle. */
+void testCatalogBindsConsoleAndAppliesIndependentReceiveCredit(void) {
+  bccam_uart_link_endpoint_t link;
+  bccam_uart_service_descriptor_t descriptor;
+
+  establish(&link);
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_link_start_service_count(&link));
+  reply_count(&link, 1);
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_link_start_service_descriptor(&link, 0));
+  reply_descriptor(&link, 0, 0x42, 1, 0, "bitcraze.console");
+
+  TEST_ASSERT_TRUE(bccam_uart_link_console_binding(&link, &descriptor));
+  TEST_ASSERT_EQUAL_UINT8(0x42, descriptor.handle);
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_link_send_credit_update(&link, 0x42, 1));
+
+  uint8_t version, service, payload[64];
+  uint16_t payload_len;
+  take_unit(&link, &version, &service, payload, &payload_len);
+  TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_CREDIT_UPDATE, payload[0]);
+  TEST_ASSERT_EQUAL_UINT8(0x42, payload[2]);
+
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_link_receive_unit(&link, 1, 0x42,
+                                 (const uint8_t *)"hello", 5));
+  bool present = false;
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_link_take_rx(&link, &service, payload, sizeof(payload),
+                            &payload_len, &present));
+  TEST_ASSERT_TRUE(present);
+  TEST_ASSERT_EQUAL_UINT8(0x42, service);
+  TEST_ASSERT_EQUAL_UINT16(5, payload_len);
+  TEST_ASSERT_EQUAL_MEMORY("hello", payload, 5);
+}
+
+/** Verify supported services own independent pending receive slots. */
+void testControlAndConsoleCanHoldPendingFramesAtTheSameTime(void) {
+  bccam_uart_link_endpoint_t link;
+
+  establish(&link);
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_link_start_service_count(&link));
+  reply_count(&link, 2);
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_link_start_service_descriptor(&link, 0));
+  reply_descriptor(&link, 0, 7, 1, 0, "bitcraze.control");
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_link_start_service_descriptor(&link, 1));
+  reply_descriptor(&link, 1, 9, 1, 0, "bitcraze.console");
+
+  uint8_t version, service, payload[64];
+  uint16_t payload_len;
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_link_send_credit_update(&link, 7, 1));
+  take_unit(&link, &version, &service, payload, &payload_len);
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_link_send_credit_update(&link, 9, 1));
+  take_unit(&link, &version, &service, payload, &payload_len);
+
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_link_receive_unit(&link, 1, 7,
+                                 (const uint8_t *)"control", 7));
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_link_receive_unit(&link, 1, 9,
+                                 (const uint8_t *)"console", 7));
+
+  bool present = false;
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_link_take_rx_for_service(&link, 9, payload, sizeof(payload),
+                                        &payload_len, &present));
+  TEST_ASSERT_TRUE(present);
+  TEST_ASSERT_EQUAL_MEMORY("console", payload, 7);
+
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_link_take_rx_for_service(&link, 7, payload, sizeof(payload),
+                                        &payload_len, &present));
+  TEST_ASSERT_TRUE(present);
+  TEST_ASSERT_EQUAL_MEMORY("control", payload, 7);
+}
+
 void testExperimentalControlIsDiscoveredButNotBound(void) {
   bccam_uart_link_endpoint_t link;
   bccam_uart_service_descriptor_t descriptor;
@@ -709,9 +789,8 @@ void testReestablishmentClearsPendingRxTxCreditAndCatalogState(void) {
   link.control_binding.descriptor.handle = 7;
   link.control_binding.tx_credit = 4;
   link.control_binding.rx_advertised_credit = 1;
-  link.rx_pending = true;
-  link.rx_service = 7;
-  link.rx_payload_len = 1;
+  link.control_binding.rx_pending = true;
+  link.control_binding.rx_payload_len = 1;
   link.tx_pending = true;
   link.tx_payload_len = 1;
   link.pending = BCCAM_UART_PENDING_SERVICE_COUNT;
@@ -721,7 +800,7 @@ void testReestablishmentClearsPendingRxTxCreditAndCatalogState(void) {
     bccam_uart_link_start_establishment(&link));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_LINK_INACTIVE, link.state);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_PENDING_ESTABLISH, link.pending);
-  TEST_ASSERT_FALSE(link.rx_pending);
+  TEST_ASSERT_FALSE(link.control_binding.rx_pending);
   TEST_ASSERT_FALSE(link.control_binding.valid);
   TEST_ASSERT_FALSE(link.service_count_known);
   TEST_ASSERT_EQUAL_UINT8(0, link.seen_ordinals[0]);

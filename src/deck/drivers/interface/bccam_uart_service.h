@@ -95,6 +95,16 @@ void bccam_uart_service_test_set_firmware_startup_result(
 void bccam_uart_service_test_set_firmware_control_probe_phase(
   bccam_uart_control_probe_phase_t phase);
 void bccam_uart_service_test_set_bootloader_enter_result(bool result);
+
+/**
+ * Force whether tests model an enabled and bound diagnostic Console source.
+ *
+ * @param active true to suspend startup recovery as production does while a
+ *               client is consuming a bound Console service; false otherwise.
+ */
+void bccam_uart_service_test_set_console_diagnostics_active(bool active);
+void bccam_uart_service_test_set_console_source_id(int source_id);
+int bccam_uart_service_test_forward_console(void);
 void bccam_uart_service_test_poll_once(void);
 void bccam_uart_service_test_handle_rx_event(
   const bccam_uart_rx_event_t *event);
