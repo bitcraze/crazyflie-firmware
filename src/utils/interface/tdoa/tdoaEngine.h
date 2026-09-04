@@ -48,4 +48,10 @@ static inline uint64_t tdoaEngineTruncateToAnchorTimeStamp(uint64_t fullTimeStam
   return fullTimeStamp & TDOA_ENGINE_TRUNCATE_TO_ANCHOR_TS_BITMAP;
 }
 
+// The tag (DW1000) keeps 40 bit time stamps
+#define TDOA_ENGINE_TRUNCATE_TO_TAG_TS_BITMAP 0xFFFFFFFFFF
+static inline uint64_t tdoaEngineTruncateToTagTimeStamp(uint64_t fullTimeStamp) {
+  return fullTimeStamp & TDOA_ENGINE_TRUNCATE_TO_TAG_TS_BITMAP;
+}
+
 #endif // __TDOA_ENGINE_H__

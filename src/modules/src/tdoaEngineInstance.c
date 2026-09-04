@@ -67,6 +67,12 @@ STATS_CNT_RATE_LOG_ADD(stFound, &tdoaEngineState.stats.suitableDataFound)
 STATS_CNT_RATE_LOG_ADD(stGeometry, &tdoaEngineState.stats.geometryRejected)
 
 /**
+ * @brief Rate of measurement anchor pair candidates that were rejected because the remote
+ * anchor's packet is older than one 32 bit time stamp wrap (67 ms) [1/s]
+ */
+STATS_CNT_RATE_LOG_ADD(stRxWrap, &tdoaEngineState.stats.remoteRxWrapRejected)
+
+/**
  * @brief Rate of packets where the time stamp is used to update the clock correction factor for an anchor [1/s]
  */
 STATS_CNT_RATE_LOG_ADD(stCc, &tdoaEngineState.stats.clockCorrectionCount)
