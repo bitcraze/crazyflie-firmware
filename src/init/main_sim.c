@@ -104,6 +104,11 @@
  * The TOC is non-empty already at this point too: crtp.c's crtp.rxRate/
  * txRate and mem.c's memTst.errCntW (both unmodified, already linked in)
  * are real log variables, so no new one was needed for this chunk either.
+ *
+ * Phase 4.6 (Power management) adds pmInit() (pm_sim.c, a full HAL swap for
+ * pm_stm32f4.c -- see that file's header comment for why pm.h itself can't
+ * be used here). No CRTP port of its own: pm.vbat is just another entry in
+ * log.c's TOC, fixed at 4.2V per the MVP's infinite-battery requirement.
  */
 
 #include "FreeRTOSConfig.h"
@@ -141,6 +146,10 @@
  * chain via the shared platform.c dispatcher, which platform_sim.c
  * deliberately bypasses (see platform_sim.c). */
 int platformInit(void);
+
+/* Not "pm.h": that header pulls in the STM32 hardware chain via deck.h --
+ * see pm_sim.c. */
+void pmInit(void);
 
 /* Not "i2cdev.h"/"watchdog.h": both pull in the STM32 stm32fxxx.h register
  * chain (via i2c_drv.h, or directly) -- same reasoning as platformInit()
@@ -219,6 +228,9 @@ static void systemLaunch(void)
 
   logInit();
   DEBUG_PRINT("Simmyflie: Phase 4.5 logging wired in\n");
+
+  pmInit();
+  DEBUG_PRINT("Simmyflie: Phase 4.6 power management wired in\n");
 
   xTaskCreate(heartbeatTask, "heartbeat", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 }

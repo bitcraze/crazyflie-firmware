@@ -49,7 +49,33 @@
 
 SECTIONS
 {
-  .param : ALIGN(4)
+  /* SUBALIGN(4), not the ld default of "each input section's own alignment":
+   * x86-64 gcc emits every LOG_GROUP_START(...)/PARAM_GROUP_START(...)
+   * per-group array (".log.NAME"/".param.NAME") 32-byte-aligned even though
+   * struct log_s/param_s only need 8-byte (pointer) alignment -- a vector-
+   * friendly default this target's gcc applies to const arrays that
+   * tools/make/F405/linker/sections_FLASH.ld's arm-none-eabi-gcc build
+   * never triggers (there, KEEP(*(.log.*)) is exactly this same one-liner,
+   * unadorned, and it's fine). Left at ld's default, any group whose byte
+   * size isn't itself a multiple of 32 leaves a zero-filled gap before the
+   * next 32-aligned group -- invisible to a hex dump, but logsLen/paramsLen
+   * are computed via typed pointer subtraction (_log_stop - _log_start),
+   * i.e. "gap bytes / sizeof(struct log_s)", so any gap that isn't itself a
+   * whole multiple of sizeof(struct log_s) shifts every following entry's
+   * apparent index -- and the specific gap size 32-byte over-alignment
+   * produces (32 - (size % 32) bytes, zero-filled) generally isn't. First
+   * hit in Phase 4.6: adding pm_sim.c's LOG_GROUP_START(pm) as a third .log
+   * group (after crtp's and mem.c's) landed a 24-byte gap -- exactly one
+   * phantom all-zero struct log_s -- between memTst's group and pm's,
+   * which logInit() then read as a real entry: type=0 (fails the "is this
+   * a LOG_GROUP marker" check), name=NULL -> strlen(NULL) segfault. Two
+   * groups never triggered it (4.3-4.5): the only inter-group boundary
+   * present (crtp -> memTst) happened to already sit on a 32-byte boundary.
+   * SUBALIGN(4) forces every input section placed here to be treated as
+   * 4-byte aligned regardless of its own recorded alignment, matching what
+   * the real ARM linker script gets "for free" from its compiler -- closes
+   * this off for any future group, not just pm's. */
+  .param : ALIGN(4) SUBALIGN(4)
   {
     _param_start = .;
     KEEP(*(.param))
@@ -57,7 +83,7 @@ SECTIONS
     _param_stop = .;
   }
 
-  .log : ALIGN(4)
+  .log : ALIGN(4) SUBALIGN(4)
   {
     _log_start = .;
     KEEP(*(.log))
