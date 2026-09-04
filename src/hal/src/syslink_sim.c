@@ -21,18 +21,23 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * phase3_verify_mock.h - TEMPORARY Phase 3 verification scaffolding, not a
- * real Firmware core (Phase 4) implementation. See phase3_verify_mock.c.
+ * syslink_sim.c - syslinkSendPacket() stub for CONFIG_PLATFORM_SIM
+ * (Simmyflie), Phase 4.2.
+ *
+ * The real syslink.c talks to the NRF51 companion radio chip over
+ * uart_syslink.h/radiolink.h, neither of which exist in sim (same "NRF
+ * companion chip doesn't exist in sim" reasoning Phase 4.0 used for
+ * systemRequestNRFVersion()). platformservice.c's setContinuousWave
+ * command is the only sim caller, forwarding a radio-test request that has
+ * no meaning without real radio hardware -- stubbed to a no-op.
  */
-#ifndef PHASE3_VERIFY_MOCK_H_
-#define PHASE3_VERIFY_MOCK_H_
 
-/**
- * Registers the minimal CRTP handlers needed for the real, unmodified
- * cfcli binary's connect() sequence to succeed: Link (15) linkSource, and
- * empty Log (5) / Param (2) TOCs / Memory (4) info. Call after crtpInit().
- * Platform (13) is real as of Phase 4.2 -- see platformserviceInit().
- */
-void phase3VerifyMockInit(void);
+#include <stdint.h>
 
-#endif // PHASE3_VERIFY_MOCK_H_
+#include "syslink.h"
+
+int syslinkSendPacket(SyslinkPacket *slp)
+{
+  (void)slp;
+  return 0;
+}

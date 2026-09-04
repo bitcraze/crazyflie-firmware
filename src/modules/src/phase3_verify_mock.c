@@ -38,8 +38,9 @@
  *      versioning (platformservice.py::_crt_service_callback). This is
  *      crtpservice.c's existing linkSource case, copied unchanged below.
  *   2. Platform (13) ch.1: GET_PROTOCOL_VERSION -> reply required
- *      (platformservice.py::_request_protocol_version). Mirrors
- *      platformservice.c::versionCommandProcess(), unchanged.
+ *      (platformservice.py::_request_protocol_version). Retired in Phase
+ *      4.2 -- the real platformservice.c now owns this port entirely (see
+ *      platformserviceInit() in main_sim.c's systemLaunch()).
  *   3. Log (5) ch.1: CMD_RESET_LOGGING -> reply required first
  *      (log.py::refresh_toc()/_send_reset_packet()) -- cflib will not send
  *      the TOC_INFO request at all until this ack comes back. Then
@@ -53,7 +54,9 @@
  *      requirements.md's "Port 4 Memory shall report zero memories/decks".
  *
  * Meant to be removed (or replaced wholesale) once Phase 4 adds the real
- * crtpservice.c/platformservice.c/log.c/param.c/mem.c wiring.
+ * crtpservice.c/log.c/param.c/mem.c wiring. platformservice.c's real
+ * wiring landed in Phase 4.2 -- see platformCommandProcess()/
+ * versionCommandProcess() in platformservice.c instead of this file.
  */
 
 #include "phase3_verify_mock.h"
@@ -61,9 +64,6 @@
 #include <string.h>
 
 #include "crtp.h"
-
-#define VERSION_CHANNEL   1
-#define VERSION_GET_PROTOCOL 0x00
 
 #define TOC_CHANNEL       0
 #define TOC_INFO          0x03
@@ -75,17 +75,6 @@
 
 #define MEM_CHAN_INFO     0
 #define MEM_CMD_INFO_NBR  0x01
-
-static void platformVersionCB(CRTPPacket *p)
-{
-  if (p->channel != VERSION_CHANNEL || p->data[0] != VERSION_GET_PROTOCOL) {
-    return;
-  }
-
-  *(int *)&p->data[1] = CRTP_PROTOCOL_VERSION;
-  p->size = 5;
-  crtpSendPacketBlock(p);
-}
 
 static void linkSourceCB(CRTPPacket *p)
 {
@@ -140,7 +129,6 @@ static void memInfoCB(CRTPPacket *p)
 
 void phase3VerifyMockInit(void)
 {
-  crtpRegisterPortCB(CRTP_PORT_PLATFORM, platformVersionCB);
   crtpRegisterPortCB(CRTP_PORT_LINK, linkSourceCB);
   crtpRegisterPortCB(CRTP_PORT_LOG, logCB);
   crtpRegisterPortCB(CRTP_PORT_PARAM, emptyTocCB);

@@ -67,6 +67,15 @@
  * -- not just in the boot-banner's narrow window -- still observes console
  * output, since Simmyflie is the UDP server and a boot-time DEBUG_PRINT sent
  * before the client's first packet has no known peer to reach yet.
+ *
+ * Phase 4.2 (Platform) adds the real platformserviceInit()/
+ * platformservice.c (port 13), retiring phase3_verify_mock.c's Platform
+ * handler -- see phase3_verify_mock.c's updated header comment. Called
+ * after commInit() (needs crtpInit()'s queues) but before the mock's
+ * remaining handlers no longer matter, since phase3VerifyMockInit() simply
+ * doesn't register a Platform callback anymore. ch.0 (arming) is inert
+ * (see supervisor_sim.c) until Commander lands in 4.9; ch.1 (version) is
+ * fully real.
  */
 
 #include "FreeRTOSConfig.h"
@@ -93,6 +102,7 @@
 #include "usec_time.h"
 #include "console.h"
 #include "debug.h"
+#include "platformservice.h"
 
 /* Not "platform.h": that header pulls in motors.h and the STM32 hardware
  * chain via the shared platform.c dispatcher, which platform_sim.c
@@ -161,6 +171,9 @@ static void systemLaunch(void)
   DEBUG_PRINT("Simmyflie: Phase 4.1 console wired in\n");
 
   foundationHalStubsInit();
+
+  platformserviceInit();
+  DEBUG_PRINT("Simmyflie: Phase 4.2 platform service wired in\n");
 
   xTaskCreate(heartbeatTask, "heartbeat", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 }

@@ -8,12 +8,21 @@ ifeq ($(CONFIG_PLATFORM_SIM),y)
 # object list (commander, log, param, platformservice, stabilizer, system,
 # ...). Phase 4.1 (Console) adds console.o -- the first real replacement,
 # gated internally for its one hardware-only dependency (see console.c).
+# Phase 4.2 (Platform) adds platformservice.o (gated internally, see
+# platformservice.c) plus its app_channel.o/worker.o dependencies, and
+# supervisor_sim.o -- a stub for the 4 supervisor.h entry points
+# platformservice.c's deprecated arm/recover commands call; the real
+# supervisor.c isn't buildable yet (see supervisor_sim.c).
+obj-y += app_channel.o
 obj-y += comm.o
 obj-y += console.o
 obj-y += crtp.o
 obj-y += phase3_verify_mock.o
+obj-y += platformservice.o
 obj-y += queuemonitor.o
 obj-y += static_mem.o
+obj-y += supervisor_sim.o
+obj-y += worker.o
 else
 obj-y += app_channel.o
 obj-$(CONFIG_APP_ENABLE) += app_handler.o

@@ -36,3 +36,13 @@ int platformInit(void)
 {
   return 0;
 }
+
+/* Phase 4.2 (Platform): the one platform.h query platformservice.c's real
+ * versionCommandProcess() needs (CRTP Platform port 13, ch.1
+ * getDeviceTypeName) -- a fixed string here rather than routing through
+ * the shared platform.c dispatcher's active_config, which this file
+ * deliberately bypasses (see file header comment above). */
+const char* platformConfigGetDeviceTypeName(void)
+{
+  return "Simmyflie";
+}

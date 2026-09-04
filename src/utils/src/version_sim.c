@@ -21,18 +21,24 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * phase3_verify_mock.h - TEMPORARY Phase 3 verification scaffolding, not a
- * real Firmware core (Phase 4) implementation. See phase3_verify_mock.c.
+ * version_sim.c - version.h backend for CONFIG_PLATFORM_SIM (Simmyflie),
+ * Phase 4.2.
+ *
+ * The real version.c is generated at build time from version.vtpl via
+ * tools/make/versionTemplate.py (git describe/rev-parse), and the template
+ * itself includes "param.h" to expose firmware.revision0/1/modified as
+ * real params -- the real param system isn't built until Phase 4.4. Fixed
+ * placeholder strings here instead: platformservice.c's real
+ * versionCommandProcess() (Phase 4.2, port 13 ch.1 getFirmwareVersion) is
+ * the only current sim caller of V_STAG. Swap this file out for the real
+ * generated version_gen.c once Phase 4.4 lands and PARAM_ADD_CORE() has a
+ * real param system to register against.
  */
-#ifndef PHASE3_VERIFY_MOCK_H_
-#define PHASE3_VERIFY_MOCK_H_
 
-/**
- * Registers the minimal CRTP handlers needed for the real, unmodified
- * cfcli binary's connect() sequence to succeed: Link (15) linkSource, and
- * empty Log (5) / Param (2) TOCs / Memory (4) info. Call after crtpInit().
- * Platform (13) is real as of Phase 4.2 -- see platformserviceInit().
- */
-void phase3VerifyMockInit(void);
+#include <stdbool.h>
 
-#endif // PHASE3_VERIFY_MOCK_H_
+const char * V_SLOCAL_REVISION = "0";
+const char * V_SREVISION = "sim";
+const char * V_STAG = "simmyflie";
+const bool V_MODIFIED = false;
+const bool V_PRODUCTION_RELEASE = false;

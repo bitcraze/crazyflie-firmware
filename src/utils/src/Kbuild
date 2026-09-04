@@ -3,12 +3,15 @@ ifeq ($(CONFIG_PLATFORM_SIM),y)
 # crtp.c/queuemonitor.c need (see cfassert_sim.c). Phase 4.0 (Foundation
 # HAL stubs) adds configblock_sim.o. Phase 4.1 (Console) adds debug.o/
 # eprintf.o -- both already fully hardware-free, so DEBUG_PRINT can route
-# through the new real console.c's consolePrintf() unmodified. The rest of
-# this tree (CRC, filters, ...) isn't needed yet.
+# through the new real console.c's consolePrintf() unmodified. Phase 4.2
+# (Platform) adds version_sim.o -- a placeholder for the real generated
+# version_gen.c, whose template pulls in param.h (not built until 4.4); see
+# version_sim.c. The rest of this tree (CRC, filters, ...) isn't needed yet.
 obj-y += cfassert_sim.o
 obj-y += configblock_sim.o
 obj-y += debug.o
 obj-y += eprintf.o
+obj-y += version_sim.o
 else
 obj-y += cfassert.o
 obj-y += clockCorrectionEngine.o
