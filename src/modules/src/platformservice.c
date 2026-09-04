@@ -37,7 +37,17 @@
 #include "platformservice.h"
 #include "syslink.h"
 #include "version.h"
+#include "autoconf.h"
+#ifdef CONFIG_PLATFORM_SIM
+/* Simmyflie: platform.h pulls in motors.h -> stm32fxxx.h, an STM32
+ * register chain with no meaning off-target (same reasoning platform_sim.c
+ * uses to bypass the shared platform.c dispatcher entirely). Forward-
+ * declare the one query this file needs instead -- platform_sim.c supplies
+ * it directly rather than through platformConfig_t/active_config. */
+const char* platformConfigGetDeviceTypeName(void);
+#else
 #include "platform.h"
+#endif
 #include "app_channel.h"
 #include "static_mem.h"
 #include "ledseq.h"
@@ -167,7 +177,7 @@ static void platformCommandProcess(CRTPPacket *p)
       // 1 - success
       const uint8_t notificationType = data[0];
 
-      workerSchedule(runUserNotification, (void*)(uint32_t)notificationType);
+      workerSchedule(runUserNotification, (void*)(uintptr_t)notificationType);
       p->size = 0;
       break;
     }
@@ -218,7 +228,7 @@ static void versionCommandProcess(CRTPPacket *p)
 
 static void runUserNotification(void* arg)
 {
-  uint8_t notificationType = (uint32_t)arg;
+  uint8_t notificationType = (uintptr_t)arg;
   if (notificationType) {
     ledseqRun(&seq_user_notification_success);
   } else {
