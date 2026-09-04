@@ -1,7 +1,14 @@
 ifeq ($(CONFIG_PLATFORM_SIM),y)
-# Simmyflie Phase 3 (Communication): only the UDP CRTP link. The rest of
-# this tree (sensors, radio, USB, ...) is Phase 5's job.
+# Simmyflie Phase 3 (Communication): the UDP CRTP link. Phase 4.0
+# (Foundation HAL stubs) adds buzzer.o (already fully portable -- reused
+# unmodified, no _sim.c needed), ledseq_sim.o, storage_sim.o, and
+# usec_time_sim.o. The rest of this tree (sensors, radio, USB, ...) is
+# Phase 5's job.
+obj-y += buzzer.o
+obj-y += ledseq_sim.o
+obj-y += storage_sim.o
 obj-y += udplink_sim.o
+obj-y += usec_time_sim.o
 else
 obj-y += amg8833.o
 obj-y += buzzer.o

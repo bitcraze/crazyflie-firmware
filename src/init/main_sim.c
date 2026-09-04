@@ -44,6 +44,19 @@
  * phase3VerifyMockInit() call is TEMPORARY verification scaffolding (see
  * phase3_verify_mock.c) so the real `cfcli` can connect end-to-end; remove
  * it once Phase 4 adds the real platformservice.c/log.c/param.c.
+ *
+ * Phase 4.0 (Foundation HAL stubs) adds calls to the hardware-only inits
+ * that block system.c's real systemInit()/systemTask() from running to
+ * completion -- configblockInit()/storageInit()/adcInit()/ledInit()/
+ * ledseqInit()/buzzerInit()/i2cdevInit()/usecTimerInit()/
+ * watchdogNormalStartTest() -- so each has a working, linkable sim
+ * implementation before later chunks (4.1-4.9) depend on it, without
+ * pulling in real system.c itself yet (that's Phase 4.10's cutover). No
+ * CRTP-visible behavior in this chunk: pure smoke test, results only
+ * printed locally. i2cdevInit()/watchdogNormalStartTest() are declared
+ * locally rather than via their real headers (i2cdev.h/watchdog.h), which
+ * pull in the STM32 stm32fxxx.h register chain -- same reasoning as
+ * platformInit() below; see i2cdev_sim.c/watchdog_sim.c.
  */
 
 #include "FreeRTOSConfig.h"
@@ -51,6 +64,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -60,10 +74,24 @@
 #include "udplink_sim.h"
 #include "phase3_verify_mock.h"
 
+#include "configblock.h"
+#include "storage.h"
+#include "adc.h"
+#include "led.h"
+#include "ledseq.h"
+#include "buzzer.h"
+#include "usec_time.h"
+
 /* Not "platform.h": that header pulls in motors.h and the STM32 hardware
  * chain via the shared platform.c dispatcher, which platform_sim.c
  * deliberately bypasses (see platform_sim.c). */
 int platformInit(void);
+
+/* Not "i2cdev.h"/"watchdog.h": both pull in the STM32 stm32fxxx.h register
+ * chain (via i2c_drv.h, or directly) -- same reasoning as platformInit()
+ * above. See i2cdev_sim.c/watchdog_sim.c. */
+int i2cdevInit(void *dev);
+bool watchdogNormalStartTest(void);
 
 static void heartbeatTask(void *pvParameters)
 {
@@ -77,12 +105,42 @@ static void heartbeatTask(void *pvParameters)
   }
 }
 
+/* Phase 4.0: exercise the foundation HAL stubs at boot. Pure smoke test --
+ * nothing here is CRTP-visible, so results are only printed locally
+ * (DEBUG_PRINT/console isn't wired in until Phase 4.1). */
+static void foundationHalStubsInit(void)
+{
+  bool pass = true;
+
+  pass &= (configblockInit() == 0);
+  pass &= configblockTest();
+  storageInit();
+  pass &= storageTest();
+  adcInit();
+  ledInit();
+  pass &= ledTest();
+  ledseqInit();
+  pass &= ledseqTest();
+  buzzerInit();
+  pass &= buzzerTest();
+  pass &= (i2cdevInit(NULL) != 0);
+  usecTimerInit();
+  pass &= watchdogNormalStartTest();
+
+  printf("Simmyflie: Phase 4.0 foundation HAL stubs %s (usecTimestamp=%llu)\n",
+         pass ? "OK" : "FAILED",
+         (unsigned long long)usecTimestamp());
+  fflush(stdout);
+}
+
 static void systemLaunch(void)
 {
   crtpInit();
   udplinkInit();
   phase3VerifyMockInit();
   commInit();
+
+  foundationHalStubsInit();
 
   xTaskCreate(heartbeatTask, "heartbeat", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 }

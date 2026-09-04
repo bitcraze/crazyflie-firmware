@@ -1,3 +1,14 @@
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+# Simmyflie Phase 4.0 (Foundation HAL stubs): just enough of this tree's
+# public API to unblock system.c's init chain -- adc_sim.o (adcInit()),
+# i2cdev_sim.o (i2cdevInit()), led_sim.o (led.h), watchdog_sim.o
+# (watchdogNormalStartTest()). The rest of this tree (real sensor/motor
+# drivers) is Phase 5's job.
+obj-y += adc_sim.o
+obj-y += i2cdev_sim.o
+obj-y += led_sim.o
+obj-y += watchdog_sim.o
+else
 obj-y += ak8963.o
 obj-y += cppm.o
 obj-y += eeprom.o
@@ -25,3 +36,4 @@ obj-y += vl53l0x.o
 obj-y += vl53l1x.o
 obj-y += watchdog.o
 obj-y += ws2812_cf2.o
+endif
