@@ -39,6 +39,7 @@
 #include "math.h"
 #include "color_led_deck.h"
 #include "i2c_dfu.h"
+#include <string.h>
 
 #define DEBUG_MODULE "COLORLED"
 #include "debug.h"
@@ -52,6 +53,7 @@ typedef struct {
   uint8_t brightnessCorr;
   uint32_t currentWrgb8888;
   uint32_t wrgb8888;
+  float tFade;
   uint8_t deckTemperature;
   uint8_t throttlePercentage;
   uint8_t ledPosition;
@@ -127,11 +129,11 @@ static const ledDeckHandlerDef_t colorLedDeckLedHandler = {
 // The brightCorr param below just toggles it via CMD_SET_BRIGHTNESS_CORR.
 
 static bool checkProtocolVersion(uint8_t i2cAddress) {
-  // Fixed packet size: CMD + 4 dummy bytes
+  // Fixed packet size: CMD + 8 dummy bytes
   uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_VERSION, 0, 0, 0, 0};
   uint8_t response[RXBUFFERSIZE];
 
-  // Send version request (5 bytes to match fixed packet size)
+  // Send version request (9 bytes to match fixed packet size)
   if (i2cdevWrite(I2C1_DEV, i2cAddress, TXBUFFERSIZE, cmd) == false) {
     DEBUG_PRINT("Failed to request version\n");
     return false;
@@ -459,9 +461,9 @@ static void task(void *param) {
         }
       }
 
-      // Push the raw color when changed
+      // Push the raw color + fade duration when the color changed
       if (ctx->wrgb8888 != ctx->currentWrgb8888) {
-        // Format: 0xWWRRGGBB -> [CMD, W, R, G, B]
+        // Format: 0xWWRRGGBB -> [CMD, W, R, G, B, fadeTime (float32, little-endian)]
         uint8_t cmd[TXBUFFERSIZE] = {
           CMD_SET_COLOR,
           (uint8_t)(ctx->wrgb8888 >> 24),
@@ -469,6 +471,7 @@ static void task(void *param) {
           (uint8_t)(ctx->wrgb8888 >> 8),
           (uint8_t)(ctx->wrgb8888)
         };
+        memcpy(&cmd[5], &ctx->tFade, sizeof(float));
 
         if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
           ctx->currentWrgb8888 = ctx->wrgb8888;
@@ -687,6 +690,11 @@ PARAM_ADD(PARAM_UINT32, wrgb8888, &contexts[BOTTOM_IDX].wrgb8888)
  */
 PARAM_ADD(PARAM_UINT8, brightCorr, &contexts[BOTTOM_IDX].brightnessCorr)
 
+/**
+ * @brief Fade duration in seconds for bottom deck. 0=instant. Applies to the next wrgb8888 change
+ */
+PARAM_ADD(PARAM_FLOAT, tfade, &contexts[BOTTOM_IDX].tFade)
+
 PARAM_GROUP_STOP(colorLedBot)
 
 // Top deck parameters
@@ -701,6 +709,11 @@ PARAM_ADD(PARAM_UINT32, wrgb8888, &contexts[TOP_IDX].wrgb8888)
  * @brief Enable brightness correction (gamma and luminance normalization) for top deck. 0=off, 1=on
  */
 PARAM_ADD(PARAM_UINT8, brightCorr, &contexts[TOP_IDX].brightnessCorr)
+
+/**
+ * @brief Fade duration in seconds for top deck. 0=instant. Applies to the next wrgb8888 change
+ */
+PARAM_ADD(PARAM_FLOAT, tfade, &contexts[TOP_IDX].tFade)
 
 PARAM_GROUP_STOP(colorLedTop)
 
