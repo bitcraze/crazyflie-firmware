@@ -4,11 +4,12 @@
 
 // Protocol commands
 #define CMD_GET_VERSION         0x00
-#define CMD_SET_COLOR           0x01
+#define CMD_SET_COLOR           0x01  // Set LED color (raw, pre-correction) [CMD, W, R, G, B]
 #define CMD_GET_THERMAL_STATUS  0x02
 #define CMD_GET_LED_POSITION    0x03
 #define CMD_GET_LED_CURRENT     0x04
 #define CMD_GET_I2C_ADDR_PIN    0x05
+#define CMD_SET_BRIGHTNESS_CORR 0x06  // Enable/disable brightness correction [CMD, enable, 0, ...]
 
 // Expected protocol version
 #define COLORLED_PROTOCOL_VERSION_REQUIRED 3
@@ -20,24 +21,3 @@
 
 #define TXBUFFERSIZE  5
 #define RXBUFFERSIZE  9
-
-typedef struct {
-    uint8_t w, r, g, b;
-} wrgb_t;
-
-typedef struct {
-    float w;
-    float r;
-    float g;
-    float b;
-} ledPerceptualScale_t;
-
-// Perceptual balance factors from user survey
-// These scale brightness values to achieve perceptually balanced colors
-// Blue is observed as weakest, others are scaled relative to it
-static const ledPerceptualScale_t LED_PERCEPTUAL_SCALE = {
-    .w = 0.99f,
-    .r = 0.78f,
-    .g = 0.51f,
-    .b = 1.0f
-};
