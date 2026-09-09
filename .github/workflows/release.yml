@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Create Release
-      uses: softprops/action-gh-release@e598afbe1493e6b1bafb1f389cabb956eab91231 # v3.0.3
+      uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
       with:
         tag_name: ${{ github.ref }}
         name: ${{ github.ref }}
@@ -60,7 +60,7 @@ jobs:
         cp build/${{ matrix.platform }}.bin release_assets/${{ matrix.platform }}-${{ steps.get_release_version.outputs.release_version }}.bin
 
     - name: Upload ${{ matrix.platform }} bin
-      uses: softprops/action-gh-release@e598afbe1493e6b1bafb1f389cabb956eab91231 # v3.0.3
+      uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
       with:
         tag_name: ${{ github.ref }}
         draft: true
