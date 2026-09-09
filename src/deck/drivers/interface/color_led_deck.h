@@ -13,7 +13,7 @@
 #define CMD_SET_BLINK           0x07  // Set blink envelope + frequency [CMD, dutyMax, dutyMin, intMax, intMin, freq]
 
 // Expected protocol version
-#define COLORLED_PROTOCOL_VERSION_REQUIRED 3
+#define COLORLED_PROTOCOL_VERSION_REQUIRED 4
 
 // LED physical position on the deck PCB (hardware-configured)
 #define COLORLED_LED_POS_NONE           0x00  // No LED / floating
