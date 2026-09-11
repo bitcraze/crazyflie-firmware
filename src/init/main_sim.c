@@ -109,6 +109,16 @@
  * pm_stm32f4.c -- see that file's header comment for why pm.h itself can't
  * be used here). No CRTP port of its own: pm.vbat is just another entry in
  * log.c's TOC, fixed at 4.2V per the MVP's infinite-battery requirement.
+ *
+ * Phase 4.7 (Pre-Phase-5 sensor/actuator stub, EXPLICITLY TEMPORARY -- see
+ * sensors_sim.c/motors_sim.c) adds sensorsInit() (sensors.h has no STM32
+ * dependency, included normally) and motorsInit()/motorsSetRatio() (declared
+ * locally, same "can't include the real header" reasoning as platformInit()/
+ * pmInit() above -- see motors_sim.c). sensorAndActuatorStubInit() below is
+ * a pure smoke test, same pattern as Phase 4.0's foundationHalStubsInit():
+ * it also sets a known, distinguishable ratio on each motor at boot so the
+ * "motor" LOG_GROUP has real, non-zero data to stream over cflib -- nothing
+ * else calls motorsSetRatio() yet, that's Phase 4.8's stabilizer loop.
  */
 
 #include "FreeRTOSConfig.h"
@@ -141,6 +151,7 @@
 #include "param_task.h"
 #include "log.h"
 #include "worker.h"
+#include "sensors.h"
 
 /* Not "platform.h": that header pulls in motors.h and the STM32 hardware
  * chain via the shared platform.c dispatcher, which platform_sim.c
@@ -150,6 +161,15 @@ int platformInit(void);
 /* Not "pm.h": that header pulls in the STM32 hardware chain via deck.h --
  * see pm_sim.c. */
 void pmInit(void);
+
+/* Not "motors.h": that header pulls in the STM32 hardware chain directly
+ * (stm32fxxx.h) -- see motors_sim.c. motorsInit()'s motor-map argument is
+ * narrowed from motors.h's real `const MotorPerifDef**` to `const void**`,
+ * same precedent as i2cdevInit()'s `void*` below. */
+void motorsInit(const void **motorMapSelect);
+bool motorsTest(void);
+void motorsSetRatio(uint32_t id, uint16_t ratio);
+uint16_t motorsGetRatio(uint32_t id);
 
 /* Not "i2cdev.h"/"watchdog.h": both pull in the STM32 stm32fxxx.h register
  * chain (via i2c_drv.h, or directly) -- same reasoning as platformInit()
@@ -201,6 +221,40 @@ static void foundationHalStubsInit(void)
   fflush(stdout);
 }
 
+/* Phase 4.7: exercise the sensor/actuator stub at boot. Pure smoke test,
+ * same pattern as foundationHalStubsInit() above -- also sets a known,
+ * distinguishable ratio on each motor so the "motor" LOG_GROUP has real
+ * data to stream over cflib before Phase 4.8's stabilizer loop exists to
+ * drive it for real. */
+static void sensorAndActuatorStubInit(void)
+{
+  bool pass = true;
+
+  sensorsInit();
+  pass &= sensorsTest();
+  pass &= sensorsAreCalibrated();
+
+  Axis3f acc, gyro;
+  baro_t baro;
+  pass &= sensorsReadAcc(&acc);
+  pass &= (acc.z == 1.0f);
+  pass &= sensorsReadGyro(&gyro);
+  pass &= (gyro.x == 0.0f && gyro.y == 0.0f && gyro.z == 0.0f);
+  pass &= sensorsReadBaro(&baro);
+
+  motorsInit(NULL);
+  pass &= motorsTest();
+  motorsSetRatio(0, 1000);
+  motorsSetRatio(1, 2000);
+  motorsSetRatio(2, 3000);
+  motorsSetRatio(3, 4000);
+  pass &= (motorsGetRatio(0) == 1000);
+  pass &= (motorsGetRatio(3) == 4000);
+
+  DEBUG_PRINT("Simmyflie: Phase 4.7 sensor/actuator stub %s\n",
+              pass ? "OK" : "FAILED");
+}
+
 static void systemLaunch(void)
 {
   crtpInit();
@@ -231,6 +285,9 @@ static void systemLaunch(void)
 
   pmInit();
   DEBUG_PRINT("Simmyflie: Phase 4.6 power management wired in\n");
+
+  sensorAndActuatorStubInit();
+  DEBUG_PRINT("Simmyflie: Phase 4.7 sensor/actuator stub wired in\n");
 
   xTaskCreate(heartbeatTask, "heartbeat", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 }
