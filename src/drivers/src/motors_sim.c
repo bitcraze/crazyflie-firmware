@@ -30,23 +30,8 @@
  * this file wholesale rather than extending it, same spirit as
  * sensors_sim.c.
  *
- * Not "motors.h": like pm.h/platform.h before it, that header pulls in the
- * STM32 hardware chain directly (#include "stm32fxxx.h", plus
- * MotorPerifDef's ST peripheral-register fields) -- see platform_sim.c's
- * header comment for the same reasoning. The five functions below are
- * declared locally instead, with mainline-matching signatures except
- * motorsInit()'s motor-map argument, narrowed from `const MotorPerifDef**`
- * (a real, ST-register-laden struct) to `const void**` since this stub never
- * dereferences it -- same narrowing precedent as i2cdevInit()'s `void*` in
- * Phase 4.0. This is link-compatible with real callers (stabilizer.c, Phase
- * 4.8): C linking matches symbol names only, not per-TU parameter types, and
- * a pointer is a pointer regardless of declared pointee type.
- *
- * motorsSetRatio(id, ratio)'s signature (not CrazySim's diverged
- * motorsSetRatio(const motors_thrust_pwm_t*)) matches current mainline
- * exactly -- see stabilizer.c's setMotorRatios(), which calls it four times,
- * once per motor. Reusing the exact mainline signature is what lets 4.8's
- * stabilizer.c call this stub completely unmodified.
+ * Not "motors.h": see motors_sim.h for why (STM32 hardware chain) and for
+ * the signature-narrowing rationale (motorsInit()'s motor-map argument).
  *
  * The "motor" LOG_GROUP (m1-m4 PWM ratios) matches real motors.c's own,
  * narrower only in that it skips the DSHOT-bidirectional RPM telemetry
@@ -58,6 +43,7 @@
 #include <stdint.h>
 
 #include "log.h"
+#include "motors_sim.h"
 
 #define NBR_OF_MOTORS 4
 #define MOTOR_M1 0

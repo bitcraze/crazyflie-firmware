@@ -153,23 +153,13 @@
 #include "worker.h"
 #include "sensors.h"
 
-/* Not "platform.h": that header pulls in motors.h and the STM32 hardware
- * chain via the shared platform.c dispatcher, which platform_sim.c
- * deliberately bypasses (see platform_sim.c). */
-int platformInit(void);
-
-/* Not "pm.h": that header pulls in the STM32 hardware chain via deck.h --
- * see pm_sim.c. */
-void pmInit(void);
-
-/* Not "motors.h": that header pulls in the STM32 hardware chain directly
- * (stm32fxxx.h) -- see motors_sim.c. motorsInit()'s motor-map argument is
- * narrowed from motors.h's real `const MotorPerifDef**` to `const void**`,
- * same precedent as i2cdevInit()'s `void*` below. */
-void motorsInit(const void **motorMapSelect);
-bool motorsTest(void);
-void motorsSetRatio(uint32_t id, uint16_t ratio);
-uint16_t motorsGetRatio(uint32_t id);
+/* Not "platform.h"/"pm.h"/"motors.h": those pull in the STM32 hardware
+ * chain (directly, or via motors.h/deck.h). These _sim.h headers are each
+ * the single source of truth for their _sim.c's signatures -- see
+ * platform_sim.h/pm_sim.h/motors_sim.h for the full reasoning. */
+#include "platform_sim.h"
+#include "pm_sim.h"
+#include "motors_sim.h"
 
 /* Not "i2cdev.h"/"watchdog.h": both pull in the STM32 stm32fxxx.h register
  * chain (via i2c_drv.h, or directly) -- same reasoning as platformInit()

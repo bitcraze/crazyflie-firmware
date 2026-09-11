@@ -32,6 +32,8 @@
  * the simulation_model project); Phase 1 just needs platformInit() to exist.
  */
 
+#include "platform_sim.h"
+
 int platformInit(void)
 {
   return 0;

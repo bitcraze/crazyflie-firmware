@@ -42,6 +42,7 @@
  */
 
 #include "log.h"
+#include "pm_sim.h"
 
 static float batteryVoltage = 4.2f;
 
