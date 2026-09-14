@@ -55,9 +55,7 @@ The implementation must handle
 #include "test_support.h"
 #include "param.h"
 
-#define TDOA_ENGINE_DEFAULT_DISTANCE_RATIO_LIMIT 0.85f
-
-static float distanceRatioLimit = TDOA_ENGINE_DEFAULT_DISTANCE_RATIO_LIMIT;
+static float distanceRatioLimit = DECK_LOCO_TDOA_DISTANCE_RATIO_LIMIT;
 
 void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms, tdoaEngineSendTdoaToEstimator sendTdoaToEstimator, const double locodeckTsFreq, const tdoaEngineMatchingAlgorithm_t matchingAlgorithm) {
   tdoaStorageInitialize(engineState->anchorInfoArray);
