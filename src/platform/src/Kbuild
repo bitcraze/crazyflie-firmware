@@ -3,6 +3,13 @@ obj-$(CONFIG_PLATFORM_CF2) += platform_cf2.o
 obj-$(CONFIG_PLATFORM_CF21BL) += platform_cf21bl.o
 obj-$(CONFIG_PLATFORM_TAG) += platform_tag.o
 obj-$(CONFIG_PLATFORM_FLAPPER) += platform_flapper.o
+obj-$(CONFIG_PLATFORM_SIM) += platform_sim.o
+
+# platform.o/platform_utils.o/platform_stm32f4.o all pull in platform.h ->
+# motors.h -> the STM32 hardware header chain (or radiolink.h directly);
+# platform_sim.o is self-contained instead. See platform_sim.c.
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += platform.o
-obj-y += platform_stm32f4.o
 obj-y += platform_utils.o
+obj-y += platform_stm32f4.o
+endif

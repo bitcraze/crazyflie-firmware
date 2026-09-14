@@ -1,0 +1,30 @@
+CONFIG_PLATFORM_SIM=y
+CONFIG_CROSS_COMPILE=""
+
+# Phase 4.8: estimator_kalman.c (gated by this flag, default y) pulls in
+# deck.h (-> stm32fxxx.h, a new hardware chain unrelated to
+# motors.h/pm.h/platform.h's) and kalman_core/'s EKF math, none of which
+# this phase needs -- DEFAULT_ESTIMATOR in estimator.c is Complementary
+# regardless of this flag (auto-select only picks Kalman if forced via
+# CONFIG_ESTIMATOR_KALMAN, which nothing here sets). Not disabling this
+# would mean solving an unrelated new build blocker just to compile in an
+# estimator nothing selects at runtime. Revisit if a future phase needs
+# Kalman specifically.
+#
+# A direct "=n" isn't enough on its own: three deck drivers (DECK_FLOW,
+# DECK_LIGHTHOUSE, DECK_LOCO), all Kconfig-default y, each `select
+# ESTIMATOR_KALMAN_ENABLE` -- Kconfig's select always wins over a seed
+# file's own value for the selected option. None of these decks are
+# hardware-relevant in sim anyway (no deck bus exists -- i2cdevInit() is a
+# no-op stub, see i2cdev_sim.c/Phase 4.0), so disabling them is correct on
+# its own merits, not just a workaround for the select chain.
+CONFIG_ESTIMATOR_KALMAN_ENABLE=n
+CONFIG_DECK_FLOW=n
+CONFIG_DECK_LIGHTHOUSE=n
+CONFIG_DECK_LOCO=n
+
+# Phase 4.8: no uSD card in sim -- stabilizer.c's #ifdef CONFIG_DECK_USD
+# block calls usddeck.c's logging functions, another deck driver not built
+# under PLATFORM_SIM (usddeck.c itself is real-hardware SPI/FS code, out of
+# scope here). Default y on real hardware, so needs an explicit override.
+CONFIG_DECK_USD=n

@@ -26,9 +26,13 @@
 
 #include <stdbool.h>
 
+#include "autoconf.h"
 #include "config.h"
 
 #include "crtp.h"
+#ifdef CONFIG_PLATFORM_SIM
+#include "udplink_sim.h"
+#else
 #include "console.h"
 #include "crtpservice.h"
 #include "param_task.h"
@@ -40,6 +44,7 @@
 #include "platformservice.h"
 #include "syslink.h"
 #include "crtp_localization_service.h"
+#endif
 
 static bool isInit;
 
@@ -48,6 +53,13 @@ void commInit(void)
   if (isInit)
     return;
 
+#ifdef CONFIG_PLATFORM_SIM
+  /* Simmyflie (Phase 3): carry raw CRTP over UDP. crtpserviceInit(),
+   * platformserviceInit(), logInit(), paramInit(), locSrvInit() are the real
+   * CRTP subsystems -- Phase 4's job (see dev/implementation-plan.md in the
+   * simulation_model project), not wired in here. */
+  crtpSetLink(udplinkGetLink());
+#else
   uartslkInit();
   radiolinkInit();
 
@@ -70,21 +82,26 @@ void commInit(void)
   //  crtpSetLink(usbGetLink);
   //else if(radiolinkTest())
   //  crtpSetLink(radiolinkGetLink());
-  
+#endif
+
   isInit = true;
 }
 
 bool commTest(void)
 {
   bool pass=isInit;
-  
+
+#ifdef CONFIG_PLATFORM_SIM
+  pass &= crtpTest();
+#else
   pass &= radiolinkTest();
   pass &= crtpTest();
   pass &= crtpserviceTest();
   pass &= platformserviceTest();
   pass &= consoleTest();
   pass &= paramTest();
-  
+#endif
+
   return pass;
 }
 
