@@ -5,6 +5,15 @@ ifeq ($(CONFIG_PLATFORM_SIM),y)
 # Phase 3/4 need (see their PLATFORM_SIM branches); the rest of each tree
 # (deck-facing HAL, the full modules/ firmware core, etc.) is still later
 # Phase 4/5 chunks' job.
+#
+# Phase 4.8: this directory's own partial link (src/built-in.o, merging
+# drivers/built-in.o + modules/built-in.o + ...) is where motors_sim.c's
+# and stabilizer.c's both-legitimate LOG_GROUP_START(motor) sections first
+# meet -- see the top Makefile's EXTRA_LDFLAGS comment (same reasoning) for
+# why this needs --unique at exactly this merge stage, not just the final
+# image link.
+EXTRA_LDFLAGS += -Wl,--unique=.log.* -Wl,--unique=.param.*
+
 obj-y += drivers/
 obj-y += hal/
 obj-y += init/

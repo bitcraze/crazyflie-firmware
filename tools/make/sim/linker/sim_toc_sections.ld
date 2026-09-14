@@ -74,8 +74,41 @@ SECTIONS
    * SUBALIGN(4) forces every input section placed here to be treated as
    * 4-byte aligned regardless of its own recorded alignment, matching what
    * the real ARM linker script gets "for free" from its compiler -- closes
-   * this off for any future group, not just pm's. */
-  .param : ALIGN(4) SUBALIGN(4)
+   * this off for any future group, not just pm's.
+   *
+   * Phase 4.8 update: SUBALIGN(4) alone was not enough once enough groups
+   * (13 new ones, mostly stabilizer.c's) were linked at once -- struct
+   * log_s is 24 bytes on a 64-bit host (8-byte pointer alignment for its
+   * name/address members), and 4-byte sub-alignment can still leave a
+   * group boundary short of the 8 bytes a pointer-containing struct
+   * actually needs, the same "boundary happens not to land on a multiple
+   * of sizeof(struct)" class of gap as the original bug, just a smaller
+   * one -- confirmed empirically: readelf reported .log at 0x21e8 (8680)
+   * bytes, and 8680 is not a multiple of 24 (361 entries plus 16 leftover
+   * bytes -- a real gap, not a rounding artifact of this comment's math).
+   * SUBALIGN(8), not 16: the Makefile's PLATFORM_SIM branch also now
+   * passes -malign-data=abi, which caps x86-64 gcc's per-array alignment
+   * request at 16 instead of 32 -- but that request only governs what
+   * ld's *default* placement (no SUBALIGN override) would honor, and
+   * SUBALIGN exists precisely to override it, so it doesn't need to match.
+   * What this bug actually depends on is SUBALIGN's value evenly dividing
+   * every struct size placed in the section, so the running offset after
+   * any whole number of groups is already aligned and no padding is ever
+   * inserted. struct log_s is 24 bytes and struct param_s is 40 bytes on
+   * a 64-bit host (8-byte pointer members) -- both multiples of 8, neither
+   * a multiple of 16. SUBALIGN(16) would therefore reintroduce exactly
+   * this class of gap for .param: a lone-entry or odd-sized group can land
+   * short of the next 16-byte boundary by an amount that isn't a multiple
+   * of 40, corrupting paramsLen the same way the original bug corrupted
+   * logsLen. SUBALIGN(8) is the largest value both struct sizes are
+   * guaranteed multiples of -- not whatever alignment the compiler
+   * happened to request upstream. See the Makefile's own comment for why
+   * -malign-data=abi was still added separately (a second, earlier
+   * merge-stage instance of this same bug, in Kbuild's intermediate
+   * `ld -r` partial links, that this file's SUBALIGN cannot reach). Still
+   * a safe superset of what ARM's 4-byte-aligned struct param_s/log_s
+   * need, so no behavior change there. */
+  .param : ALIGN(8) SUBALIGN(8)
   {
     _param_start = .;
     KEEP(*(.param))
@@ -83,7 +116,7 @@ SECTIONS
     _param_stop = .;
   }
 
-  .log : ALIGN(4) SUBALIGN(4)
+  .log : ALIGN(8) SUBALIGN(8)
   {
     _log_start = .;
     KEEP(*(.log))

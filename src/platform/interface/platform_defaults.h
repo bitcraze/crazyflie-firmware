@@ -46,6 +46,18 @@
 #ifdef CONFIG_PLATFORM_FLAPPER
     #include "platform_defaults_flapper.h"
 #endif
+#ifdef CONFIG_PLATFORM_SIM
+    /* Simmyflie: no CONFIG_PLATFORM_SIM branch exists among the real
+     * platform_defaults_*.h files (all real-hardware PCB variants), so
+     * without this, every PID gain and physical-constant macro below stays
+     * undefined and controller_pid.c/health.c fail to compile. CF2 is the
+     * closest real analog -- same motor count/layout the Actuator shim
+     * models (motors_sim.c) -- so its gains become the sim baseline PID
+     * tuning, matching the same use-the-real-hardware-value-when-there-is-
+     * a-natural-choice reasoning as pm.vbat's fixed 4.2V or mem.c's
+     * nbr_of_mems=1. */
+    #include "platform_defaults_cf2.h"
+#endif
 
 // Drone physical constants
 // TODO provide those in each config. Those are values of cf2 platform

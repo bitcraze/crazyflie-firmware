@@ -35,8 +35,21 @@
  * should let Phase 4.8's stabilizer.c call this stub unmodified.
  *
  * Single source of truth for these signatures -- both motors_sim.c (the
- * definitions) and every consumer (main_sim.c) include this header instead
- * of hand-typing matching forward declarations.
+ * definitions) and every consumer (main_sim.c; and, via
+ * src/config/sim/hw_shims/motors.h, stabilizer.c/health.c -- see Phase 4.8)
+ * include this header instead of hand-typing matching forward declarations.
+ *
+ * Phase 4.8 additions (motorsResetESCs/motorsCompensateBatteryVoltage/
+ * motorsBeep/motorsGetHealthTestSettings/testsound/NBR_OF_MOTORS/
+ * MOTOR_M1..M4/MotorHealthTestDef): the rest of real motors.h's surface that
+ * stabilizer.c/health.c reference. All narrower-than-mainline stubs --
+ * motorsCompensateBatteryVoltage() is a pass-through (no battery-voltage
+ * model exists in sim, matching pm_sim.c's constant-voltage scope),
+ * motorsBeep()/motorsResetESCs() are no-ops (no speaker/ESC-reset pin in
+ * sim), motorsGetHealthTestSettings() returns one fixed timing/ratio set
+ * (health.c's propeller/battery self-test is dead code in sim by default --
+ * startPropTest/startBatTest params are 0 unless a client sets them -- so
+ * the values are cosmetic, not modeled).
  */
 #ifndef __MOTORS_SIM_H__
 #define __MOTORS_SIM_H__
@@ -44,10 +57,43 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define NBR_OF_MOTORS 4
+#define MOTOR_M1  0
+#define MOTOR_M2  1
+#define MOTOR_M3  2
+#define MOTOR_M4  3
+
+/* Test defines -- just the two health.c's propeller-test failure path
+ * references (dead code by default, see above). */
+#define MOTORS_TEST_ON_TIME_MS    50
+#define MOTORS_TEST_DELAY_TIME_MS 150
+
+/* Sound defines -- just enough of real motors.h's tone table for
+ * health.c's beep-frequency arithmetic (dead code by default, see above). */
+#define A4    440
+#define A5    880
+#define F5    698
+#define D5    587
+#define MOTORS_TIM_BEEP_CLK_FREQ 16800000UL /* real motors.h: TIM_CLOCK_HZ/5 */
+
+typedef struct {
+  uint16_t onPeriodMsec;
+  uint16_t offPeriodMsec;
+  uint16_t varianceMeasurementStartMsec;
+  uint16_t onPeriodPWMRatioProp;
+  uint16_t onPeriodPWMRatioBat;
+} MotorHealthTestDef;
+
+extern const uint16_t testsound[NBR_OF_MOTORS];
+
 void motorsInit(const void **motorMapSelect);
 bool motorsTest(void);
 void motorsSetRatio(uint32_t id, uint16_t ratio);
 uint16_t motorsGetRatio(uint32_t id);
 void motorsStop(void);
+void motorsResetESCs(void);
+void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio);
+const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id);
+float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVoltage);
 
 #endif // __MOTORS_SIM_H__

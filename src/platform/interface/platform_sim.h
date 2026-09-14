@@ -28,15 +28,24 @@
  * hardware chain, which has no meaning off-target (see platform_sim.c's own
  * header comment). This is the single source of truth for these two
  * signatures -- both platform_sim.c (the definitions) and every consumer
- * (main_sim.c, platformservice.c) include this header instead of each
- * hand-typing a matching forward declaration, so a signature change is a
- * compile error at the definition site instead of a silent cross-TU
+ * (main_sim.c, platformservice.c; and, via src/config/sim/hw_shims/
+ * platform.h, stabilizer.c -- see Phase 4.8) include this header instead of
+ * each hand-typing a matching forward declaration, so a signature change is
+ * a compile error at the definition site instead of a silent cross-TU
  * mismatch the linker won't catch.
+ *
+ * Phase 4.8 adds platformConfigGetMotorMapping(): stabilizer.c's
+ * motorsInit(platformConfigGetMotorMapping()) call site. Returns
+ * `const void**` (not real platform.h's `const MotorPerifDef**`), matching
+ * motors_sim.h's own narrowed motorsInit() signature -- the sim
+ * motorsInit() ignores its argument entirely (see motors_sim.c), so a
+ * fixed NULL is enough.
  */
 #ifndef __PLATFORM_SIM_H__
 #define __PLATFORM_SIM_H__
 
 int platformInit(void);
 const char* platformConfigGetDeviceTypeName(void);
+const void** platformConfigGetMotorMapping(void);
 
 #endif // __PLATFORM_SIM_H__

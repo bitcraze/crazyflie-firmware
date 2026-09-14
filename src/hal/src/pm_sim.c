@@ -50,6 +50,11 @@ void pmInit(void)
 {
 }
 
+float pmGetBatteryVoltage(void)
+{
+  return batteryVoltage;
+}
+
 /**
  * Power management log variables.
  */

@@ -21,24 +21,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * pm_sim.h - declares pm_sim.c's public surface for CONFIG_PLATFORM_SIM
- * (Simmyflie).
+ * platform.h (hw_shims) - Phase 4.8 shadow for src/platform/interface/
+ * platform.h, CONFIG_PLATFORM_SIM only (Simmyflie).
  *
- * Not "pm.h": that header pulls in the STM32 hardware chain via deck.h (see
- * pm_sim.c's own header comment). Single source of truth for this
- * signature -- both pm_sim.c (the definition) and every consumer
- * (main_sim.c; and, via src/config/sim/hw_shims/pm.h, stabilizer.c/
- * health.c -- see Phase 4.8) include this header instead of hand-typing a
- * matching forward declaration.
+ * See motors.h in this same directory for the full rationale -- this file
+ * is the platform.h counterpart, needed because stabilizer.c #include
+ * "platform.h" unconditionally, and that header pulls in motors.h ->
+ * stm32fxxx.h directly.
  *
- * Phase 4.8 adds pmGetBatteryVoltage(): the one other pm.h entry point
- * stabilizer.c/health.c reference, returning the same fixed 4.2V the
- * pm.vbat log variable already reports.
+ * Not a declaration set of its own -- platform_sim.h remains the single
+ * source of truth (also included directly by main_sim.c/platformservice.c
+ * and defined against by platform_sim.c).
  */
-#ifndef __PM_SIM_H__
-#define __PM_SIM_H__
+#ifndef __PLATFORM_HW_SHIM_H__
+#define __PLATFORM_HW_SHIM_H__
 
-void pmInit(void);
-float pmGetBatteryVoltage(void);
+#include "platform_sim.h"
 
-#endif // __PM_SIM_H__
+#endif // __PLATFORM_HW_SHIM_H__

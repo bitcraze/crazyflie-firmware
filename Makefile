@@ -61,13 +61,61 @@ ifeq ($(CONFIG_PLATFORM_SIM),y)
 # configs/sim_defconfig, which blanks the arm-none-eabi- default).
 # -Wno-unused-variable: the vendored FreeRTOS POSIX port (ThirdParty, not
 # ours to fix) has a couple of genuinely-unused locals.
-ARCH_CFLAGS += -g3 -pthread -D_GNU_SOURCE -Wno-unused-variable
+# -malign-data=abi: x86-64 gcc's default ("compat") heuristically bumps the
+# alignment of const arrays at or above certain size thresholds up to 16/32
+# bytes for cache-line friendliness, regardless of the array's own true
+# (ABI-mandated) alignment requirement -- arm-none-eabi-gcc never does this.
+# log.c's/param_logic.c's LOG_GROUP_START(...)/PARAM_GROUP_START(...) arrays
+# (struct log_s/param_s, 8-byte pointer-aligned) get caught by this: Phase
+# 4.6 first hit it as a gap corrupting logInit()'s element count once enough
+# groups landed at once, "fixed" with SUBALIGN(4)/(8) in
+# tools/make/sim/linker/sim_toc_sections.ld -- but that only governs the
+# *final* link. Phase 4.8 found a second instance one merge stage earlier:
+# Kbuild's own intermediate `ld -r` partial-links (e.g. src/drivers/built-in.o
+# + src/modules/built-in.o -> src/built-in.o) also concatenate same-named
+# input sections (motors_sim.c and stabilizer.c both legitimately declare
+# LOG_GROUP_START(motor), same group name, same as real hardware) and pad
+# between them per the compiler's over-alignment request -- outside
+# sim_toc_sections.ld's SECTIONS block entirely, so that script cannot fix
+# it. -malign-data=abi removes the over-alignment at its source instead of
+# compensating for it at every merge stage downstream.
+ARCH_CFLAGS += -g3 -pthread -D_GNU_SOURCE -Wno-unused-variable -malign-data=abi
 
 FREERTOS = $(srctree)/vendor/FreeRTOS
 PORT = $(FREERTOS)/portable/ThirdParty/GCC/Posix
 LIB = $(srctree)/src/lib
 
 LDFLAGS =
+
+# Note: --unique='.log.*'/'.param.*' is injected per-directory via
+# EXTRA_LDFLAGS in src/Kbuild and src/modules/src/Kbuild, not here -- see
+# those files' comments. Several LOG_GROUP_START(...)/PARAM_GROUP_START(...)
+# group names are legitimately declared in more than one file (e.g. both
+# stabilizer.c and motors_sim.c/controller_pid.c declare
+# LOG_GROUP_START(motor)/LOG_GROUP_START(controller) -- true on real
+# hardware too, log.c doesn't require group names to be unique). Kbuild's
+# intermediate per-directory `ld -r` partial links (cmd_link_multi-y) have
+# no SECTIONS script of their own, so ld's default same-named-section
+# merging concatenates two such files' contributions early, using each
+# array's compiler-requested alignment (16, from -malign-data=abi above) to
+# decide inter-file padding -- and since sizeof(struct log_s) (24, a 64-bit
+# host) isn't a multiple of 16, that padding corrupts logInit()'s
+# (stop-start)/sizeof(struct) element count, the same corruption class
+# Phase 4.6 first found, recurring one merge stage earlier than
+# sim_toc_sections.ld's SUBALIGN can reach.
+#
+# EXTRA_LDFLAGS (Kbuild's own per-directory hook, reset at the top of every
+# scripts/Makefile.build inclusion), not LDFLAGS here: LDFLAGS is exported
+# globally (see tools/kbuild/Makefile.kbuild) and reaches the *final* image
+# link too (cmd_firmware), where sim_toc_sections.ld's own explicit
+# `.log { KEEP(*(.log.*)) ... }` rule already claims these same input
+# sections -- --unique there instead forces each into its own separate,
+# never-merged output section, leaving _log_start/_log_stop bounding
+# nothing real (confirmed empirically). Scoping --unique to just the
+# specific directories where a collision is known to first occur keeps it
+# out of that final link while still reaching every affected intermediate
+# merge; a future new same-named group pair (e.g. Phase 4.9) may need the
+# same EXTRA_LDFLAGS line added to whichever Kbuild file first merges it.
 image_LDFLAGS += -pthread
 image_LDFLAGS += -Wl,-Map=$(PROG).map,--cref,--gc-sections
 image_LDFLAGS += -T $(srctree)/tools/make/sim/linker/sim_toc_sections.ld
@@ -78,6 +126,12 @@ INCLUDES += -I$(PORT)/utils
 # dedicated interface/ dir like the other INCLUDES below -- Communication
 # (Phase 3, src/hal/src/udplink_sim.c) needs instanceGetSocketFd() from it.
 INCLUDES += -I$(srctree)/src/init
+# Phase 4.8: shadows motors.h/pm.h/platform.h (see that directory's own
+# header comments, and design-specification.md's "Header-shadow-avoidance"
+# section) for stabilizer.c/health.c, which #include them unconditionally.
+# Must come before the src/drivers/interface -I$(srctree)/src/hal/interface
+# -I$(srctree)/src/platform/interface entries below so these win.
+INCLUDES += -I$(srctree)/src/config/sim/hw_shims
 
 # src/config/sim must come before the common -I$(srctree)/src/config below
 # so our FreeRTOSConfig.h wins over the mainline one.

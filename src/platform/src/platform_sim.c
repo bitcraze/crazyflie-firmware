@@ -32,6 +32,8 @@
  * the simulation_model project); Phase 1 just needs platformInit() to exist.
  */
 
+#include <stddef.h>
+
 #include "platform_sim.h"
 
 int platformInit(void)
@@ -47,4 +49,12 @@ int platformInit(void)
 const char* platformConfigGetDeviceTypeName(void)
 {
   return "Simmyflie";
+}
+
+/* Phase 4.8: stabilizer.c's motorsInit(platformConfigGetMotorMapping())
+ * call site -- motors_sim.c's motorsInit() ignores its argument entirely,
+ * so there's no real motor map to return. */
+const void** platformConfigGetMotorMapping(void)
+{
+  return NULL;
 }

@@ -28,8 +28,8 @@
  * PLATFORM_SIM INCLUDES comment, same trick as src/config/sim/FreeRTOSConfig.h).
  *
  * Deliberately dropped from the mainline version:
- * - #include "nrf24l01.h"/"trace.h"/"usec_time.h": hardware drivers, not
- *   built under PLATFORM_SIM.
+ * - #include "nrf24l01.h"/"trace.h": hardware drivers, not built under
+ *   PLATFORM_SIM.
  * - configGENERATE_RUN_TIME_STATS / portCONFIGURE_TIMER_FOR_RUN_TIME_STATS /
  *   portGET_RUN_TIME_COUNTER_VALUE: the FreeRTOS POSIX port's own
  *   portmacro.h already defines these (no-op / ulPortGetRunTime()) --
@@ -39,6 +39,8 @@
 
 #ifndef CONFIG_H_
 #define CONFIG_H_
+
+#include "usec_time.h"
 
 #define CONFIG_BLOCK_ADDRESS    (2048 * (64-1))
 #define MCU_ID_ADDRESS          0x1FFF7A10

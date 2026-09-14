@@ -37,6 +37,10 @@
  * narrower only in that it skips the DSHOT-bidirectional RPM telemetry
  * entries (m1_rpm.. -- CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL has no
  * meaning in sim, there's no real ESC to report RPM from).
+ *
+ * Phase 4.8 additions (motorsResetESCs/motorsCompensateBatteryVoltage/
+ * motorsBeep/motorsGetHealthTestSettings/testsound): see motors_sim.h's
+ * header comment for why each is a narrower-than-mainline stub.
  */
 
 #include <stdbool.h>
@@ -45,11 +49,15 @@
 #include "log.h"
 #include "motors_sim.h"
 
-#define NBR_OF_MOTORS 4
-#define MOTOR_M1 0
-#define MOTOR_M2 1
-#define MOTOR_M3 2
-#define MOTOR_M4 3
+const uint16_t testsound[NBR_OF_MOTORS] = {A4, A5, F5, D5};
+
+static const MotorHealthTestDef healthTestSettings = {
+  .onPeriodMsec = 50,
+  .offPeriodMsec = 950,
+  .varianceMeasurementStartMsec = 20,
+  .onPeriodPWMRatioProp = 5000,
+  .onPeriodPWMRatioBat = 5000,
+};
 
 static bool isInit = false;
 static uint16_t motor_ratios[NBR_OF_MOTORS] = {0, 0, 0, 0};
@@ -89,6 +97,34 @@ void motorsStop(void)
   for (int i = 0; i < NBR_OF_MOTORS; i++) {
     motor_ratios[i] = 0;
   }
+}
+
+void motorsResetESCs(void)
+{
+  /* No-op: only meaningful for brushless motors with an ESC reset pin. */
+}
+
+void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio)
+{
+  /* No-op: no speaker in sim. */
+  (void)id;
+  (void)enable;
+  (void)frequency;
+  (void)ratio;
+}
+
+const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id)
+{
+  (void)id;
+  return &healthTestSettings;
+}
+
+float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVoltage)
+{
+  /* No battery-voltage model in sim (see pm_sim.c) -- pass through. */
+  (void)id;
+  (void)supplyVoltage;
+  return iThrust;
 }
 
 /**

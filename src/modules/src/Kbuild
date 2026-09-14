@@ -1,4 +1,13 @@
 ifeq ($(CONFIG_PLATFORM_SIM),y)
+# Phase 4.8: this directory's own partial link (src/modules/src/built-in.o,
+# merging this directory's .o files with controller/built-in.o) is where
+# controller_pid.c's and stabilizer.c's both-legitimate
+# LOG_GROUP_START(controller) sections first meet -- see the top Makefile's
+# EXTRA_LDFLAGS comment and src/Kbuild's own copy of this comment (same
+# reasoning, different collision) for why this needs --unique at exactly
+# this merge stage, not just the final image link.
+EXTRA_LDFLAGS += -Wl,--unique=.log.* -Wl,--unique=.param.*
+
 # Simmyflie Phase 3 (Communication): the CRTP port-dispatch layer plus its
 # two portable-FreeRTOS-only dependencies, and comm.c (gated internally on
 # CONFIG_PLATFORM_SIM to skip the hardware links/CRTP subsystems it
@@ -27,21 +36,42 @@ ifeq ($(CONFIG_PLATFORM_SIM),y)
 # phase3_verify_mock.c's Log handler, including the CMD_RESET_LOGGING ch.1
 # quirk Phase 3 hand-fixed in the mock: real log.c's CONTROL_RESET case
 # (logControlProcess()) already answers it correctly.
+# Phase 4.8 (Estimator + controller + power distribution + stabilizer loop)
+# adds stabilizer.o plus its real, unmodified dependents -- collision_avoidance.o/
+# health.o/peer_localization.o/power_distribution_quadrotor.o, and the
+# controller/ and estimator/ subtrees (each portable; see
+# dev/implementation-plan-phase-4.md's 4.8 section for the per-file
+# dependency sweep) -- plus two TEMPORARY stubs, commander_sim.o/
+# crtp_commander_high_level_sim.o, standing in for 4.9's real
+# commander.c/crtp_commander_high_level.c until that chunk lands (see
+# those files' own header comments for why).
 obj-y += app_channel.o
+obj-y += collision_avoidance.o
 obj-y += comm.o
+obj-y += commander_sim.o
 obj-y += console.o
 obj-y += crtp.o
+obj-y += crtp_commander_high_level_sim.o
 obj-y += crtp_mem.o
+obj-y += health.o
 obj-y += log.o
 obj-y += mem.o
 obj-y += param_logic.o
 obj-y += param_task.o
+obj-y += peer_localization.o
 obj-y += phase3_verify_mock.o
 obj-y += platformservice.o
+obj-y += power_distribution_quadrotor.o
 obj-y += queuemonitor.o
+obj-y += sensfusion6.o
+obj-y += stabilizer.o
 obj-y += static_mem.o
 obj-y += supervisor_sim.o
+obj-y += system_sim.o
 obj-y += worker.o
+
+obj-y += controller/
+obj-y += estimator/
 else
 obj-y += app_channel.o
 obj-$(CONFIG_APP_ENABLE) += app_handler.o

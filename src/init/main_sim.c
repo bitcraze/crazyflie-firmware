@@ -119,6 +119,17 @@
  * it also sets a known, distinguishable ratio on each motor at boot so the
  * "motor" LOG_GROUP has real, non-zero data to stream over cflib -- nothing
  * else calls motorsSetRatio() yet, that's Phase 4.8's stabilizer loop.
+ *
+ * Phase 4.8 (Estimator + controller + power distribution + stabilizer loop)
+ * adds stabilizerInit() (stabilizer.c, real and fully unmodified -- its
+ * three unconditional #include "motors.h"/"pm.h"/"platform.h" lines resolve
+ * to sim-safe shims via include-path ordering, not a source edit; see
+ * design-specification.md's "Header-shadow-avoidance" section). Unlike
+ * every earlier chunk, stabilizer.h itself has no STM32 dependency, so it's
+ * included normally alongside the other real headers below. No CRTP port of
+ * its own: the stabilizer loop runs on its own 1kHz schedule regardless of
+ * CRTP traffic, which is exactly what this chunk verifies (no setpoint
+ * packets sent at all -- see stabilizer_check.py).
  */
 
 #include "FreeRTOSConfig.h"
@@ -152,6 +163,7 @@
 #include "log.h"
 #include "worker.h"
 #include "sensors.h"
+#include "stabilizer.h"
 
 /* Not "platform.h"/"pm.h"/"motors.h": those pull in the STM32 hardware
  * chain (directly, or via motors.h/deck.h). These _sim.h headers are each
@@ -278,6 +290,9 @@ static void systemLaunch(void)
 
   sensorAndActuatorStubInit();
   DEBUG_PRINT("Simmyflie: Phase 4.7 sensor/actuator stub wired in\n");
+
+  stabilizerInit(StateEstimatorTypeAutoSelect);
+  DEBUG_PRINT("Simmyflie: Phase 4.8 stabilizer loop wired in\n");
 
   xTaskCreate(heartbeatTask, "heartbeat", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 }

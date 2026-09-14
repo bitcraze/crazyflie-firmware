@@ -21,24 +21,23 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * pm_sim.h - declares pm_sim.c's public surface for CONFIG_PLATFORM_SIM
- * (Simmyflie).
+ * system_sim.c - Minimal system.h backend for CONFIG_PLATFORM_SIM
+ * (Simmyflie), Phase 4.8.
  *
- * Not "pm.h": that header pulls in the STM32 hardware chain via deck.h (see
- * pm_sim.c's own header comment). Single source of truth for this
- * signature -- both pm_sim.c (the definition) and every consumer
- * (main_sim.c; and, via src/config/sim/hw_shims/pm.h, stabilizer.c/
- * health.c -- see Phase 4.8) include this header instead of hand-typing a
- * matching forward declaration.
- *
- * Phase 4.8 adds pmGetBatteryVoltage(): the one other pm.h entry point
- * stabilizer.c/health.c reference, returning the same fixed 4.2V the
- * pm.vbat log variable already reports.
+ * EXPLICITLY TEMPORARY (see dev/implementation-plan-phase-4.md's 4.8
+ * section): stabilizer.c's stabilizerTask() calls systemWaitStart()
+ * unconditionally before its main loop -- on real hardware this blocks
+ * until system.c's self-test-gated boot sequence (systemTask()) signals
+ * startup is complete. That whole sequence is Phase 4.10's cutover
+ * (main_sim.c still runs its own local systemLaunch() placeholder, not the
+ * real system.c). Returning immediately is the correct sim behavior for
+ * now, not just an expedient stub: there is no self-test gate yet for it to
+ * legitimately wait on. Phase 4.10 replaces this file wholesale with the
+ * real system.c, not by extending it.
  */
-#ifndef __PM_SIM_H__
-#define __PM_SIM_H__
 
-void pmInit(void);
-float pmGetBatteryVoltage(void);
+#include "system.h"
 
-#endif // __PM_SIM_H__
+void systemWaitStart(void)
+{
+}

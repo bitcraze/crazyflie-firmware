@@ -9,14 +9,22 @@ ifeq ($(CONFIG_PLATFORM_SIM),y)
 # version_sim.c. Phase 4.4 (Parameters) adds crc32.o -- param_logic.c hashes
 # its TOC with crc32CalculateBuffer(), already fully hardware-free. Phase 4.5
 # (Logging) adds num.o -- log.c's logRunBlock() uses single2half() for
-# LOG_FP16 values, already fully hardware-free. The rest of this tree
-# (filters, ...) isn't needed yet.
+# LOG_FP16 values, already fully hardware-free. Phase 4.8 adds pid.o --
+# controller_pid.c's PID loops (attitude_pid_controller.c/
+# position_controller_pid.c) -- plus its own link-time dependents filter.o
+# (pid.c's low-pass filter), rateSupervisor.o (stabilizer.c's loop-rate
+# check) and statsCnt.o (STATS_CNT_RATE_DEFINE's log handler) -- all fully
+# hardware-free.
 obj-y += cfassert_sim.o
 obj-y += configblock_sim.o
 obj-y += crc32.o
 obj-y += debug.o
 obj-y += eprintf.o
+obj-y += filter.o
 obj-y += num.o
+obj-y += pid.o
+obj-y += rateSupervisor.o
+obj-y += statsCnt.o
 obj-y += version_sim.o
 else
 obj-y += cfassert.o
