@@ -11,11 +11,6 @@
 #define TDOA_ENGINE_MEASUREMENT_NOISE_STD 0.15f
 #endif
 
-#ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
-// 0 = unlimited
-#define TDOA_ENGINE_DEFAULT_MAX_RATE_HZ 0.0f
-#endif
-
 typedef void (*tdoaEngineSendTdoaToEstimator)(tdoaMeasurement_t* tdoaMeasurement);
 
 typedef enum {

@@ -67,7 +67,8 @@ void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms, tdoaE
   engineState->locodeckTsFreq = locodeckTsFreq;
   engineState->matchingAlgorithm = matchingAlgorithm;
 #ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
-  engineState->maxRateHz = TDOA_ENGINE_DEFAULT_MAX_RATE_HZ;
+  // 0 = unlimited
+  engineState->maxRateHz = (float)CONFIG_DECK_LOCO_TDOA_RATE_LIMIT_MAX_RATE_HZ;
   engineState->lastForwardedTime_ms = 0;
 #endif
 

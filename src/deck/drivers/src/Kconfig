@@ -362,6 +362,16 @@ config DECK_LOCO_TDOA_RATE_LIMIT
         aggregated over all anchors, are forwarded to the estimator. This can
         be useful for decreasing CPU load due to Kalman filter calculations.
 
+config DECK_LOCO_TDOA_RATE_LIMIT_MAX_RATE_HZ
+    int "Default max rate (Hz) of TDoA measurements forwarded to the estimator (0 means unlimited)"
+    depends on DECK_LOCO_TDOA_RATE_LIMIT
+    range 0 1000
+    default 0
+    help
+        Default value for the maximum rate, in Hz, at which TDoA measurements
+        are forwarded to the estimator. A value of 0 means unlimited. Reasonable values are between 20 to 400. Positioning is degraded below 100, but works
+        reasonably well down to 20.
+
 config DECK_LOCO_TDOA3_HYBRID_MODE
     bool "Support TDoA3 hybrid mode"
     depends on DECK_LOCO
