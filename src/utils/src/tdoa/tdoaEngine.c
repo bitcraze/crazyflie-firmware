@@ -54,6 +54,7 @@ The implementation must handle
 #include "physicalConstants.h"
 #include "test_support.h"
 #include "param.h"
+#include "usec_time.h"
 
 #define TDOA_ENGINE_DEFAULT_DISTANCE_RATIO_LIMIT 0.85f
 
@@ -303,16 +304,23 @@ void tdoaEngineGetAnchorCtxForPacketProcessing(tdoaEngineState_t* engineState, c
 // Rate-limits the aggregate stream of measurements forwarded to the estimator, across all anchors.
 // maxRateHz <= 0 disables the limit. The shared timer is reset as soon as a packet is let through,
 // even if matching later fails to produce a measurement.
-static bool isForwardRateLimited(tdoaEngineState_t* engineState, const uint32_t now_ms, const float maxRateHz) {
+static bool isForwardRateLimited(tdoaEngineState_t* engineState, const float maxRateHz) {
   if (maxRateHz <= 0.0f) {
     return false;
   }
 
-  const uint32_t minPeriod_ms = (uint32_t)(1000.0f / maxRateHz);
-  if (engineState->lastForwardedTime_ms != 0 && (now_ms - engineState->lastForwardedTime_ms) < minPeriod_ms) {
+  const uint64_t now_us = usecTimestamp();
+  const uint64_t minPeriod_us = (uint64_t)(1000000.0f / maxRateHz);
+  if (engineState->lastForwardedTime_us != 0 && (now_us - engineState->lastForwardedTime_us) < minPeriod_us) {
     return true;
   } else {
-    engineState->lastForwardedTime_ms = now_ms;
+    if (now_us > engineState->lastForwardedTime_us + 10*minPeriod_us) { // Long time since last measurement, or no measurement has yet been forwarded
+      // Reset window
+      engineState->lastForwardedTime_us = now_us;
+    }
+    else {
+      engineState->lastForwardedTime_us += minPeriod_us;
+    }
     return false;
   }
 }
@@ -328,7 +336,7 @@ bool tdoaEngineProcessPacketFiltered(tdoaEngineState_t* engineState, tdoaAnchorC
     STATS_CNT_RATE_EVENT(&engineState->stats.timeIsGood);
 
 #ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
-    if (!isForwardRateLimited(engineState, anchorCtx->currentTime_ms, engineState->maxRateHz)) {
+    if (!isForwardRateLimited(engineState, engineState->maxRateHz)) {
 #endif
       tdoaAnchorContext_t otherAnchorCtx;
       double tdoaDistDiff = 0.0;
