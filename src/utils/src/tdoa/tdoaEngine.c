@@ -302,18 +302,18 @@ void tdoaEngineGetAnchorCtxForPacketProcessing(tdoaEngineState_t* engineState, c
 }
 
 #ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
-// Rate-limits the aggregate stream of measurements forwarded to the estimator, across all anchors.
-// maxRateHz <= 0 disables the limit. The shared timer is reset as soon as a packet is let through,
-// even if matching later fails to produce a measurement.
-static bool isForwardRateLimited(tdoaEngineState_t* engineState, const float maxRateHz) {
+// Limits the forward rate across all anchors. Outputs true if 
+// 1/maxRateHz time has passed since last allowing forwarding.
+// maxRateHz <= 0 disables the limit.
+static bool isForwardingAllowed(tdoaEngineState_t* engineState, const float maxRateHz) {
   if (maxRateHz <= 0.0f) {
-    return false;
+    return true;
   }
 
   const uint64_t now_us = usecTimestamp();
   const uint64_t minPeriod_us = (uint64_t)(1000000.0f / maxRateHz);
   if (engineState->lastForwardedTime_us != 0 && (now_us - engineState->lastForwardedTime_us) < minPeriod_us) {
-    return true;
+    return false;
   } else {
     if (now_us > engineState->lastForwardedTime_us + 10*minPeriod_us) { // Long time since last measurement, or no measurement has yet been forwarded
       // Reset window
@@ -322,7 +322,7 @@ static bool isForwardRateLimited(tdoaEngineState_t* engineState, const float max
     else {
       engineState->lastForwardedTime_us += minPeriod_us;
     }
-    return false;
+    return true;
   }
 }
 #endif
@@ -337,7 +337,7 @@ bool tdoaEngineProcessPacketFiltered(tdoaEngineState_t* engineState, tdoaAnchorC
     STATS_CNT_RATE_EVENT(&engineState->stats.timeIsGood);
 
 #ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
-    if (!isForwardRateLimited(engineState, engineState->maxRateHz)) {
+    if (isForwardingAllowed(engineState, engineState->maxRateHz)) {
 #endif
       tdoaAnchorContext_t otherAnchorCtx;
       double tdoaDistDiff = 0.0;
