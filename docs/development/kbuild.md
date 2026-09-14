@@ -57,3 +57,19 @@ To get an idea of how `menuconfig` will look, please see the images below.
 
 Read more about platforms in the [platform section.](/docs/userguides/platform.md)
 
+### Shell tab completion
+
+Tab-completion scripts for `make` are available for bash and zsh in `tools/completion/`. They complete build targets (e.g. `menuconfig`, `clean`) as well as the `configs/*_defconfig` files, and only take effect inside a checkout of this repository.
+
+To enable it, add one of the following lines to your shell's rc file:
+
+```bash
+# ~/.bashrc
+source /path/to/crazyflie-firmware/tools/completion/make-completion.bash
+```
+
+```bash
+# ~/.zshrc
+source /path/to/crazyflie-firmware/tools/completion/make-completion.zsh
+```
+
