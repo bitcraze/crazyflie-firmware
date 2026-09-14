@@ -354,12 +354,13 @@ config DECK_LOCO_LONGER_RANGE
         Note that anchors need to be built with support for this as well
 
 config DECK_LOCO_TDOA_RATE_LIMIT
-    bool "Support rate limiting of TDoA measurements forwarded to the estimator (experimental)"
+    bool "Support rate limiting of TDoA measurements forwarded to the estimator"
     depends on DECK_LOCO
-    default y
+    default n
     help
         Compile in the rate limiter that caps how often TDoA measurements,
-        aggregated over all anchors, are forwarded to the estimator.
+        aggregated over all anchors, are forwarded to the estimator. This can
+        be useful for decreasing CPU load due to Kalman filter calculations.
 
 config DECK_LOCO_TDOA3_HYBRID_MODE
     bool "Support TDoA3 hybrid mode"
