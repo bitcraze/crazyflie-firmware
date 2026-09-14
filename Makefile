@@ -46,11 +46,12 @@ image_LDFLAGS += -T $(LINKER_DIR)/FLASH_CLOAD.ld
 
 #
 # Let an out-of-tree app shadow in-tree interface headers (e.g. a custom
-# platform_defaults.h) by giving its own directory first priority in the
-# include search path, ahead of every other INCLUDES entry below.
+# platform_defaults.h) by putting them in an "overrides" subfolder, which
+# gets first priority in the include search path, ahead of every other
+# INCLUDES entry below.
 #
 ifneq ($(OOT),)
-INCLUDES += -I$(OOT)
+INCLUDES += -I$(OOT)/overrides
 endif
 
 INCLUDES += -I$(srctree)/vendor/CMSIS/CMSIS/Core/Include -I$(srctree)/vendor/CMSIS/CMSIS/DSP/Include
