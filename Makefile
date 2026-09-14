@@ -44,6 +44,15 @@ image_LDFLAGS += -Wl,-Map=$(PROG).map,--cref,--gc-sections,--undefined=uxTopUsed
 image_LDFLAGS += -L$(srctree)/tools/make/F405/linker
 image_LDFLAGS += -T $(LINKER_DIR)/FLASH_CLOAD.ld
 
+#
+# Let an out-of-tree app shadow in-tree interface headers (e.g. a custom
+# platform_defaults.h) by giving its own directory first priority in the
+# include search path, ahead of every other INCLUDES entry below.
+#
+ifneq ($(OOT),)
+INCLUDES += -I$(OOT)
+endif
+
 INCLUDES += -I$(srctree)/vendor/CMSIS/CMSIS/Core/Include -I$(srctree)/vendor/CMSIS/CMSIS/DSP/Include
 INCLUDES += -I$(srctree)/vendor/libdw1000/inc
 INCLUDES += -I$(FREERTOS)/include -I$(PORT)
