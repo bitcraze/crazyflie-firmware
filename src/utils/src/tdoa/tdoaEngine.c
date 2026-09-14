@@ -69,7 +69,7 @@ void tdoaEngineInit(tdoaEngineState_t* engineState, const uint32_t now_ms, tdoaE
 #ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
   // 0 = unlimited
   engineState->maxRateHz = (float)CONFIG_DECK_LOCO_TDOA_RATE_LIMIT_MAX_RATE_HZ;
-  engineState->lastForwardedTime_ms = 0;
+  engineState->lastForwardedTime_us = 0;
 #endif
 
   engineState->matching.offset = 0;
