@@ -54,11 +54,6 @@ typedef struct {
   uint32_t currentWrgb8888;
   uint32_t wrgb8888;
   float tFade;
-  uint8_t blinkDutyMax;
-  uint8_t blinkDutyMin;
-  uint8_t blinkIntMax;
-  uint8_t blinkIntMin;
-  float blinkFreq;
   uint8_t deckTemperature;
   uint8_t throttlePercentage;
   uint8_t ledPosition;
@@ -77,8 +72,8 @@ typedef struct {
 
 // Two instances: bottom and top
 static colorLedContext_t contexts[2] = {
-  { .isInit = false, .brightnessCorr = true, .blinkIntMax = 255, .i2cAddress = COLORLED_BOT_DECK_I2C_ADDRESS, .isInFirmware = true, .isInBootloader = false, .testResults = 0 }, // bottom
-  { .isInit = false, .brightnessCorr = true, .blinkIntMax = 255, .i2cAddress = COLORLED_TOP_DECK_I2C_ADDRESS, .isInFirmware = true, .isInBootloader = false, .testResults = 0 }  // top
+  { .isInit = false, .brightnessCorr = true, .i2cAddress = COLORLED_BOT_DECK_I2C_ADDRESS, .isInFirmware = true, .isInBootloader = false, .testResults = 0 }, // bottom
+  { .isInit = false, .brightnessCorr = true, .i2cAddress = COLORLED_TOP_DECK_I2C_ADDRESS, .isInFirmware = true, .isInBootloader = false, .testResults = 0 }  // top
 };
 
 // Enable deck power by pulling high
@@ -436,11 +431,6 @@ static void task(void *param) {
   const TickType_t currentPollInterval = M2T(1000); // Poll LED current every 1000ms
 
   uint8_t lastBrightnessCorr = ctx->brightnessCorr;
-  uint8_t lastBlinkDutyMax = ctx->blinkDutyMax;
-  uint8_t lastBlinkDutyMin = ctx->blinkDutyMin;
-  uint8_t lastBlinkIntMax = ctx->blinkIntMax;
-  uint8_t lastBlinkIntMin = ctx->blinkIntMin;
-  float lastBlinkFreq = ctx->blinkFreq;
 
   while (1)
   {
@@ -468,30 +458,6 @@ static void task(void *param) {
           lastBrightnessCorr = ctx->brightnessCorr;
         } else {
           DEBUG_PRINT("Failed to write brightness correction setting to deck at I2C address 0x%02X\n", ctx->i2cAddress);
-        }
-      }
-
-      // Push the blink envelope + frequency when any part changed
-      if (ctx->blinkDutyMax != lastBlinkDutyMax || ctx->blinkDutyMin != lastBlinkDutyMin ||
-          ctx->blinkIntMax != lastBlinkIntMax || ctx->blinkIntMin != lastBlinkIntMin ||
-          ctx->blinkFreq != lastBlinkFreq) {
-        uint8_t cmd[TXBUFFERSIZE] = {
-          CMD_SET_BLINK,
-          ctx->blinkDutyMax,
-          ctx->blinkDutyMin,
-          ctx->blinkIntMax,
-          ctx->blinkIntMin
-        };
-        memcpy(&cmd[5], &ctx->blinkFreq, sizeof(float));
-
-        if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
-          lastBlinkDutyMax = ctx->blinkDutyMax;
-          lastBlinkDutyMin = ctx->blinkDutyMin;
-          lastBlinkIntMax = ctx->blinkIntMax;
-          lastBlinkIntMin = ctx->blinkIntMin;
-          lastBlinkFreq = ctx->blinkFreq;
-        } else {
-          DEBUG_PRINT("Failed to write blink settings to deck at I2C address 0x%02X\n", ctx->i2cAddress);
         }
       }
 
@@ -729,31 +695,6 @@ PARAM_ADD(PARAM_UINT8, brightCorr, &contexts[BOTTOM_IDX].brightnessCorr)
  */
 PARAM_ADD(PARAM_FLOAT, tfade, &contexts[BOTTOM_IDX].tFade)
 
-/**
- * @brief Blink effect frequency in Hz for bottom deck. 0=off, >0=blink frequency
- */
-PARAM_ADD(PARAM_FLOAT, blinkFreq, &contexts[BOTTOM_IDX].blinkFreq)
-
-/**
- * @brief Blink effect max intensity for bottom deck. 0=0%, 255=100% of the displayed color
- */
-PARAM_ADD(PARAM_UINT8, blinkIntMax, &contexts[BOTTOM_IDX].blinkIntMax)
-
-/**
- * @brief Blink effect min intensity for bottom deck. 0=0%, 255=100% of the displayed color
- */
-PARAM_ADD(PARAM_UINT8, blinkIntMin, &contexts[BOTTOM_IDX].blinkIntMin)
-
-/**
- * @brief Blink effect time at max intensity for bottom deck. 0=0%, 255=100% of blink period
- */
-PARAM_ADD(PARAM_UINT8, blinkDutyMax, &contexts[BOTTOM_IDX].blinkDutyMax)
-
-/**
- * @brief Blink effect time at min intensity for bottom deck. 0=0%, 255=100% of blink period
- */
-PARAM_ADD(PARAM_UINT8, blinkDutyMin, &contexts[BOTTOM_IDX].blinkDutyMin)
-
 PARAM_GROUP_STOP(colorLedBot)
 
 // Top deck parameters
@@ -773,31 +714,6 @@ PARAM_ADD(PARAM_UINT8, brightCorr, &contexts[TOP_IDX].brightnessCorr)
  * @brief Fade duration in seconds for top deck. 0=instant. Applies to the next wrgb8888 change
  */
 PARAM_ADD(PARAM_FLOAT, tfade, &contexts[TOP_IDX].tFade)
-
-/**
- * @brief Blink effect frequency in Hz for top deck. 0=off, >0=blink frequency
- */
-PARAM_ADD(PARAM_FLOAT, blinkFreq, &contexts[TOP_IDX].blinkFreq)
-
-/**
- * @brief Blink effect max intensity for top deck. 0=0%, 255=100% of the displayed color
- */
-PARAM_ADD(PARAM_UINT8, blinkIntMax, &contexts[TOP_IDX].blinkIntMax)
-
-/**
- * @brief Blink effect min intensity for top deck. 0=0%, 255=100% of the displayed color
- */
-PARAM_ADD(PARAM_UINT8, blinkIntMin, &contexts[TOP_IDX].blinkIntMin)
-
-/**
- * @brief Blink effect time at max intensity for top deck. 0=0%, 255=100% of blink period
- */
-PARAM_ADD(PARAM_UINT8, blinkDutyMax, &contexts[TOP_IDX].blinkDutyMax)
-
-/**
- * @brief Blink effect time at min intensity for top deck. 0=0%, 255=100% of blink period
- */
-PARAM_ADD(PARAM_UINT8, blinkDutyMin, &contexts[TOP_IDX].blinkDutyMin)
 
 PARAM_GROUP_STOP(colorLedTop)
 

@@ -10,7 +10,6 @@
 #define CMD_GET_LED_CURRENT     0x04
 #define CMD_GET_I2C_ADDR_PIN    0x05
 #define CMD_SET_BRIGHTNESS_CORR 0x06  // Enable/disable brightness correction [CMD, enable, 0, ...]
-#define CMD_SET_BLINK           0x07  // Set blink envelope + frequency [CMD, dutyMax, dutyMin, intMax, intMin, freq]
 
 // Expected protocol version
 #define COLORLED_PROTOCOL_VERSION_REQUIRED 4
