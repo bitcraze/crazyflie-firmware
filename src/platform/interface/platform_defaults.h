@@ -173,10 +173,10 @@
 
 // Pre-flight disarming timeout
 #ifndef PREFLIGHT_TIMEOUT_MS
-    #define PREFLIGHT_TIMEOUT_MS 30000
+    #define PREFLIGHT_TIMEOUT_MS 60000
 #endif
 
-// Landing timeout before disarming
+// Landing timeout before disarming 
 #ifndef LANDING_TIMEOUT_MS
     #define LANDING_TIMEOUT_MS 3000
 #endif
