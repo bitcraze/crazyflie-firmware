@@ -136,6 +136,22 @@ static double calcDistanceDiff(const tdoaAnchorContext_t* otherAnchorCtx, const 
   return SPEED_OF_LIGHT * tdoa / locodeckTsFreq;
 }
 
+// Anchors only put 32 bit time stamps on air, so the anchor side gap (txAn - rxAr_by_An) in calcTDoA()
+// is only valid if the anchor transmitted less than one 32 bit wrap (67 ms) after it received the
+// remote anchor's packet. If the remote packet is older than that (the remote anchor went silent,
+// for instance due to packet collisions), the truncated gaps on the tag and anchor side no longer
+// cancel once the anchor side is scaled by the clock correction. The resulting error is
+// 2^32 * (clockCorrection - 1) ticks, that is about 20 m per ppm of clock offset.
+//
+// The tag has 40 bit time stamps, so the tag side gap is unambiguous and can be used to detect
+// the condition. The margin accounts for the difference in flight times seen by the tag and the anchor.
+#define TDOA_ENGINE_REMOTE_RX_MAX_AGE_MARGIN 0x00100000
+static bool isRemoteRxTimeWithinAnchorTsRange(const tdoaAnchorContext_t* otherAnchorCtx, const int64_t rxAn_by_T_in_cl_T) {
+  const int64_t rxAr_by_T_in_cl_T = tdoaStorageGetRxTime(otherAnchorCtx);
+  const uint64_t tagSideGap = tdoaEngineTruncateToTagTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T);
+  return tagSideGap < (TDOA_ENGINE_TRUNCATE_TO_ANCHOR_TS_BITMAP - TDOA_ENGINE_REMOTE_RX_MAX_AGE_MARGIN);
+}
+
 static float sq(float a) { return a * a; }
 
 static float distanceBetweenAnchorsSquared(const point_t* a, const point_t* b) {
@@ -197,6 +213,11 @@ TESTABLE_STATIC bool matchRandomAnchor(tdoaEngineState_t* engineState,
     if (!doExcludeId || (excludedId != candidateAnchorId)) {
       if (tdoaStorageGetCreateAnchorCtx(engineState->anchorInfoArray, candidateAnchorId, now_ms, otherAnchorCtx)) {
         if (engineState->matching.seqNr[index] == tdoaStorageGetSeqNr(otherAnchorCtx) && tdoaStorageGetRemoteTimeOfFlight(anchorCtx, candidateAnchorId)) {
+          if (!isRemoteRxTimeWithinAnchorTsRange(otherAnchorCtx, rxAn_by_T_in_cl_T)) {
+            STATS_CNT_RATE_EVENT(&engineState->stats.remoteRxWrapRejected);
+            continue;
+          }
+
           const double candidateDistanceDiff = calcDistanceDiff(otherAnchorCtx, anchorCtx, txAn_in_cl_An, rxAn_by_T_in_cl_T, locodeckTsFreq);
           if (!isGeometryGoodEnough(anchorCtx, otherAnchorCtx, candidateDistanceDiff)) {
             STATS_CNT_RATE_EVENT(&engineState->stats.geometryRejected);
@@ -238,6 +259,11 @@ static bool matchYoungestAnchor(tdoaEngineState_t* engineState,
             uint32_t updateTime = tdoaStorageGetLastUpdateTime(otherAnchorCtx);
             if (updateTime > youngestUpdateTime) {
               if (engineState->matching.seqNr[index] == tdoaStorageGetSeqNr(otherAnchorCtx)) {
+                if (!isRemoteRxTimeWithinAnchorTsRange(otherAnchorCtx, rxAn_by_T_in_cl_T)) {
+                  STATS_CNT_RATE_EVENT(&engineState->stats.remoteRxWrapRejected);
+                  continue;
+                }
+
                 youngestUpdateTime = updateTime;
                 bestId = candidateAnchorId;
               }
