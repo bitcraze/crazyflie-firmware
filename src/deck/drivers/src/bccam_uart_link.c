@@ -143,7 +143,8 @@ static bool is_control_contract(const uint8_t *id, uint8_t len) {
 }
 
 /** Return true when an encoded contract ID names bitcraze.console. */
-static bool is_console_contract(const uint8_t *id, uint8_t len) {
+static bool is_console_contract(const uint8_t *id, uint8_t len)
+{
   static const uint8_t console[] = "bitcraze.console";
   return len == sizeof(console) - 1u && memcmp(id, console, len) == 0;
 }
@@ -161,7 +162,8 @@ static bool observed_credit_handles_are_known(
 
 /** Find the mutable supported-service binding for an opaque handle. */
 static bccam_uart_service_binding_t *binding_for_service(
-  bccam_uart_link_endpoint_t *endpoint, uint8_t handle) {
+  bccam_uart_link_endpoint_t *endpoint, uint8_t handle)
+{
   if (endpoint == NULL) {
     return NULL;
   }
@@ -178,7 +180,8 @@ static bccam_uart_service_binding_t *binding_for_service(
 
 /** Find the read-only supported-service binding for an opaque handle. */
 static const bccam_uart_service_binding_t *binding_for_service_const(
-  const bccam_uart_link_endpoint_t *endpoint, uint8_t handle) {
+  const bccam_uart_link_endpoint_t *endpoint, uint8_t handle)
+{
   if (endpoint == NULL) {
     return NULL;
   }
@@ -657,7 +660,8 @@ static int take_binding_rx(bccam_uart_service_binding_t *binding,
                            uint8_t *out,
                            size_t out_capacity,
                            uint16_t *out_len,
-                           bool *unit_present) {
+                           bool *unit_present)
+{
   if (!binding->rx_pending) {
     return BCCAM_UART_OK;
   }
@@ -678,7 +682,8 @@ int bccam_uart_link_take_rx_for_service(
   uint8_t *out,
   size_t out_capacity,
   uint16_t *out_len,
-  bool *unit_present) {
+  bool *unit_present)
+{
   if (out_len == NULL || unit_present == NULL) {
     return BCCAM_UART_ERR_BAD_ARGUMENT;
   }
@@ -755,7 +760,8 @@ bool bccam_uart_link_control_binding(const bccam_uart_link_endpoint_t *endpoint,
 }
 
 bool bccam_uart_link_console_binding(const bccam_uart_link_endpoint_t *endpoint,
-                                     bccam_uart_service_descriptor_t *descriptor) {
+                                     bccam_uart_service_descriptor_t *descriptor)
+{
   if (endpoint == NULL || !endpoint->console_binding.valid) {
     return false;
   }

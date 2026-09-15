@@ -107,7 +107,8 @@ static uint8_t uart_send_count(void) {
   return count;
 }
 
-static void complete_service_link_establishment(void) {
+static void complete_service_link_establishment(void)
+{
   const bccam_firmware_uart_client_test_trace_entry_t *establish =
     last_uart_send();
   TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_ESTABLISH, establish->bytes[6]);
@@ -126,7 +127,8 @@ static void establish_service_link(void) {
   complete_service_link_establishment();
 }
 
-static void complete_console_service_link_establishment(void) {
+static void complete_console_service_link_establishment(void)
+{
   complete_service_link_establishment();
 
   const bccam_firmware_uart_client_test_trace_entry_t *count_request =

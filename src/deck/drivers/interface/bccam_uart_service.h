@@ -103,7 +103,18 @@ void bccam_uart_service_test_set_bootloader_enter_result(bool result);
  *               client is consuming a bound Console service; false otherwise.
  */
 void bccam_uart_service_test_set_console_diagnostics_active(bool active);
+/**
+ * Override the Console source ID used by the UART forwarding state machine.
+ *
+ * @param source_id registered source ID, or -1 to model failed registration.
+ */
 void bccam_uart_service_test_set_console_source_id(int source_id);
+
+/**
+ * Advance the production Console forwarding state machine by one step.
+ *
+ * @return BCCAM_UART_OK on success (including no work), or a UART error code.
+ */
 int bccam_uart_service_test_forward_console(void);
 void bccam_uart_service_test_poll_once(void);
 void bccam_uart_service_test_handle_rx_event(
