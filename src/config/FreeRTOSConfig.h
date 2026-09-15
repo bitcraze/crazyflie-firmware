@@ -90,6 +90,12 @@
 #define configUSE_MALLOC_FAILED_HOOK 1
 #define configTIMER_TASK_STACK_DEPTH (configMINIMAL_STACK_SIZE * 4)
 
+#ifdef CONFIG_FREERTOS_USE_TRACE_FACILITY
+  #define configUSE_TRACE_FACILITY 1
+#else
+  #define configUSE_TRACE_FACILITY 0
+#endif
+
 #define configMAX_PRIORITIES		( 6 )
 #define configMAX_CO_ROUTINE_PRIORITIES ( 2 )
 
