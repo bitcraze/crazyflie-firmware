@@ -94,6 +94,18 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
                                          const state_t *state,
                                          const stabilizerStep_t stabilizerStep);
 
+// Change PID parameters at runtime; NaN/inf values are ignored (keeps current).
+// A snapshot of the previous values is saved for restoration with
+// controllerMellingerResetParamsToPrevious().
+void controllerMellingerChangePosParams(
+    float kp_xy, float kd_xy, float ki_xy, float i_range_xy,
+    float kp_z,  float kd_z,  float ki_z,  float i_range_z);
+void controllerMellingerChangeAttParams(
+    float kR_xy, float kw_xy, float ki_m_xy, float i_range_m_xy, float kd_omega_rp);
+void controllerMellingerChangeYawParams(
+    float kR_z, float kw_z, float ki_m_z, float i_range_m_z);
+void controllerMellingerResetParamsToPrevious(void);
+
 #ifdef CRAZYFLIE_FW
 
 void controllerMellingerFirmwareInit(void);
@@ -102,6 +114,9 @@ void controllerMellingerFirmware(control_t *control, const setpoint_t *setpoint,
                                          const sensorData_t *sensors,
                                          const state_t *state,
                                          const stabilizerStep_t stabilizerStep);
+
+void controllerMellingerEnterPreciseLand(void);
+void controllerMellingerExitPreciseLand(void);
 
 #endif // CRAZYFLIE_FW
 

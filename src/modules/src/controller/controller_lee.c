@@ -279,6 +279,14 @@ void controllerLeeFirmware(control_t *control, const setpoint_t *setpoint,
   controllerLee(&g_self, control, setpoint, sensors, state, tick);
 }
 
+void controllerLeeEnterPreciseLand(void)
+{
+}
+
+void controllerLeeExitPreciseLand(void)
+{
+}
+
 PARAM_GROUP_START(ctrlLee)
 PARAM_ADD(PARAM_FLOAT, KR_x, &g_self.KR.x)
 PARAM_ADD(PARAM_FLOAT, KR_y, &g_self.KR.y)

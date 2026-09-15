@@ -47,3 +47,7 @@ void controllerBrescianini(control_t *control,
                         const sensorData_t *sensors,
                         const state_t *state,
                         const stabilizerStep_t stabilizerStep);
+
+// Brescianini does not currently support precise landing; these are no-ops.
+void controllerBrescianiniEnterPreciseLand(void);
+void controllerBrescianiniExitPreciseLand(void);
