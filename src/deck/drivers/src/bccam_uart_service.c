@@ -600,16 +600,29 @@ static void enter_fw_resetting(void) {
   firmware_startup_deadline_tick = 0;
   reset_control_probe_logging();
   reset_rx_queue_state();
-#if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
-  if (console_frame_pending) {
-    console_frame_needs_release = false;
-  } else {
+  // The camera commits transmitted bytes, so retain an accepted receive slot
+  // before establishment clears the old link session. Taking it grants no
+  // credit and is safe even when the source is disabled.
+  if (!console_frame_pending &&
+      bccam_uart_runtime_console_service_bound(&firmware_client.runtime)) {
+    uint16_t length = 0u;
+    bool present = false;
+    const int result = bccam_uart_runtime_take_console_rx(
+      &firmware_client.runtime, console_frame, sizeof(console_frame),
+      &length, &present);
+    if (result == BCCAM_UART_OK && present) {
+      console_frame_length = length;
+      console_frame_offset = 0u;
+      console_frame_pending = length > 0u;
+    }
+  }
+  if (!console_frame_pending) {
     console_frame_length = 0u;
     console_frame_offset = 0u;
-    console_frame_needs_release = false;
   }
+  // The retained bytes no longer own a receive slot in the next session.
+  console_frame_needs_release = false;
   console_release_pending = false;
-#endif
   update_service_status_cache();
 }
 
