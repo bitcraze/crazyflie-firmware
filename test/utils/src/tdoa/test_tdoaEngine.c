@@ -39,6 +39,7 @@
 
 #include "physicalConstants.h"
 #include "mock_clockCorrectionEngine.h"
+#include "mock_usec_time.h"
 
 // matchRandomAnchor() is TESTABLE_STATIC in tdoaEngine.c, which drops "static" under
 // UNIT_TEST_MODE - declare it here to call it directly.
