@@ -360,7 +360,7 @@ config DECK_LOCO_LONGER_RANGE
 config DECK_LOCO_TDOA_DISTANCE_RATIO_LIMIT
     string "Distance ratio limit for rejecting anchor pairs with bad geometry (TDoA 3 only)"
     depends on DECK_LOCO
-    default "0.98"
+    default 0.98
     help
         Anchor pair candidates with a measured-distance / anchor-distance ratio at or
         above this limit are rejected as bad geometry. The value is in range [0, 1],
