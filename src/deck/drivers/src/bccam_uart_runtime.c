@@ -148,7 +148,8 @@ static void refresh_control_binding(bccam_uart_runtime_t *runtime) {
 
 /** Resolve the compatible Console handle bound in the current Link session. */
 static bool console_service_id(const bccam_uart_runtime_t *runtime,
-                               uint8_t *service_id) {
+                               uint8_t *service_id)
+{
   bccam_uart_service_descriptor_t descriptor;
   if (runtime == NULL ||
       !bccam_uart_link_console_binding(&runtime->link, &descriptor)) {
@@ -472,11 +473,13 @@ bool bccam_uart_runtime_control_service_bound(const bccam_uart_runtime_t *runtim
   return runtime != NULL && runtime->control_service_bound;
 }
 
-bool bccam_uart_runtime_console_service_bound(const bccam_uart_runtime_t *runtime) {
+bool bccam_uart_runtime_console_service_bound(const bccam_uart_runtime_t *runtime)
+{
   return console_service_id(runtime, NULL);
 }
 
-int bccam_uart_runtime_open_console_rx(bccam_uart_runtime_t *runtime) {
+int bccam_uart_runtime_open_console_rx(bccam_uart_runtime_t *runtime)
+{
   uint8_t service = 0u;
   if (runtime == NULL) {
     return BCCAM_UART_ERR_BAD_ARGUMENT;
@@ -499,7 +502,8 @@ int bccam_uart_runtime_take_console_rx(bccam_uart_runtime_t *runtime,
                                        uint8_t *payload,
                                        size_t payload_capacity,
                                        uint16_t *payload_len,
-                                       bool *unit_present) {
+                                       bool *unit_present)
+{
   uint8_t console_service = 0u;
   if (payload_len == NULL || unit_present == NULL) {
     return BCCAM_UART_ERR_BAD_ARGUMENT;
@@ -517,7 +521,8 @@ int bccam_uart_runtime_take_console_rx(bccam_uart_runtime_t *runtime,
     unit_present);
 }
 
-int bccam_uart_runtime_release_console_rx(bccam_uart_runtime_t *runtime) {
+int bccam_uart_runtime_release_console_rx(bccam_uart_runtime_t *runtime)
+{
   uint8_t service = 0u;
   if (runtime == NULL) {
     return BCCAM_UART_ERR_BAD_ARGUMENT;

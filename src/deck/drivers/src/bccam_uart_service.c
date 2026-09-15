@@ -115,7 +115,8 @@ STATIC_MEM_TASK_ALLOC(bcCamUartTask, BCCAM_UART_TASK_STACKSIZE);
 #endif
 
 /** Check whether a client can currently use Console for startup diagnosis. */
-static bool console_diagnostics_active(void) {
+static bool console_diagnostics_active(void)
+{
 #if defined(UNIT_TEST) || defined(UNIT_TEST_MODE)
   return test_console_diagnostics_active;
 #else
@@ -1067,14 +1068,16 @@ static void poll_firmware_link_at(uint32_t now_ticks) {
 }
 
 /** Return true for transient Console forwarding backpressure results. */
-static bool temporary_console_result(int result) {
+static bool temporary_console_result(int result)
+{
   return result == BCCAM_UART_ERR_TRANSACTION_BUSY ||
          result == BCCAM_UART_ERR_NO_CREDIT;
 }
 
 /** Publish Console receive credit only while the source remains enabled. */
 static int publish_console_credit_if_enabled(bool release_consumed_slot,
-                                             bool *published) {
+                                             bool *published)
+{
   int result = BCCAM_UART_OK;
   *published = false;
   taskENTER_CRITICAL();
@@ -1089,7 +1092,8 @@ static int publish_console_credit_if_enabled(bool release_consumed_slot,
 }
 
 /** Advance the best-effort Camera Console to CRTP forwarding state machine. */
-static int forward_console(void) {
+static int forward_console(void)
+{
   if (console_source_id < 0 ||
       !bccam_uart_runtime_console_service_bound(&firmware_client.runtime)) {
     return BCCAM_UART_OK;
@@ -1531,15 +1535,18 @@ void bccam_uart_service_test_set_bootloader_enter_result(bool result) {
   test_bootloader_enter_result = result;
 }
 
-void bccam_uart_service_test_set_console_diagnostics_active(bool active) {
+void bccam_uart_service_test_set_console_diagnostics_active(bool active)
+{
   test_console_diagnostics_active = active;
 }
 
-void bccam_uart_service_test_set_console_source_id(int source_id) {
+void bccam_uart_service_test_set_console_source_id(int source_id)
+{
   console_source_id = source_id;
 }
 
-int bccam_uart_service_test_forward_console(void) {
+int bccam_uart_service_test_forward_console(void)
+{
   return forward_console();
 }
 
