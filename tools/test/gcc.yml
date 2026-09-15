@@ -3,10 +3,10 @@ kconfig:
   config_file: 'build/.config'
 compiler:
   path: gcc
-  source_path:     &source_path 'src/'
-  unit_tests_path: &unit_tests_path 'test/**/'
-  mocks_path:      &mocks_path 'generated/test/mocks/'
-  build_path:      &build_path 'generated/test/build/'
+  source_path:     'src/'
+  unit_tests_path: 'test/**/'
+  mocks_path:      'generated/test/mocks/'
+  build_path:      'generated/test/build/'
   options:
     - '-c'
     - '-Wall'
@@ -23,9 +23,9 @@ compiler:
   includes:
     prefix: '-I'
     items:
-      - *source_path
-      - *unit_tests_path
-      - *mocks_path
+      - 'src/'
+      - 'test/**/'
+      - 'generated/test/mocks/'
       - 'build/include/generated'
       - 'src/config'
       - 'src/deck/drivers/interface/'
@@ -87,7 +87,7 @@ compiler:
   object_files:
     prefix: '-o'
     extension: '.o'
-    destination: *build_path
+    destination: 'generated/test/build/'
   libs:
     TEST_SUPPORT:
       files:
@@ -116,12 +116,12 @@ linker:
   includes:
     prefix: '-I'
   object_files:
-    path: *build_path
+    path: 'generated/test/build/'
     extension: '.o'
   bin_files:
     prefix: '-o'
     extension: '.exe'
-    destination: *build_path
+    destination: 'generated/test/build/'
 
 unsupported:
   - out_of_memory
@@ -140,5 +140,5 @@ env:
     - :ignore
     - :array
     - :callback
-  :mock_path: *mocks_path
+  :mock_path: 'generated/test/mocks/'
   :mock_prefix: mock_
