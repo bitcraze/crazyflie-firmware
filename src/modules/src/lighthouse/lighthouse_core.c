@@ -28,6 +28,7 @@
 #include "stm32fxxx.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "queue.h"
 
 #include <math.h>
 #include <stdbool.h>
@@ -64,6 +65,7 @@
 
 #include "lighthouse_transmit.h"
 
+#define LH_GET_FRAME_TIMEOUT  M2T(10)
 
 static const uint32_t MAX_WAIT_TIME_FOR_HEALTH_MS = 4000;
 
@@ -72,7 +74,7 @@ static const uint32_t MAX_WAIT_TIME_FOR_HEALTH_MS = 4000;
 static const uint32_t MAX_TIME_SINCE_LAST_FRAME_MS = 1500;
 
 static pulseProcessorResult_t angles;
-static lighthouseUartFrame_t frame;
+static lighthouseUartFrame_t frame, frameIsr;
 static lighthouseBsIdentificationData_t bsIdentificationData;
 
 // Stats
@@ -139,6 +141,8 @@ static lighthouseBaseStationType_t previousSystemType = lighthouseBsTypeV2;
 static pulseProcessorProcessPulse_t pulseProcessorProcessPulse = pulseProcessorV2ProcessPulse;
 
 #define UART_FRAME_LENGTH 12
+static xQueueHandle lhFramePacketQueue;
+STATIC_MEM_QUEUE_ALLOC(lhFramePacketQueue, 1, sizeof(lighthouseUartFrame_t));
 
 
 // Written by lighthouseCoreTask(), read by lighthouseCoreDeckStatus() from the supervisor task
@@ -146,6 +150,8 @@ static volatile bool deckIsFlashed = false;
 
 // The time (in ms) of the latest received UART frame, sync frames included
 static volatile uint32_t lastFrameTs = 0;
+
+static void uart1RxISRCallback(uint8_t rxByte, BaseType_t *xHigherPriorityTaskWoken);
 
 uint8_t lighthouseCoreDeckStatus() {
   // If the deck never flashed/booted we can't trust its state to probe it
@@ -177,8 +183,12 @@ static void modifyBit(uint16_t *bitmap, const int index, const bool value) {
 }
 
 void lighthouseCoreInit() {
+  lhFramePacketQueue = STATIC_MEM_QUEUE_CREATE(lhFramePacketQueue);
+
   lighthouseStorageInitializeSystemTypeFromStorage();
   lighthousePositionEstInit();
+  
+  uart1SetRxCallback(uart1RxISRCallback);
 
   for (int i = 0; i < CONFIG_DECK_LIGHTHOUSE_MAX_N_BS; i++) {
     modifyBit(&baseStationAvailabledMap, i, true);
@@ -265,73 +275,55 @@ void lighthouseCoreSetSystemType(const lighthouseBaseStationType_t type)
   lighthouseUpdateSystemType();
 }
 
-#define OPTIMIZE_UART1_ACCESS 1
-TESTABLE_STATIC bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
-  static char data[UART_FRAME_LENGTH];
-  int syncCounter = 0;
+static void uart1RxISRCallback(uint8_t rxByte, BaseType_t *xHigherPriorityTaskWoken) {
+  static uint8_t data[UART_FRAME_LENGTH];
+  static int index = 0;
+  static int syncCounter = 0;
 
-  #ifdef OPTIMIZE_UART1_ACCESS
-    // Wait until there is enough data available in the queue before reading
-    // to optimize the CPU usage. Locking on the queue (as is done in uart1GetDataWithTimeout()) seems to take a lot
-    // of time and the vTaskDelay() solution uses much less CPU.
-  while (uart1bytesAvailable() < UART_FRAME_LENGTH) {
-    vTaskDelay(1);
-    lighthouseTransmitProcessTimeout();
-  }
-  #endif
-
-  for(int i = 0; i < UART_FRAME_LENGTH; i++) {
-  #ifdef OPTIMIZE_UART1_ACCESS
-    uart1Getchar((char*)&data[i]);
-  #else
-    while(!uart1GetDataWithTimeout((uint8_t*)&data[i], 2)) {
-      lighthouseTransmitProcessTimeout();
-    }
-  #endif
-
-    if ((unsigned char)data[i] == 0xff) {
-      syncCounter += 1;
-    }
+  data[index] = rxByte;
+  index += 1;
+  
+  if ((unsigned char)rxByte == 0xff) {
+    syncCounter += 1;
+  } else {
+    syncCounter = 0;
   }
 
-  memset(frame, 0, sizeof(*frame));
+  if (index == UART_FRAME_LENGTH || syncCounter == UART_FRAME_LENGTH) {
+    const bool isSyncFrame = (syncCounter == UART_FRAME_LENGTH);
 
-  frame->isSyncFrame = (syncCounter == UART_FRAME_LENGTH);
+    index = 0;
+    syncCounter = 0;
+ 
+    frameIsr.isSyncFrame = isSyncFrame;
+    frameIsr.data.sensor = data[0] & 0x03;
+    frameIsr.data.channelFound = (data[0] & 0x80) == 0;
+    frameIsr.data.channel = (data[0] >> 3) & 0x0f;
+    frameIsr.data.slowBit = (data[0] >> 2) & 0x01;
+    memcpy(&frameIsr.data.width, &data[1], 2);
+    memcpy(&frameIsr.data.offset, &data[3], 3);
+    memcpy(&frameIsr.data.beamData, &data[6], 3);
+    memcpy(&frameIsr.data.timestamp, &data[9], 3);
 
-  frame->data.sensor = data[0] & 0x03;
-  frame->data.channelFound = (data[0] & 0x80) == 0;
-  frame->data.channel = (data[0] >> 3) & 0x0f;
-  frame->data.slowBit = (data[0] >> 2) & 0x01;
-  memcpy(&frame->data.width, &data[1], 2);
-  memcpy(&frame->data.offset, &data[3], 3);
-  memcpy(&frame->data.beamData, &data[6], 3);
-  memcpy(&frame->data.timestamp, &data[9], 3);
+    // Offset is expressed in a 6 MHz clock, convert to the 24 MHz that is used for timestamps
+    frameIsr.data.offset *= 4;
 
-  // Offset is expressed in a 6 MHz clock, convert to the 24 MHz that is used for timestamps
-  frame->data.offset *= 4;
+    bool isPaddingZero = (((data[5] | data[8]) & 0xfe) == 0);
+    bool isFrameValid = (isPaddingZero || frameIsr.isSyncFrame);
 
-  bool isPaddingZero = (((data[5] | data[8]) & 0xfe) == 0);
-  bool isFrameValid = (isPaddingZero || frame->isSyncFrame);
-
-  STATS_CNT_RATE_EVENT_DEBUG(&serialFrameRate);
-
-  return isFrameValid;
+    if (isFrameValid) {
+      xQueueSendFromISR(lhFramePacketQueue, &frameIsr, xHigherPriorityTaskWoken);
+    }
+  }
 }
 
-TESTABLE_STATIC void waitForUartSynchFrame() {
-  char c;
-  int syncCounter = 0;
-  bool synchronized = false;
-
-  while (!synchronized) {
-    uart1Getchar(&c);
-    if ((unsigned char)c == 0xff) {
-      syncCounter += 1;
-    } else {
-      syncCounter = 0;
-    }
-    synchronized = (syncCounter == UART_FRAME_LENGTH);
+TESTABLE_STATIC bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
+  if (xQueueReceive(lhFramePacketQueue, frame, LH_GET_FRAME_TIMEOUT) == pdTRUE) {
+    STATS_CNT_RATE_EVENT_DEBUG(&serialFrameRate);
+    return true;
   }
+
+  return false;
 }
 
 void lighthouseCoreSetLeds(lighthouseCoreLedState_t red, lighthouseCoreLedState_t orange, lighthouseCoreLedState_t green)
@@ -570,7 +562,7 @@ static void updateSystemStatus(const uint32_t now_ms) {
 }
 
 void lighthouseCoreTask(void *param) {
-  bool isUartFrameValid = false;
+  bool previousWasSyncFrame = false;
 
   uart1Init(230400);
   systemWaitStart();
@@ -578,8 +570,6 @@ void lighthouseCoreTask(void *param) {
   lighthouseStorageVerifySetStorageVersion();
   lighthouseStorageInitializeGeoDataFromStorage();
   lighthouseStorageInitializeCalibDataFromStorage();
-
-  ASSERT(uart1QueueMaxLength() >= UART_FRAME_LENGTH);
 
   if (lighthouseDeckFlasherCheckVersionAndBoot() == false) {
     DEBUG_PRINT("FPGA not booted. Lighthouse disabled!\n");
@@ -596,14 +586,12 @@ void lighthouseCoreTask(void *param) {
 
   while(1) {
     memset(pulseWidth, 0, sizeof(pulseWidth[0]) * PULSE_PROCESSOR_N_SENSORS);
-    waitForUartSynchFrame();
-    uartSynchronized = true;
 
-    bool previousWasSyncFrame = false;
-
-    while((isUartFrameValid = getUartFrameRaw(&frame))) {
+    // This is a blocking call with a timeout.
+    if (getUartFrameRaw(&frame)) {      
       const uint32_t now_ms = T2M(xTaskGetTickCount());
       lastFrameTs = now_ms;
+      uartSynchronized = true;
 
       // If a sync frame is getting through, we are only receiving sync frames. So nothing else. Reset state
       if(frame.isSyncFrame && previousWasSyncFrame) {
@@ -612,7 +600,7 @@ void lighthouseCoreTask(void *param) {
       // Now we are receiving items
       else if(!frame.isSyncFrame) {
         STATS_CNT_RATE_EVENT_DEBUG(&frameRate);
-	lighthouseTransmitProcessFrame(&frame);
+        lighthouseTransmitProcessFrame(&frame);
 
         deckHealthCheck(&lighthouseCoreState, &frame, now_ms);
         lighthouseUpdateSystemType();
@@ -624,9 +612,10 @@ void lighthouseCoreTask(void *param) {
       previousWasSyncFrame = frame.isSyncFrame;
 
       updateSystemStatus(now_ms);
+    } else {
+       uartSynchronized = false;
+       lighthouseTransmitProcessTimeout();
     }
-
-    uartSynchronized = false;
   }
 }
 
