@@ -353,6 +353,21 @@ config DECK_LOCO_LONGER_RANGE
     help
         Note that anchors need to be built with support for this as well
 
+#
+# Kconfig does not support float, we use a string here and fix it up in the
+# Makefile.
+#
+config DECK_LOCO_TDOA_DISTANCE_RATIO_LIMIT
+    string "Distance ratio limit for rejecting anchor pairs with bad geometry (TDoA 3 only)"
+    depends on DECK_LOCO
+    default 0.98
+    help
+        Anchor pair candidates with a measured-distance / anchor-distance ratio at or
+        above this limit are rejected as bad geometry. The value is in range [0, 1],
+        where a value closer to one means letting through more measurements.
+        Geometries with several anchors along the same line could benefit from lowering 
+        the value. Reasonable range is [0.6, 0.98].
+
 config DECK_LOCO_TDOA_RATE_LIMIT
     bool "Support rate limiting of TDoA measurements forwarded to the estimator"
     depends on DECK_LOCO

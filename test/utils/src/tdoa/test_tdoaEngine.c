@@ -1,3 +1,5 @@
+// @IGNORE_IF_NOT CONFIG_DECK_LOCO
+
 /**
  *    ||          ____  _ __
  * +------+      / __ )(_) /_______________ _____  ___
@@ -93,8 +95,8 @@ void testThatACandidateWithRatioAtOrAboveTheLimitIsSkippedInFavorOfTheNextCandid
   // Fixture
   // Registered first, tried second (offset-based rotation): distanceDiff = 5, ratio = 0.5 - passes
   fixtureRegisterCandidate(CANDIDATE_B_ID, 95, true);
-  // Registered second, tried first: distanceDiff = 9, ratio = 0.9 - at/above the default 0.85 limit, rejected
-  fixtureRegisterCandidate(CANDIDATE_A_ID, 91, true);
+  // Registered second, tried first: distanceDiff = 10, ratio = 1.0 - at/above the default 0.98 limit, rejected
+  fixtureRegisterCandidate(CANDIDATE_A_ID, 90, true);
 
   tdoaAnchorContext_t otherAnchorCtx;
   double distanceDiff = 0.0;
@@ -132,8 +134,8 @@ void testThatACandidateWithAMissingAnchorPositionIsSkippedInFavorOfTheNextCandid
 
 void testThatFalseIsReturnedWhenAllCandidatesFail() {
   // Fixture
-  // Ratio 0.9 - at/above the limit, rejected
-  fixtureRegisterCandidate(CANDIDATE_A_ID, 91, true);
+  // Ratio 1.0 - at/above the limit, rejected
+  fixtureRegisterCandidate(CANDIDATE_A_ID, 90, true);
   // No position - can't compute a ratio, rejected
   fixtureRegisterCandidate(CANDIDATE_B_ID, 1, false);
 
