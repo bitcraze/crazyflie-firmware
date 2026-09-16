@@ -136,20 +136,28 @@ static double calcDistanceDiff(const tdoaAnchorContext_t* otherAnchorCtx, const 
   return SPEED_OF_LIGHT * tdoa / locodeckTsFreq;
 }
 
-// Anchors only put 32 bit time stamps on air, so the anchor side gap (txAn - rxAr_by_An) in calcTDoA()
-// is only valid if the anchor transmitted less than one 32 bit wrap (67 ms) after it received the
-// remote anchor's packet. If the remote packet is older than that (the remote anchor went silent,
-// for instance due to packet collisions), the truncated gaps on the tag and anchor side no longer
-// cancel once the anchor side is scaled by the clock correction. The resulting error is
-// 2^32 * (clockCorrection - 1) ticks, that is about 20 m per ppm of clock offset.
+// calcTDoA() computes two differences, (txAn - rxAr_by_An) and (rxAn_by_T - rxAr_by_T). Anchors only
+// put 32 bit time stamps on air, so both differences are truncated to 32 bits and wrap every 2^32 ticks
+// (67 ms). A candidate is only used if the anchor and the tag hold the same latest packet from the
+// remote anchor (matching sequence numbers). That shared packet gets older with every packet from the
+// remote anchor that both miss, for instance due to packet collisions. Depending on the anchors'
+// transmit rate, a single missed packet can be enough to make it more than 67 ms old, and both
+// differences then come out 2^32 ticks too small. If it were not for the clock correction, the two
+// errors would cancel. But (txAn - rxAr_by_An) is converted to tag ticks by multiplying it with the
+// clock correction, which scales its error to 2^32 * clockCorrection ticks and leaves
+// 2^32 * (clockCorrection - 1) ticks, about 20 m per ppm of clock offset.
 //
-// The tag has 40 bit time stamps, so the tag side gap is unambiguous and can be used to detect
-// the condition. The margin accounts for the difference in flight times seen by the tag and the anchor.
-#define TDOA_ENGINE_REMOTE_RX_MAX_AGE_MARGIN 0x00100000
+// The tag keeps 40 bit time stamps, so (rxAn_by_T - rxAr_by_T) only wraps every 17.2 s and can be
+// used to detect this. If the anchor's clock runs faster than the tag's, the anchor's count can reach
+// one wrap slightly before the tag's does, so the limit is set a margin below one wrap. The margin,
+// 2^20 ticks (16 microseconds), is well above the difference caused by clock offset, 1.34 microseconds
+// at the 20 ppm clock offset limit in clockCorrectionEngine.c.
+#define TDOA_ENGINE_REMOTE_RX_AGE_MARGIN 0x00100000
+#define TDOA_ENGINE_MAX_REMOTE_RX_AGE (TDOA_ENGINE_TRUNCATE_TO_ANCHOR_TS_BITMAP - TDOA_ENGINE_REMOTE_RX_AGE_MARGIN)
 static bool isRemoteRxTimeWithinAnchorTsRange(const tdoaAnchorContext_t* otherAnchorCtx, const int64_t rxAn_by_T_in_cl_T) {
   const int64_t rxAr_by_T_in_cl_T = tdoaStorageGetRxTime(otherAnchorCtx);
-  const uint64_t tagSideGap = tdoaEngineTruncateToTagTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T);
-  return tagSideGap < (TDOA_ENGINE_TRUNCATE_TO_ANCHOR_TS_BITMAP - TDOA_ENGINE_REMOTE_RX_MAX_AGE_MARGIN);
+  const uint64_t delta_rxAr_to_rxAn_in_cl_T = tdoaEngineTruncateToTagTimeStamp(rxAn_by_T_in_cl_T - rxAr_by_T_in_cl_T);
+  return delta_rxAr_to_rxAn_in_cl_T < TDOA_ENGINE_MAX_REMOTE_RX_AGE;
 }
 
 static float sq(float a) { return a * a; }

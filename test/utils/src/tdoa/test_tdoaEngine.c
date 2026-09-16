@@ -152,7 +152,7 @@ void testThatFalseIsReturnedWhenAllCandidatesFail() {
 void testThatACandidateReceivedMoreThanOneAnchorTsWrapAgoIsRejected() {
   // Fixture
   // The candidate was received by the tag at 0, this packet arrives one full 32 bit wrap + RX_TIMESTAMP later.
-  // Truncated to 32 bits the gap looks like RX_TIMESTAMP, and distanceDiff would be 100 - 95 = 5 and pass the
+  // Truncated to 32 bits, (rxAn_by_T - rxAr_by_T) looks like RX_TIMESTAMP, and distanceDiff would be 100 - 95 = 5 and pass the
   // geometry check. The 40 bit tag time stamps reveal the wrap.
   const int64_t rxAn_by_T = 0x100000000 + RX_TIMESTAMP;
   fixtureRegisterCandidateWithRxTime(CANDIDATE_A_ID, 95, true, 0);
@@ -171,7 +171,7 @@ void testThatACandidateReceivedMoreThanOneAnchorTsWrapAgoIsRejected() {
 
 void testThatACandidateReceivedJustLessThanOneAnchorTsWrapAgoIsAccepted() {
   // Fixture
-  // Gap of 0xFFE00000 ticks, below the (2^32 - margin) limit. tof chosen so that distanceDiff = 5.
+  // (rxAn_by_T - rxAr_by_T) is 0xFFE00000 ticks, below TDOA_ENGINE_MAX_REMOTE_RX_AGE. tof chosen so that distanceDiff = 5.
   const int64_t rxAn_by_T = 0xFFE00000;
   fixtureRegisterCandidateWithRxTime(CANDIDATE_A_ID, 0xFFE00000 - 5, true, 0);
 
@@ -188,10 +188,10 @@ void testThatACandidateReceivedJustLessThanOneAnchorTsWrapAgoIsAccepted() {
 }
 
 
-void testThatTheTagSideGapIsEvaluatedModulo40Bits() {
+void testThatTheRemoteRxAgeIsEvaluatedModulo40Bits() {
   // Fixture
   // The candidate was received just before the 40 bit tag counter wrapped, this packet just after.
-  // The true gap is 0x200 ticks, distanceDiff = 0x200 - 507 = 5.
+  // (rxAn_by_T - rxAr_by_T) is 0x200 ticks, distanceDiff = 0x200 - 507 = 5.
   const int64_t rxAn_by_T = 0x100;
   fixtureRegisterCandidateWithRxTime(CANDIDATE_A_ID, 507, true, 0xFFFFFFFF00);
 
