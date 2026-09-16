@@ -12,6 +12,7 @@ typedef struct {
   statsCntRateLogger_t timeIsGood;
   statsCntRateLogger_t suitableDataFound;
   statsCntRateLogger_t geometryRejected; // Rate for measurement pairs that were rejected due to bad geometry
+  statsCntRateLogger_t remoteRxWrapRejected; // Rate for measurement pairs that were rejected because the remote anchor packet is older than one 32 bit time stamp wrap
 
   // Anchor ids to use for stats
   uint8_t anchorId; // The id of the anchor to log
