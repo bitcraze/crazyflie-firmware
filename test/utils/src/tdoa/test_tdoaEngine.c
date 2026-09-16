@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * test_tdoaEngine.c - Unit tests for the candidate filters in matchRandomAnchor()
+ * test_tdoaEngine.c - Unit tests for the candidate filters in matchRandomAnchor() and matchYoungestAnchor()
  */
 
 // File under test
@@ -38,9 +38,10 @@
 #include "physicalConstants.h"
 #include "mock_clockCorrectionEngine.h"
 
-// matchRandomAnchor() is TESTABLE_STATIC in tdoaEngine.c, which drops "static" under
-// UNIT_TEST_MODE - declare it here to call it directly.
+// matchRandomAnchor() and matchYoungestAnchor() are TESTABLE_STATIC in tdoaEngine.c, which drops "static" under
+// UNIT_TEST_MODE - declare them here to call them directly.
 bool matchRandomAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx, const bool doExcludeId, const uint8_t excludedId, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T, const double locodeckTsFreq, double* distanceDiff);
+bool matchYoungestAnchor(tdoaEngineState_t* engineState, tdoaAnchorContext_t* otherAnchorCtx, const tdoaAnchorContext_t* anchorCtx, const bool doExcludeId, const uint8_t excludedId, const int64_t txAn_in_cl_An, const int64_t rxAn_by_T_in_cl_T, const double locodeckTsFreq, double* distanceDiff);
 
 #define NOW_MS 10000
 #define OWN_ANCHOR_ID 5
@@ -61,6 +62,7 @@ static tdoaAnchorContext_t ownAnchorCtx;
 static void noopSendTdoaToEstimator(tdoaMeasurement_t* tdoaMeasurement);
 static void fixtureRegisterCandidate(const uint8_t candidateId, const int64_t tof, const bool withPosition);
 static void fixtureRegisterCandidateWithRxTime(const uint8_t candidateId, const int64_t tof, const bool withPosition, const int64_t rxTime);
+static void fixtureRegisterCandidateWithRxAndUpdateTime(const uint8_t candidateId, const int64_t tof, const bool withPosition, const int64_t rxTime, const uint32_t updateTime_ms);
 
 void setUp(void) {
   tdoaEngineInit(&engineState, NOW_MS, noopSendTdoaToEstimator, LOCODECK_TS_FREQ_FOR_TEST, TdoaEngineMatchingAlgorithmRandom);
@@ -229,6 +231,27 @@ void testThatAWrappedCandidateIsSkippedInFavorOfTheNextCandidate() {
 }
 
 
+void testThatAWrappedCandidateIsSkippedInFavorOfAnOlderCandidateByTheYoungestMatcher() {
+  // Fixture
+  const int64_t rxAn_by_T = 0x100000000 + RX_TIMESTAMP;
+  // Older: received RX_TIMESTAMP ticks before this packet, distanceDiff = 5 - passes
+  fixtureRegisterCandidateWithRxAndUpdateTime(CANDIDATE_B_ID, 95, true, 0x100000000, NOW_MS - 10);
+  // Younger, so it would be picked: received one wrap + RX_TIMESTAMP ticks before this packet - rejected
+  fixtureRegisterCandidateWithRxAndUpdateTime(CANDIDATE_A_ID, 95, true, 0, NOW_MS - 5);
+
+  tdoaAnchorContext_t otherAnchorCtx;
+  double distanceDiff = 0.0;
+
+  // Test
+  bool actual = matchYoungestAnchor(&engineState, &otherAnchorCtx, &ownAnchorCtx, false, 0, 0, rxAn_by_T, LOCODECK_TS_FREQ_FOR_TEST, &distanceDiff);
+
+  // Assert
+  TEST_ASSERT_TRUE(actual);
+  TEST_ASSERT_EQUAL_UINT8(CANDIDATE_B_ID, tdoaStorageGetId(&otherAnchorCtx));
+  TEST_ASSERT_EQUAL_FLOAT(5.0f, (float)distanceDiff);
+}
+
+
 // Helpers ///////////////
 
 static void noopSendTdoaToEstimator(tdoaMeasurement_t* tdoaMeasurement) {
@@ -244,10 +267,16 @@ static void fixtureRegisterCandidate(const uint8_t candidateId, const int64_t to
 
 // As fixtureRegisterCandidate(), but with an explicit time stamp for when the tag received the candidate's packet
 static void fixtureRegisterCandidateWithRxTime(const uint8_t candidateId, const int64_t tof, const bool withPosition, const int64_t rxTime) {
+  fixtureRegisterCandidateWithRxAndUpdateTime(candidateId, tof, withPosition, rxTime, NOW_MS);
+}
+
+// As fixtureRegisterCandidateWithRxTime(), but with an explicit system time for when the candidate was last updated,
+// which matchYoungestAnchor() uses to pick a candidate
+static void fixtureRegisterCandidateWithRxAndUpdateTime(const uint8_t candidateId, const int64_t tof, const bool withPosition, const int64_t rxTime, const uint32_t updateTime_ms) {
   const uint8_t seqNr = candidateId;
 
   tdoaAnchorContext_t candidateCtx;
-  tdoaStorageGetCreateAnchorCtx(engineState.anchorInfoArray, candidateId, NOW_MS, &candidateCtx);
+  tdoaStorageGetCreateAnchorCtx(engineState.anchorInfoArray, candidateId, updateTime_ms, &candidateCtx);
   tdoaStorageSetRxTxData(&candidateCtx, rxTime, 0, seqNr);
   if (withPosition) {
     tdoaStorageSetAnchorPosition(&candidateCtx, ANCHOR_TO_ANCHOR_DISTANCE, 0.0f, 0.0f);

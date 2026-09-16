@@ -243,15 +243,15 @@ TESTABLE_STATIC bool matchRandomAnchor(tdoaEngineState_t* engineState,
   return false;
 }
 
-static bool matchYoungestAnchor(tdoaEngineState_t* engineState,
-                                tdoaAnchorContext_t* otherAnchorCtx,
-                                const tdoaAnchorContext_t* anchorCtx,
-                                const bool doExcludeId,
-                                const uint8_t excludedId,
-                                const int64_t txAn_in_cl_An,
-                                const int64_t rxAn_by_T_in_cl_T,
-                                const double locodeckTsFreq,
-                                double* distanceDiff) {
+TESTABLE_STATIC bool matchYoungestAnchor(tdoaEngineState_t* engineState,
+                                         tdoaAnchorContext_t* otherAnchorCtx,
+                                         const tdoaAnchorContext_t* anchorCtx,
+                                         const bool doExcludeId,
+                                         const uint8_t excludedId,
+                                         const int64_t txAn_in_cl_An,
+                                         const int64_t rxAn_by_T_in_cl_T,
+                                         const double locodeckTsFreq,
+                                         double* distanceDiff) {
     int remoteCount = 0;
     tdoaStorageGetRemoteSeqNrList(anchorCtx, &remoteCount, engineState->matching.seqNr, engineState->matching.id);
 
