@@ -197,6 +197,21 @@ config DECK_FLOW
         distances in any direction or act as an aid for beginners where
         it creates a very stable flying platform.
 
+config DECK_FLOWV3
+    bool "Support the Flow v3 deck"
+    default y
+    select ESTIMATOR_KALMAN_ENABLE
+    select DECK_ZRANGER
+    select DECK_ZRANGER2
+    help
+        The Flow deck gives the Crazyflie 2.x the ability to understand
+        when it’s moving in any direction. The VL53L1x ToF sensor measures
+        the distance to the ground with high precision and the PMW3901
+        optical flow sensor measures movements in relation to the ground.
+        This creates a flying 3D robot that can be pre-programmed to fly
+        distances in any direction or act as an aid for beginners where
+        it creates a very stable flying platform.
+
 config DECK_GTGPS
     bool "Support the GPS prototype deck (obsolete)"
     default n

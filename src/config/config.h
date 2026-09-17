@@ -67,6 +67,7 @@
 #define SENSORS_TASK_PRI          4
 #define ADC_TASK_PRI              3
 #define FLOW_TASK_PRI             3
+#define FLOWV3_TASK_PRI           3
 #define MULTIRANGER_TASK_PRI      3
 #define SYSTEM_TASK_PRI           2
 #define CRTP_TX_TASK_PRI          2
@@ -136,6 +137,7 @@
 #define ZRANGER_TASK_NAME         "ZRANGER"
 #define ZRANGER2_TASK_NAME        "ZRANGER2"
 #define FLOW_TASK_NAME            "FLOW"
+#define FLOWV3_TASK_NAME          "FLOWV3"
 #define USDLOG_TASK_NAME          "USDLOG"
 #define USDWRITE_TASK_NAME        "USDWRITE"
 #define PCA9685_TASK_NAME         "PCA9685"
@@ -192,6 +194,7 @@
 #define ZRANGER_TASK_STACKSIZE          (2 * configMINIMAL_STACK_SIZE)
 #define ZRANGER2_TASK_STACKSIZE         (2 * configMINIMAL_STACK_SIZE)
 #define FLOW_TASK_STACKSIZE             (2 * configMINIMAL_STACK_SIZE)
+#define FLOWV3_TASK_STACKSIZE             (2 * configMINIMAL_STACK_SIZE)
 #define USDLOG_TASK_STACKSIZE           (2 * configMINIMAL_STACK_SIZE)
 #define USDWRITE_TASK_STACKSIZE         (3 * configMINIMAL_STACK_SIZE)
 #define PCA9685_TASK_STACKSIZE          (2 * configMINIMAL_STACK_SIZE)

@@ -50,3 +50,6 @@ build/
 *.elf
 
 tools/dependency/web/data.js
+
+venv/
+rust_venv/
