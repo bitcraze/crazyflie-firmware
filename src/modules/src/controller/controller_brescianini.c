@@ -92,6 +92,14 @@ void controllerBrescianiniInit(void) {
   isInit = true;
 }
 
+void controllerBrescianiniEnterPreciseLand(void)
+{
+}
+
+void controllerBrescianiniExitPreciseLand(void)
+{
+}
+
 
 #define UPDATE_RATE RATE_100_HZ
 
