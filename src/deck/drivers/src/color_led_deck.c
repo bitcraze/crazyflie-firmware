@@ -39,6 +39,7 @@
 #include "math.h"
 #include "color_led_deck.h"
 #include "i2c_dfu.h"
+#include <string.h>
 
 #define DEBUG_MODULE "COLORLED"
 #include "debug.h"
@@ -52,6 +53,7 @@ typedef struct {
   uint8_t brightnessCorr;
   uint32_t currentWrgb8888;
   uint32_t wrgb8888;
+  float tFade;
   uint8_t deckTemperature;
   uint8_t throttlePercentage;
   uint8_t ledPosition;
@@ -123,72 +125,16 @@ static const ledDeckHandlerDef_t colorLedDeckLedHandler = {
 };
 
 
-// Gamma correction LUT (gamma = 2.0 with minimum threshold)
-// Input 0 -> 0 (off), Input 1-255 -> 3-255 (gamma corrected)
-// Minimum output of 3 ensures LEDs start at lowest visible level
-static const uint8_t gamma8[256] = {
-      0,   3,   3,   3,   3,   3,   3,   3,   3,   3,   3,   3,   4,   4,   4,   4,
-      4,   4,   4,   4,   5,   5,   5,   5,   5,   5,   6,   6,   6,   6,   6,   7,
-      7,   7,   7,   8,   8,   8,   9,   9,   9,  10,  10,  10,  11,  11,  11,  12,
-     12,  12,  13,  13,  13,  14,  14,  15,  15,  16,  16,  16,  17,  17,  18,  18,
-     19,  19,  20,  20,  21,  21,  22,  23,  23,  24,  24,  25,  25,  26,  27,  27,
-     28,  28,  29,  30,  30,  31,  32,  32,  33,  34,  34,  35,  36,  37,  37,  38,
-     39,  39,  40,  41,  42,  43,  43,  44,  45,  46,  47,  47,  48,  49,  50,  51,
-     52,  52,  53,  54,  55,  56,  57,  58,  59,  60,  61,  62,  63,  64,  65,  66,
-     66,  67,  68,  70,  71,  72,  73,  74,  75,  76,  77,  78,  79,  80,  81,  82,
-     83,  84,  86,  87,  88,  89,  90,  91,  93,  94,  95,  96,  97,  99, 100, 101,
-    102, 103, 105, 106, 107, 109, 110, 111, 112, 114, 115, 116, 118, 119, 120, 122,
-    123, 124, 126, 127, 129, 130, 131, 133, 134, 136, 137, 139, 140, 141, 143, 144,
-    146, 147, 149, 150, 152, 153, 155, 156, 158, 160, 161, 163, 164, 166, 167, 169,
-    171, 172, 174, 176, 177, 179, 180, 182, 184, 185, 187, 189, 191, 192, 194, 196,
-    197, 199, 201, 203, 204, 206, 208, 210, 212, 213, 215, 217, 219, 221, 223, 224,
-    226, 228, 230, 232, 234, 236, 238, 239, 241, 243, 245, 247, 249, 251, 253, 255
-};
-
-static inline uint8_t applyGammaCorrection(const uint8_t value) {
-    return gamma8[value];
-}
-
-static wrgb_t applyPerceptualScaling(const wrgb_t *input_rgb) {
-    // Apply perceptual balance factors from user survey
-    // These scale brightness values to achieve perceptually balanced colors
-    //
-    // This scales ALL channels down to match the weakest LED
-    // This significantly reduces maximum achievable brightness but provides perceptual uniformity
-    //
-    // Use brightnessCorr parameter to bypass this normalization for maximum brightness
-
-    wrgb_t result = {
-        .w = (uint8_t)(input_rgb->w * LED_PERCEPTUAL_SCALE.w),
-        .r = (uint8_t)(input_rgb->r * LED_PERCEPTUAL_SCALE.r),
-        .g = (uint8_t)(input_rgb->g * LED_PERCEPTUAL_SCALE.g),
-        .b = (uint8_t)(input_rgb->b * LED_PERCEPTUAL_SCALE.b)
-    };
-
-    return result;
-}
-
-static wrgb_t applyBrightnessCorrection(const wrgb_t *input_wrgb){
-    // Apply perceptual scaling from user survey
-    wrgb_t led_wrgb = applyPerceptualScaling(input_wrgb);
-
-    // Apply gamma correction for perceptual linearity
-    // This makes brightness changes feel uniform across the entire range
-    led_wrgb.w = applyGammaCorrection(led_wrgb.w);
-    led_wrgb.r = applyGammaCorrection(led_wrgb.r);
-    led_wrgb.g = applyGammaCorrection(led_wrgb.g);
-    led_wrgb.b = applyGammaCorrection(led_wrgb.b);
-
-    return led_wrgb;
-}
+// Brightness correction (gamma + perceptual scaling) is applied on the color LED deck.
+// The brightCorr param below just toggles it via CMD_SET_BRIGHTNESS_CORR.
 
 static bool checkProtocolVersion(uint8_t i2cAddress) {
-  // Fixed packet size: CMD + 4 dummy bytes
-  uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_VERSION, 0, 0, 0, 0};
+  // Stable discovery request: CMD + 4 dummy bytes
+  uint8_t cmd[COLORLED_REQUEST_SIZE] = {CMD_GET_VERSION, 0, 0, 0, 0};
   uint8_t response[RXBUFFERSIZE];
 
-  // Send version request (5 bytes to match fixed packet size)
-  if (i2cdevWrite(I2C1_DEV, i2cAddress, TXBUFFERSIZE, cmd) == false) {
+  // Keep this five-byte request compatible with older deck firmware
+  if (i2cdevWrite(I2C1_DEV, i2cAddress, sizeof(cmd), cmd) == false) {
     DEBUG_PRINT("Failed to request version\n");
     return false;
   }
@@ -318,10 +264,10 @@ static bool colorLedTopDeckTest() {
 }
 
 static bool pollThermalStatus(colorLedContext_t *ctx) {
-  uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_THERMAL_STATUS, 0, 0, 0, 0};
+  uint8_t cmd[COLORLED_REQUEST_SIZE] = {CMD_GET_THERMAL_STATUS, 0, 0, 0, 0};
   uint8_t response[RXBUFFERSIZE];
 
-  if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
+  if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, sizeof(cmd), cmd)) {
     vTaskDelay(M2T(1));
     if (i2cdevRead(I2C1_DEV, ctx->i2cAddress, RXBUFFERSIZE, response)) {
       if (response[0] == CMD_GET_THERMAL_STATUS) {
@@ -335,10 +281,10 @@ static bool pollThermalStatus(colorLedContext_t *ctx) {
 }
 
 static bool pollLedCurrent(colorLedContext_t *ctx) {
-  uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_LED_CURRENT, 0, 0, 0, 0};
+  uint8_t cmd[COLORLED_REQUEST_SIZE] = {CMD_GET_LED_CURRENT, 0, 0, 0, 0};
   uint8_t response[RXBUFFERSIZE];
 
-  if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
+  if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, sizeof(cmd), cmd)) {
     vTaskDelay(M2T(1));
     if (i2cdevRead(I2C1_DEV, ctx->i2cAddress, RXBUFFERSIZE, response)) {
       if (response[0] == CMD_GET_LED_CURRENT) {
@@ -355,10 +301,10 @@ static bool pollLedCurrent(colorLedContext_t *ctx) {
 }
 
 static bool verifyLedPosition(colorLedContext_t *ctx, uint8_t expectedPosition) {
-  uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_LED_POSITION, 0, 0, 0, 0};
+  uint8_t cmd[COLORLED_REQUEST_SIZE] = {CMD_GET_LED_POSITION, 0, 0, 0, 0};
   uint8_t response[RXBUFFERSIZE];
 
-  if (!i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
+  if (!i2cdevWrite(I2C1_DEV, ctx->i2cAddress, sizeof(cmd), cmd)) {
     DEBUG_PRINT("Failed to write CMD_GET_LED_POSITION\n");
     return false;
   }
@@ -399,7 +345,7 @@ static bool verifyLedPosition(colorLedContext_t *ctx, uint8_t expectedPosition) 
 }
 
 static bool testI2cAddrPin(colorLedContext_t *ctx) {
-  uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_I2C_ADDR_PIN, 0, 0, 0, 0};
+  uint8_t cmd[COLORLED_REQUEST_SIZE] = {CMD_GET_I2C_ADDR_PIN, 0, 0, 0, 0};
   uint8_t response[RXBUFFERSIZE];
 
   // Configure pin as output
@@ -416,7 +362,7 @@ static bool testI2cAddrPin(colorLedContext_t *ctx) {
 
   vTaskDelay(M2T(2)); // Allow pin to settle
 
-  if (!i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
+  if (!i2cdevWrite(I2C1_DEV, ctx->i2cAddress, sizeof(cmd), cmd)) {
     DEBUG_PRINT("Failed to write I2C command for LOW state test\n");
     return false;
   }
@@ -446,7 +392,7 @@ static bool testI2cAddrPin(colorLedContext_t *ctx) {
 
   vTaskDelay(M2T(2)); // Allow pin to settle
 
-  if (!i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
+  if (!i2cdevWrite(I2C1_DEV, ctx->i2cAddress, sizeof(cmd), cmd)) {
     DEBUG_PRINT("Failed to write I2C command for HIGH state test\n");
     return false;
   }
@@ -484,6 +430,8 @@ static void task(void *param) {
   TickType_t lastCurrentPoll = xTaskGetTickCount();
   const TickType_t currentPollInterval = M2T(1000); // Poll LED current every 1000ms
 
+  uint8_t lastBrightnessCorr = ctx->brightnessCorr;
+
   while (1)
   {
     if (ctx->isInFirmware) {
@@ -503,35 +451,31 @@ static void task(void *param) {
         lastCurrentPoll = xTaskGetTickCount();
       }
 
-      // Send color updates when changed
-      if (ctx->currentWrgb8888 != ctx->wrgb8888) {
-        ctx->currentWrgb8888 = ctx->wrgb8888;
-
-        // Unpack to struct (format: 0xWWRRGGBB)
-        wrgb_t input = {
-            .w = (ctx->currentWrgb8888 >> 24) & 0xFF,
-            .r = (ctx->currentWrgb8888 >> 16) & 0xFF,
-            .g = (ctx->currentWrgb8888 >> 8) & 0xFF,
-            .b = ctx->currentWrgb8888 & 0xFF
-        };
-
-        wrgb_t output;
-        if (ctx->brightnessCorr) {
-          // Apply correction
-          output = applyBrightnessCorrection(&input);
+      // Push the brightness correction toggle when changed
+      if (ctx->brightnessCorr != lastBrightnessCorr) {
+        uint8_t cmd[COLORLED_REQUEST_SIZE] = {CMD_SET_BRIGHTNESS_CORR, ctx->brightnessCorr};
+        if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, sizeof(cmd), cmd)) {
+          lastBrightnessCorr = ctx->brightnessCorr;
         } else {
-          output = input;
+          DEBUG_PRINT("Failed to write brightness correction setting to deck at I2C address 0x%02X\n", ctx->i2cAddress);
         }
+      }
 
-        // Format: 0xWWRRGGBB -> Hardware expects [W, R, G, B]
-        uint8_t wrgb_data[5] = {
-          CMD_SET_COLOR,
-          output.w,
-          output.r,
-          output.g,
-          output.b
+      // Push the raw color + fade duration when the color changed
+      if (ctx->wrgb8888 != ctx->currentWrgb8888) {
+        // Format: 0xWWRRGGBB -> [CMD, W, R, G, B, fadeTime (float32, little-endian)]
+        uint8_t cmd[COLORLED_FADE_REQUEST_SIZE] = {
+          CMD_SET_COLOR_FADE,
+          (uint8_t)(ctx->wrgb8888 >> 24),
+          (uint8_t)(ctx->wrgb8888 >> 16),
+          (uint8_t)(ctx->wrgb8888 >> 8),
+          (uint8_t)(ctx->wrgb8888)
         };
-        if (!i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, wrgb_data)) {
+        memcpy(&cmd[5], &ctx->tFade, sizeof(float));
+
+        if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, sizeof(cmd), cmd)) {
+          ctx->currentWrgb8888 = ctx->wrgb8888;
+        } else {
           DEBUG_PRINT("Failed to write color command to deck at I2C address 0x%02X\n", ctx->i2cAddress);
         }
       }
@@ -746,6 +690,11 @@ PARAM_ADD(PARAM_UINT32, wrgb8888, &contexts[BOTTOM_IDX].wrgb8888)
  */
 PARAM_ADD(PARAM_UINT8, brightCorr, &contexts[BOTTOM_IDX].brightnessCorr)
 
+/**
+ * @brief Fade duration in seconds for bottom deck. 0=instant. Applies to the next wrgb8888 change
+ */
+PARAM_ADD(PARAM_FLOAT, tfade, &contexts[BOTTOM_IDX].tFade)
+
 PARAM_GROUP_STOP(colorLedBot)
 
 // Top deck parameters
@@ -760,6 +709,11 @@ PARAM_ADD(PARAM_UINT32, wrgb8888, &contexts[TOP_IDX].wrgb8888)
  * @brief Enable brightness correction (gamma and luminance normalization) for top deck. 0=off, 1=on
  */
 PARAM_ADD(PARAM_UINT8, brightCorr, &contexts[TOP_IDX].brightnessCorr)
+
+/**
+ * @brief Fade duration in seconds for top deck. 0=instant. Applies to the next wrgb8888 change
+ */
+PARAM_ADD(PARAM_FLOAT, tfade, &contexts[TOP_IDX].tFade)
 
 PARAM_GROUP_STOP(colorLedTop)
 
