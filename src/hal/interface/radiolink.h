@@ -54,6 +54,7 @@ void radiolinkSetChannel(uint8_t channel);
 void radiolinkSetDatarate(uint8_t datarate);
 void radiolinkSetAddress(uint64_t address);
 void radiolinkSetPowerDbm(int8_t powerDbm);
+void radiolinkSendDisableOnUsb(void);
 void radiolinkSyslinkDispatch(SyslinkPacket *slp);
 struct crtpLinkOperations * radiolinkGetLink();
 bool radiolinkSendP2PPacketBroadcast(P2PPacket *p2pp);
