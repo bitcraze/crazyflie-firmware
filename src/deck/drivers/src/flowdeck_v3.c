@@ -20,7 +20,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-/* flowdeck_v3.c: UART template for Flow deck V3 */
+/* flowdeck_v3.c: Flow deck V3 driver
+ *
+ * Flow and range measurements are received from the RP2350 on the deck over UART.
+ * The deck is powered through the deck controller, which also gives access to the
+ * RP2350 flash for firmware upgrades (deck memory bcFlow3:rp2350).
+ */
 
 #define DEBUG_MODULE "FlowDeckV3"
 
@@ -45,6 +50,9 @@
 
 #include "flowdeck_v3.h"
 #include "stabilizer_types.h"
+
+#include "deckctrl_gpio.h"
+#include "deckctrl_spi.h"
 
 
 #define OULIER_LIMIT 100
@@ -169,10 +177,352 @@ static void flowdeckV3Task(void *param) {
 }
 
 
-static void flowdeck3Init(DeckInfo *info) {
-  (void)info;
+// Deck controller GPIO mapping
+#define GPIO_RP_RUN   DECKCTRL_GPIO_PIN_0   // PA0 - RP2350 RUN, low holds the RP2350 in reset
+#define GPIO_PWR_EN   DECKCTRL_GPIO_PIN_12  // PC15 - Enables the 3V0 and 1V8 regulators
+
+#define POWER_UP_DELAY_MS 10
+#define RESET_DELAY_MS    10
+
+// SPI flash (W25Q32RV)
+#define FLASH_SIZE          (4 * 1024 * 1024)
+#define FLASH_PAGE_SIZE     256
+#define FLASH_BLOCK_SIZE    0x10000
+
+#define FLASH_CMD_WRITE_ENABLE  0x06
+#define FLASH_CMD_READ_STATUS   0x05
+#define FLASH_CMD_READ          0x03
+#define FLASH_CMD_PAGE_PROGRAM  0x02
+#define FLASH_CMD_BLOCK_ERASE   0xD8
+#define FLASH_CMD_JEDEC_ID      0x9F
+#define FLASH_CMD_RELEASE_PD    0xAB
+#define FLASH_CMD_ENABLE_RESET  0x66
+#define FLASH_CMD_RESET         0x99
+
+#define FLASH_STATUS_BUSY       0x01
+
+// Command byte and 24-bit address
+#define FLASH_CMD_HEADER_SIZE   4
+
+#define FLASH_PROGRAM_TIMEOUT_MS  50
+#define FLASH_ERASE_TIMEOUT_MS    3000
+#define FLASH_ERASE_POLL_MS       10
+
+static DeckInfo* flowDeckInfo = NULL;
+static bool isInFlashMode = false;
+
+// Firmware upgrade state, writes are expected to be sequential starting at address 0
+static uint32_t newFwSize = 0;
+static uint32_t nextAddress = 0;
+static uint32_t erasedUntil = 0;
+static bool isImageComplete = false;
+// Page program command followed by the data of the page being filled
+static uint8_t programBuffer[FLASH_CMD_HEADER_SIZE + FLASH_PAGE_SIZE];
+static uint16_t pageFill = 0;
+
+
+static void resetUpgradeState(void) {
+  nextAddress = 0;
+  erasedUntil = 0;
+  pageFill = 0;
+  isImageComplete = false;
+}
+
+static void setCommandAddress(uint8_t* command, const uint32_t address) {
+  command[1] = (address >> 16) & 0xFF;
+  command[2] = (address >> 8) & 0xFF;
+  command[3] = address & 0xFF;
+}
+
+static bool flashCommand(const uint8_t command) {
+  return deckctrl_spi_transfer(flowDeckInfo, &command, 1, NULL, 0, false);
+}
+
+static bool flashWaitReady(const uint32_t timeoutMs, const uint32_t pollMs) {
+  const TickType_t start = xTaskGetTickCount();
+  const uint8_t command = FLASH_CMD_READ_STATUS;
+  uint8_t status;
+
+  while (true) {
+    if (!deckctrl_spi_transfer(flowDeckInfo, &command, 1, &status, 1, false)) {
+      return false;
+    }
+
+    if ((status & FLASH_STATUS_BUSY) == 0) {
+      return true;
+    }
+
+    if ((xTaskGetTickCount() - start) > M2T(timeoutMs)) {
+      DEBUG_PRINT("Flash busy timeout\n");
+      return false;
+    }
+
+    vTaskDelay(M2T(pollMs));
+  }
+}
+
+static bool flashEraseBlock(const uint32_t address) {
+  uint8_t command[FLASH_CMD_HEADER_SIZE] = {FLASH_CMD_BLOCK_ERASE};
+  setCommandAddress(command, address);
+
+  return flashCommand(FLASH_CMD_WRITE_ENABLE) &&
+    deckctrl_spi_transfer(flowDeckInfo, command, sizeof(command), NULL, 0, false) &&
+    flashWaitReady(FLASH_ERASE_TIMEOUT_MS, FLASH_ERASE_POLL_MS);
+}
+
+// Program the buffered page, erasing blocks on the way when needed
+static bool flashProgramBufferedPage(void) {
+  if (pageFill == 0) {
+    return true;
+  }
+
+  const uint32_t pageAddress = nextAddress - pageFill;
+  const uint16_t length = pageFill;
+  pageFill = 0;
+
+  while (erasedUntil < pageAddress + length) {
+    if (!flashEraseBlock(erasedUntil)) {
+      DEBUG_PRINT("Failed to erase block at 0x%X\n", (unsigned int)erasedUntil);
+      return false;
+    }
+    erasedUntil += FLASH_BLOCK_SIZE;
+  }
+
+  programBuffer[0] = FLASH_CMD_PAGE_PROGRAM;
+  setCommandAddress(programBuffer, pageAddress);
+
+  const bool result = flashCommand(FLASH_CMD_WRITE_ENABLE) &&
+    deckctrl_spi_transfer(flowDeckInfo, programBuffer, FLASH_CMD_HEADER_SIZE + length, NULL, 0, false) &&
+    flashWaitReady(FLASH_PROGRAM_TIMEOUT_MS, 1);
+
+  if (!result) {
+    DEBUG_PRINT("Failed to program page at 0x%X\n", (unsigned int)pageAddress);
+  }
+
+  return result;
+}
+
+// The RP2350 may have left the flash in continuous read mode or in deep power-down
+static bool flashWakeUp(void) {
+  // Clocking out 0xFF with CS asserted ends continuous read mode
+  static const uint8_t modeBitReset[] = {0xFF, 0xFF};
+  if (!deckctrl_spi_transfer(flowDeckInfo, modeBitReset, sizeof(modeBitReset), NULL, 0, false)) {
+    return false;
+  }
+
+  if (!flashCommand(FLASH_CMD_RELEASE_PD)) {
+    return false;
+  }
+  vTaskDelay(M2T(1));
+
+  if (!flashCommand(FLASH_CMD_ENABLE_RESET) || !flashCommand(FLASH_CMD_RESET)) {
+    return false;
+  }
+  vTaskDelay(M2T(1));
+
+  const uint8_t command = FLASH_CMD_JEDEC_ID;
+  uint8_t id[3];
+  if (!deckctrl_spi_transfer(flowDeckInfo, &command, 1, id, sizeof(id), false)) {
+    return false;
+  }
+
+  DEBUG_PRINT("Flash JEDEC ID: %X %X %X\n", (unsigned int)id[0], (unsigned int)id[1], (unsigned int)id[2]);
+
+  // A missing or silent flash reads as all zeros or all ones
+  return id[0] != 0x00 && id[0] != 0xFF;
+}
+
+static bool rp2350Restart(void) {
+  bool result = deckctrl_gpio_write(flowDeckInfo, GPIO_RP_RUN, LOW);
+  vTaskDelay(M2T(RESET_DELAY_MS));
+  result = result && deckctrl_gpio_write(flowDeckInfo, GPIO_RP_RUN, HIGH);
+  return result;
+}
+
+static void enterFlashMode(void) {
+  resetUpgradeState();
+
+  // The RP2350 releases the flash pins while in reset
+  if (!deckctrl_gpio_write(flowDeckInfo, GPIO_RP_RUN, LOW)) {
+    DEBUG_PRINT("Failed to reset RP2350\n");
+    return;
+  }
+  vTaskDelay(M2T(RESET_DELAY_MS));
+
+  if (!deckctrl_spi_enable(flowDeckInfo, DECKCTRL_SPI_MODE_0, DECKCTRL_SPI_DIV_2)) {
+    DEBUG_PRINT("Failed to enable SPI bridge\n");
+    rp2350Restart();
+    return;
+  }
+
+  if (!flashWakeUp()) {
+    DEBUG_PRINT("No response from flash\n");
+    if (deckctrl_spi_disable(flowDeckInfo)) {
+      rp2350Restart();
+    }
+    return;
+  }
+
+  isInFlashMode = true;
+  DEBUG_PRINT("RP2350 in reset, flash accessible\n");
+}
+
+static void exitFlashMode(void) {
+  // Write the last page if the image size was not known
+  flashProgramBufferedPage();
+
+  // The SPI pins must be released before the RP2350 leaves reset, otherwise both drive the bus
+  if (!deckctrl_spi_disable(flowDeckInfo)) {
+    DEBUG_PRINT("Failed to disable SPI bridge, keeping RP2350 in reset\n");
+    return;
+  }
+  isInFlashMode = false;
+
+  deckctrl_gpio_write(flowDeckInfo, GPIO_RP_RUN, HIGH);
+  DEBUG_PRINT("RP2350 started\n");
+}
+
+static bool flowWriteFlash(const uint32_t memAddr, const uint8_t writeLen, const uint8_t* buffer, const DeckMemDef_t* memDef) {
+  if (!isInFlashMode) {
+    return false;
+  }
+
+  uint32_t address = memAddr;
+  uint32_t length = writeLen;
+  const uint8_t* data = buffer;
+
+  if (address == 0 && isImageComplete) {
+    resetUpgradeState();
+  }
+
+  // The client resends a write if the reply is late, for instance during an erase. Skip data we already have.
+  if (address < nextAddress) {
+    const uint32_t alreadyWritten = nextAddress - address;
+    if (alreadyWritten >= length) {
+      return true;
+    }
+    address += alreadyWritten;
+    data += alreadyWritten;
+    length -= alreadyWritten;
+  }
+
+  if (address != nextAddress) {
+    DEBUG_PRINT("Non sequential write at 0x%X, expected 0x%X\n", (unsigned int)address, (unsigned int)nextAddress);
+    return false;
+  }
+
+  if (address + length > FLASH_SIZE) {
+    return false;
+  }
+
+  while (length > 0) {
+    uint32_t chunk = FLASH_PAGE_SIZE - pageFill;
+    if (chunk > length) {
+      chunk = length;
+    }
+
+    memcpy(&programBuffer[FLASH_CMD_HEADER_SIZE + pageFill], data, chunk);
+    pageFill += chunk;
+    nextAddress += chunk;
+    data += chunk;
+    length -= chunk;
+
+    if (pageFill == FLASH_PAGE_SIZE) {
+      if (!flashProgramBufferedPage()) {
+        return false;
+      }
+    }
+  }
+
+  if (newFwSize > 0 && nextAddress >= newFwSize) {
+    if (!flashProgramBufferedPage()) {
+      return false;
+    }
+    isImageComplete = true;
+    DEBUG_PRINT("Wrote %d bytes to flash\n", (unsigned int)nextAddress);
+  }
+
+  return true;
+}
+
+static bool flowReadFlash(const uint32_t memAddr, const uint8_t readLen, uint8_t* buffer) {
+  if (!isInFlashMode) {
+    return false;
+  }
+
+  if (memAddr + readLen > FLASH_SIZE) {
+    return false;
+  }
+
+  uint8_t command[FLASH_CMD_HEADER_SIZE] = {FLASH_CMD_READ};
+  setCommandAddress(command, memAddr);
+
+  return deckctrl_spi_transfer(flowDeckInfo, command, sizeof(command), buffer, readLen, false);
+}
+
+static uint8_t flowPropertiesQuery(void) {
+  uint8_t result = 0;
 
   if (isInit) {
+    result |= DECK_MEMORY_MASK_STARTED;
+  }
+
+  if (isInFlashMode) {
+    result |= DECK_MEMORY_MASK_BOOT_LOADER_ACTIVE;
+  }
+
+  return result;
+}
+
+static void flowResetToBootloader(void) {
+  if (!isInit) {
+    return;
+  }
+
+  enterFlashMode();
+}
+
+static void flowResetToFw(void) {
+  if (!isInit) {
+    return;
+  }
+
+  if (isInFlashMode) {
+    exitFlashMode();
+  } else {
+    rp2350Restart();
+  }
+}
+
+static const DeckMemDef_t memoryDef = {
+  .write = flowWriteFlash,
+  .read = flowReadFlash,
+  .properties = flowPropertiesQuery,
+  .supportsUpgrade = true,
+  .newFwSizeP = &newFwSize,
+  .id = "rp2350",
+  .commandResetToBootloader = flowResetToBootloader,
+  .commandResetToFw = flowResetToFw,
+};
+
+static void flowdeck3Init(DeckInfo *info) {
+  if (isInit) {
+    return;
+  }
+
+  flowDeckInfo = info;
+
+  // A pin switched to output starts low: power on with the RP2350 held in reset, then let it boot
+  bool powered = deckctrl_gpio_set_direction(info, GPIO_RP_RUN, OUTPUT) &&
+    deckctrl_gpio_set_direction(info, GPIO_PWR_EN, OUTPUT) &&
+    deckctrl_gpio_write(info, GPIO_PWR_EN, HIGH);
+
+  vTaskDelay(M2T(POWER_UP_DELAY_MS));
+
+  powered = powered && deckctrl_gpio_write(info, GPIO_RP_RUN, HIGH);
+
+  if (!powered) {
+    DEBUG_PRINT("Failed to power the deck\n");
     return;
   }
   
@@ -195,13 +545,16 @@ static bool flowdeck3Test(void) {
 }
 
 static const DeckDriver flowdeck3_deck = {
-  .vid = 0x00,
-  .pid = 0x00,
+  .vid = 0xBC,
+  .pid = 0x16,
   .name = "bcFlow3",
 
-  .usedGpio = 0,
+  // IO_3 pulls the flash CS low through a resistor (RP2350 BOOTSEL), it must not be driven by others
+  .usedGpio = DECK_USING_IO_3,
   .usedPeriph = DECK_USING_UART1,
   .requiredEstimator = StateEstimatorTypeKalman,
+
+  .memoryDef = &memoryDef,
 
   .init = flowdeck3Init,
   .test = flowdeck3Test,

@@ -198,6 +198,7 @@ config DECK_FLOW
         it creates a very stable flying platform.
 
 config DECK_FLOWV3
+    depends on DECK_BACKEND_DECKCTRL
     bool "Support the Flow v3 deck"
     default y
     select ESTIMATOR_KALMAN_ENABLE
