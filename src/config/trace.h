@@ -27,7 +27,7 @@
 #ifndef __TRACE_H__
 #define __TRACE_H__
 
-#define configUSE_TRACE_FACILITY	1
+#include "autoconf.h"
 
 // ITM useful macros
 #ifndef ITM_NO_OVERFLOW
@@ -49,9 +49,11 @@
 #define ITM_BLOCKING_ON_QUEUE_RECEIVE 0x0300
 #define ITM_BLOCKING_ON_QUEUE_SEND 0x0400
 
+#ifdef CONFIG_FREERTOS_USE_TRACE_FACILITY
 #define traceQUEUE_SEND(xQueue) ITM_SEND(3, ITM_QUEUE_SEND | ((xQUEUE *) xQueue)->uxQueueNumber)
 #define traceQUEUE_SEND_FAILED(xQueue) ITM_SEND(3, ITM_QUEUE_FAILED | ((xQUEUE *) xQueue)->uxQueueNumber)
 #define traceBLOCKING_ON_QUEUE_RECEIVE(xQueue) ITM_SEND(3, ITM_BLOCKING_ON_QUEUE_RECEIVE | ((xQUEUE *) xQueue)->uxQueueNumber)
 #define traceBLOCKING_ON_QUEUE_SEND(xQueue) ITM_SEND(3, ITM_BLOCKING_ON_QUEUE_SEND | ((xQUEUE *) xQueue)->uxQueueNumber)
+#endif
 
 #endif
