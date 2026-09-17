@@ -129,12 +129,12 @@ static const ledDeckHandlerDef_t colorLedDeckLedHandler = {
 // The brightCorr param below just toggles it via CMD_SET_BRIGHTNESS_CORR.
 
 static bool checkProtocolVersion(uint8_t i2cAddress) {
-  // Fixed packet size: CMD + 8 dummy bytes
-  uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_VERSION, 0, 0, 0, 0};
+  // Stable discovery request: CMD + 4 dummy bytes
+  uint8_t cmd[COLORLED_REQUEST_SIZE] = {CMD_GET_VERSION, 0, 0, 0, 0};
   uint8_t response[RXBUFFERSIZE];
 
-  // Send version request (9 bytes to match fixed packet size)
-  if (i2cdevWrite(I2C1_DEV, i2cAddress, TXBUFFERSIZE, cmd) == false) {
+  // Keep this five-byte request compatible with older deck firmware
+  if (i2cdevWrite(I2C1_DEV, i2cAddress, sizeof(cmd), cmd) == false) {
     DEBUG_PRINT("Failed to request version\n");
     return false;
   }
@@ -264,10 +264,10 @@ static bool colorLedTopDeckTest() {
 }
 
 static bool pollThermalStatus(colorLedContext_t *ctx) {
-  uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_THERMAL_STATUS, 0, 0, 0, 0};
+  uint8_t cmd[COLORLED_REQUEST_SIZE] = {CMD_GET_THERMAL_STATUS, 0, 0, 0, 0};
   uint8_t response[RXBUFFERSIZE];
 
-  if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
+  if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, sizeof(cmd), cmd)) {
     vTaskDelay(M2T(1));
     if (i2cdevRead(I2C1_DEV, ctx->i2cAddress, RXBUFFERSIZE, response)) {
       if (response[0] == CMD_GET_THERMAL_STATUS) {
@@ -281,10 +281,10 @@ static bool pollThermalStatus(colorLedContext_t *ctx) {
 }
 
 static bool pollLedCurrent(colorLedContext_t *ctx) {
-  uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_LED_CURRENT, 0, 0, 0, 0};
+  uint8_t cmd[COLORLED_REQUEST_SIZE] = {CMD_GET_LED_CURRENT, 0, 0, 0, 0};
   uint8_t response[RXBUFFERSIZE];
 
-  if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
+  if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, sizeof(cmd), cmd)) {
     vTaskDelay(M2T(1));
     if (i2cdevRead(I2C1_DEV, ctx->i2cAddress, RXBUFFERSIZE, response)) {
       if (response[0] == CMD_GET_LED_CURRENT) {
@@ -301,10 +301,10 @@ static bool pollLedCurrent(colorLedContext_t *ctx) {
 }
 
 static bool verifyLedPosition(colorLedContext_t *ctx, uint8_t expectedPosition) {
-  uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_LED_POSITION, 0, 0, 0, 0};
+  uint8_t cmd[COLORLED_REQUEST_SIZE] = {CMD_GET_LED_POSITION, 0, 0, 0, 0};
   uint8_t response[RXBUFFERSIZE];
 
-  if (!i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
+  if (!i2cdevWrite(I2C1_DEV, ctx->i2cAddress, sizeof(cmd), cmd)) {
     DEBUG_PRINT("Failed to write CMD_GET_LED_POSITION\n");
     return false;
   }
@@ -345,7 +345,7 @@ static bool verifyLedPosition(colorLedContext_t *ctx, uint8_t expectedPosition) 
 }
 
 static bool testI2cAddrPin(colorLedContext_t *ctx) {
-  uint8_t cmd[TXBUFFERSIZE] = {CMD_GET_I2C_ADDR_PIN, 0, 0, 0, 0};
+  uint8_t cmd[COLORLED_REQUEST_SIZE] = {CMD_GET_I2C_ADDR_PIN, 0, 0, 0, 0};
   uint8_t response[RXBUFFERSIZE];
 
   // Configure pin as output
@@ -362,7 +362,7 @@ static bool testI2cAddrPin(colorLedContext_t *ctx) {
 
   vTaskDelay(M2T(2)); // Allow pin to settle
 
-  if (!i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
+  if (!i2cdevWrite(I2C1_DEV, ctx->i2cAddress, sizeof(cmd), cmd)) {
     DEBUG_PRINT("Failed to write I2C command for LOW state test\n");
     return false;
   }
@@ -392,7 +392,7 @@ static bool testI2cAddrPin(colorLedContext_t *ctx) {
 
   vTaskDelay(M2T(2)); // Allow pin to settle
 
-  if (!i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
+  if (!i2cdevWrite(I2C1_DEV, ctx->i2cAddress, sizeof(cmd), cmd)) {
     DEBUG_PRINT("Failed to write I2C command for HIGH state test\n");
     return false;
   }
@@ -453,8 +453,8 @@ static void task(void *param) {
 
       // Push the brightness correction toggle when changed
       if (ctx->brightnessCorr != lastBrightnessCorr) {
-        uint8_t cmd[TXBUFFERSIZE] = {CMD_SET_BRIGHTNESS_CORR, ctx->brightnessCorr};
-        if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
+        uint8_t cmd[COLORLED_REQUEST_SIZE] = {CMD_SET_BRIGHTNESS_CORR, ctx->brightnessCorr};
+        if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, sizeof(cmd), cmd)) {
           lastBrightnessCorr = ctx->brightnessCorr;
         } else {
           DEBUG_PRINT("Failed to write brightness correction setting to deck at I2C address 0x%02X\n", ctx->i2cAddress);
@@ -464,8 +464,8 @@ static void task(void *param) {
       // Push the raw color + fade duration when the color changed
       if (ctx->wrgb8888 != ctx->currentWrgb8888) {
         // Format: 0xWWRRGGBB -> [CMD, W, R, G, B, fadeTime (float32, little-endian)]
-        uint8_t cmd[TXBUFFERSIZE] = {
-          CMD_SET_COLOR,
+        uint8_t cmd[COLORLED_FADE_REQUEST_SIZE] = {
+          CMD_SET_COLOR_FADE,
           (uint8_t)(ctx->wrgb8888 >> 24),
           (uint8_t)(ctx->wrgb8888 >> 16),
           (uint8_t)(ctx->wrgb8888 >> 8),
@@ -473,7 +473,7 @@ static void task(void *param) {
         };
         memcpy(&cmd[5], &ctx->tFade, sizeof(float));
 
-        if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, TXBUFFERSIZE, cmd)) {
+        if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, sizeof(cmd), cmd)) {
           ctx->currentWrgb8888 = ctx->wrgb8888;
         } else {
           DEBUG_PRINT("Failed to write color command to deck at I2C address 0x%02X\n", ctx->i2cAddress);
