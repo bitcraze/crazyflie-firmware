@@ -54,3 +54,7 @@ tools/dependency/web/data.js
 venv/
 rust_venv/
 cache/
+
+# Clangd
+compile_commands.json
+.cache/**

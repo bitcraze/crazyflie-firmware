@@ -77,9 +77,9 @@ not flying a trajectory.
 
 ## Support in the python lib (CFLib)
 
-There are four main ways to interact with the commander framework from the [python library](https://github.com/bitcraze/crazyflie-lib-python)/.
+You can find examples of different ways to interact with the commander framework using the [python library](https://github.com/bitcraze/crazyflie-lib-python).
 
-* **autonomousSequence.py**: Send setpoints directly using the Commander class from the Crazyflie object.
-* **motion_commander_demo.py**: The MotionCommander class exposes a simplified API and sends velocity set-points continuously based on the methods called.
-* **autonomous_sequence_high_level.py**: Use the high level commander directly using the HighLevelCommander class on the Crazyflie object.
-* **position_commander_demo.py**: Use the PositionHlCommander class for a simplified API to send commands to the high level commander.
+* **[autonomousSequence.py](https://github.com/bitcraze/crazyflie-demos/tree/main/demos/scripts/cflib/autonomy/autonomous_sequence)**: Send setpoints directly using the Commander class from the Crazyflie object.
+* **[motion_commander_demo.py](https://github.com/bitcraze/crazyflie-demos/tree/main/demos/scripts/cflib/autonomy/motion_commander_demo)**: The MotionCommander class exposes a simplified API and sends velocity set-points continuously based on the methods called.
+* **[autonomous_sequence_high_level.py](https://github.com/bitcraze/crazyflie-demos/tree/main/demos/scripts/cflib/autonomy/autonomous_sequence_high_level)**: Use the high level commander directly using the HighLevelCommander class on the Crazyflie object.
+* **[position_commander_demo.py](https://github.com/bitcraze/crazyflie-demos/tree/main/demos/scripts/cflib/autonomy/position_commander_demo)**: Use the PositionHlCommander class for a simplified API to send commands to the high level commander.

@@ -29,6 +29,8 @@
 
 #include <stdbool.h>
 #include "crtp.h"
+#include "FreeRTOS.h"
+#include "queue.h"
 
 //#define SYSLINK_MTU 32
 
@@ -75,5 +77,6 @@ typedef enum
 void usblinkInit();
 bool usblinkTest();
 struct crtpLinkOperations * usblinkGetLink();
+xQueueHandle usblinkGetCrtpDeliveryQueue(void);
 
 #endif

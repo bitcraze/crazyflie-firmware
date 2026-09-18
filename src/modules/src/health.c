@@ -149,15 +149,23 @@ static bool evaluatePropTest(float low, float high, float value, uint8_t motor)
 
 bool healthShallWeRunTest(void)
 {
-
   if (startPropTest != false) {
+#ifndef HEALTH_DISABLE_PROP_TEST
     testState = configureAcc;
+#else
+  DEBUG_PRINT("Propeller test disabled for this platform.\n");
+#endif
     startPropTest = false;
   } else if (startBatTest != false) {
+#ifndef HEALTH_DISABLE_BAT_TEST
     testState = testBattery;
+#else
+  DEBUG_PRINT("Battery test disabled for this platform.\n");
+#endif
     startBatTest = false;
     tick = 0;
   }
+
 
   return (testState != testDone);
 }

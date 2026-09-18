@@ -5,3 +5,4 @@ obj-y += deck_memory.o
 obj-y += deck.o
 obj-y += deck_test.o
 obj-y += deckctrl_dfu_memory.o
+obj-$(CONFIG_DECK_SUPERVISOR) += deck_supervisor.o

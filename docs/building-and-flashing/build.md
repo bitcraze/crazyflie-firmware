@@ -9,8 +9,9 @@ You'll need to use either the [Crazyflie VM](https://github.com/bitcraze/bitcraz
 [the toolbelt](https://github.com/bitcraze/toolbelt) or
 install some ARM toolchain.
 
-There is also experimental support for [building with nix](./nix.md).
-This allows to build the firmware in a reproducable way.
+There is also support for [building with pixi](./pixi.md), which lets you build and flash the firmware without installing dependencies system-wide, in a reproducible way.
+
+There is also experimental support for [building with nix](./nix.md), which allows you to build the firmware in a reproducible way.
 
 ### Install a toolchain
 
@@ -116,7 +117,7 @@ Build artifacts, including binaries, will end up in the `build` directory.
 ### Customize the firmware with kbuild (Advanced)
 
 
-**Please note** that these instructions are only meant for you if you want to build an custom firmware for a custom platform than the ones we have listed above. You can still configure and change the firmware without kbuild.
+**Please note** that these instructions are only meant for you if you want to build an custom firmware for a custom platform than the ones we have listed above, e.g., the legacy propellers or thrust upgrade kit, see [battery compensation](/docs/functional-areas/battery_compensation.md). You can still configure and change the firmware without kbuild.
 
 Please go to [these instructions](/docs/development/kbuild.md) to learn how to use the menuconfig.
 
@@ -225,52 +226,5 @@ $ make flash
 
 ## Unit testing
 
-### Running all unit tests
-
-With the environment set up locally
-
-```
-$ make unit
-```
-
-with the docker builder image and the toolbelt
-
-```
-$ tb make unit
-```
-
-### Running one unit test
-
-When working with one specific file it is often convenient to run only one unit test
-
-```
-$ make unit FILES=test/utils/src/test_num.c
-```
-
-or with the toolbelt
-
-```
-$ tb make unit FILES=test/utils/src/test_num.c
-```
-
-### Running unit tests with specific build settings
-
-Defines are managed by make and are passed on to the unit test code. Use the
-normal ways of configuring make when running tests. For instance to run test
-for Crazyflie 1
-
-```
-$ make unit LPS_TDOA_ENABLE=1
-```
-
-### Dependencies
-
-Frameworks for unit testing and mocking are pulled in as git submodules.
-
-The testing framework uses ruby and rake to generate and run code.
-
-To minimize the need for installations and configuration, use the docker builder
-image (bitcraze/builder) that contains all tools needed. All scripts in the
-tools/build directory are intended to be run in the image. The
-[toolbelt](https://github.com/bitcraze/toolbelt) makes it
-easy to run the tool scripts.
+See the [unit testing](../development/unit_testing) page for how to run and
+configure unit tests locally or with the toolbelt.

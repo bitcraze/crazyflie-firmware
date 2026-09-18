@@ -32,6 +32,7 @@
 
 #include "deck.h"
 #include "param.h"
+#include "log.h"
 
 #include "stm32fxxx.h"
 #include "config.h"
@@ -97,6 +98,7 @@ static const DeckDriver lighthouse_deck = {
   .memoryDef = &memoryDef,
 
   .init = lighthouseInit,
+  .status = lighthouseCoreDeckStatus,
 };
 
 
@@ -110,3 +112,18 @@ PARAM_GROUP_START(deck)
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcLighthouse4, &isInit)
 
 PARAM_GROUP_STOP(deck)
+
+
+static uint8_t lighthouseStatusLogger(uint32_t timestamp, void* data) {
+  return lighthouseCoreDeckStatus();
+}
+static logByFunction_t lighthouseStatusLoggerDef = {.acquireUInt8 = lighthouseStatusLogger, .data = 0};
+
+LOG_GROUP_START(deckStatus)
+
+/**
+ * @brief Lighthouse deck status: 0 = ok, non-zero = error
+ */
+LOG_ADD_BY_FUNCTION(LOG_UINT8, bcLighthouse4, &lighthouseStatusLoggerDef)
+
+LOG_GROUP_STOP(deckStatus)

@@ -241,6 +241,7 @@ static const MotorPerifDef MOTORS_PA1_TIM2_CH2_BRUSHLESS_PP =
     .timDbgStop    = DBGMCU_TIM2_STOP,
     .timPeriod     = MOTORS_BL_PWM_PERIOD,
     .timPrescaler  = MOTORS_BL_PWM_PRESCALE,
+    .timChannel   = TIM_Channel_2,
     .setCompare    = TIM_SetCompare2,
     .getCompare    = TIM_GetCapture2,
     .ocInit        = TIM_OC2Init,
@@ -250,6 +251,7 @@ static const MotorPerifDef MOTORS_PA1_TIM2_CH2_BRUSHLESS_PP =
     .DMA_PerifAddr = (uint32_t)&TIM2->CCR2,
     .TIM_DMASource = TIM_DMA_CC2,
     .DMA_IRQChannel = DMA1_Stream6_IRQn,
+    .DMA_ITFlag_TC = DMA_FLAG_TCIF6,
 };
 
 // Bolt M2, PB11, TIM2_CH4, Brushless config
@@ -271,6 +273,7 @@ static const MotorPerifDef MOTORS_PB11_TIM2_CH4_BRUSHLESS_PP =
     .timDbgStop    = DBGMCU_TIM2_STOP,
     .timPeriod     = MOTORS_BL_PWM_PERIOD,
     .timPrescaler  = MOTORS_BL_PWM_PRESCALE,
+    .timChannel   = TIM_Channel_4,
     .setCompare    = TIM_SetCompare4,
     .getCompare    = TIM_GetCapture4,
     .ocInit        = TIM_OC4Init,
@@ -280,7 +283,7 @@ static const MotorPerifDef MOTORS_PB11_TIM2_CH4_BRUSHLESS_PP =
     .DMA_PerifAddr = (uint32_t)&TIM2->CCR4,
     .TIM_DMASource = TIM_DMA_CC4,
     .DMA_IRQChannel = DMA1_Stream7_IRQn,
-
+    .DMA_ITFlag_TC = DMA_FLAG_TCIF7,
 };
 
 // Bolt M3, PA15, TIM2_CH1, Brushless config
@@ -302,6 +305,7 @@ static const MotorPerifDef MOTORS_PA15_TIM2_CH1_BRUSHLESS_PP =
     .timDbgStop    = DBGMCU_TIM2_STOP,
     .timPeriod     = MOTORS_BL_PWM_PERIOD,
     .timPrescaler  = MOTORS_BL_PWM_PRESCALE,
+    .timChannel   = TIM_Channel_1,
     .setCompare    = TIM_SetCompare1,
     .getCompare    = TIM_GetCapture1,
     .ocInit        = TIM_OC1Init,
@@ -311,6 +315,7 @@ static const MotorPerifDef MOTORS_PA15_TIM2_CH1_BRUSHLESS_PP =
     .DMA_PerifAddr = (uint32_t)&TIM2->CCR1,
     .TIM_DMASource = TIM_DMA_CC1,
     .DMA_IRQChannel = DMA1_Stream5_IRQn,
+    .DMA_ITFlag_TC = DMA_FLAG_TCIF5,
 };
 
 // Bolt M4, PB9, TIM4_CH4, Brushless config
@@ -357,6 +362,7 @@ static const MotorPerifDef MOTORS_PB10_TIM2_CH3_BRUSHLESS_PP =
     .timDbgStop    = DBGMCU_TIM2_STOP,
     .timPeriod     = MOTORS_BL_PWM_PERIOD,
     .timPrescaler  = MOTORS_BL_PWM_PRESCALE,
+    .timChannel    = TIM_Channel_3,
     .setCompare    = TIM_SetCompare3,
     .getCompare    = TIM_GetCapture3,
     .ocInit        = TIM_OC3Init,
@@ -366,6 +372,7 @@ static const MotorPerifDef MOTORS_PB10_TIM2_CH3_BRUSHLESS_PP =
     .DMA_PerifAddr = (uint32_t)&TIM2->CCR3,
     .TIM_DMASource = TIM_DMA_CC3,
     .DMA_IRQChannel = DMA1_Stream1_IRQn,
+    .DMA_ITFlag_TC = DMA_FLAG_TCIF1,
 };
 
 // CF21-BL M1, PA1, TIM2_CH2, Brushless config including DSHOT
@@ -385,6 +392,7 @@ static const MotorPerifDef MOTORS_PA1_TIM2_CH2_BRUSHLESS_OD =
     .timDbgStop    = DBGMCU_TIM2_STOP,
     .timPeriod     = MOTORS_BL_PWM_PERIOD,
     .timPrescaler  = MOTORS_BL_PWM_PRESCALE,
+    .timChannel    = TIM_Channel_2,
     .setCompare    = TIM_SetCompare2,
     .getCompare    = TIM_GetCapture2,
     .ocInit        = TIM_OC2Init,
@@ -394,6 +402,7 @@ static const MotorPerifDef MOTORS_PA1_TIM2_CH2_BRUSHLESS_OD =
     .DMA_PerifAddr = (uint32_t)&TIM2->CCR2,
     .TIM_DMASource = TIM_DMA_CC2,
     .DMA_IRQChannel = DMA1_Stream6_IRQn,
+    .DMA_ITFlag_TC  = DMA_FLAG_TCIF6,
 };
 
 // CF21-BL M2, PB11, TIM2_CH4, Brushless config including DSHOT
@@ -413,6 +422,7 @@ static const MotorPerifDef MOTORS_PB11_TIM2_CH4_BRUSHLESS_OD =
     .timDbgStop    = DBGMCU_TIM2_STOP,
     .timPeriod     = MOTORS_BL_PWM_PERIOD,
     .timPrescaler  = MOTORS_BL_PWM_PRESCALE,
+    .timChannel    = TIM_Channel_4,
     .setCompare    = TIM_SetCompare4,
     .getCompare    = TIM_GetCapture4,
     .ocInit        = TIM_OC4Init,
@@ -422,6 +432,7 @@ static const MotorPerifDef MOTORS_PB11_TIM2_CH4_BRUSHLESS_OD =
     .DMA_PerifAddr = (uint32_t)&TIM2->CCR4,
     .TIM_DMASource = TIM_DMA_CC4,
     .DMA_IRQChannel = DMA1_Stream7_IRQn,
+    .DMA_ITFlag_TC  = DMA_FLAG_TCIF7,
 };
 
 // CF21-BL M3, PA15, TIM2_CH1, Brushless config including DSHOT
@@ -441,6 +452,7 @@ static const MotorPerifDef MOTORS_PB11_TIM2_CH4_BRUSHLESS_OD =
     .timDbgStop    = DBGMCU_TIM2_STOP,
     .timPeriod     = MOTORS_BL_PWM_PERIOD,
     .timPrescaler  = MOTORS_BL_PWM_PRESCALE,
+    .timChannel    = TIM_Channel_1,
     .setCompare    = TIM_SetCompare1,
     .getCompare    = TIM_GetCapture1,
     .ocInit        = TIM_OC1Init,
@@ -450,6 +462,7 @@ static const MotorPerifDef MOTORS_PB11_TIM2_CH4_BRUSHLESS_OD =
     .DMA_PerifAddr = (uint32_t)&TIM2->CCR1,
     .TIM_DMASource = TIM_DMA_CC1,
     .DMA_IRQChannel = DMA1_Stream5_IRQn,
+    .DMA_ITFlag_TC  = DMA_FLAG_TCIF5,
 };
 
 
@@ -470,6 +483,7 @@ static const MotorPerifDef MOTORS_PB10_TIM2_CH3_BRUSHLESS_OD =
     .timDbgStop    = DBGMCU_TIM2_STOP,
     .timPeriod     = MOTORS_BL_PWM_PERIOD,
     .timPrescaler  = MOTORS_BL_PWM_PRESCALE,
+    .timChannel    = TIM_Channel_3,
     .setCompare    = TIM_SetCompare3,
     .getCompare    = TIM_GetCapture3,
     .ocInit        = TIM_OC3Init,
@@ -479,6 +493,7 @@ static const MotorPerifDef MOTORS_PB10_TIM2_CH3_BRUSHLESS_OD =
     .DMA_PerifAddr = (uint32_t)&TIM2->CCR3,
     .TIM_DMASource = TIM_DMA_CC3,
     .DMA_IRQChannel = DMA1_Stream1_IRQn,
+    .DMA_ITFlag_TC  = DMA_FLAG_TCIF1,
 };
 
 

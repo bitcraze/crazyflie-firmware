@@ -34,9 +34,14 @@
 #include "FreeRTOS.h"
 #include "num.h"
 #include "position_controller.h"
+#include "platform_defaults.h"
 
-#define MIN_THRUST  1000
-#define MAX_THRUST  60000
+// Thrust below MIN_THRUST is treated as zero
+#ifdef CONFIG_ENABLE_THRUST_BAT_COMPENSATED
+  #define MIN_THRUST ((uint16_t)(THRUST_MIN / THRUST_MAX * UINT16_MAX))
+#else
+  #define MIN_THRUST 1000
+#endif
 
 /**
  * CRTP commander rpyt packet format
@@ -135,7 +140,7 @@ void crtpCommanderRpytDecodeSetpoint(setpoint_t *setpoint, CRTPPacket *pk)
   if (thrustLocked || (rawThrust < MIN_THRUST)) {
     setpoint->thrust = 0;
   } else {
-    setpoint->thrust = fminf(rawThrust, MAX_THRUST);
+    setpoint->thrust = rawThrust;
   }
 
   if (altHoldMode) {

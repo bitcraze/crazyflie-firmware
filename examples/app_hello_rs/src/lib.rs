@@ -15,9 +15,8 @@ fn console_print(msg: &str) {
 
 #[no_mangle]
 pub extern "C" fn appMain() -> i32 {
-    console_print("Hello from Rust!\n");
-
     loop {
+        console_print("Hello from Rust!\n");
         unsafe { vTaskDelay(1000); }
     }
 }

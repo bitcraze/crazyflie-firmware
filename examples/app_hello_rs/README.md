@@ -26,3 +26,21 @@ The Crazyflie firmware will call `appMain()` at startup.
 This function is declared in rust as `pub extern "C"` to be callable from C.
 
 The FreeRTOS delay function and Crazyflie console putchar function are manually declared `extern "C"` which allows Rust to call them.
+
+## How to run this example
+
+Run the following commands. This is for the Crazyflie 2.0 and 2.1. Replace accordingly for your target.
+
+```
+make clean
+make cf2_defconfig
+make -j15
+```
+
+Then flash the firmware using your favourite flashing method, for example:
+
+```
+cfloader flash build/cf2.bin stm32-fw -w radio://0/80/2M/E7E7E7E7E7
+```
+
+To see the result, check for "Hello from Rust" in the console output in the client.

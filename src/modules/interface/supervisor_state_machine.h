@@ -30,6 +30,7 @@ typedef enum {
     supervisorStateNotInitialized = 0,
     supervisorStatePreFlChecksNotPassed,
     supervisorStatePreFlChecksPassed,
+    supervisorStateArming,
     supervisorStateReadyToFly,
     supervisorStateFlying,
     supervisorStateLanded,
@@ -52,6 +53,10 @@ typedef enum {
   supervisorConditionIsCrashed,
   supervisorConditionPreflightTimeout,
   supervisorConditionLandingTimeout,
+  supervisorConditionDeckFault,
+  supervisorConditionRPMatArmingValid,
+  supervisorConditionSpinupTimeout,
+  supervisorConditionMotorsNotResponding,
   supervisorCondition_NrOfConditions,
 } supervisorConditions_t;
 
@@ -68,6 +73,10 @@ typedef uint32_t supervisorConditionBits_t;
 #define SUPERVISOR_CB_CRASHED (1 << supervisorConditionIsCrashed)
 #define SUPERVISOR_CB_PREFLIGHT_TIMEOUT (1 << supervisorConditionPreflightTimeout)
 #define SUPERVISOR_CB_LANDING_TIMEOUT (1 << supervisorConditionLandingTimeout)
+#define SUPERVISOR_CB_DECK_FAULT (1 << supervisorConditionDeckFault)
+#define SUPERVISOR_CB_RPM_AT_ARMING_VALID (1 << supervisorConditionRPMatArmingValid)
+#define SUPERVISOR_CB_SPINUP_TIMEOUT (1 << supervisorConditionSpinupTimeout)
+#define SUPERVISOR_CB_MOTORS_NOT_RESPONDING (1 << supervisorConditionMotorsNotResponding)
 
 
 // Enum that is used to describe how to combine the bits in the required field
