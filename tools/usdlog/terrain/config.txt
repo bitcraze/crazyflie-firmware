@@ -1,0 +1,44 @@
+1     # version
+8192  # buffer size in bytes
+terr  # file name
+0     # enable on startup (0/1)
+on:fixedFrequency
+100   # frequency
+1     # mode (0: disabled, 1: synchronous stabilizer, 2: asynchronous)
+stateEstimate.x
+stateEstimate.y
+stateEstimate.z
+stateEstimate.vx
+stateEstimate.vy
+stateEstimate.vz
+stateEstimate.qx
+stateEstimate.qy
+stateEstimate.qz
+stateEstimate.qw
+ctrltarget.z
+kalman.varZ
+lighthouse.bsActive
+supervisor.info
+stabilizer.thrust
+pm.vbat
+on:estTOF
+zranger2.sigma
+zranger2.status
+zranger2.signalRate
+zranger2.ambientRate
+zranger2.spads
+zranger2.quality
+on:estFlow
+motion.squal
+motion.shutter
+motion.outlierCount
+on:estGyroscope
+gyro.x
+gyro.y
+gyro.z
+on:estAcceleration
+acc.x
+acc.y
+acc.z
+on:estBarometer
+baro.asl
