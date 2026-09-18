@@ -60,11 +60,18 @@ void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *f
   // Height above origin
   float z_g = 0.0;
 
+#ifdef CONFIG_ESTIMATOR_KALMAN_TERRAIN
+  // The flow sensor sees the terrain, so use the height above it
+  const float heightAboveTerrain = this->S[KC_STATE_Z] - this->S[KC_STATE_T];
+#else
+  const float heightAboveTerrain = this->S[KC_STATE_Z];
+#endif
+
   // Saturate height in prediction and correction to avoid singularities
-  if ( this->S[KC_STATE_Z] < 0.1f ) {
+  if ( heightAboveTerrain < 0.1f ) {
       z_g = 0.1;
   } else {
-      z_g = this->S[KC_STATE_Z];
+      z_g = heightAboveTerrain;
   }
 
   // Lever-arm induced translational velocity at camera
@@ -86,6 +93,9 @@ void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *f
   // derive measurement equation with respect to dx (and z?)
   hx[KC_STATE_Z]  = (Npix * flow->dt / thetapix) * ((this->R[2][2] * v_cam_bx) / (-z_g * z_g));
   hx[KC_STATE_PX] = (Npix * flow->dt / thetapix) * (this->R[2][2] / z_g);
+#ifdef CONFIG_ESTIMATOR_KALMAN_TERRAIN
+  hx[KC_STATE_T] = -hx[KC_STATE_Z];
+#endif
 
   //First update
   kalmanCoreScalarUpdate(this, &Hx, (measuredNX-predictedNX), flow->stdDevX*FLOW_RESOLUTION);
@@ -99,6 +109,9 @@ void kalmanCoreUpdateWithFlow(kalmanCoreData_t* this, const flowMeasurement_t *f
   // derive measurement equation with respect to dy (and z?)
   hy[KC_STATE_Z]  = (Npix * flow->dt / thetapix) * ((this->R[2][2] * v_cam_by) / (-z_g * z_g));
   hy[KC_STATE_PY] = (Npix * flow->dt / thetapix) * (this->R[2][2] / z_g);
+#ifdef CONFIG_ESTIMATOR_KALMAN_TERRAIN
+  hy[KC_STATE_T] = -hy[KC_STATE_Z];
+#endif
 
   // Second update
   kalmanCoreScalarUpdate(this, &Hy, (measuredNY-predictedNY), flow->stdDevY*FLOW_RESOLUTION);

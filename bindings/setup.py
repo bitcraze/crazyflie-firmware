@@ -67,6 +67,7 @@ cffirmware = Extension(
         "-fno-strict-aliasing",
         "-Wno-address-of-packed-member",
         "-DUNIT_TEST_MODE",
+        "-DKALMAN_TERRAIN_STATE",
     ],
 )
 

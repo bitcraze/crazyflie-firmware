@@ -34,9 +34,9 @@ EVENTTRIGGER(estTDOA, uint8, idA, uint8, idB, float, distanceDiff)
 EVENTTRIGGER(estPosition, uint8, source)
 EVENTTRIGGER(estPose)
 EVENTTRIGGER(estDistance, uint8, id, float, distance)
-EVENTTRIGGER(estTOF)
+EVENTTRIGGER(estTOF, float, distance, float, stdDev)
 EVENTTRIGGER(estAbsoluteHeight)
-EVENTTRIGGER(estFlow)
+EVENTTRIGGER(estFlow, float, dt, float, dpixelx, float, dpixely, float, stdDevX, float, stdDevY)
 EVENTTRIGGER(estYawError, float, yawError)
 EVENTTRIGGER(estSweepAngle, uint8, sensorId, uint8, baseStationId, uint8, sweepId, float, t, float, sweepAngle)
 EVENTTRIGGER(estGyroscope)
@@ -217,7 +217,9 @@ void estimatorEnqueue(const measurement_t *measurement) {
       eventTrigger(&eventTrigger_estDistance);
       break;
     case MeasurementTypeTOF:
-      // no payload needed, see range.zrange
+      // stdDev is not available as a log variable, so the full measurement goes in the payload
+      eventTrigger_estTOF_payload.distance = measurement->data.tof.distance;
+      eventTrigger_estTOF_payload.stdDev = measurement->data.tof.stdDev;
       eventTrigger(&eventTrigger_estTOF);
       break;
     case MeasurementTypeAbsoluteHeight:
@@ -225,7 +227,13 @@ void estimatorEnqueue(const measurement_t *measurement) {
       eventTrigger(&eventTrigger_estAbsoluteHeight);
       break;
     case MeasurementTypeFlow:
-      // no payload needed, see motion.{deltaX,deltaY}
+      // motion.{deltaX,deltaY} are raw sensor axes, and dt is not available as a log variable,
+      // so the measurement as seen by the estimator goes in the payload
+      eventTrigger_estFlow_payload.dt = measurement->data.flow.dt;
+      eventTrigger_estFlow_payload.dpixelx = measurement->data.flow.dpixelx;
+      eventTrigger_estFlow_payload.dpixely = measurement->data.flow.dpixely;
+      eventTrigger_estFlow_payload.stdDevX = measurement->data.flow.stdDevX;
+      eventTrigger_estFlow_payload.stdDevY = measurement->data.flow.stdDevY;
       eventTrigger(&eventTrigger_estFlow);
       break;
     case MeasurementTypeYawError:

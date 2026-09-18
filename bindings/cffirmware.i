@@ -1,4 +1,6 @@
 %module cffirmware
+// Must match -DKALMAN_TERRAIN_STATE in setup.py, or KC_STATE_DIM differs between Python and C
+#define KALMAN_TERRAIN_STATE
 %include <stdint.i>
 
 // ignore GNU specific compiler attributes
@@ -106,6 +108,24 @@ void collisionAvoidanceUpdateSetpointWrap(
         workspace,
         setpoint, sensorData, state);
     free(workspace);
+}
+
+// Access to the Kalman core internals, for measurement models written in Python
+float kcGetS(const kalmanCoreData_t* d, int i) { return d->S[i]; }
+void kcSetS(kalmanCoreData_t* d, int i, float v) { d->S[i] = v; }
+float kcGetP(const kalmanCoreData_t* d, int i, int j) { return d->P[i][j]; }
+void kcSetP(kalmanCoreData_t* d, int i, int j, float v) { d->P[i][j] = v; }
+float kcGetR(const kalmanCoreData_t* d, int i, int j) { return d->R[i][j]; }
+
+// Scalar update with up to three non-zero entries in H, pass index -1 for unused entries
+void kcScalarUpdate(kalmanCoreData_t* d, int i0, float h0, int i1, float h1, int i2, float h2,
+                    float error, float stdMeasNoise) {
+  float h[KC_STATE_DIM] = {0};
+  arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
+  if (i0 >= 0) { h[i0] = h0; }
+  if (i1 >= 0) { h[i1] = h1; }
+  if (i2 >= 0) { h[i2] = h2; }
+  kalmanCoreScalarUpdate(d, &H, error, stdMeasNoise);
 }
 
 void assertFail(char *exp, char *file, int line) {

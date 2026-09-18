@@ -200,6 +200,10 @@ void kalmanCoreInit(kalmanCoreData_t *this, const kalmanCoreParams_t *params, co
   this->P[KC_STATE_D0][KC_STATE_D0] = powf(params->stdDevInitialAttitude_rollpitch, 2);
   this->P[KC_STATE_D1][KC_STATE_D1] = powf(params->stdDevInitialAttitude_rollpitch, 2);
   this->P[KC_STATE_D2][KC_STATE_D2] = powf(params->stdDevInitialAttitude_yaw, 2);
+#ifdef CONFIG_ESTIMATOR_KALMAN_TERRAIN
+  // Terrain height 0 at the take-off spot, by definition
+  this->P[KC_STATE_T][KC_STATE_T] = powf(0.01f, 2);
+#endif
 
   this->Pm.numRows = KC_STATE_DIM;
   this->Pm.numCols = KC_STATE_DIM;
@@ -386,6 +390,9 @@ static void predictDt(kalmanCoreData_t* this, const kalmanCoreParams_t *params, 
   A[KC_STATE_D0][KC_STATE_D0] = 1;
   A[KC_STATE_D1][KC_STATE_D1] = 1;
   A[KC_STATE_D2][KC_STATE_D2] = 1;
+#ifdef KALMAN_TERRAIN_STATE
+  A[KC_STATE_T][KC_STATE_T] = 1;
+#endif
 
   // position from body-frame velocity
   A[KC_STATE_X][KC_STATE_PX] = this->R[0][0]*dt;
@@ -623,6 +630,11 @@ static void addProcessNoiseDt(kalmanCoreData_t *this, const kalmanCoreParams_t *
   this->P[KC_STATE_D0][KC_STATE_D0] += powf(params->measNoiseGyro_rollpitch * dt + params->procNoiseAtt, 2);
   this->P[KC_STATE_D1][KC_STATE_D1] += powf(params->measNoiseGyro_rollpitch * dt + params->procNoiseAtt, 2);
   this->P[KC_STATE_D2][KC_STATE_D2] += powf(params->measNoiseGyro_yaw * dt + params->procNoiseAtt, 2);
+#ifdef CONFIG_ESTIMATOR_KALMAN_TERRAIN
+  // The terrain can only change under the drone when it moves horizontally
+  const float speed = sqrtf(this->S[KC_STATE_PX] * this->S[KC_STATE_PX] + this->S[KC_STATE_PY] * this->S[KC_STATE_PY]);
+  this->P[KC_STATE_T][KC_STATE_T] += powf(params->procNoiseTerrainSlope * speed * dt, 2);
+#endif
 
   for (int i=0; i<KC_STATE_DIM; i++) {
     for (int j=i; j<KC_STATE_DIM; j++) {
@@ -715,6 +727,9 @@ bool kalmanCoreFinalize(kalmanCoreData_t* this)
     A[KC_STATE_PX][KC_STATE_PX] = 1;
     A[KC_STATE_PY][KC_STATE_PY] = 1;
     A[KC_STATE_PZ][KC_STATE_PZ] = 1;
+#ifdef KALMAN_TERRAIN_STATE
+    A[KC_STATE_T][KC_STATE_T] = 1;
+#endif
 
     A[KC_STATE_D0][KC_STATE_D0] =  1 - d1*d1/2 - d2*d2/2;
     A[KC_STATE_D0][KC_STATE_D1] =  d2 + d0*d1/2;

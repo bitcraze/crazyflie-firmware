@@ -55,13 +55,22 @@
 
 #pragma once
 
+#include "autoconf.h"
 #include "cf_math.h"
 #include "stabilizer_types.h"
+
+#if defined(CONFIG_ESTIMATOR_KALMAN_TERRAIN) && !defined(KALMAN_TERRAIN_STATE)
+#define KALMAN_TERRAIN_STATE
+#endif
 
 // Indexes to access the quad's state, stored as a column vector
 typedef enum
 {
-  KC_STATE_X, KC_STATE_Y, KC_STATE_Z, KC_STATE_PX, KC_STATE_PY, KC_STATE_PZ, KC_STATE_D0, KC_STATE_D1, KC_STATE_D2, KC_STATE_DIM
+  KC_STATE_X, KC_STATE_Y, KC_STATE_Z, KC_STATE_PX, KC_STATE_PY, KC_STATE_PZ, KC_STATE_D0, KC_STATE_D1, KC_STATE_D2,
+#ifdef KALMAN_TERRAIN_STATE
+  KC_STATE_T, // Terrain height below the drone, only for offline experiments through the Python bindings
+#endif
+  KC_STATE_DIM
 } kalmanCoreStateIdx_t;
 
 
@@ -131,6 +140,13 @@ typedef struct {
   // PI --- facing negative X
   // 3 * PI / 2 --- facing negative Y
   float initialYaw;
+
+#ifdef CONFIG_ESTIMATOR_KALMAN_TERRAIN
+  float procNoiseTerrainSlope; // Expected terrain slope, terrain process noise per metre flown [m/m]
+  float terrainGate;           // ToF innovation gate for a terrain step [std devs]
+  uint8_t terrainConfirm;      // Consecutive ToF readings outside the gate before a terrain step
+  float terrainResetVariance;  // Terrain variance after a step [m^2]
+#endif
 
   float attitudeReversion;
 

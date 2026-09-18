@@ -55,6 +55,14 @@ static float expCoeff;
 
 static uint16_t range_last = 0;
 
+// Extra per-measurement data from the sensor, for logging
+static float rangeSigma;        // [mm] sensor's own estimate of the range standard deviation
+static uint8_t rangeStatus;     // 0 = valid, see VL53L1_RANGESTATUS_* for others
+static float signalRate;        // [MCPS] return signal rate, a measure of target reflectance
+static float ambientRate;       // [MCPS] ambient rate, a measure of ambient light
+static uint16_t effectiveSpads; // effective SPAD count for the return signal, divided by 256
+static uint8_t rangeQuality;    // [%] range quality level computed by the ST API
+
 static bool isInit;
 
 NO_DMA_CCM_SAFE_ZERO_INIT static VL53L1_Dev_t dev;
@@ -74,6 +82,13 @@ static uint16_t zRanger2GetMeasurementAndRestart(VL53L1_Dev_t *dev)
 
     status = VL53L1_GetRangingMeasurementData(dev, &rangingData);
     range = rangingData.RangeMilliMeter;
+
+    rangeSigma = rangingData.SigmaMilliMeter / 65536.0f;
+    rangeStatus = rangingData.RangeStatus;
+    signalRate = rangingData.SignalRateRtnMegaCps / 65536.0f;
+    ambientRate = rangingData.AmbientRateRtnMegaCps / 65536.0f;
+    effectiveSpads = rangingData.EffectiveSpadRtnCount / 256;
+    rangeQuality = rangingData.RangeQualityLevel;
 
     VL53L1_StopMeasurement(dev);
     status = VL53L1_StartMeasurement(dev);
@@ -140,6 +155,9 @@ void zRanger2Task(void* arg)
     if (range_last < RANGE_OUTLIER_LIMIT) {
       float distance = (float)range_last * 0.001f; // Scale from [mm] to [m]
       float stdDev = expStdA * (1.0f  + expf( expCoeff * (distance - expPointA)));
+#ifdef CONFIG_ESTIMATOR_KALMAN_TERRAIN
+      if (rangeStatus == 0)
+#endif
       rangeEnqueueDownRangeInEstimator(distance, stdDev, xTaskGetTickCount());
     }
   }
@@ -157,6 +175,37 @@ static const DeckDriver zranger2_deck = {
 };
 
 DECK_DRIVER(zranger2_deck);
+
+/**
+ * Extra data reported by the VL53L1x with each range measurement. The values are updated before the
+ * measurement is pushed to the estimator, so they can be logged on the estTOF event.
+ */
+LOG_GROUP_START(zranger2)
+/**
+ * @brief Sensor estimate of the range standard deviation [mm]
+ */
+LOG_ADD(LOG_FLOAT, sigma, &rangeSigma)
+/**
+ * @brief Range status, 0 = valid
+ */
+LOG_ADD(LOG_UINT8, status, &rangeStatus)
+/**
+ * @brief Return signal rate [MCPS]
+ */
+LOG_ADD(LOG_FLOAT, signalRate, &signalRate)
+/**
+ * @brief Ambient light rate [MCPS]
+ */
+LOG_ADD(LOG_FLOAT, ambientRate, &ambientRate)
+/**
+ * @brief Effective SPAD count for the return signal
+ */
+LOG_ADD(LOG_UINT16, spads, &effectiveSpads)
+/**
+ * @brief Range quality level [%]
+ */
+LOG_ADD(LOG_UINT8, quality, &rangeQuality)
+LOG_GROUP_STOP(zranger2)
 
 PARAM_GROUP_START(deck)
 

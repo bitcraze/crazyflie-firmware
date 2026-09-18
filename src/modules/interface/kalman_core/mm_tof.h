@@ -29,3 +29,8 @@
 
 // Measurements of TOF from laser sensor
 void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof);
+
+#ifdef CONFIG_ESTIMATOR_KALMAN_TERRAIN
+// Measurements of TOF relative to the terrain state, with a reset of the terrain on steps
+void kalmanCoreUpdateWithTofTerrain(kalmanCoreData_t* this, const kalmanCoreParams_t *params, tofMeasurement_t *tof);
+#endif

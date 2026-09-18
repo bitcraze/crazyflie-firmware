@@ -76,6 +76,15 @@ config ESTIMATOR_KALMAN_GENERAL_PURPOSE
         use any drone specific information for state estimation, this is useful when using the Crazyflie as a general
         positioning tag (tracker).
 
+config ESTIMATOR_KALMAN_TERRAIN
+    bool "Track terrain height in the Kalman estimator (experimental)"
+    default n
+    depends on ESTIMATOR_KALMAN_ENABLE
+    help
+        Adds a terrain height state, so steps and slopes under the flow deck do not move the
+        height estimate. ToF and flow measure relative to the terrain, the accelerometer and
+        barometer keep the height. Experimental, tuned on replayed logs.
+
 config ESTIMATOR_KALMAN_INITIAL_YAW_STD
     int "Configure the initial yaw standard deviation in the Kalman filter."
     default 10

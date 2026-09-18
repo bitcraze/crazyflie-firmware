@@ -38,7 +38,16 @@
 #include "platform_defaults.h"
 
 // Process noise defaults depend on configuration
-#ifdef CONFIG_ESTIMATOR_KALMAN_GENERAL_PURPOSE
+#if defined(CONFIG_ESTIMATOR_KALMAN_TERRAIN)
+// Trust the accelerometer more, so a slope under a level drone goes into the terrain and not the height
+#define KALMAN_CORE_PROC_NOISE_DEFAULTS \
+  .procNoiseAcc_xy = 0.5f, \
+  .procNoiseAcc_z = 0.2f, \
+  .procNoiseTerrainSlope = 0.3f, \
+  .terrainGate = 12.0f, \
+  .terrainConfirm = 2, \
+  .terrainResetVariance = 1.0f
+#elif defined(CONFIG_ESTIMATOR_KALMAN_GENERAL_PURPOSE)
 #define KALMAN_CORE_PROC_NOISE_DEFAULTS \
   .procNoiseAcc_xy = 0.5f, \
   .procNoiseAcc_z = 0.5f

@@ -128,6 +128,16 @@ const uint32_t PREDICTION_UPDATE_INTERVAL_MS = 1000 / PREDICT_RATE;
 static bool robustTwr = false;
 static bool robustTdoa = false;
 
+// Skip ToF and flow measurements in the update. They still pass through the measurement queue, so
+// the estTOF and estFlow events can be logged, for instance to record data for offline replay.
+#ifdef CONFIG_ESTIMATOR_KALMAN_TERRAIN
+static bool ignoreTof = false;
+static bool ignoreFlow = false;
+#else
+static bool ignoreTof = true;
+static bool ignoreFlow = true;
+#endif
+
 /**
  * Quadrocopter State
  *
@@ -179,7 +189,8 @@ static rateSupervisor_t rateSupervisorContext;
 #define WARNING_HOLD_BACK_TIME_MS 2000
 static uint32_t warningBlockTimeMs = 0;
 
-#ifdef KALMAN_USE_BARO_UPDATE
+#if defined(KALMAN_USE_BARO_UPDATE) || defined(CONFIG_ESTIMATOR_KALMAN_TERRAIN)
+// With the terrain state the barometer is a weak absolute reference for the height
 static const bool useBaroUpdate = true;
 #else
 static const bool useBaroUpdate = false;
@@ -333,13 +344,21 @@ static void updateQueuedMeasurements(const uint32_t nowMs, const bool quadIsFlyi
         }
         break;
       case MeasurementTypeTOF:
-        kalmanCoreUpdateWithTof(&coreData, &m.data.tof);
+        if (!ignoreTof) {
+#ifdef CONFIG_ESTIMATOR_KALMAN_TERRAIN
+          kalmanCoreUpdateWithTofTerrain(&coreData, &coreParams, &m.data.tof);
+#else
+          kalmanCoreUpdateWithTof(&coreData, &m.data.tof);
+#endif
+        }
         break;
       case MeasurementTypeAbsoluteHeight:
         kalmanCoreUpdateWithAbsoluteHeight(&coreData, &m.data.height);
         break;
       case MeasurementTypeFlow:
-        kalmanCoreUpdateWithFlow(&coreData, &m.data.flow, &gyroLatest);
+        if (!ignoreFlow) {
+          kalmanCoreUpdateWithFlow(&coreData, &m.data.flow, &gyroLatest);
+        }
         break;
       case MeasurementTypeYawError:
         kalmanCoreUpdateWithYawError(&coreData, &m.data.yawError);
@@ -426,6 +445,12 @@ LOG_GROUP_START(kalman)
  *  Note: This is similar to stateEstimate.z
  */
   LOG_ADD(LOG_FLOAT, stateZ, &coreData.S[KC_STATE_Z])
+#ifdef CONFIG_ESTIMATOR_KALMAN_TERRAIN
+  /**
+   * @brief State terrain height below the drone [m]
+   */
+  LOG_ADD(LOG_FLOAT, stateT, &coreData.S[KC_STATE_T])
+#endif
   /**
   * @brief State velocity in its body frame x
   *
@@ -543,6 +568,32 @@ PARAM_GROUP_START(kalman)
  * @brief Nonzero to use robust TWR method (default: 0)
  */
   PARAM_ADD_CORE(PARAM_UINT8, robustTwr, &robustTwr)
+/**
+ * @brief Nonzero to not use ToF measurements in the update, they are still logged on estTOF (default: 1)
+ */
+  PARAM_ADD(PARAM_UINT8, ignoreTof, &ignoreTof)
+/**
+ * @brief Nonzero to not use flow measurements in the update, they are still logged on estFlow (default: 1)
+ */
+  PARAM_ADD(PARAM_UINT8, ignoreFlow, &ignoreFlow)
+#ifdef CONFIG_ESTIMATOR_KALMAN_TERRAIN
+/**
+ * @brief Expected terrain slope, terrain process noise per metre flown [m/m] (default: 0.3)
+ */
+  PARAM_ADD(PARAM_FLOAT, terrSlope, &coreParams.procNoiseTerrainSlope)
+/**
+ * @brief ToF innovation gate for a terrain step [std devs] (default: 12)
+ */
+  PARAM_ADD(PARAM_FLOAT, terrGate, &coreParams.terrainGate)
+/**
+ * @brief Consecutive ToF readings outside the gate before a terrain step (default: 2)
+ */
+  PARAM_ADD(PARAM_UINT8, terrConfirm, &coreParams.terrainConfirm)
+/**
+ * @brief Terrain variance after a step [m^2] (default: 1)
+ */
+  PARAM_ADD(PARAM_FLOAT, terrResetVar, &coreParams.terrainResetVariance)
+#endif
 /**
  * @brief Process noise for x and y acceleration
  */

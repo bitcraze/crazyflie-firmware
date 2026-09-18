@@ -24,6 +24,7 @@
  */
 
 #include "mm_tof.h"
+#include "log.h"
 
 void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof)
 {
@@ -59,3 +60,58 @@ void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof)
     kalmanCoreScalarUpdate(this, &H, measuredDistance-predictedDistance, tof->stdDev);
   }
 }
+
+#ifdef CONFIG_ESTIMATOR_KALMAN_TERRAIN
+static uint32_t terrainSteps;
+
+void kalmanCoreUpdateWithTofTerrain(kalmanCoreData_t* this, const kalmanCoreParams_t *params, tofMeasurement_t *tof)
+{
+  static uint8_t outsideGate = 0;
+
+  float h[KC_STATE_DIM] = {0};
+  arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
+
+  // Only update the filter if the measurement is reliable (\hat{h} -> infty when R[2][2] -> 0)
+  if (fabs(this->R[2][2]) > 0.1 && this->R[2][2] > 0){
+    float angle = fabsf(acosf(this->R[2][2])) - DEG_TO_RAD * (15.0f / 2.0f);
+    if (angle < 0.0f) {
+      angle = 0.0f;
+    }
+    const float cosAngle = cosf(angle);
+    const float measuredDistance = tof->distance; // [m]
+
+    // The distance is measured to the terrain: d = (z - t) / cos(alpha)
+    h[KC_STATE_Z] = 1 / cosAngle;
+    h[KC_STATE_T] = -1 / cosAngle;
+    float error = measuredDistance - (this->S[KC_STATE_Z] - this->S[KC_STATE_T]) / cosAngle;
+
+    const float innovationVariance = h[KC_STATE_Z] * h[KC_STATE_Z] * this->P[KC_STATE_Z][KC_STATE_Z]
+      + 2 * h[KC_STATE_Z] * h[KC_STATE_T] * this->P[KC_STATE_Z][KC_STATE_T]
+      + h[KC_STATE_T] * h[KC_STATE_T] * this->P[KC_STATE_T][KC_STATE_T]
+      + tof->stdDev * tof->stdDev;
+
+    if (error * error > params->terrainGate * params->terrainGate * innovationVariance) {
+      outsideGate++;
+      if (outsideGate < params->terrainConfirm) {
+        // Could be a single reading on an edge, wait for the next one
+        return;
+      }
+      // A step in the terrain: move it into the terrain state and let the next readings refine it
+      this->S[KC_STATE_T] = this->S[KC_STATE_Z] - measuredDistance * cosAngle;
+      this->P[KC_STATE_T][KC_STATE_T] = params->terrainResetVariance;
+      error = measuredDistance - (this->S[KC_STATE_Z] - this->S[KC_STATE_T]) / cosAngle;
+      terrainSteps++;
+    }
+    outsideGate = 0;
+
+    kalmanCoreScalarUpdate(this, &H, error, tof->stdDev);
+  }
+}
+
+LOG_GROUP_START(kalman_terr)
+  /**
+   * @brief Number of terrain steps detected by the ToF measurement model
+   */
+  LOG_ADD(LOG_UINT32, steps, &terrainSteps)
+LOG_GROUP_STOP(kalman_terr)
+#endif
