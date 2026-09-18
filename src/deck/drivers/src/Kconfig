@@ -516,6 +516,16 @@ config DECK_USD
         (or any other firmware code) to implement usecases that requires
         the use of files.
 
+config DECK_USD_NO_INIT
+    depends on DECK_USD
+    bool "Leave the Micro SD card deck to another deck"
+    default n
+    help
+        Do not initialize the Micro SD card deck, even when it is detected.
+        Used when another deck owns the card instead, such as the Flow v3
+        deck which logs its sensor data to it over the deck SPI bus. The
+        Crazyflie then leaves the bus and the chip select pin alone.
+
 config DECK_USD_USE_ALT_PINS_AND_SPI
   bool "Use alternate SPI and alternate CS pin"
   default n

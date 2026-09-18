@@ -453,6 +453,12 @@ static bool initSuccess = false;
 
 static void usdInit(DeckInfo *info)
 {
+#ifdef CONFIG_DECK_USD_NO_INIT
+  // Another deck owns the card and drives the SPI bus, so stay off it
+  DEBUG_PRINT("uSD deck found but not used, left to another deck\n");
+  return;
+#endif
+
   if (!isInit) {
     memoryRegisterHandler(&memDef);
 
@@ -1049,6 +1055,10 @@ static void usdWriteTask(void* prm)
 
 static bool usdTest()
 {
+#ifdef CONFIG_DECK_USD_NO_INIT
+  return true;
+#endif
+
   if (!isInit) {
     DEBUG_PRINT("Error while initializing uSD deck\n");
   }
