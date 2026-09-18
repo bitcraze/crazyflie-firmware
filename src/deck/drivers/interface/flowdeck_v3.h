@@ -8,6 +8,11 @@
  */
 #define FLOWDECK_V3_UART_BAUDRATE    230400
 #define FLOWDECK_V3_UART_SYNC_HEADER   0xFFFF
+// Text messages from the deck, printed on the Crazyflie console
+#define FLOWDECK_V3_UART_TEXT_HEADER   0xFFFD
+#define FLOWDECK_V3_UART_TEXT_MAX_LENGTH 96
+// Give up on a partially received frame and look for a header again
+#define FLOWDECK_V3_UART_FRAME_TIMEOUT_MS 100
 #define FLOWDECK_V3_UART_SYNC_LENGTH 4
 
 typedef struct {

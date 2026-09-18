@@ -68,6 +68,14 @@ static float stdFlow = 2.0f;
 static bool isInit = false;
 static flowdeckV3UartFrame_t rxFrame;
 
+// Raw values of the last received frame, for bring-up and testing
+static uint8_t flowMotionLog;
+static int16_t flowDeltaXLog;
+static int16_t flowDeltaYLog;
+static uint16_t flowShutterLog;
+static uint16_t flowRangeLog;
+static uint16_t flowFrameCountLog;
+
 // Disables pushing the flow measurement in the EKF
 static bool useFlowDisabled = false;
 
@@ -86,19 +94,71 @@ static const float expStdB = 0.2f;    // STD at elevation expPointB [m]
 static float expCoeff;
 
 
-static void flowdeckV3ReadData(flowdeckV3UartFrame_t *frame) {
+static void flowdeckV3ReadByte(uint8_t *byte) {
+  while (uart1bytesAvailable() < 1) {
+    vTaskDelay(M2T(1));
+  }
+  uart1Getchar((char *) byte);
+}
+
+// Used inside a frame, where a missing byte means the deck stopped sending
+// mid-frame. Returns false on timeout, so we can go back to looking for a header.
+static bool flowdeckV3ReadByteTimeout(uint8_t *byte, const uint32_t timeoutMs) {
+  const TickType_t start = xTaskGetTickCount();
+
+  while (uart1bytesAvailable() < 1) {
+    if ((xTaskGetTickCount() - start) > M2T(timeoutMs)) {
+      return false;
+    }
+    vTaskDelay(M2T(1));
+  }
+  uart1Getchar((char *) byte);
+
+  return true;
+}
+
+// The deck sends bring-up messages as text, print them on the console
+static void flowdeckV3ReadText(void) {
+  uint8_t length;
+  if (!flowdeckV3ReadByteTimeout(&length, FLOWDECK_V3_UART_FRAME_TIMEOUT_MS)) {
+    return;
+  }
+
+  char text[FLOWDECK_V3_UART_TEXT_MAX_LENGTH + 1];
+  uint32_t index = 0;
+
+  for (uint8_t i = 0; i < length; i++) {
+    uint8_t byte;
+    if (!flowdeckV3ReadByteTimeout(&byte, FLOWDECK_V3_UART_FRAME_TIMEOUT_MS)) {
+      break;
+    }
+    if (index < FLOWDECK_V3_UART_TEXT_MAX_LENGTH) {
+      text[index++] = (char)byte;
+    }
+  }
+  text[index] = 0;
+
+  if (index > 0) {
+    DEBUG_PRINT("%s\n", text);
+  }
+}
+
+// Returns true when a measurement frame was read, false when the deck sent something else
+static bool flowdeckV3ReadData(flowdeckV3UartFrame_t *frame) {
   uint8_t *raw = (uint8_t *)frame;
   uint16_t header = 0;
 
   // the deck sends a sync header before the start of each frame.
   // Wait for it.
-  while (header != FLOWDECK_V3_UART_SYNC_HEADER) {
-    while (uart1bytesAvailable() < 1) {
-      vTaskDelay(M2T(1));
-    }
+  while (header != FLOWDECK_V3_UART_SYNC_HEADER && header != FLOWDECK_V3_UART_TEXT_HEADER) {
     uint8_t byte;
-    uart1Getchar((char *) &byte);
+    flowdeckV3ReadByte(&byte);
     header = (header << 8) | byte;
+  }
+
+  if (header == FLOWDECK_V3_UART_TEXT_HEADER) {
+    flowdeckV3ReadText();
+    return false;
   }
 
   while (uart1bytesAvailable() < sizeof(*frame)) {
@@ -108,6 +168,8 @@ static void flowdeckV3ReadData(flowdeckV3UartFrame_t *frame) {
   for (uint32_t i = 0; i < sizeof(*frame); i++) {
     uart1Getchar((char *)&raw[i]);
   }
+
+  return true;
 }
 
 static void flowdeckV3Task(void *param) {
@@ -120,13 +182,23 @@ static void flowdeckV3Task(void *param) {
 
   uint32_t frameCount = 0;
   while (1) {
-    flowdeckV3ReadData(&rxFrame);
+    if (!flowdeckV3ReadData(&rxFrame)) {
+      continue;
+    }
 
     // Flow -------------------------------------------------------
     // Flip motion information to comply with sensor mounting
     // (might need to be changed if mounted differently)
     int16_t accpx = (int16_t) -((int32_t) rxFrame.deltaY + INT16_MIN);
     int16_t accpy = (int16_t) -((int32_t) rxFrame.deltaX + INT16_MIN);
+
+    // Logged before the outlier removal, so that the raw sensor output is visible
+    flowMotionLog = (uint8_t)rxFrame.motion;
+    flowDeltaXLog = accpx;
+    flowDeltaYLog = accpy;
+    flowShutterLog = rxFrame.shutter;
+    flowRangeLog = rxFrame.rangeMm;
+    flowFrameCountLog++;
 
     // Outlier removal
     if (abs(accpx) < OULIER_LIMIT && abs(accpy) < OULIER_LIMIT) {
@@ -561,6 +633,36 @@ static const DeckDriver flowdeck3_deck = {
 };
 
 DECK_DRIVER(flowdeck3_deck);
+
+/**
+ * Raw data from the Flow v3 deck, as received over the UART
+ */
+LOG_GROUP_START(flow3)
+/**
+ * @brief Motion register of the flow sensor, bit 7 is set when motion was detected
+ */
+LOG_ADD(LOG_UINT8, motion, &flowMotionLog)
+/**
+ * @brief Flow movement in x, in pixels since the last frame
+ */
+LOG_ADD(LOG_INT16, deltaX, &flowDeltaXLog)
+/**
+ * @brief Flow movement in y, in pixels since the last frame
+ */
+LOG_ADD(LOG_INT16, deltaY, &flowDeltaYLog)
+/**
+ * @brief Shutter value of the flow sensor
+ */
+LOG_ADD(LOG_UINT16, shutter, &flowShutterLog)
+/**
+ * @brief Distance measured by the range sensor [mm]
+ */
+LOG_ADD(LOG_UINT16, range, &flowRangeLog)
+/**
+ * @brief Number of frames received from the deck
+ */
+LOG_ADD(LOG_UINT16, frames, &flowFrameCountLog)
+LOG_GROUP_STOP(flow3)
 
 PARAM_GROUP_START(deck)
 
