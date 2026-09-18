@@ -253,6 +253,12 @@ static void flowdeckV3Task(void *param) {
 #define GPIO_RP_RUN   DECKCTRL_GPIO_PIN_0   // PA0 - RP2350 RUN, low holds the RP2350 in reset
 #define GPIO_PWR_EN   DECKCTRL_GPIO_PIN_12  // PC15 - Enables the 3V0 and 1V8 regulators
 
+// Deck controller pins on the RP2350 flash bus, used by its SPI bridge
+#define GPIO_FLASH_CS   DECKCTRL_GPIO_PIN_4   // PA4
+#define GPIO_FLASH_SCK  DECKCTRL_GPIO_PIN_5   // PA5
+#define GPIO_FLASH_MISO DECKCTRL_GPIO_PIN_9   // PA11
+#define GPIO_FLASH_MOSI DECKCTRL_GPIO_PIN_10  // PA12
+
 #define POWER_UP_DELAY_MS 10
 #define RESET_DELAY_MS    10
 
@@ -577,12 +583,27 @@ static const DeckMemDef_t memoryDef = {
   .commandResetToFw = flowResetToFw,
 };
 
+// The deck controller keeps its state over a Crazyflie restart, so it can still be
+// driving the flash bus from an interrupted firmware upgrade. The RP2350 reads its
+// firmware over that bus when it boots, and stops before it starts if the pins are
+// driven, so hand them back before releasing the RP2350 from reset.
+static void releaseFlashBus(DeckInfo *info) {
+  deckctrl_spi_disable(info);
+
+  const DeckCtrlGPIOPin pins[] = {GPIO_FLASH_CS, GPIO_FLASH_SCK, GPIO_FLASH_MISO, GPIO_FLASH_MOSI};
+  for (uint32_t i = 0; i < sizeof(pins) / sizeof(pins[0]); i++) {
+    deckctrl_gpio_set_direction(info, pins[i], INPUT);
+  }
+}
+
 static void flowdeck3Init(DeckInfo *info) {
   if (isInit) {
     return;
   }
 
   flowDeckInfo = info;
+
+  releaseFlashBus(info);
 
   // A pin switched to output starts low: power on with the RP2350 held in reset, then let it boot
   bool powered = deckctrl_gpio_set_direction(info, GPIO_RP_RUN, OUTPUT) &&
