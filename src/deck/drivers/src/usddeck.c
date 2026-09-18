@@ -73,6 +73,7 @@
 #define SPI_BEGIN               spi3Begin
 #define USD_SPI_BAUDRATE_2MHZ   SPI3_BAUDRATE_2MHZ
 #define USD_SPI_BAUDRATE_21MHZ  SPI3_BAUDRATE_21MHZ
+#define USD_SPI_BAUDRATE_6MHZ   SPI3_BAUDRATE_6MHZ
 #define SPI_EXCHANGE            spi3Exchange
 #define SPI_BEGIN_TRANSACTION   spi3BeginTransaction
 #define SPI_END_TRANSACTION     spi3EndTransaction
@@ -85,6 +86,7 @@
 #define SPI_BEGIN               spiBegin
 #define USD_SPI_BAUDRATE_2MHZ   SPI_BAUDRATE_2MHZ
 #define USD_SPI_BAUDRATE_21MHZ  SPI_BAUDRATE_21MHZ
+#define USD_SPI_BAUDRATE_6MHZ   SPI_BAUDRATE_6MHZ
 #define SPI_EXCHANGE            spiExchange
 #define SPI_BEGIN_TRANSACTION   spiBeginTransaction
 #define SPI_END_TRANSACTION     spiEndTransaction
@@ -302,7 +304,9 @@ static void setSlowSpiMode(void)
 
 static void setFastSpiMode(void)
 {
-  spiSpeed = USD_SPI_BAUDRATE_21MHZ;
+  // Terrain logging: 21 MHz gives write errors when the brushless motors start and stop,
+  // 6 MHz still gives about 10 times the needed throughput
+  spiSpeed = USD_SPI_BAUDRATE_6MHZ;
 }
 
 /* Exchange a byte */
