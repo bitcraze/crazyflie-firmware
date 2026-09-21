@@ -226,5 +226,5 @@ $ make flash
 
 ## Unit testing
 
-See the [unit testing](../development/unit_testing) page for how to run and
+See the [unit testing](/docs/development/unit_testing.md) page for how to run and
 configure unit tests locally or with the toolbelt.
