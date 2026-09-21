@@ -1,6 +1,32 @@
 ifeq ($(CONFIG_PLATFORM_SIM),y)
 
-# FreeRTOS (Simmyflie: POSIX simulator port -- no CMSIS, no libdw1000).
+# Phase 4.9: kalman_core.c calls arm_cos_f32()/arm_sin_f32() for its initial
+# quaternion setup -- the *only* CMSIS DSP symbols the whole EKF dependency
+# tree needs (everything else is plain C via math3d.h; see
+# dev/implementation-plan-phase-4.md's 4.9 section for the full sweep).
+# Both are portable table-lookup C (no Cortex-M inline assembly -- confirmed
+# by inspection, same "narrower than mainline, upgrade later" verification
+# every prior chunk's new dependency got), just needing arm_common_tables.o's
+# sinTable_f32 data. Not the whole CMSIS DSP library mainline links (this
+# comment block used to read "no CMSIS" -- no longer true, but still far
+# short of the full list the else branch below builds).
+obj-y += CMSIS/CMSIS/DSP/Source/CommonTables/arm_common_tables.o
+obj-y += CMSIS/CMSIS/DSP/Source/FastMathFunctions/arm_cos_f32.o
+obj-y += CMSIS/CMSIS/DSP/Source/FastMathFunctions/arm_sin_f32.o
+# kalman_core.c/mm_*.c's cf_math.h wrappers (mat_mult()/mat_trans()/
+# mat_scale()/mat_inv()) call these four -- only live once
+# estimatorKalmanTaskInit() actually creates kalmanTask (see main_sim.c's
+# Phase 4.9 comment), so gc-sections dropped them until that wiring landed.
+# All four are plain C, same portability class as arm_cos_f32/arm_sin_f32
+# above (arm_mat_trans_f32.c's arm_helium_utils.h include is Helium/MVE-gated
+# behind a macro this build never defines, same as mainline's own Cortex-M4
+# build -- confirmed by mainline already linking this file unmodified).
+obj-y += CMSIS/CMSIS/DSP/Source/MatrixFunctions/arm_mat_mult_f32.o
+obj-y += CMSIS/CMSIS/DSP/Source/MatrixFunctions/arm_mat_trans_f32.o
+obj-y += CMSIS/CMSIS/DSP/Source/MatrixFunctions/arm_mat_scale_f32.o
+obj-y += CMSIS/CMSIS/DSP/Source/MatrixFunctions/arm_mat_inverse_f32.o
+
+# FreeRTOS (Simmyflie: POSIX simulator port -- no libdw1000).
 # Phase 4.5 (Logging) adds timers.o -- log.c's periodic log blocks need real
 # FreeRTOS software timers (configUSE_TIMERS flipped on in this platform's
 # FreeRTOSConfig.h; see that file's header comment).

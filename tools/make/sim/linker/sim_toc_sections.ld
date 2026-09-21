@@ -124,6 +124,28 @@ SECTIONS
     _log_stop = .;
   }
 
+  /* Phase 4.9: eventtrigger.c's _eventtrigger_start/_eventtrigger_stop --
+   * same TOC-array shape as .param/.log above (EVENTTRIGGER(...)'s per-name
+   * ".eventtrigger.NAME" input sections, walked via eventtrigger*
+   * pointer-subtraction in eventtriggerGetId()/eventtriggerGetByName()),
+   * same SUBALIGN(8) reasoning: struct eventtrigger_s is pointer-heavy
+   * (name/payloadDesc/payload), so 8-byte-aligned and a multiple of 8 in
+   * size on a 64-bit host -- SUBALIGN(8) is the largest value guaranteed to
+   * divide it evenly, closing off the same x86-64-gcc-over-alignment gap
+   * class 4.6/4.8 found for .log/.param before it can recur here. Unlike
+   * .log/.param, every EVENTTRIGGER(...) invocation in this build lives in
+   * one file (estimator.c) with a distinct NAME per section, so there's no
+   * cross-file same-name collision needing --unique at an intermediate
+   * Kbuild merge stage (see the Makefile's EXTRA_LDFLAGS comment) -- only
+   * this final-link SUBALIGN is needed. */
+  .eventtrigger : ALIGN(8) SUBALIGN(8)
+  {
+    _eventtrigger_start = .;
+    KEEP(*(.eventtrigger))
+    KEEP(*(.eventtrigger.*))
+    _eventtrigger_stop = .;
+  }
+
   .sim_toc_after_bss : ALIGN(4)
   {
     _sdata = .;

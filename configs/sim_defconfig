@@ -1,24 +1,22 @@
 CONFIG_PLATFORM_SIM=y
 CONFIG_CROSS_COMPILE=""
 
-# Phase 4.8: estimator_kalman.c (gated by this flag, default y) pulls in
-# deck.h (-> stm32fxxx.h, a new hardware chain unrelated to
-# motors.h/pm.h/platform.h's) and kalman_core/'s EKF math, none of which
-# this phase needs -- DEFAULT_ESTIMATOR in estimator.c is Complementary
-# regardless of this flag (auto-select only picks Kalman if forced via
-# CONFIG_ESTIMATOR_KALMAN, which nothing here sets). Not disabling this
-# would mean solving an unrelated new build blocker just to compile in an
-# estimator nothing selects at runtime. Revisit if a future phase needs
-# Kalman specifically.
+# Phase 4.9: CONFIG_ESTIMATOR_KALMAN_ENABLE now reverts to mainline's own
+# default (y), matching real hardware -- see
+# dev/implementation-plan-phase-4.md's 4.9 section for the dependency sweep
+# showing the EKF's only hardware coupling (estimator_kalman.c's #include
+# "deck.h", used solely for deckGetRequiredKalmanEstimatorAttitudeReversionOff())
+# is solved the same way 4.8 solved motors.h/pm.h/platform.h: include-path
+# shadowing (src/config/sim/hw_shims/deck.h). ESTIMATOR_AUTO_SELECT stays the
+# default estimator *choice*: with no decks present it falls back to
+# DEFAULT_ESTIMATOR (Complementary) in estimator.c, same as real hardware out
+# of the box -- selecting Kalman is a `make menuconfig` -> "Default
+# estimator" -> "Kalman estimator" choice, not a sim-specific override.
 #
-# A direct "=n" isn't enough on its own: three deck drivers (DECK_FLOW,
-# DECK_LIGHTHOUSE, DECK_LOCO), all Kconfig-default y, each `select
-# ESTIMATOR_KALMAN_ENABLE` -- Kconfig's select always wins over a seed
-# file's own value for the selected option. None of these decks are
-# hardware-relevant in sim anyway (no deck bus exists -- i2cdevInit() is a
-# no-op stub, see i2cdev_sim.c/Phase 4.0), so disabling them is correct on
-# its own merits, not just a workaround for the select chain.
-CONFIG_ESTIMATOR_KALMAN_ENABLE=n
+# DECK_FLOW/DECK_LIGHTHOUSE/DECK_LOCO stay disabled below regardless (no deck
+# bus in sim -- i2cdevInit() is a no-op stub, see i2cdev_sim.c/Phase 4.0);
+# each also `select`s ESTIMATOR_KALMAN_ENABLE, but that's moot now that the
+# flag defaults to y anyway.
 CONFIG_DECK_FLOW=n
 CONFIG_DECK_LIGHTHOUSE=n
 CONFIG_DECK_LOCO=n

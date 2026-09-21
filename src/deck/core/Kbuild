@@ -1,3 +1,9 @@
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+# Simmyflie Phase 4.9: only sim/deck.c -- the real deck_info.o/deck.o/etc.
+# pull in real GPIO/I2C deck-probing code, out of scope with no deck bus in
+# sim.
+obj-y += sim/
+else
 obj-y += deck_drivers.o
 obj-y += deck_discovery.o
 obj-y += deck_info.o
@@ -6,3 +12,4 @@ obj-y += deck.o
 obj-y += deck_test.o
 obj-y += deckctrl_dfu_memory.o
 obj-$(CONFIG_DECK_SUPERVISOR) += deck_supervisor.o
+endif

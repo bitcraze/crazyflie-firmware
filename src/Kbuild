@@ -14,6 +14,10 @@ ifeq ($(CONFIG_PLATFORM_SIM),y)
 # image link.
 EXTRA_LDFLAGS += -Wl,--unique=.log.* -Wl,--unique=.param.*
 
+# Phase 4.9: deck/ recurses into core/sim/ only (see src/deck/Kbuild's own
+# PLATFORM_SIM split) -- estimator_kalman.c's one deck.h dependency,
+# deckGetRequiredKalmanEstimatorAttitudeReversionOff().
+obj-y += deck/
 obj-y += drivers/
 obj-y += hal/
 obj-y += init/

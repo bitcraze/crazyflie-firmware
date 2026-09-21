@@ -104,6 +104,12 @@ void motorsResetESCs(void)
   /* No-op: only meaningful for brushless motors with an ESC reset pin. */
 }
 
+void motorsBurstDshot(void)
+{
+  /* No-op: motorsSetRatio() already applies the ratio directly, so there's
+   * no separate hardware burst step to model. */
+}
+
 void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio)
 {
   /* No-op: no speaker in sim. */

@@ -42,10 +42,24 @@ EXTRA_LDFLAGS += -Wl,--unique=.log.* -Wl,--unique=.param.*
 # controller/ and estimator/ subtrees (each portable; see
 # dev/implementation-plan-phase-4.md's 4.8 section for the per-file
 # dependency sweep) -- plus two TEMPORARY stubs, commander_sim.o/
-# crtp_commander_high_level_sim.o, standing in for 4.9's real
+# crtp_commander_high_level_sim.o, standing in for 4.10's real
 # commander.c/crtp_commander_high_level.c until that chunk lands (see
 # those files' own header comments for why).
+# Phase 4.9 (Enable the Kalman estimator) adds axis3fSubSampler.o
+# (unconditional -- estimator_kalman.c needs it regardless of platform) and,
+# gated on CONFIG_ESTIMATOR_KALMAN_ENABLE (mainline's own default, y):
+# kalman_supervisor.o, the kalman_core/ subtree, and (auto-selected by
+# Kconfig once Kalman is on) the outlierfilter/ subtree. estimator_kalman.o
+# itself needs no new line here -- estimator/Kbuild's own
+# obj-$(CONFIG_ESTIMATOR_KALMAN_ENABLE) line already applies, that directory
+# is already recursed into unconditionally below. All of this tree's C files
+# are portable (no CMSIS/arm_math, confirmed by a full per-file #include
+# sweep -- see dev/implementation-plan-phase-4.md's 4.9 section); the only
+# hardware coupling was estimator_kalman.c's #include "deck.h", solved via
+# include-path shadowing (src/config/sim/hw_shims/deck.h), same mechanism
+# 4.8 used for motors.h/pm.h/platform.h.
 obj-y += app_channel.o
+obj-y += axis3fSubSampler.o
 obj-y += collision_avoidance.o
 obj-y += comm.o
 obj-y += commander_sim.o
@@ -53,7 +67,13 @@ obj-y += console.o
 obj-y += crtp.o
 obj-y += crtp_commander_high_level_sim.o
 obj-y += crtp_mem.o
+# estimator.c's estimatorEnqueue() calls eventTrigger() for a handful of
+# measurement types -- unreferenced (and so gc-sections-dropped) until 4.9's
+# kalmanMeasurementInjectionTask() (main_sim.c) becomes the first sim caller
+# of estimatorEnqueuePosition()/estimatorEnqueueYawError(). Fully portable.
+obj-y += eventtrigger.o
 obj-y += health.o
+obj-$(CONFIG_ESTIMATOR_KALMAN_ENABLE) += kalman_supervisor.o
 obj-y += log.o
 obj-y += mem.o
 obj-y += param_logic.o
@@ -72,6 +92,8 @@ obj-y += worker.o
 
 obj-y += controller/
 obj-y += estimator/
+obj-$(CONFIG_ESTIMATOR_KALMAN_ENABLE) += kalman_core/
+obj-$(CONFIG_ESTIMATOR_OUTLIER_FILTERS) += outlierfilter/
 else
 obj-y += app_channel.o
 obj-$(CONFIG_APP_ENABLE) += app_handler.o

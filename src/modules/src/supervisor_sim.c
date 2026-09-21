@@ -38,10 +38,18 @@
  * chosen over pulling the real commander/crtp_commander_high_level/
  * planner/supervisor chain forward into 4.8). supervisorCanFly() always
  * false keeps this consistent with the pre-existing arming gap: nothing in
- * sim can fly until 4.9 gives arming real supervisor/commander context, so
+ * sim can fly until 4.10 gives arming real supervisor/commander context, so
  * stabilizerTask()'s motor-output branch stays dead code, matching 4.2's
- * "Known gap" exactly. Phase 4.9's plan already carries this gap forward --
- * swap this file out for the real one then, don't extend it further.
+ * "Known gap" exactly.
+ *
+ * Phase 4.9 adds supervisorIsFlying(): estimator_kalman.c's kalmanTask()
+ * calls it directly (not through stabilizer.c, the only caller through
+ * 4.8) to gate its "flying vs. on-the-ground" process-noise tuning -- dead
+ * code until estimatorKalmanTaskInit() actually creates kalmanTask, which
+ * is why this gap wasn't hit until Kalman's task-init wiring landed (see
+ * main_sim.c's Phase 4.9 comment). Same false-by-default reasoning as
+ * every other entry point here. Swap this whole file out for the real one
+ * once 4.10 lands, don't extend it further.
  */
 
 #include "supervisor.h"
@@ -86,6 +94,11 @@ bool supervisorAreMotorsAllowedToRun()
 }
 
 bool supervisorCanFly(void)
+{
+  return false;
+}
+
+bool supervisorIsFlying(void)
 {
   return false;
 }

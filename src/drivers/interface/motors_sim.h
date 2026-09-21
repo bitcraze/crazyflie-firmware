@@ -50,6 +50,13 @@
  * (health.c's propeller/battery self-test is dead code in sim by default --
  * startPropTest/startBatTest params are 0 unless a client sets them -- so
  * the values are cosmetic, not modeled).
+ *
+ * motorsBurstDshot() (added once cf21bl_defconfig -- CF2.1 brushless, this
+ * project's requirements.md target -- became the base .config for `make
+ * sim`, pulling in CONFIG_MOTORS_ESC_PROTOCOL_DSHOT and stabilizer.c's
+ * #ifdef'd call): also a no-op, same reasoning as motorsResetESCs() --
+ * motorsSetRatio() already applies the ratio directly, so there's no
+ * separate hardware burst step to model.
  */
 #ifndef __MOTORS_SIM_H__
 #define __MOTORS_SIM_H__
@@ -92,6 +99,7 @@ void motorsSetRatio(uint32_t id, uint16_t ratio);
 uint16_t motorsGetRatio(uint32_t id);
 void motorsStop(void);
 void motorsResetESCs(void);
+void motorsBurstDshot(void);
 void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio);
 const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id);
 float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVoltage);
