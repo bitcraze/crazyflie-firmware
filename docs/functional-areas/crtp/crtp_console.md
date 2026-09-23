@@ -9,14 +9,13 @@ packets and invalid UTF-8 may occur. Clients should use an incremental,
 loss-tolerant decoder and must not infer line or record boundaries from CRTP
 packets.
 
-The sourced Console extension on channels 1 through 3 is available from CRTP
-protocol version 13. Channel 0 retains its legacy format.
+Channels 1 through 3 require CRTP protocol version 13.
 
 ## Channel 0: local console
 
-Channel 0 is the existing Crazyflie-local stream. Its payload is 0 to 30 bytes
-and has the implicit source `cf:stm32`. It is unchanged and is not listed in
-the source TOC.
+Channel 0 carries console output from the Crazyflie's STM32. Its payload
+contains 0 to 30 bytes. Its implicit source is `cf:stm32`, which is not listed
+in the source catalog.
 
 ## Channel 1: sourced console
 
@@ -63,8 +62,7 @@ disabled source is queued after it until that source is enabled again.
 
 ## Channel 3: source TOC
 
-The TOC uses the original 8-bit log/parameter command shape, without V1/V2 in
-the command names.
+The source catalog uses the following commands:
 
 ```text
 GET_ITEM request:  [0x00, source_id]
@@ -79,7 +77,8 @@ Error response:    [command, errno]
 The source path occupies the remainder of `GET_ITEM`; it is not NUL terminated.
 Paths are non-empty UTF-8 with non-empty colon-separated segments and are
 unique in the catalog, for example `deck:bcCam` or `cf:nRF51`. They are for
-display and filtering, not stable device identity.
+display and filtering. The Camera Deck's console source is `deck:bcCam`;
+the protocol does not identify individual deck instances.
 
 The catalog is frozen for the Crazyflie boot. IDs are contiguous from zero and
 remain assigned if a source becomes temporarily unavailable. The CRC is the
@@ -89,21 +88,5 @@ must retry after startup. An unknown item returns `ENOENT`. As on channel 2, an
 empty request is not answered, an unknown command returns `ENOSYS`, and a known
 command with an invalid payload returns `EINVAL`.
 
-## Camera Deck binding
-
-The static `bcCam` UART service currently uses the generic Common Link
-endpoint to enumerate the immutable target service catalog and bind a
-compatible `bitcraze.console` service to source `deck:bcCam`. It does not
-assume a service handle or descriptor ordinal. A future deck/service discovery
-layer can move this composition out of the driver without changing either
-console protocol.
-
-Crazyflie grants the Console service one Common Link receive slot only while
-the source is enabled and no previous Console frame remains to be queued to
-CRTP. The slot is independent of the Control service receive slot, so a stalled
-Control probe does not prevent Console traffic. While this source is enabled
-and its Console service is bound, the bcCam startup-recovery watchdog is
-suspended so that it does not reset the deck during diagnosis. Disabling the
-source starts a fresh recovery timeout if Control is still stalled.
-Consequently CRTP congestion propagates to the Camera Deck spool, which is the
-intentional best-effort loss boundary.
+The Camera Deck's UART binding and buffering behavior are described in
+[Camera Deck console](../camera-deck-console.md).
