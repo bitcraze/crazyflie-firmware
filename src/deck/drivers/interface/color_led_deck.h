@@ -4,7 +4,6 @@
 
 // Protocol commands
 #define CMD_GET_VERSION         0x00
-#define CMD_SET_COLOR           0x01  // Legacy, already corrected [CMD, W, R, G, B]
 #define CMD_GET_THERMAL_STATUS  0x02
 #define CMD_GET_LED_POSITION    0x03
 #define CMD_GET_LED_CURRENT     0x04
