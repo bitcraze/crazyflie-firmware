@@ -80,8 +80,10 @@ static uint16_t control_malformed_logged;
 uint8_t bccam_uart_service_link_state_log;
 static bccam_uart_service_status_t service_status_cache;
 
-/** Console source ID assigned to deck:bcCam, or -1 if registration failed. */
-static int console_source_id = -1;
+/** Static storage for the registered Camera Deck Console source. */
+static ConsoleSource console_source = { .path = "deck:bcCam" };
+/** True after Console accepts console_source. */
+static bool console_source_registered;
 /** Staging buffer for one accepted Camera Console frame. */
 static uint8_t console_frame[BCCAM_UART_CAMERA_PROFILE_MTU];
 /** Total number of bytes in console_frame. */
@@ -120,9 +122,9 @@ static bool console_diagnostics_active(void)
 #if defined(UNIT_TEST) || defined(UNIT_TEST_MODE)
   return test_console_diagnostics_active;
 #else
-  return console_source_id >= 0 &&
+  return console_source_registered &&
     bccam_uart_runtime_console_service_bound(&firmware_client.runtime) &&
-    consoleSourceIsEnabled((uint8_t)console_source_id);
+    consoleSourceIsEnabled(&console_source);
 #endif
 }
 
@@ -993,6 +995,9 @@ static bool update_startup_recovery_watchdog(
   }
 
   if (console_diagnostics_active()) {
+    // Keep the timeout paused while the diagnostic source is enabled and bound.
+    // CRTP does not track client connections reliably, so a disconnected
+    // client may leave the timeout paused. Disabling starts a fresh timeout.
     firmware_startup_deadline_tick = 0;
     return false;
   }
@@ -1081,7 +1086,7 @@ static int publish_console_credit_if_enabled(bool release_consumed_slot,
   int result = BCCAM_UART_OK;
   *published = false;
   taskENTER_CRITICAL();
-  if (consoleSourceIsEnabled((uint8_t)console_source_id)) {
+  if (consoleSourceIsEnabled(&console_source)) {
     result = release_consumed_slot ?
       bccam_uart_runtime_release_console_rx(&firmware_client.runtime) :
       bccam_uart_runtime_open_console_rx(&firmware_client.runtime);
@@ -1094,12 +1099,12 @@ static int publish_console_credit_if_enabled(bool release_consumed_slot,
 /** Advance the best-effort Camera Console to CRTP forwarding state machine. */
 static int forward_console(void)
 {
-  if (console_source_id < 0 ||
+  if (!console_source_registered ||
       !bccam_uart_runtime_console_service_bound(&firmware_client.runtime)) {
     return BCCAM_UART_OK;
   }
 
-  const bool enabled = consoleSourceIsEnabled((uint8_t)console_source_id);
+  const bool enabled = consoleSourceIsEnabled(&console_source);
   if (!enabled) {
     return BCCAM_UART_OK;
   }
@@ -1108,7 +1113,7 @@ static int forward_console(void)
     const size_t remaining = console_frame_length - console_frame_offset;
     const size_t chunk = remaining < (CRTP_MAX_DATA_SIZE - 1u) ?
       remaining : (CRTP_MAX_DATA_SIZE - 1u);
-    if (consoleSourceSend((uint8_t)console_source_id,
+    if (consoleSourceSend(&console_source,
                           &console_frame[console_frame_offset], chunk)) {
       console_frame_offset = (uint16_t)(console_frame_offset + chunk);
       if (console_frame_offset == console_frame_length) {
@@ -1328,8 +1333,9 @@ void bccam_uart_service_init(DeckInfo *deck_info_arg) {
   firmware_startup_deadline_tick = 0;
   firmware_startup_reset_count = 0;
 #if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
-  console_source_id = consoleSourceRegister("deck:bcCam");
-  if (console_source_id < 0) {
+  const int console_registration_result = consoleSourceRegister(&console_source);
+  console_source_registered = console_registration_result == 0;
+  if (!console_source_registered) {
     DEBUG_PRINT("Failed to register console source deck:bcCam\n");
   }
   request_queue = STATIC_MEM_QUEUE_CREATE(request_queue);
@@ -1479,7 +1485,7 @@ void bccam_uart_service_test_reset(void) {
   test_bootloader_enter_result_forced = false;
   test_bootloader_enter_result = false;
   test_console_diagnostics_active = false;
-  console_source_id = -1;
+  console_source_registered = false;
   console_frame_length = 0u;
   console_frame_offset = 0u;
   console_frame_pending = false;
@@ -1540,9 +1546,9 @@ void bccam_uart_service_test_set_console_diagnostics_active(bool active)
   test_console_diagnostics_active = active;
 }
 
-void bccam_uart_service_test_set_console_source_id(int source_id)
+void bccam_uart_service_test_set_console_source_registered(bool registered)
 {
-  console_source_id = source_id;
+  console_source_registered = registered;
 }
 
 int bccam_uart_service_test_forward_console(void)

@@ -73,51 +73,75 @@ int consolePuts(const char *str);
 void consoleFlush(void);
 
 /**
- * Register a console source in the immutable boot-lifetime source catalog.
- *
- * @param path Null-terminated, valid UTF-8 source path. Colon-separated path
- *             segments must be non-empty, the encoded path must fit in one
- *             Console TOC response. The path is copied before this call
- *             returns, so the caller retains ownership of its storage.
- * @return The nonnegative 8-bit source ID. Registering the same path again
- *         returns its existing ID. Returns -1 when the path is invalid, the
- *         catalog is full, or registration has been frozen.
+ * ConsoleSource identifies a stream in the CRTP console source catalog. The
+ * caller provides the node and its NUL-terminated path. Set only path before
+ * registration; Console initializes the other fields on success. Do not
+ * change any field after registration. The node and its path must remain valid
+ * for the full firmware lifetime, and the path must not change. Console never
+ * frees either one.
  */
-int consoleSourceRegister(const char *path);
+typedef struct ConsoleSource {
+  const char *path;
+  struct ConsoleSource *next;  ///< Console-owned list link.
+  uint8_t id;                 ///< Console-owned wire ID.
+  uint8_t pathLength;         ///< Console-owned encoded path length.
+  volatile bool enabled;      ///< Console-owned runtime state.
+} ConsoleSource;
+
+/**
+ * Register a caller-provided node in the boot-lifetime source catalog.
+ *
+ * source->path must be valid UTF-8 with non-empty colon-separated segments
+ * and at most 27 encoded bytes. On success, source becomes the handle for the
+ * functions below. Failure does not change the node or catalog. A node from
+ * an earlier successful call remains registered if it is passed again.
+ * Call from task context. Console protects the catalog and enabled state with
+ * critical sections.
+ *
+ * @return 0 on success; EINVAL for a NULL source or invalid path, EEXIST for
+ *         a previously registered node or path, ENOSPC for 255 entries, or
+ *         EBUSY after registration has been frozen. These are positive errno
+ *         values from the firmware's C library.
+ */
+int consoleSourceRegister(ConsoleSource *source);
 
 /**
  * Permanently close source registration for the current firmware lifetime.
  *
- * This makes the catalog invariant before clients can query its source IDs and
- * CRC. Calls after the first one have no additional effect.
+ * Clients can then query stable source IDs and the catalog CRC. Later calls
+ * have no additional effect.
  */
 void consoleSourceFreeze(void);
 
 /**
- * Check whether a ground client has enabled a console source.
+ * Check whether a client has enabled a console source.
  *
- * @param sourceId Boot-lifetime source ID returned by consoleSourceRegister().
- * @return true when sourceId exists and is enabled, otherwise false.
+ * @param source Successfully registered node pointer. Any other value violates
+ *               the API contract.
+ * @return true when the source is enabled, otherwise false.
  */
-bool consoleSourceIsEnabled(uint8_t sourceId);
+bool consoleSourceIsEnabled(const ConsoleSource *source);
 
 /**
  * Try to send one binary chunk for an enabled source without blocking.
  *
- * The bytes are canonically UTF-8 console data, but a chunk may split a code
- * point or contain invalid bytes. The data is copied before this call returns.
+ * The stream is intended as UTF-8, but a chunk may split a code point or
+ * contain invalid bytes. Console copies the data before this call returns.
  * The enabled-state check and CRTP enqueue are ordered with runtime disable:
  * a successful disable response cannot overtake an accepted chunk.
  *
- * @param sourceId Boot-lifetime source ID returned by consoleSourceRegister().
+ * @param source Successfully registered node pointer. Any other value violates
+ *               the API contract.
  * @param data Non-NULL buffer containing the chunk to send.
  * @param length Number of bytes in data; must fit beside the source ID in one
  *               CRTP packet (at most CRTP_MAX_DATA_SIZE - 1).
- * @return true when the chunk was accepted by the CRTP transmit queue;
- *         false when the source is invalid or disabled, data is NULL, length
- *         is too large, or the queue cannot accept the packet immediately.
+ * @return true if the CRTP transmit queue accepted the chunk. This does not
+ *         confirm delivery to a client. Returns false if the source is
+ *         disabled, data is NULL, length is too large, or the queue cannot
+ *         accept the packet immediately.
  */
-bool consoleSourceSend(uint8_t sourceId, const uint8_t *data, size_t length);
+bool consoleSourceSend(const ConsoleSource *source, const uint8_t *data,
+                       size_t length);
 
 #ifdef UNIT_TEST_MODE
 /** Reset Console module state between host tests. */

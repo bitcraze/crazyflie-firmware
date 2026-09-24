@@ -42,12 +42,12 @@ bool deckctrl_gpio_write(DeckInfo *info, DeckCtrlGPIOPin pin, uint32_t value) {
 void vTaskDelay(const TickType_t ticks) { (void)ticks; }
 void vPortEnterCritical(void) {}
 void vPortExitCritical(void) {}
-bool consoleSourceIsEnabled(uint8_t source_id) {
-  (void)source_id;
+bool consoleSourceIsEnabled(const ConsoleSource *source) {
+  (void)source;
   return false;
 }
-bool consoleSourceSend(uint8_t source_id, const uint8_t *data, size_t length) {
-  (void)source_id;
+bool consoleSourceSend(const ConsoleSource *source, const uint8_t *data, size_t length) {
+  (void)source;
   (void)data;
   (void)length;
   return false;

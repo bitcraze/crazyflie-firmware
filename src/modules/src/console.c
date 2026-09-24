@@ -45,8 +45,8 @@
 #define CONSOLE_CHANNEL_TOC 3u
 /** Source ID selecting every catalog entry in a control request. */
 #define CONSOLE_SOURCE_ALL 0xffu
-/** Maximum number of boot-lifetime console sources. */
-#define CONSOLE_SOURCE_MAX 8u
+/** Number of assignable wire IDs; 0xff selects all sources. */
+#define CONSOLE_SOURCE_MAX 255u
 /** Runtime-control command that changes source enable state. */
 #define CONSOLE_CMD_SET_ENABLED 0x00u
 /** Source-catalog command that returns one entry. */
@@ -54,17 +54,11 @@
 /** Source-catalog command that returns count and CRC. */
 #define CONSOLE_TOC_GET_INFO 0x01u
 
-/** One entry in the immutable boot-lifetime source catalog. */
-typedef struct {
-  char path[CRTP_MAX_DATA_SIZE - 1u];  ///< Owned NUL-terminated source path.
-  uint8_t pathLength;                 ///< Encoded path length without NUL.
-  volatile bool enabled;              ///< Current client-controlled state.
-} ConsoleSource;
-
 /** Registered source catalog in stable source-ID order. */
-static ConsoleSource sources[CONSOLE_SOURCE_MAX];
-/** Number of populated entries in sources. */
-static uint8_t sourceCount;
+static ConsoleSource *sourceHead;
+static ConsoleSource *sourceTail;
+/** Count can reach 255, one past the highest assignable source ID. */
+static uint16_t sourceCount;
 /** True after source registration has permanently closed. */
 static bool sourcesFrozen;
 
@@ -87,7 +81,7 @@ static bool isInit;
 static void addBufferFullMarker();
 /** Handle sourced Console control and catalog CRTP requests. */
 static void consoleCrtpCallback(CRTPPacket *packet);
-/** Send a command-level errno response. */
+/** Echo the request command followed by an error number. */
 static void consoleSendCommandError(CRTPPacket *packet, uint8_t error);
 
 /**
@@ -169,10 +163,14 @@ void consoleInit()
   isInit = true;
 }
 
-int consoleSourceRegister(const char *path)
+int consoleSourceRegister(ConsoleSource *source)
 {
+  if (source == NULL) {
+    return EINVAL;
+  }
+  const char *path = source->path;
   if (path == NULL || path[0] == '\0' || !validUtf8(path)) {
-    return -1;
+    return EINVAL;
   }
 
   bool segmentStart = true;
@@ -180,7 +178,7 @@ int consoleSourceRegister(const char *path)
   for (const char *cursor = path; *cursor != '\0'; cursor++) {
     if (*cursor == ':') {
       if (segmentStart) {
-        return -1;
+        return EINVAL;
       }
       segmentStart = true;
     } else {
@@ -188,34 +186,37 @@ int consoleSourceRegister(const char *path)
     }
     length++;
   }
-  if (segmentStart || length > (CRTP_MAX_DATA_SIZE - 2u)) {
-    return -1;
+  if (segmentStart || length > (CRTP_MAX_DATA_SIZE - 3u)) {
+    return EINVAL;
   }
-  int result = -1;
   taskENTER_CRITICAL();
   if (sourcesFrozen) {
     taskEXIT_CRITICAL();
-    return result;
+    return EBUSY;
   }
-  for (uint8_t i = 0u; i < sourceCount; i++) {
-    if (strcmp(sources[i].path, path) == 0) {
-      result = i;
+  for (ConsoleSource *entry = sourceHead; entry != NULL; entry = entry->next) {
+    if (entry == source || strcmp(entry->path, path) == 0) {
       taskEXIT_CRITICAL();
-      return result;
+      return EEXIST;
     }
   }
   if (sourceCount >= CONSOLE_SOURCE_MAX) {
     taskEXIT_CRITICAL();
-    return result;
+    return ENOSPC;
   }
 
-  const uint8_t id = sourceCount++;
-  memcpy(sources[id].path, path, length + 1u);
-  sources[id].pathLength = (uint8_t)length;
-  sources[id].enabled = false;
-  result = id;
+  source->next = NULL;
+  source->id = (uint8_t)sourceCount++;
+  source->pathLength = (uint8_t)length;
+  source->enabled = false;
+  if (sourceTail == NULL) {
+    sourceHead = source;
+  } else {
+    sourceTail->next = source;
+  }
+  sourceTail = source;
   taskEXIT_CRITICAL();
-  return result;
+  return 0;
 }
 
 void consoleSourceFreeze(void)
@@ -225,18 +226,16 @@ void consoleSourceFreeze(void)
   taskEXIT_CRITICAL();
 }
 
-bool consoleSourceIsEnabled(uint8_t sourceId)
+bool consoleSourceIsEnabled(const ConsoleSource *source)
 {
   bool enabled = false;
   taskENTER_CRITICAL();
-  if (sourceId < sourceCount) {
-    enabled = sources[sourceId].enabled;
-  }
+  enabled = source->enabled;
   taskEXIT_CRITICAL();
   return enabled;
 }
 
-bool consoleSourceSend(uint8_t sourceId, const uint8_t *data, size_t length)
+bool consoleSourceSend(const ConsoleSource *source, const uint8_t *data, size_t length)
 {
   if (data == NULL || length > (CRTP_MAX_DATA_SIZE - 1u)) {
     return false;
@@ -246,12 +245,12 @@ bool consoleSourceSend(uint8_t sourceId, const uint8_t *data, size_t length)
     .header = CRTP_HEADER(CRTP_PORT_CONSOLE, CONSOLE_CHANNEL_SOURCED),
     .size = (uint8_t)(length + 1u),
   };
-  packet.data[0] = sourceId;
+  packet.data[0] = source->id;
   memcpy(&packet.data[1], data, length);
 
   bool accepted = false;
   taskENTER_CRITICAL();
-  if (sourceId < sourceCount && sources[sourceId].enabled) {
+  if (source->enabled) {
     accepted = crtpSendPacket(&packet) == pdTRUE;
   }
   taskEXIT_CRITICAL();
@@ -261,7 +260,8 @@ bool consoleSourceSend(uint8_t sourceId, const uint8_t *data, size_t length)
 #ifdef UNIT_TEST_MODE
 void consoleResetForTest(void)
 {
-  memset(sources, 0, sizeof(sources));
+  sourceHead = NULL;
+  sourceTail = NULL;
   sourceCount = 0u;
   sourcesFrozen = false;
   messageSendingIsPending = false;
@@ -275,9 +275,9 @@ static uint32_t consoleCatalogCrc(void)
 {
   crc32Context_t context;
   crc32ContextInit(&context);
-  for (uint8_t id = 0u; id < sourceCount; id++) {
-    crc32Update(&context, &id, sizeof(id));
-    crc32Update(&context, sources[id].path, sources[id].pathLength);
+  for (const ConsoleSource *source = sourceHead; source != NULL; source = source->next) {
+    crc32Update(&context, &source->id, sizeof(source->id));
+    crc32Update(&context, source->path, source->pathLength);
   }
   return crc32Out(&context);
 }
@@ -289,58 +289,84 @@ static void consoleSendCommandError(CRTPPacket *packet, uint8_t error)
   (void)crtpSendPacketBlock(packet);
 }
 
-static void consoleCrtpCallback(CRTPPacket *packet)
+static ConsoleSource *consoleSourceById(uint8_t id)
 {
-  if (packet->channel == CONSOLE_CHANNEL_CONTROL) {
-    if (packet->size == 0u) {
-      return;
+  for (ConsoleSource *source = sourceHead; source != NULL; source = source->next) {
+    if (source->id == id) {
+      return source;
     }
-    if (packet->data[0] != CONSOLE_CMD_SET_ENABLED) {
+  }
+  return NULL;
+}
+
+static void consoleHandleControl(CRTPPacket *packet)
+{
+  if (packet->size == 0u) {
+    return;
+  }
+  switch (packet->data[0]) {
+    case CONSOLE_CMD_SET_ENABLED:
+      break;
+    default:
       consoleSendCommandError(packet, ENOSYS);
       return;
-    }
-    if (packet->size != 3u || packet->data[2] > 1u) {
-      consoleSendCommandError(packet, EINVAL);
-      return;
-    }
+  }
+  if (packet->size != 3u || packet->data[2] > 1u) {
+    consoleSendCommandError(packet, EINVAL);
+    return;
+  }
 
-    const uint8_t sourceId = packet->data[1];
-    uint8_t result = 0u;
-    taskENTER_CRITICAL();
-    if (!sourcesFrozen) {
-      result = EAGAIN;
-    } else if (sourceId == CONSOLE_SOURCE_ALL) {
-      for (uint8_t i = 0u; i < sourceCount; i++) {
-        sources[i].enabled = packet->data[2] != 0u;
-      }
-    } else if (sourceId < sourceCount) {
-      sources[sourceId].enabled = packet->data[2] != 0u;
+  const uint8_t sourceId = packet->data[1];
+  uint8_t result = 0u;
+  taskENTER_CRITICAL();
+  if (!sourcesFrozen) {
+    result = EAGAIN;
+  } else if (sourceId == CONSOLE_SOURCE_ALL) {
+    for (ConsoleSource *source = sourceHead; source != NULL; source = source->next) {
+      source->enabled = packet->data[2] != 0u;
+    }
+  } else {
+    ConsoleSource *source = consoleSourceById(sourceId);
+    if (source != NULL) {
+      source->enabled = packet->data[2] != 0u;
     } else {
       result = ENOENT;
     }
-    taskEXIT_CRITICAL();
-    packet->size = 4u;
-    packet->data[3] = result;
-    (void)crtpSendPacketBlock(packet);
-    return;
   }
-
-  if (packet->channel != CONSOLE_CHANNEL_TOC || packet->size == 0u) {
-    return;
-  }
-  if (packet->data[0] == CONSOLE_TOC_GET_INFO) {
-    if (packet->size != 1u) {
-      consoleSendCommandError(packet, EINVAL);
-      return;
-    }
-  } else if (packet->data[0] == CONSOLE_TOC_GET_ITEM) {
-    if (packet->size != 2u) {
-      consoleSendCommandError(packet, EINVAL);
-      return;
-    }
+  taskEXIT_CRITICAL();
+  if (result != 0u) {
+    consoleSendCommandError(packet, result);
   } else {
-    consoleSendCommandError(packet, ENOSYS);
+    packet->size = 4u;
+    packet->data[3] = packet->data[2];
+    packet->data[2] = sourceId;
+    packet->data[1] = 0u;
+    packet->data[0] = CONSOLE_CMD_SET_ENABLED;
+    (void)crtpSendPacketBlock(packet);
+  }
+}
+
+static void consoleHandleCatalog(CRTPPacket *packet)
+{
+  if (packet->size == 0u) {
     return;
+  }
+  switch (packet->data[0]) {
+    case CONSOLE_TOC_GET_INFO:
+      if (packet->size != 1u) {
+        consoleSendCommandError(packet, EINVAL);
+        return;
+      }
+      break;
+    case CONSOLE_TOC_GET_ITEM:
+      if (packet->size != 2u) {
+        consoleSendCommandError(packet, EINVAL);
+        return;
+      }
+      break;
+    default:
+      consoleSendCommandError(packet, ENOSYS);
+      return;
   }
 
   bool frozen;
@@ -353,21 +379,41 @@ static void consoleCrtpCallback(CRTPPacket *packet)
   }
   if (packet->data[0] == CONSOLE_TOC_GET_INFO) {
     const uint32_t crc = consoleCatalogCrc();
-    packet->size = 6u;
-    packet->data[1] = sourceCount;
-    memcpy(&packet->data[2], &crc, sizeof(crc));
+    packet->size = 7u;
+    packet->data[0] = CONSOLE_TOC_GET_INFO;
+    packet->data[1] = 0u;
+    packet->data[2] = (uint8_t)sourceCount;
+    memcpy(&packet->data[3], &crc, sizeof(crc));
     (void)crtpSendPacketBlock(packet);
   } else {
     const uint8_t sourceId = packet->data[1];
-    if (sourceId >= sourceCount) {
+    const ConsoleSource *source = consoleSourceById(sourceId);
+    if (source == NULL) {
       consoleSendCommandError(packet, ENOENT);
       return;
     } else {
-      const size_t length = sources[sourceId].pathLength;
-      memcpy(&packet->data[2], sources[sourceId].path, length);
-      packet->size = (uint8_t)(length + 2u);
+      const size_t length = source->pathLength;
+      memcpy(&packet->data[3], source->path, length);
+      packet->size = (uint8_t)(length + 3u);
+      packet->data[0] = CONSOLE_TOC_GET_ITEM;
+      packet->data[1] = 0u;
+      packet->data[2] = sourceId;
     }
     (void)crtpSendPacketBlock(packet);
+  }
+}
+
+static void consoleCrtpCallback(CRTPPacket *packet)
+{
+  switch (packet->channel) {
+    case CONSOLE_CHANNEL_CONTROL:
+      consoleHandleControl(packet);
+      break;
+    case CONSOLE_CHANNEL_TOC:
+      consoleHandleCatalog(packet);
+      break;
+    default:
+      break;
   }
 }
 

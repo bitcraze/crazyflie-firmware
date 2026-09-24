@@ -29,6 +29,7 @@
  */
 
 #include <errno.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "FreeRTOS.h"
@@ -55,6 +56,20 @@ static bool injectDisableAtSend;
 static bool disableDeferred;
 /** Source ID used by the injected disable request. */
 static uint8_t injectedDisableSourceId;
+/** Candidate nodes retained for the duration of each test. */
+static ConsoleSource testSources[260];
+static size_t nextTestSource;
+
+static ConsoleSource *newSource(const char *path) {
+  TEST_ASSERT_LESS_THAN(sizeof(testSources) / sizeof(testSources[0]), nextTestSource);
+  ConsoleSource *source = &testSources[nextTestSource++];
+  source->path = path;
+  return source;
+}
+
+static int registerSource(const char *path) {
+  return consoleSourceRegister(newSource(path));
+}
 
 /** Dispatch the disable request used by the race fixture. */
 static void dispatchInjectedDisable(void) {
@@ -181,6 +196,7 @@ void setUp(void) {
   injectDisableAtSend = false;
   disableDeferred = false;
   injectedDisableSourceId = 0u;
+  nextTestSource = 0u;
   consoleInit();
   TEST_ASSERT_NOT_NULL(consoleCallback);
 }
@@ -262,26 +278,24 @@ void testRequestsBeforeFreezeReportCommandErrors(void) {
   assertCommandError(0u, EINVAL);
   clearSentPackets();
 
-  TEST_ASSERT_EQUAL_INT(0, consoleSourceRegister("deck:bcCam"));
+  TEST_ASSERT_EQUAL_INT(0, registerSource("deck:bcCam"));
   dispatchRequest(2u, 3u, 0u, 0u, 1u);
-  TEST_ASSERT_EQUAL_UINT8(4u, sentPackets[0].size);
+  TEST_ASSERT_EQUAL_UINT8(2u, sentPackets[0].size);
   TEST_ASSERT_EQUAL_UINT8(0u, sentPackets[0].data[0]);
-  TEST_ASSERT_EQUAL_UINT8(0u, sentPackets[0].data[1]);
-  TEST_ASSERT_EQUAL_UINT8(1u, sentPackets[0].data[2]);
-  TEST_ASSERT_EQUAL_UINT8(EAGAIN, sentPackets[0].data[3]);
-  TEST_ASSERT_FALSE(consoleSourceIsEnabled(0u));
+  TEST_ASSERT_EQUAL_UINT8(EAGAIN, sentPackets[0].data[1]);
+  TEST_ASSERT_FALSE(consoleSourceIsEnabled(&testSources[0]));
 }
 
 /** Frozen catalog replies have stable framing, contents, and CRC. */
 void testFrozenCatalogReturnsInfoItemsAndErrors(void) {
-  static const uint8_t expectedInfo[] = {1u, 2u, 0x4bu, 0x5eu, 0x1fu, 0x8eu};
-  static const uint8_t expectedItem[] = {0u, 0u, 'd', 'e', 'c', 'k', ':',
+  static const uint8_t expectedInfo[] = {1u, 0u, 2u, 0x4bu, 0x5eu, 0x1fu, 0x8eu};
+  static const uint8_t expectedItem[] = {0u, 0u, 0u, 'd', 'e', 'c', 'k', ':',
                                         'b', 'c', 'C', 'a', 'm'};
-  TEST_ASSERT_EQUAL_INT(0, consoleSourceRegister("deck:bcCam"));
-  TEST_ASSERT_EQUAL_INT(1, consoleSourceRegister("cf:nRF51"));
+  TEST_ASSERT_EQUAL_INT(0, registerSource("deck:bcCam"));
+  TEST_ASSERT_EQUAL_INT(0, registerSource("cf:nRF51"));
   consoleSourceFreeze();
   consoleSourceFreeze();
-  TEST_ASSERT_EQUAL_INT(-1, consoleSourceRegister("deck:late"));
+  TEST_ASSERT_EQUAL_INT(EBUSY, registerSource("deck:late"));
 
   dispatchRequest(3u, 1u, 1u, 0u, 0u);
   TEST_ASSERT_EQUAL_UINT32(1u, sentPacketCount);
@@ -300,7 +314,7 @@ void testFrozenCatalogReturnsInfoItemsAndErrors(void) {
 
 /** A source-free build exposes a valid immutable empty catalog. */
 void testFrozenEmptyCatalogIsUsable(void) {
-  static const uint8_t expectedInfo[] = {1u, 0u, 0u, 0u, 0u, 0u};
+  static const uint8_t expectedInfo[] = {1u, 0u, 0u, 0u, 0u, 0u, 0u};
   consoleSourceFreeze();
 
   dispatchRequest(3u, 1u, 1u, 0u, 0u);
@@ -312,72 +326,74 @@ void testFrozenEmptyCatalogIsUsable(void) {
 /** A disable response cannot overtake a sourced packet that won the race. */
 void testDisableResponseOrdersAfterWinningSourceSend(void) {
   static const uint8_t payload[] = {'o', 'k'};
-  TEST_ASSERT_EQUAL_INT(0, consoleSourceRegister("deck:bcCam"));
+  TEST_ASSERT_EQUAL_INT(0, registerSource("deck:bcCam"));
   consoleSourceFreeze();
   dispatchRequest(2u, 3u, 0u, 0u, 1u);
   clearSentPackets();
 
   injectedDisableSourceId = 0u;
   injectDisableAtSend = true;
-  TEST_ASSERT_TRUE(consoleSourceSend(0u, payload, sizeof(payload)));
+  TEST_ASSERT_TRUE(consoleSourceSend(&testSources[0], payload, sizeof(payload)));
 
   TEST_ASSERT_EQUAL_UINT32(2u, sentPacketCount);
   TEST_ASSERT_EQUAL_UINT8(1u, sentPackets[0].channel);
   TEST_ASSERT_EQUAL_UINT8(0u, sentPackets[0].data[0]);
   TEST_ASSERT_EQUAL_UINT8_ARRAY(payload, &sentPackets[0].data[1], sizeof(payload));
   TEST_ASSERT_EQUAL_UINT8(2u, sentPackets[1].channel);
-  TEST_ASSERT_EQUAL_UINT8(0u, sentPackets[1].data[3]);
-  TEST_ASSERT_FALSE(consoleSourceIsEnabled(0u));
-  TEST_ASSERT_FALSE(consoleSourceSend(0u, payload, sizeof(payload)));
+  TEST_ASSERT_EQUAL_UINT8(0u, sentPackets[1].data[0]);
+  TEST_ASSERT_FALSE(consoleSourceIsEnabled(&testSources[0]));
+  TEST_ASSERT_FALSE(consoleSourceSend(&testSources[0], payload, sizeof(payload)));
   TEST_ASSERT_EQUAL_UINT32(2u, sentPacketCount);
 }
 
 /** Disable-all has the same response barrier as single-source disable. */
 void testDisableAllResponseOrdersAfterWinningSourceSend(void) {
   static const uint8_t payload[] = {'o', 'k'};
-  TEST_ASSERT_EQUAL_INT(0, consoleSourceRegister("deck:bcCam"));
-  TEST_ASSERT_EQUAL_INT(1, consoleSourceRegister("cf:nRF51"));
+  TEST_ASSERT_EQUAL_INT(0, registerSource("deck:bcCam"));
+  TEST_ASSERT_EQUAL_INT(0, registerSource("cf:nRF51"));
   consoleSourceFreeze();
   dispatchRequest(2u, 3u, 0u, 0xffu, 1u);
   clearSentPackets();
 
   injectedDisableSourceId = 0xffu;
   injectDisableAtSend = true;
-  TEST_ASSERT_TRUE(consoleSourceSend(0u, payload, sizeof(payload)));
+  TEST_ASSERT_TRUE(consoleSourceSend(&testSources[0], payload, sizeof(payload)));
 
   TEST_ASSERT_EQUAL_UINT32(2u, sentPacketCount);
   TEST_ASSERT_EQUAL_UINT8(1u, sentPackets[0].channel);
   TEST_ASSERT_EQUAL_UINT8(2u, sentPackets[1].channel);
-  TEST_ASSERT_FALSE(consoleSourceIsEnabled(0u));
-  TEST_ASSERT_FALSE(consoleSourceIsEnabled(1u));
+  TEST_ASSERT_FALSE(consoleSourceIsEnabled(&testSources[0]));
+  TEST_ASSERT_FALSE(consoleSourceIsEnabled(&testSources[1]));
 }
 
 /** Runtime control is default-off, idempotent, and supports all sources. */
 void testRuntimeControlIsIdempotent(void) {
-  TEST_ASSERT_EQUAL_INT(0, consoleSourceRegister("deck:bcCam"));
-  TEST_ASSERT_EQUAL_INT(1, consoleSourceRegister("cf:nRF51"));
+  TEST_ASSERT_EQUAL_INT(0, registerSource("deck:bcCam"));
+  TEST_ASSERT_EQUAL_INT(0, registerSource("cf:nRF51"));
   consoleSourceFreeze();
-  TEST_ASSERT_FALSE(consoleSourceIsEnabled(0u));
-  TEST_ASSERT_FALSE(consoleSourceIsEnabled(1u));
+  TEST_ASSERT_FALSE(consoleSourceIsEnabled(&testSources[0]));
+  TEST_ASSERT_FALSE(consoleSourceIsEnabled(&testSources[1]));
 
   dispatchRequest(2u, 3u, 0u, 0u, 1u);
   dispatchRequest(2u, 3u, 0u, 0u, 1u);
-  TEST_ASSERT_TRUE(consoleSourceIsEnabled(0u));
-  TEST_ASSERT_FALSE(consoleSourceIsEnabled(1u));
+  static const uint8_t enabledResponse[] = {0u, 0u, 0u, 1u};
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(enabledResponse, sentPackets[0].data,
+                                 sizeof(enabledResponse));
+  TEST_ASSERT_TRUE(consoleSourceIsEnabled(&testSources[0]));
+  TEST_ASSERT_FALSE(consoleSourceIsEnabled(&testSources[1]));
 
   dispatchRequest(2u, 3u, 0u, 0xffu, 1u);
-  TEST_ASSERT_TRUE(consoleSourceIsEnabled(0u));
-  TEST_ASSERT_TRUE(consoleSourceIsEnabled(1u));
+  TEST_ASSERT_TRUE(consoleSourceIsEnabled(&testSources[0]));
+  TEST_ASSERT_TRUE(consoleSourceIsEnabled(&testSources[1]));
 
   dispatchRequest(2u, 3u, 0u, 0xffu, 0u);
   dispatchRequest(2u, 3u, 0u, 0xffu, 0u);
-  TEST_ASSERT_FALSE(consoleSourceIsEnabled(0u));
-  TEST_ASSERT_FALSE(consoleSourceIsEnabled(1u));
+  TEST_ASSERT_FALSE(consoleSourceIsEnabled(&testSources[0]));
+  TEST_ASSERT_FALSE(consoleSourceIsEnabled(&testSources[1]));
 
   clearSentPackets();
   dispatchRequest(2u, 3u, 0u, 2u, 1u);
-  TEST_ASSERT_EQUAL_UINT8(4u, sentPackets[0].size);
-  TEST_ASSERT_EQUAL_UINT8(ENOENT, sentPackets[0].data[3]);
+  assertCommandError(0u, ENOENT);
 }
 
 /** Enable-all and disable-all succeed for a frozen empty catalog. */
@@ -388,23 +404,25 @@ void testRuntimeControlAllSucceedsForEmptyCatalog(void) {
   dispatchRequest(2u, 3u, 0u, 0xffu, 0u);
 
   TEST_ASSERT_EQUAL_UINT32(2u, sentPacketCount);
-  TEST_ASSERT_EQUAL_UINT8(0u, sentPackets[0].data[3]);
-  TEST_ASSERT_EQUAL_UINT8(0u, sentPackets[1].data[3]);
+  TEST_ASSERT_EQUAL_UINT8(0u, sentPackets[0].data[0]);
+  TEST_ASSERT_EQUAL_UINT8(0u, sentPackets[1].data[0]);
+  TEST_ASSERT_EQUAL_UINT8(0xffu, sentPackets[0].data[2]);
+  TEST_ASSERT_EQUAL_UINT8(0xffu, sentPackets[1].data[2]);
 }
 
 /** Sourced sends preserve framing and report disabled or congested output. */
 void testSourceSendFramesDataAndReportsBackpressure(void) {
   static const uint8_t payload[] = {'a', 'b', 'c'};
   static const uint8_t expected[] = {0u, 'a', 'b', 'c'};
-  TEST_ASSERT_EQUAL_INT(0, consoleSourceRegister("deck:bcCam"));
+  TEST_ASSERT_EQUAL_INT(0, registerSource("deck:bcCam"));
   consoleSourceFreeze();
 
-  TEST_ASSERT_FALSE(consoleSourceSend(0u, payload, sizeof(payload)));
+  TEST_ASSERT_FALSE(consoleSourceSend(&testSources[0], payload, sizeof(payload)));
   TEST_ASSERT_EQUAL_UINT32(0u, sentPacketCount);
   dispatchRequest(2u, 3u, 0u, 0u, 1u);
   clearSentPackets();
 
-  TEST_ASSERT_TRUE(consoleSourceSend(0u, payload, sizeof(payload)));
+  TEST_ASSERT_TRUE(consoleSourceSend(&testSources[0], payload, sizeof(payload)));
   TEST_ASSERT_EQUAL_UINT32(1u, sentPacketCount);
   TEST_ASSERT_EQUAL_UINT8(1u, sentPackets[0].channel);
   TEST_ASSERT_EQUAL_UINT8(sizeof(expected), sentPackets[0].size);
@@ -412,31 +430,47 @@ void testSourceSendFramesDataAndReportsBackpressure(void) {
 
   clearSentPackets();
   nonblockingSendResult = pdFALSE;
-  TEST_ASSERT_FALSE(consoleSourceSend(0u, payload, sizeof(payload)));
+  TEST_ASSERT_FALSE(consoleSourceSend(&testSources[0], payload, sizeof(payload)));
   TEST_ASSERT_EQUAL_UINT32(0u, sentPacketCount);
-  TEST_ASSERT_FALSE(consoleSourceSend(1u, payload, sizeof(payload)));
-  TEST_ASSERT_FALSE(consoleSourceSend(0u, NULL, sizeof(payload)));
-  TEST_ASSERT_FALSE(consoleSourceSend(0u, payload, CRTP_MAX_DATA_SIZE));
+  TEST_ASSERT_FALSE(consoleSourceSend(&testSources[0], NULL, sizeof(payload)));
+  TEST_ASSERT_FALSE(consoleSourceSend(&testSources[0], payload, CRTP_MAX_DATA_SIZE));
 }
 
-/** Verify catalog ownership, duplicate lookup, and bounded capacity. */
-void testSourceCatalogOwnsPathsAndFindsDuplicatesWhenFull(void) {
-  char mutablePath[] = "deck:first";
-  TEST_ASSERT_EQUAL_INT(0, consoleSourceRegister(mutablePath));
+/** Console initializes accepted nodes and leaves rejected nodes unchanged. */
+void testSourceCatalogRejectsDuplicateNodesAndPaths(void) {
+  ConsoleSource *first = newSource("deck:first");
+  first->next = first;
+  first->id = 0xffu;
+  first->pathLength = 0xffu;
+  first->enabled = true;
+  TEST_ASSERT_EQUAL_INT(0, consoleSourceRegister(first));
+  TEST_ASSERT_EQUAL_UINT8(0u, first->id);
+  TEST_ASSERT_NULL(first->next);
+  TEST_ASSERT_FALSE(first->enabled);
+  TEST_ASSERT_EQUAL_INT(EEXIST, consoleSourceRegister(first));
 
-  memcpy(mutablePath, "deck:other", sizeof(mutablePath));
-  TEST_ASSERT_EQUAL_INT(0, consoleSourceRegister("deck:first"));
+  ConsoleSource *duplicate = newSource("deck:first");
+  duplicate->id = 0xaau;
+  TEST_ASSERT_EQUAL_INT(EEXIST, consoleSourceRegister(duplicate));
+  TEST_ASSERT_EQUAL_UINT8(0xaau, duplicate->id);
+  TEST_ASSERT_EQUAL_INT(0, registerSource("deck:second"));
+  TEST_ASSERT_EQUAL_UINT8(1u, testSources[2].id);
+}
 
-  TEST_ASSERT_EQUAL_INT(1, consoleSourceRegister("deck:1"));
-  TEST_ASSERT_EQUAL_INT(2, consoleSourceRegister("deck:2"));
-  TEST_ASSERT_EQUAL_INT(3, consoleSourceRegister("deck:3"));
-  TEST_ASSERT_EQUAL_INT(4, consoleSourceRegister("deck:4"));
-  TEST_ASSERT_EQUAL_INT(5, consoleSourceRegister("deck:5"));
-  TEST_ASSERT_EQUAL_INT(6, consoleSourceRegister("deck:6"));
-  TEST_ASSERT_EQUAL_INT(7, consoleSourceRegister("deck:7"));
-
-  TEST_ASSERT_EQUAL_INT(4, consoleSourceRegister("deck:4"));
-  TEST_ASSERT_EQUAL_INT(-1, consoleSourceRegister("deck:8"));
+/** The reserved all-sources ID cannot be assigned or overflow the count. */
+void testSourceCatalogAccepts255Nodes(void) {
+  char paths[256][10];
+  for (unsigned int id = 0u; id < 255u; id++) {
+    snprintf(paths[id], sizeof(paths[id]), "deck:%03u", id);
+    TEST_ASSERT_EQUAL_INT(0, registerSource(paths[id]));
+    TEST_ASSERT_EQUAL_UINT8(id, testSources[id].id);
+  }
+  snprintf(paths[255], sizeof(paths[255]), "deck:255");
+  TEST_ASSERT_EQUAL_INT(EEXIST, registerSource(paths[254]));
+  TEST_ASSERT_EQUAL_INT(ENOSPC, registerSource(paths[255]));
+  consoleSourceFreeze();
+  dispatchRequest(3u, 1u, 1u, 0u, 0u);
+  TEST_ASSERT_EQUAL_UINT8(255u, sentPackets[0].data[2]);
 }
 
 /** Source paths reject invalid structure, UTF-8, and encoded lengths. */
@@ -444,8 +478,8 @@ void testSourceCatalogRejectsInvalidPaths(void) {
   const char overlongUtf8[] = {(char)0xc0, (char)0x80, '\0'};
   const char truncatedUtf8[] = {(char)0xf0, '\0'};
   const char surrogateUtf8[] = {(char)0xed, (char)0xa0, (char)0x80, '\0'};
-  char maximumPath[CRTP_MAX_DATA_SIZE - 1u];
-  char oversizedPath[CRTP_MAX_DATA_SIZE];
+  char maximumPath[CRTP_MAX_DATA_SIZE - 2u];
+  char oversizedPath[CRTP_MAX_DATA_SIZE - 1u];
   memset(maximumPath, 'a', sizeof(maximumPath));
   maximumPath[0] = 'd';
   maximumPath[1] = ':';
@@ -455,14 +489,19 @@ void testSourceCatalogRejectsInvalidPaths(void) {
   oversizedPath[1] = ':';
   oversizedPath[sizeof(oversizedPath) - 1u] = '\0';
 
-  TEST_ASSERT_EQUAL_INT(-1, consoleSourceRegister(NULL));
-  TEST_ASSERT_EQUAL_INT(-1, consoleSourceRegister(""));
-  TEST_ASSERT_EQUAL_INT(-1, consoleSourceRegister(":deck"));
-  TEST_ASSERT_EQUAL_INT(-1, consoleSourceRegister("deck:"));
-  TEST_ASSERT_EQUAL_INT(-1, consoleSourceRegister("deck::camera"));
-  TEST_ASSERT_EQUAL_INT(-1, consoleSourceRegister(overlongUtf8));
-  TEST_ASSERT_EQUAL_INT(-1, consoleSourceRegister(truncatedUtf8));
-  TEST_ASSERT_EQUAL_INT(-1, consoleSourceRegister(surrogateUtf8));
-  TEST_ASSERT_EQUAL_INT(0, consoleSourceRegister(maximumPath));
-  TEST_ASSERT_EQUAL_INT(-1, consoleSourceRegister(oversizedPath));
+  TEST_ASSERT_EQUAL_INT(EINVAL, consoleSourceRegister(NULL));
+  TEST_ASSERT_EQUAL_INT(EINVAL, registerSource(""));
+  TEST_ASSERT_EQUAL_INT(EINVAL, registerSource(":deck"));
+  TEST_ASSERT_EQUAL_INT(EINVAL, registerSource("deck:"));
+  TEST_ASSERT_EQUAL_INT(EINVAL, registerSource("deck::camera"));
+  TEST_ASSERT_EQUAL_INT(EINVAL, registerSource(overlongUtf8));
+  TEST_ASSERT_EQUAL_INT(EINVAL, registerSource(truncatedUtf8));
+  TEST_ASSERT_EQUAL_INT(EINVAL, registerSource(surrogateUtf8));
+  TEST_ASSERT_EQUAL_INT(0, registerSource(maximumPath));
+  TEST_ASSERT_EQUAL_INT(EINVAL, registerSource(oversizedPath));
+  consoleSourceFreeze();
+  dispatchRequest(3u, 2u, 0u, 0u, 0u);
+  TEST_ASSERT_EQUAL_UINT8(CRTP_MAX_DATA_SIZE, sentPackets[0].size);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(maximumPath, &sentPackets[0].data[3],
+                                 sizeof(maximumPath) - 1u);
 }

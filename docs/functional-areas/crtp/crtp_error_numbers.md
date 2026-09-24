@@ -3,7 +3,10 @@ title: Error numbers
 page_id: crtp_error_numbers
 ---
 
-CRTP responses that include a result byte use standard C errno values. A result of `0` always means success. Non-zero values are error codes from the table below.
+Some CRTP responses report a status byte using the firmware's C errno values.
+Zero means success; nonzero values identify errors in the table below. These
+numbers are part of the wire protocol. A host operating system may use
+different numbers for the same errors.
 
 | ID      | Number | Description |
 | ------- | ------ |-------------|
@@ -41,3 +44,4 @@ CRTP responses that include a result byte use standard C errno values. A result 
 | EPIPE   | 32     | Broken pipe |
 | EDOM    | 33     | Math argument out of domain of func |
 | ERANGE  | 34     | Math result not representable |
+| ENOSYS  | 88     | Function not implemented |

@@ -99,16 +99,16 @@ void bccam_uart_service_test_set_bootloader_enter_result(bool result);
 /**
  * Force whether tests model an enabled and bound diagnostic Console source.
  *
- * @param active true to suspend startup recovery as production does while a
- *               client is consuming a bound Console service; false otherwise.
+ * @param active true to suspend startup recovery as production does while the
+ *               source is enabled and bound; false otherwise.
  */
 void bccam_uart_service_test_set_console_diagnostics_active(bool active);
 /**
- * Override the Console source ID used by the UART forwarding state machine.
+ * Model whether Console accepted the Camera Deck source for forwarding tests.
  *
- * @param source_id registered source ID, or -1 to model failed registration.
+ * @param registered Whether the Camera Deck Console source was registered.
  */
-void bccam_uart_service_test_set_console_source_id(int source_id);
+void bccam_uart_service_test_set_console_source_registered(bool registered);
 
 /**
  * Advance the production Console forwarding state machine by one step.
