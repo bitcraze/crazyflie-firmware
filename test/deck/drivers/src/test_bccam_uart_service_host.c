@@ -33,8 +33,8 @@ void vPortExitCritical(void) {
   critical_depth--;
 }
 
-bool consoleSourceIsEnabled(uint8_t source_id) {
-  (void)source_id;
+bool consoleSourceIsEnabled(const ConsoleSource *source) {
+  (void)source;
   const bool enabled = console_enabled_check_count == 0u ||
     console_enabled_after_first_check;
   if (console_enabled_check_count > 0u && critical_depth > 0u) {
@@ -44,8 +44,8 @@ bool consoleSourceIsEnabled(uint8_t source_id) {
   return enabled;
 }
 
-bool consoleSourceSend(uint8_t source_id, const uint8_t *data, size_t length) {
-  (void)source_id;
+bool consoleSourceSend(const ConsoleSource *source, const uint8_t *data, size_t length) {
+  (void)source;
   if (!console_accept_output) {
     return false;
   }
@@ -150,7 +150,7 @@ static void complete_console_service_link_establishment(void)
     'b','i','t','c','r','a','z','e','.','c','o','n','s','o','l','e'
   };
   service_receive_management(descriptor_reply, sizeof(descriptor_reply));
-  bccam_uart_service_test_set_console_source_id(0);
+  bccam_uart_service_test_set_console_source_registered(true);
 }
 
 static void establish_console_service_link(void) {
