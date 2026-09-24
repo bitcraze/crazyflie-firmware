@@ -9,10 +9,14 @@
 #endif
 
 // Deck controller logical GPIO mapping (STM32 deck-ctrl MCU)
-#define GPIO_QCC_EN   0 // PA2 - QCC enable/reset
-#define GPIO_QCC_BOOT 5 // PA7 - QCC SYS_BOOT
+#define GPIO_QCC_EN   DECKCTRL_GPIO_PIN_2 // PA2 - QCC enable/reset
+#define GPIO_QCC_BOOT DECKCTRL_GPIO_PIN_7 // PA7 - QCC SYS_BOOT
 
 #if defined(UNIT_TEST) || defined(UNIT_TEST_MODE)
+// deckctrl_gpio.h pulls in the STM32 headers, so mirror the few values needed
+// here rather than including it in host builds.
+#define DECKCTRL_GPIO_PIN_2 2
+#define DECKCTRL_GPIO_PIN_7 7
 #define OUTPUT 1
 #define LOW 0
 #define HIGH 1
