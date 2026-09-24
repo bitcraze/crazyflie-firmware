@@ -10,6 +10,8 @@
 #include "queue.h"
 #include "semphr.h"
 #include "task.h"
+#include "console.h"
+#include "crtp.h"
 
 #if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
 #include "static_mem.h"
@@ -66,6 +68,8 @@ static uint16_t test_rx_post_drain_poll_count;
 static uint16_t test_incompatible_report_count;
 static bool test_bootloader_enter_result_forced;
 static bool test_bootloader_enter_result;
+/** Forced enabled-and-bound Console state used by watchdog host tests. */
+static bool test_console_diagnostics_active;
 #endif
 
 #ifdef CONFIG_DECK_BCCAM_DEBUG
@@ -75,6 +79,23 @@ static uint16_t control_malformed_logged;
 
 uint8_t bccam_uart_service_link_state_log;
 static bccam_uart_service_status_t service_status_cache;
+
+/** Static storage for the registered Camera Deck Console source. */
+static ConsoleSource console_source = { .path = "deck:bcCam" };
+/** True after Console accepts console_source. */
+static bool console_source_registered;
+/** Staging buffer for one accepted Camera Console frame. */
+static uint8_t console_frame[BCCAM_UART_CAMERA_PROFILE_MTU];
+/** Total number of bytes in console_frame. */
+static uint16_t console_frame_length;
+/** Offset of the next byte to enqueue to CRTP. */
+static uint16_t console_frame_offset;
+/** True while console_frame contains bytes still awaiting CRTP. */
+static bool console_frame_pending;
+/** True while the consumed Common Link slot still needs release. */
+static bool console_release_pending;
+/** True when completing console_frame must schedule a slot release. */
+static bool console_frame_needs_release;
 
 #if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
 static xQueueHandle request_queue;
@@ -94,6 +115,18 @@ STATIC_MEM_QUEUE_ALLOC(rx_queue,
                        sizeof(bccam_uart_rx_event_t));
 STATIC_MEM_TASK_ALLOC(bcCamUartTask, BCCAM_UART_TASK_STACKSIZE);
 #endif
+
+/** Check whether a client can currently use Console for startup diagnosis. */
+static bool console_diagnostics_active(void)
+{
+#if defined(UNIT_TEST) || defined(UNIT_TEST_MODE)
+  return test_console_diagnostics_active;
+#else
+  return console_source_registered &&
+    bccam_uart_runtime_console_service_bound(&firmware_client.runtime) &&
+    consoleSourceIsEnabled(&console_source);
+#endif
+}
 
 static void observe_firmware_client(
   bccam_firmware_uart_client_observation_t *observation) {
@@ -570,6 +603,29 @@ static void enter_fw_resetting(void) {
   firmware_startup_deadline_tick = 0;
   reset_control_probe_logging();
   reset_rx_queue_state();
+  // The camera commits transmitted bytes, so retain an accepted receive slot
+  // before establishment clears the old link session. Taking it grants no
+  // credit and is safe even when the source is disabled.
+  if (!console_frame_pending &&
+      bccam_uart_runtime_console_service_bound(&firmware_client.runtime)) {
+    uint16_t length = 0u;
+    bool present = false;
+    const int result = bccam_uart_runtime_take_console_rx(
+      &firmware_client.runtime, console_frame, sizeof(console_frame),
+      &length, &present);
+    if (result == BCCAM_UART_OK && present) {
+      console_frame_length = length;
+      console_frame_offset = 0u;
+      console_frame_pending = length > 0u;
+    }
+  }
+  if (!console_frame_pending) {
+    console_frame_length = 0u;
+    console_frame_offset = 0u;
+  }
+  // The retained bytes no longer own a receive slot in the next session.
+  console_frame_needs_release = false;
+  console_release_pending = false;
   update_service_status_cache();
 }
 
@@ -938,6 +994,14 @@ static bool update_startup_recovery_watchdog(
     return false;
   }
 
+  if (console_diagnostics_active()) {
+    // Keep the timeout paused while the diagnostic source is enabled and bound.
+    // CRTP does not track client connections reliably, so a disconnected
+    // client may leave the timeout paused. Disabling starts a fresh timeout.
+    firmware_startup_deadline_tick = 0;
+    return false;
+  }
+
   if (firmware_startup_deadline_tick == 0) {
     firmware_startup_deadline_tick =
       now_ticks + M2T(BCCAM_FW_STARTUP_TIMEOUT_MS);
@@ -1006,6 +1070,95 @@ static void poll_firmware_link_at(uint32_t now_ticks) {
   }
 
   update_service_status_cache();
+}
+
+/** Return true for transient Console forwarding backpressure results. */
+static bool temporary_console_result(int result)
+{
+  return result == BCCAM_UART_ERR_TRANSACTION_BUSY ||
+         result == BCCAM_UART_ERR_NO_CREDIT;
+}
+
+/** Publish Console receive credit only while the source remains enabled. */
+static int publish_console_credit_if_enabled(bool release_consumed_slot,
+                                             bool *published)
+{
+  int result = BCCAM_UART_OK;
+  *published = false;
+  taskENTER_CRITICAL();
+  if (consoleSourceIsEnabled(&console_source)) {
+    result = release_consumed_slot ?
+      bccam_uart_runtime_release_console_rx(&firmware_client.runtime) :
+      bccam_uart_runtime_open_console_rx(&firmware_client.runtime);
+    *published = result == BCCAM_UART_OK;
+  }
+  taskEXIT_CRITICAL();
+  return result;
+}
+
+/** Advance the best-effort Camera Console to CRTP forwarding state machine. */
+static int forward_console(void)
+{
+  if (!console_source_registered ||
+      !bccam_uart_runtime_console_service_bound(&firmware_client.runtime)) {
+    return BCCAM_UART_OK;
+  }
+
+  const bool enabled = consoleSourceIsEnabled(&console_source);
+  if (!enabled) {
+    return BCCAM_UART_OK;
+  }
+
+  if (console_frame_pending) {
+    const size_t remaining = console_frame_length - console_frame_offset;
+    const size_t chunk = remaining < (CRTP_MAX_DATA_SIZE - 1u) ?
+      remaining : (CRTP_MAX_DATA_SIZE - 1u);
+    if (consoleSourceSend(&console_source,
+                          &console_frame[console_frame_offset], chunk)) {
+      console_frame_offset = (uint16_t)(console_frame_offset + chunk);
+      if (console_frame_offset == console_frame_length) {
+        console_frame_pending = false;
+        console_release_pending = console_frame_needs_release;
+        console_frame_needs_release = false;
+      }
+    }
+    return BCCAM_UART_OK;
+  }
+
+  if (console_release_pending) {
+    bool published = false;
+    const int result = publish_console_credit_if_enabled(true, &published);
+    if (published) {
+      console_release_pending = false;
+    }
+    return result;
+  }
+
+  uint16_t length = 0u;
+  bool present = false;
+  int result = bccam_uart_runtime_take_console_rx(
+    &firmware_client.runtime, console_frame, sizeof(console_frame),
+    &length, &present);
+  if (result != BCCAM_UART_OK || !present) {
+    if (result == BCCAM_UART_OK && enabled) {
+      bool published = false;
+      result = publish_console_credit_if_enabled(false, &published);
+    }
+    return result;
+  }
+
+  if (enabled) {
+    console_frame_length = length;
+    console_frame_offset = 0u;
+    console_frame_pending = true;
+    console_frame_needs_release = true;
+    if (length == 0u) {
+      console_frame_pending = false;
+      console_release_pending = true;
+      console_frame_needs_release = false;
+    }
+  }
+  return BCCAM_UART_OK;
 }
 
 static bool handle_rx_event(const bccam_uart_rx_event_t *event) {
@@ -1128,6 +1281,14 @@ static void service_poll_once_at(uint32_t now_ticks) {
              service_state == BCCAM_UART_SERVICE_STATE_FW_ACTIVE ||
              service_state == BCCAM_UART_SERVICE_STATE_FW_INCOMPATIBLE) {
     poll_firmware_link_at(now_ticks);
+#if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
+    const int console_result = forward_console();
+    if (console_result != BCCAM_UART_OK &&
+        !temporary_console_result(console_result)) {
+      DEBUG_PRINT("UART console forwarding failed: %d\n", console_result);
+      enter_fw_resetting();
+    }
+#endif
   }
 }
 
@@ -1172,6 +1333,11 @@ void bccam_uart_service_init(DeckInfo *deck_info_arg) {
   firmware_startup_deadline_tick = 0;
   firmware_startup_reset_count = 0;
 #if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
+  const int console_registration_result = consoleSourceRegister(&console_source);
+  console_source_registered = console_registration_result == 0;
+  if (!console_source_registered) {
+    DEBUG_PRINT("Failed to register console source deck:bcCam\n");
+  }
   request_queue = STATIC_MEM_QUEUE_CREATE(request_queue);
   rx_queue = STATIC_MEM_QUEUE_CREATE(rx_queue);
   reset_rx_collector_for_firmware_mode();
@@ -1318,6 +1484,13 @@ void bccam_uart_service_test_reset(void) {
     BCCAM_UART_CONTROL_PROBE_WAITING_FOR_LINK;
   test_bootloader_enter_result_forced = false;
   test_bootloader_enter_result = false;
+  test_console_diagnostics_active = false;
+  console_source_registered = false;
+  console_frame_length = 0u;
+  console_frame_offset = 0u;
+  console_frame_pending = false;
+  console_release_pending = false;
+  console_frame_needs_release = false;
   bccam_firmware_uart_client_init(&firmware_client, &deck_controller);
   bccam_firmware_uart_client_test_trace_reset();
   reset_flash_session();
@@ -1366,6 +1539,21 @@ void bccam_uart_service_test_set_firmware_control_probe_phase(
 void bccam_uart_service_test_set_bootloader_enter_result(bool result) {
   test_bootloader_enter_result_forced = true;
   test_bootloader_enter_result = result;
+}
+
+void bccam_uart_service_test_set_console_diagnostics_active(bool active)
+{
+  test_console_diagnostics_active = active;
+}
+
+void bccam_uart_service_test_set_console_source_registered(bool registered)
+{
+  console_source_registered = registered;
+}
+
+int bccam_uart_service_test_forward_console(void)
+{
+  return forward_console();
 }
 
 void bccam_uart_service_test_poll_once(void) {

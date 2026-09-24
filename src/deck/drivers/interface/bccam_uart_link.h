@@ -12,6 +12,8 @@
 #define BCCAM_UART_SERVICE_LINK_MANAGEMENT 0u
 #define BCCAM_UART_SERVICE_CONTRACT_ID_MAX_LEN 24u
 #define BCCAM_UART_CONTROL_CONTRACT_MAJOR 1u
+/** Supported major version of the bitcraze.console service contract. */
+#define BCCAM_UART_CONSOLE_CONTRACT_MAJOR 1u
 
 typedef enum bccam_uart_result_t {
   BCCAM_UART_OK = 0,
@@ -72,6 +74,9 @@ typedef struct bccam_uart_service_binding_t {
   bccam_uart_service_descriptor_t descriptor;
   uint8_t tx_credit;
   uint8_t rx_advertised_credit;
+  bool rx_pending;  ///< True while this service owns a staged receive unit.
+  uint16_t rx_payload_len;  ///< Number of bytes in rx_payload.
+  uint8_t rx_payload[BCCAM_UART_NORMAL_MAX_PAYLOAD];  ///< Staged unit payload.
 } bccam_uart_service_binding_t;
 
 typedef struct bccam_uart_link_counters_t {
@@ -113,10 +118,8 @@ typedef struct bccam_uart_link_endpoint_t {
   uint8_t pending_tx_credit[256];
   uint8_t observed_credit_handles[32];
   bccam_uart_service_binding_t control_binding;
-  bool rx_pending;
-  uint8_t rx_service;
-  uint16_t rx_payload_len;
-  uint8_t rx_payload[BCCAM_UART_NORMAL_MAX_PAYLOAD];
+  /** Compatible Console service and its independent receive slot. */
+  bccam_uart_service_binding_t console_binding;
   bool tx_pending;
   uint8_t tx_version;
   uint8_t tx_service;
@@ -163,11 +166,50 @@ int bccam_uart_link_take_rx(bccam_uart_link_endpoint_t *endpoint,
                             size_t out_capacity,
                             uint16_t *out_len,
                             bool *unit_present);
+
+/**
+ * Take a pending received unit for one bound service.
+ *
+ * Each service owns its receive staging slot, so taking one service does not
+ * consume a simultaneously pending unit for another service.
+ *
+ * @param endpoint Active Link endpoint that owns the service binding.
+ * @param service Handle of the bound service to read.
+ * @param out Buffer that receives the payload when a unit is pending.
+ * @param out_capacity Number of bytes available in out.
+ * @param out_len Output set to the payload length, or zero when none is
+ *                pending. Must not be NULL.
+ * @param unit_present Output set true only when a unit was copied. Must not be
+ *                     NULL.
+ * @return BCCAM_UART_OK when a unit was taken or none was pending;
+ *         BCCAM_UART_ERR_BAD_ARGUMENT for invalid pointers;
+ *         BCCAM_UART_ERR_UNKNOWN_SERVICE when service is not bound; or
+ *         BCCAM_UART_ERR_BUFFER_TOO_SMALL when out cannot hold the payload.
+ */
+int bccam_uart_link_take_rx_for_service(
+  bccam_uart_link_endpoint_t *endpoint,
+  uint8_t service,
+  uint8_t *out,
+  size_t out_capacity,
+  uint16_t *out_len,
+  bool *unit_present);
 int bccam_uart_link_enter_fault(bccam_uart_link_endpoint_t *endpoint);
 int bccam_uart_link_note_tx_failure(bccam_uart_link_endpoint_t *endpoint);
 
 bool bccam_uart_link_catalog_complete(const bccam_uart_link_endpoint_t *endpoint);
 bool bccam_uart_link_control_binding(const bccam_uart_link_endpoint_t *endpoint,
+                                     bccam_uart_service_descriptor_t *descriptor);
+
+/**
+ * Get the compatible Console service discovered for the current Link session.
+ *
+ * @param endpoint Link endpoint whose immutable service catalog was queried.
+ * @param descriptor Optional output that receives a copy of the discovered
+ *                   Console descriptor when a binding exists. May be NULL.
+ * @return true when a bitcraze.console service with a supported major version
+ *         is bound, otherwise false. A NULL endpoint returns false.
+ */
+bool bccam_uart_link_console_binding(const bccam_uart_link_endpoint_t *endpoint,
                                      bccam_uart_service_descriptor_t *descriptor);
 bool bccam_uart_link_boot_notice_received(const bccam_uart_link_endpoint_t *endpoint);
 void bccam_uart_link_clear_boot_notice(bccam_uart_link_endpoint_t *endpoint);

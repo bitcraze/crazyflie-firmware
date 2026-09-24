@@ -4,6 +4,8 @@
 #include "unity.h"
 #include "bccam_firmware_uart_client.h"
 #include "bccam_uart_service.h"
+#include "console.h" // @NO_MODULE
+#include "crtp.h" // @NO_MODULE
 // @MODULE "bccam_bootloader_uart_client.c"
 // @MODULE "bccam_uart_crc.c"
 // @MODULE "bccam_deck_controller.c"
@@ -14,7 +16,55 @@
 void bccam_bootloader_uart_client_test_queue_rx(const uint8_t *bytes,
                                                 uint32_t length);
 
-void setUp(void) { bccam_uart_service_test_reset(); }
+static bool console_accept_output;
+static uint8_t console_output[128];
+static size_t console_output_length;
+static uint8_t console_enabled_check_count;
+static bool console_enabled_after_first_check;
+static unsigned int critical_depth;
+static bool console_recheck_was_critical;
+
+void vPortEnterCritical(void) {
+  critical_depth++;
+}
+
+void vPortExitCritical(void) {
+  TEST_ASSERT_GREATER_THAN(0u, critical_depth);
+  critical_depth--;
+}
+
+bool consoleSourceIsEnabled(const ConsoleSource *source) {
+  (void)source;
+  const bool enabled = console_enabled_check_count == 0u ||
+    console_enabled_after_first_check;
+  if (console_enabled_check_count > 0u && critical_depth > 0u) {
+    console_recheck_was_critical = true;
+  }
+  console_enabled_check_count++;
+  return enabled;
+}
+
+bool consoleSourceSend(const ConsoleSource *source, const uint8_t *data, size_t length) {
+  (void)source;
+  if (!console_accept_output) {
+    return false;
+  }
+  TEST_ASSERT_TRUE(console_enabled_after_first_check);
+  TEST_ASSERT_TRUE(console_output_length + length <= sizeof(console_output));
+  memcpy(&console_output[console_output_length], data, length);
+  console_output_length += length;
+  return true;
+}
+
+void setUp(void) {
+  console_accept_output = false;
+  console_output_length = 0u;
+  console_enabled_check_count = 0u;
+  console_enabled_after_first_check = false;
+  critical_depth = 0u;
+  console_recheck_was_critical = false;
+  bccam_uart_service_test_reset();
+}
 void tearDown(void) {}
 
 static const bccam_firmware_uart_client_test_trace_entry_t *last_uart_send(void) {
@@ -57,9 +107,8 @@ static uint8_t uart_send_count(void) {
   return count;
 }
 
-static void establish_service_link(void) {
-  bccam_uart_service_test_start_firmware_establishment();
-  bccam_uart_service_test_poll_once();
+static void complete_service_link_establishment(void)
+{
   const bccam_firmware_uart_client_test_trace_entry_t *establish =
     last_uart_send();
   TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_ESTABLISH, establish->bytes[6]);
@@ -70,6 +119,56 @@ static void establish_service_link(void) {
   service_receive_management(reply, sizeof(reply));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_SERVICE_STATE_FW_ACTIVE,
                         bccam_uart_service_get_state());
+}
+
+static void establish_service_link(void) {
+  bccam_uart_service_test_start_firmware_establishment();
+  bccam_uart_service_test_poll_once();
+  complete_service_link_establishment();
+}
+
+static void complete_console_service_link_establishment(void)
+{
+  complete_service_link_establishment();
+
+  const bccam_firmware_uart_client_test_trace_entry_t *count_request =
+    last_uart_send();
+  TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_GET_SERVICE_COUNT,
+                          count_request->bytes[6]);
+  const uint8_t count_reply[] = {
+    BCCAM_UART_LINK_OP_SERVICE_COUNT, count_request->bytes[7], 1
+  };
+  service_receive_management(count_reply, sizeof(count_reply));
+
+  const bccam_firmware_uart_client_test_trace_entry_t *descriptor_request =
+    last_uart_send();
+  TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_GET_SERVICE_DESCRIPTOR,
+                          descriptor_request->bytes[6]);
+  const uint8_t descriptor_reply[] = {
+    BCCAM_UART_LINK_OP_SERVICE_DESCRIPTOR, descriptor_request->bytes[7], 0,
+    7, 1, 0, 16,
+    'b','i','t','c','r','a','z','e','.','c','o','n','s','o','l','e'
+  };
+  service_receive_management(descriptor_reply, sizeof(descriptor_reply));
+  bccam_uart_service_test_set_console_source_registered(true);
+}
+
+static void establish_console_service_link(void) {
+  bccam_uart_service_test_start_firmware_establishment();
+  bccam_uart_service_test_poll_once();
+  complete_console_service_link_establishment();
+}
+
+void testDisableDuringForwardingDoesNotPublishFreshConsoleCredit(void) {
+  establish_console_service_link();
+  const uint8_t sends_before_forward = uart_send_count();
+
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+                        bccam_uart_service_test_forward_console());
+  bccam_uart_service_test_poll_once();
+
+  TEST_ASSERT_EQUAL_UINT8(sends_before_forward, uart_send_count());
+  TEST_ASSERT_TRUE(console_recheck_was_critical);
 }
 
 void testInitialStateIsUninitialized(void) {
@@ -391,6 +490,28 @@ void testIncompatibleAndReadyStartupDisableDeadlineRecovery(void) {
   TEST_ASSERT_EQUAL_UINT32(0, report.reset_count);
 }
 
+/** Verify diagnostics pause recovery and disabling starts a fresh timeout. */
+void testEnabledBoundConsoleSuspendsStalledControlRecovery(void) {
+  bccam_uart_service_test_startup_recovery_report_t report = {0};
+  bccam_uart_service_test_start_firmware_establishment();
+  bccam_uart_service_test_set_firmware_startup_result(
+    BCCAM_UART_FIRMWARE_STARTUP_WAITING);
+  bccam_uart_service_test_set_firmware_control_probe_phase(
+    BCCAM_UART_CONTROL_PROBE_WAITING_FOR_RESPONSE);
+  bccam_uart_service_test_set_console_diagnostics_active(true);
+
+  TEST_ASSERT_FALSE(bccam_uart_service_test_update_startup_watchdog(3000,
+                                                                    &report));
+  TEST_ASSERT_EQUAL_UINT32(0, report.reset_count);
+
+  bccam_uart_service_test_set_console_diagnostics_active(false);
+  TEST_ASSERT_FALSE(bccam_uart_service_test_update_startup_watchdog(3000,
+                                                                    &report));
+  TEST_ASSERT_TRUE(bccam_uart_service_test_update_startup_watchdog(6000,
+                                                                   &report));
+  TEST_ASSERT_EQUAL_UINT32(1, report.reset_count);
+}
+
 void testPollFailureFormattingBoundariesRemainTerminated(void) {
   char one[1] = { 'x' };
   char short_text[8];
@@ -422,4 +543,109 @@ void testInactiveDiagnosticUsesFinalizedLifecycleName(void) {
                                                BCCAM_UART_ERR_BAD_CRC,
                                                &observation, true);
   TEST_ASSERT_NOT_NULL(strstr(text, "link=INACTIVE"));
+}
+
+static void receive_console_frame(const uint8_t *text, size_t length)
+{
+  bccam_uart_rx_event_t event = { .type = BCCAM_UART_RX_EVENT_RAW_FRAME };
+  size_t frame_length = 0u;
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_frame_encode_version(1, 7, text, length,
+      event.raw_frame.bytes, sizeof(event.raw_frame.bytes), &frame_length));
+  event.raw_frame.length = (uint16_t)frame_length;
+  bccam_uart_service_test_handle_rx_event(&event);
+}
+
+static void accept_console_frame(const uint8_t *text, size_t length)
+{
+  establish_console_service_link();
+  console_enabled_after_first_check = true;
+  console_accept_output = true;
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_service_test_forward_console());
+  bccam_uart_service_test_poll_once();
+  receive_console_frame(text, length);
+}
+
+static void recover_stalled_control_while_disabled(void)
+{
+  bccam_uart_service_test_startup_recovery_report_t report = {0};
+  bccam_uart_service_test_set_firmware_startup_result(BCCAM_UART_FIRMWARE_STARTUP_WAITING);
+  bccam_uart_service_test_set_firmware_control_probe_phase(BCCAM_UART_CONTROL_PROBE_WAITING_FOR_RESPONSE);
+  bccam_uart_service_test_set_console_diagnostics_active(true);
+  TEST_ASSERT_FALSE(bccam_uart_service_test_update_startup_watchdog(1000, &report));
+  bccam_uart_service_test_set_console_diagnostics_active(false);
+  TEST_ASSERT_FALSE(bccam_uart_service_test_update_startup_watchdog(1000, &report));
+  TEST_ASSERT_TRUE(bccam_uart_service_test_update_startup_watchdog(4000, &report));
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_SERVICE_STATE_FW_RESETTING, bccam_uart_service_get_state());
+  bccam_uart_service_test_poll_once();
+  complete_console_service_link_establishment();
+}
+
+void testAcceptedConsoleFrameSurvivesDisableWithoutRecovery(void)
+{
+  const uint8_t text[] = "retained console";
+  accept_console_frame(text, sizeof(text));
+  console_enabled_after_first_check = false;
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_service_test_forward_console());
+  TEST_ASSERT_EQUAL_UINT(0u, console_output_length);
+  console_enabled_after_first_check = true;
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_service_test_forward_console());
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_service_test_forward_console());
+  TEST_ASSERT_EQUAL_UINT(sizeof(text), console_output_length);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(text, console_output, sizeof(text));
+}
+
+void testAcceptedConsoleFrameSurvivesDisableTriggeredRecovery(void)
+{
+  const uint8_t text[] = "retained console";
+  accept_console_frame(text, sizeof(text));
+  console_enabled_after_first_check = false;
+  // Recover before forwarding gets another turn to stage the accepted frame.
+  recover_stalled_control_while_disabled();
+  const uint8_t sends_before_forward = uart_send_count();
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_service_test_forward_console());
+  bccam_uart_service_test_poll_once();
+  TEST_ASSERT_EQUAL_UINT8(sends_before_forward, uart_send_count());
+  TEST_ASSERT_EQUAL_UINT(0u, console_output_length);
+  console_enabled_after_first_check = true;
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_service_test_forward_console());
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_service_test_forward_console());
+  TEST_ASSERT_EQUAL_UINT(sizeof(text), console_output_length);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(text, console_output, sizeof(text));
+}
+
+void testPartiallyForwardedConsoleFrameSurvivesRepeatedRecovery(void)
+{
+  const uint8_t text[] = "console output spanning more than one CRTP packet";
+  const uint8_t live[] = "live";
+  accept_console_frame(text, sizeof(text));
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_service_test_forward_console());
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_service_test_forward_console());
+  TEST_ASSERT_EQUAL_UINT(CRTP_MAX_DATA_SIZE - 1u, console_output_length);
+  console_enabled_after_first_check = false;
+  recover_stalled_control_while_disabled();
+  recover_stalled_control_while_disabled();
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_service_test_forward_console());
+  TEST_ASSERT_EQUAL_UINT(CRTP_MAX_DATA_SIZE - 1u, console_output_length);
+
+  console_enabled_after_first_check = true;
+  const uint8_t sends_before_forward = uart_send_count();
+  for (unsigned int i = 0u; i < 4u; i++) {
+    TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_service_test_forward_console());
+    bccam_uart_service_test_poll_once();
+  }
+  TEST_ASSERT_EQUAL_UINT(sizeof(text), console_output_length);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(text, console_output, sizeof(text));
+  // Recovery must open one fresh credit, without releasing an old-session slot.
+  TEST_ASSERT_EQUAL_UINT8(sends_before_forward + 1u, uart_send_count());
+  const bccam_firmware_uart_client_test_trace_entry_t *credit = last_uart_send();
+  TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_CREDIT_UPDATE, credit->bytes[6]);
+  TEST_ASSERT_EQUAL_UINT8(7u, credit->bytes[8]);
+  TEST_ASSERT_EQUAL_UINT8(1u, credit->bytes[9]);
+
+  receive_console_frame(live, sizeof(live));
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_service_test_forward_console());
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_service_test_forward_console());
+  TEST_ASSERT_EQUAL_UINT(sizeof(text) + sizeof(live), console_output_length);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(live, &console_output[sizeof(text)], sizeof(live));
 }
