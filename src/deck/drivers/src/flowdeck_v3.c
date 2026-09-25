@@ -55,11 +55,18 @@
 #include "deckctrl_spi.h"
 
 
-#define OULIER_LIMIT 100
+// The sensor tracks up to 7.4 rad/s, about 2.9 pixels per frame
+#define OUTLIER_LIMIT_PIXELS 3.5f
 #define RANGE_OUTLIER_LIMIT 4000 // the measured range is in [mm]
 
 
-static uint8_t resolution = 0x4c;
+// Resolution setting of the flow sensor, must match the deck firmware
+#define FLOW_SENSOR_RESOLUTION 0x4C
+// Pixels per count at that setting
+static const float pixelsPerCount = 4.477f / (FLOW_SENSOR_RESOLUTION + 1);
+// The flow measurement model takes the motion in units of 0.1 pixel, as the
+// Flow v2 delivers it
+static const float modelUnitsPerPixel = 10.0f;
 static flowMeasurement_t flowData;
 
 static uint8_t outlierCount = 0;
@@ -182,8 +189,11 @@ static void flowdeckV3HandleFlow(const flowdeckV3UartFlowFrame_t *frame) {
   flowShutterLog = frame->shutter;
   flowFrameCountLog++;
 
+  float pixelsX = accpx * pixelsPerCount;
+  float pixelsY = accpy * pixelsPerCount;
+
   // Outlier removal
-  if (abs(accpx) < OULIER_LIMIT && abs(accpy) < OULIER_LIMIT) {
+  if (fabsf(pixelsX) < OUTLIER_LIMIT_PIXELS && fabsf(pixelsY) < OUTLIER_LIMIT_PIXELS) {
      if (useAdaptiveStd) {
       // The standard deviation is fitted by measurements flying over low and high texture
       //   and looking at the shutter time
@@ -198,12 +208,12 @@ static void flowdeckV3HandleFlow(const flowdeckV3UartFlowFrame_t *frame) {
       stdFlow = flowStdFixed;
     }
 
-    flowData.stdDevX = stdFlow * 0.1f;
-    flowData.stdDevY = stdFlow * 0.1f;
+    flowData.stdDevX = stdFlow;
+    flowData.stdDevY = stdFlow;
     flowData.dt = 1.0f / 126.0f;
 
-    flowData.dpixelx = (float) accpx;
-    flowData.dpixely = (float) accpy;
+    flowData.dpixelx = pixelsX * modelUnitsPerPixel;
+    flowData.dpixely = pixelsY * modelUnitsPerPixel;
 
     // Push measurements into the estimator if flow is not disabled
     // and the PMW flow sensor indicates motion detection
@@ -710,6 +720,3 @@ PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcFlow3, &isInit)
 
 PARAM_GROUP_STOP(deck)
 
-PARAM_GROUP_START(flow)
-PARAM_ADD(PARAM_UINT8, resolution, &resolution)
-PARAM_GROUP_STOP(flow)
