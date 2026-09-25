@@ -31,11 +31,54 @@
  * exists -- i2cdevInit() is a no-op stub, see i2cdev_sim.c/Phase 4.0), so
  * there is no deck that could ever request this. Fixed false forever: no
  * deck ever overrides attitude-reversion in sim.
+ *
+ * Also registers the "deck" param group. On real hardware every compiled-in
+ * deck driver adds its own read-only bc<Deck> "is attached" param to this
+ * group, and they exist (reading 0) even with no deck attached -- cfclient
+ * relies on that (FlightTab, lighthouse_tab, LEDRingTab, ColorLEDTab index
+ * param.values["deck"][...] unguarded). Since no driver is built under sim,
+ * every bc* param declared by any driver in src/deck/drivers/src/ is
+ * mirrored here, all backed by one constant 0 (no deck is ever attached).
+ * CORE/non-CORE flags match each driver's own declaration. bcLoadcell is
+ * declared by both loadcell.c and loadcell_nau7802.c and appears once.
+ * Keep in sync when a driver adds or removes a bc* param.
  */
 
 #include "sim/deck.h"
+#include "param.h"
+
+static uint8_t noDeckAttached = 0;
 
 bool deckGetRequiredKalmanEstimatorAttitudeReversionOff(void)
 {
   return false;
 }
+
+PARAM_GROUP_START(deck)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcACS37800, &noDeckAttached)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcActiveMarker, &noDeckAttached)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcAI, &noDeckAttached)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcBigQuad, &noDeckAttached)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcBuzzer, &noDeckAttached)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcCam, &noDeckAttached)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcCamLink, &noDeckAttached)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcColorLedBot, &noDeckAttached)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcColorLedTop, &noDeckAttached)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcCPPM, &noDeckAttached)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcDWM1000, &noDeckAttached)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcFlapperDeck, &noDeckAttached)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcFlow, &noDeckAttached)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcFlow2, &noDeckAttached)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcGTGPS, &noDeckAttached)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcLedRing, &noDeckAttached)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcLhTester, &noDeckAttached)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcLighthouse4, &noDeckAttached)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcLoadcell, &noDeckAttached)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcLoco, &noDeckAttached)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcMultiranger, &noDeckAttached)
+PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, bcOA, &noDeckAttached)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcServo, &noDeckAttached)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcUSD, &noDeckAttached)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcZRanger, &noDeckAttached)
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcZRanger2, &noDeckAttached)
+PARAM_GROUP_STOP(deck)
