@@ -56,7 +56,7 @@
 
 
 #define OULIER_LIMIT 100
-#define RANGE_OUTLIER_LIMIT 3000 // the measured range is in [mm]
+#define RANGE_OUTLIER_LIMIT 4000 // the measured range is in [mm]
 
 
 static uint8_t resolution = 0x4c;
@@ -234,15 +234,16 @@ static void flowdeckV3Task(void *param) {
     }
 
     // Z-range -------------------------------------------------------
-    rangeSet(rangeDown, rxFrame.rangeMm / 1000.0f);
+    if (rxFrame.rangeMm != FLOWDECK_V3_RANGE_INVALID) {
+      rangeSet(rangeDown, rxFrame.rangeMm / 1000.0f);
 
-    // check if range is feasible and push into the estimator
-    // the sensor should not be able to measure >3 [m], and outliers typically
-    // occur as >8 [m] measurements
-    if (rxFrame.rangeMm < RANGE_OUTLIER_LIMIT) {
-      float distance = (float) rxFrame.rangeMm * 0.001f; // Scale from [mm] to [m]
-      float stdDev = expStdA * (1.0f  + expf( expCoeff * (distance - expPointA)));
-      rangeEnqueueDownRangeInEstimator(distance, stdDev, xTaskGetTickCount());
+      // check if range is feasible and push into the estimator
+      // the sensor should not be able to measure >4 [m]
+      if (rxFrame.rangeMm < RANGE_OUTLIER_LIMIT) {
+        float distance = (float) rxFrame.rangeMm * 0.001f; // Scale from [mm] to [m]
+        float stdDev = expStdA * (1.0f  + expf( expCoeff * (distance - expPointA)));
+        rangeEnqueueDownRangeInEstimator(distance, stdDev, xTaskGetTickCount());
+      }
     }
 
   }

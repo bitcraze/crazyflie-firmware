@@ -22,3 +22,6 @@ typedef struct {
     uint16_t shutter;
 	uint16_t rangeMm;
 } __attribute__((packed)) flowdeckV3UartFrame_t;
+
+// rangeMm value sent by the deck when it has no valid range
+#define FLOWDECK_V3_RANGE_INVALID 0xFFFE
