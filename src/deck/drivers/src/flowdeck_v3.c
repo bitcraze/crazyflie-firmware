@@ -169,10 +169,11 @@ static void flowdeckV3ReadPayload(void *payload, const uint32_t size) {
 }
 
 static void flowdeckV3HandleFlow(const flowdeckV3UartFlowFrame_t *frame) {
-  // Flip motion information to comply with sensor mounting
-  // (might need to be changed if mounted differently)
-  int16_t accpx = (int16_t) -((int32_t) frame->deltaY + INT16_MIN);
-  int16_t accpy = (int16_t) -((int32_t) frame->deltaX + INT16_MIN);
+  // The deck sends the motion of the scene in the body frame: +deltaX when the
+  // drone moves backward, +deltaY when it moves right. The flow measurement
+  // model uses the motion of the drone, so negate both.
+  int16_t accpx = (int16_t) -((int32_t) frame->deltaX + INT16_MIN);
+  int16_t accpy = (int16_t) -((int32_t) frame->deltaY + INT16_MIN);
 
   // Logged before the outlier removal, so that the raw sensor output is visible
   flowMotionLog = (uint8_t)frame->motion;
