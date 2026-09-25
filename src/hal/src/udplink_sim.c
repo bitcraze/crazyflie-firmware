@@ -123,6 +123,16 @@ static void udplinkRxTask(void *param)
       continue;
     }
 
+    /* Null packet (header 0xFF, no payload) is cflib's UdpDriver scan probe.
+     * Answer it straight away, like the radio's auto-ack, so a scan finds us
+     * without waiting for unrelated outgoing traffic. Handled here rather than
+     * passed to CRTP so a scan neither takes over the peer of a connected
+     * client nor reaches the firmware. */
+    if (n == 1 && p.raw[0] == 0xFF) {
+      sendto(fd, p.raw, 1, 0, (struct sockaddr *)&from, fromLen);
+      continue;
+    }
+
     peerAddr = from;
     peerKnown = true;
 
