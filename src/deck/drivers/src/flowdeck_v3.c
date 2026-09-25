@@ -60,10 +60,10 @@
 #define RANGE_OUTLIER_LIMIT 4000 // the measured range is in [mm]
 
 
-// Resolution setting of the flow sensor, must match the deck firmware
-#define FLOW_SENSOR_RESOLUTION 0x4C
-// Pixels per count at that setting
-static const float pixelsPerCount = 4.477f / (FLOW_SENSOR_RESOLUTION + 1);
+// Pixels per count, at the resolution setting of the deck firmware. This is
+// the scale used so far, the ~17 counts per pixel from the resolution formula
+// gave overshoot in flight. Verify with mocap.
+static const float pixelsPerCount = 0.05f;
 // The flow measurement model takes the motion in units of 0.1 pixel, as the
 // Flow v2 delivers it
 static const float modelUnitsPerPixel = 10.0f;
