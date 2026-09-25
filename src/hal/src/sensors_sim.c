@@ -50,6 +50,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "usec_time.h"
+#include "estimator.h"
 
 static bool isInit = false;
 static bool suspended = false;
@@ -91,9 +92,28 @@ void sensorsAcquire(sensorData_t *sensors)
   sensors->interruptTimestamp = usecTimestamp();
 }
 
+/* Mirrors the real sensor tasks (e.g. sensors_bmi088_bmp3xx.c): one gyro and
+ * one acc measurement enqueued to the estimator per stabilizer tick. The
+ * estimators only see IMU data through this queue -- without it the Kalman
+ * prediction runs with zero acceleration, free-falls, and trips the
+ * supervisor's velocity bound. No baro enqueue: the Kalman filter ignores it
+ * unless kalman.useBaroUpdate is set. */
 void sensorsWaitDataReady(void)
 {
   vTaskDelay(pdMS_TO_TICKS(1));
+
+  if (suspended) {
+    return;
+  }
+
+  measurement_t measurement;
+  measurement.type = MeasurementTypeGyroscope;
+  measurement.data.gyroscope.gyro = fixedGyro;
+  estimatorEnqueue(&measurement);
+
+  measurement.type = MeasurementTypeAcceleration;
+  measurement.data.acceleration.acc = fixedAcc;
+  estimatorEnqueue(&measurement);
 }
 
 bool sensorsReadGyro(Axis3f *gyro)
