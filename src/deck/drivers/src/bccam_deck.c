@@ -40,8 +40,8 @@
 #include "debug.h"
 
 // Deck controller logical GPIO mapping (STM32 deck-ctrl MCU)
-#define GPIO_UART_SEL DECKCTRL_GPIO_PIN_11 // PA0 - select expansion UART1
-#define GPIO_PWR_EN   DECKCTRL_GPIO_PIN_10 // PC15 - power enable
+#define GPIO_UART_SEL DECKCTRL_GPIO_PIN_0  // PA0 - select expansion UART1
+#define GPIO_PWR_EN   DECKCTRL_GPIO_PIN_12 // PC15 - power enable
 
 static bool isInit = false;
 static uint32_t newFwSize = 0;

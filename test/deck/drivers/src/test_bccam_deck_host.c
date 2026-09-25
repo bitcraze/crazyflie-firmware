@@ -107,10 +107,10 @@ void testRevisionGInitializesRevGPowerAndUartSelectMappings(void) {
 
   TEST_ASSERT_EQUAL_UINT8(2, gpio_direction_count);
   TEST_ASSERT_EQUAL_UINT8(2, gpio_write_count);
-  TEST_ASSERT_EQUAL_INT(DECKCTRL_GPIO_PIN_10, direction_pins[0]);
-  TEST_ASSERT_EQUAL_INT(DECKCTRL_GPIO_PIN_11, direction_pins[1]);
-  TEST_ASSERT_EQUAL_INT(DECKCTRL_GPIO_PIN_10, write_pins[0]);
-  TEST_ASSERT_EQUAL_INT(DECKCTRL_GPIO_PIN_11, write_pins[1]);
+  TEST_ASSERT_EQUAL_INT(DECKCTRL_GPIO_PIN_12, direction_pins[0]);
+  TEST_ASSERT_EQUAL_INT(DECKCTRL_GPIO_PIN_0, direction_pins[1]);
+  TEST_ASSERT_EQUAL_INT(DECKCTRL_GPIO_PIN_12, write_pins[0]);
+  TEST_ASSERT_EQUAL_INT(DECKCTRL_GPIO_PIN_0, write_pins[1]);
   TEST_ASSERT_EQUAL_UINT8(1, delay_count);
   TEST_ASSERT_EQUAL_UINT8(1, service_init_count);
   TEST_ASSERT_TRUE(driver_bccam_deck->test());

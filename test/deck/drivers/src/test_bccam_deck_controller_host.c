@@ -3,8 +3,8 @@
 #include "unity.h"
 #include "bccam_deck_controller.h"
 
-#define TEST_QCC_EN_PIN 0
-#define TEST_QCC_BOOT_PIN 5
+#define TEST_QCC_EN_PIN 2
+#define TEST_QCC_BOOT_PIN 7
 
 void setUp(void) {
   bccam_deck_controller_test_trace_reset();
