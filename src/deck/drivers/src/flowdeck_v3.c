@@ -66,7 +66,6 @@ static uint8_t outlierCount = 0;
 static float stdFlow = 2.0f;
 
 static bool isInit = false;
-static flowdeckV3UartFrame_t rxFrame;
 
 // Raw values of the last received frame, for bring-up and testing
 static uint8_t flowMotionLog;
@@ -86,12 +85,11 @@ static bool useAdaptiveStd = false;
 // (will not work if useAdaptiveStd is on)
 static float flowStdFixed = 2.0f;
 
-// Range sensor measurement noise model
-static const float expPointA = 1.0f;
-static const float expStdA = 0.0025f; // STD at elevation expPointA [m]
-static const float expPointB = 1.3f;
-static const float expStdB = 0.2f;    // STD at elevation expPointB [m]
-static float expCoeff;
+// Range sensor measurement noise model, from the VL53L5CX datasheet (DS13754)
+// range accuracy, which is given at 2.7 sigma: ±15 mm below 200 mm, and
+// ±8% worst case (gray target, ambient light) for 4x4 at 30 Hz continuous
+static const float rangeStdMin = 0.006f;      // [m]
+static const float rangeStdRelative = 0.03f;  // fraction of the distance
 
 
 static void flowdeckV3ReadByte(uint8_t *byte) {
@@ -143,33 +141,96 @@ static void flowdeckV3ReadText(void) {
   }
 }
 
-// Returns true when a measurement frame was read, false when the deck sent something else
-static bool flowdeckV3ReadData(flowdeckV3UartFrame_t *frame) {
-  uint8_t *raw = (uint8_t *)frame;
+// Wait for the header that the deck sends before each frame
+static uint16_t flowdeckV3ReadHeader(void) {
   uint16_t header = 0;
 
-  // the deck sends a sync header before the start of each frame.
-  // Wait for it.
-  while (header != FLOWDECK_V3_UART_SYNC_HEADER && header != FLOWDECK_V3_UART_TEXT_HEADER) {
+  while (header != FLOWDECK_V3_UART_FLOW_HEADER &&
+         header != FLOWDECK_V3_UART_TOF_HEADER &&
+         header != FLOWDECK_V3_UART_TEXT_HEADER) {
     uint8_t byte;
     flowdeckV3ReadByte(&byte);
     header = (header << 8) | byte;
   }
 
-  if (header == FLOWDECK_V3_UART_TEXT_HEADER) {
-    flowdeckV3ReadText();
-    return false;
-  }
+  return header;
+}
 
-  while (uart1bytesAvailable() < sizeof(*frame)) {
+static void flowdeckV3ReadPayload(void *payload, const uint32_t size) {
+  uint8_t *raw = (uint8_t *)payload;
+
+  while (uart1bytesAvailable() < size) {
     vTaskDelay(M2T(1));
   }
 
-  for (uint32_t i = 0; i < sizeof(*frame); i++) {
+  for (uint32_t i = 0; i < size; i++) {
     uart1Getchar((char *)&raw[i]);
   }
+}
 
-  return true;
+static void flowdeckV3HandleFlow(const flowdeckV3UartFlowFrame_t *frame) {
+  // Flip motion information to comply with sensor mounting
+  // (might need to be changed if mounted differently)
+  int16_t accpx = (int16_t) -((int32_t) frame->deltaY + INT16_MIN);
+  int16_t accpy = (int16_t) -((int32_t) frame->deltaX + INT16_MIN);
+
+  // Logged before the outlier removal, so that the raw sensor output is visible
+  flowMotionLog = (uint8_t)frame->motion;
+  flowDeltaXLog = accpx;
+  flowDeltaYLog = accpy;
+  flowShutterLog = frame->shutter;
+  flowFrameCountLog++;
+
+  // Outlier removal
+  if (abs(accpx) < OULIER_LIMIT && abs(accpy) < OULIER_LIMIT) {
+     if (useAdaptiveStd) {
+      // The standard deviation is fitted by measurements flying over low and high texture
+      //   and looking at the shutter time
+      float shutter_f = (float)frame->shutter;
+      stdFlow=0.0007984f *shutter_f + 0.4335f;
+
+      // The formula with the amount of features instead
+      /*float squal_f = (float)currentMotion.squal;
+      stdFlow =  -0.01257f * squal_f + 4.406f; */
+      if (stdFlow < 0.1f) stdFlow=0.1f;
+    } else {
+      stdFlow = flowStdFixed;
+    }
+
+    flowData.stdDevX = stdFlow * 0.1f;
+    flowData.stdDevY = stdFlow * 0.1f;
+    flowData.dt = 1.0f / 126.0f;
+
+    flowData.dpixelx = (float) accpx;
+    flowData.dpixely = (float) accpy;
+
+    // Push measurements into the estimator if flow is not disabled
+    // and the PMW flow sensor indicates motion detection
+    if (!useFlowDisabled && frame->motion & 0x80) {
+      estimatorEnqueueFlow(&flowData);
+    }
+  } else {
+    outlierCount++;
+  }
+}
+
+static void flowdeckV3HandleTof(const flowdeckV3UartTofFrame_t *frame) {
+  // Logged before any rejection, so that the raw sensor output is visible
+  flowRangeLog = frame->rangeMm;
+
+  if (frame->rangeMm == FLOWDECK_V3_RANGE_INVALID) {
+    return;
+  }
+
+  rangeSet(rangeDown, frame->rangeMm / 1000.0f);
+
+  // check if range is feasible and push into the estimator
+  // the sensor should not be able to measure >4 [m]
+  if (frame->rangeMm < RANGE_OUTLIER_LIMIT) {
+    float distance = (float) frame->rangeMm * 0.001f; // Scale from [mm] to [m]
+    float stdDev = fmaxf(rangeStdMin, rangeStdRelative * distance);
+    rangeEnqueueDownRangeInEstimator(distance, stdDev, xTaskGetTickCount());
+  }
 }
 
 static void flowdeckV3Task(void *param) {
@@ -178,74 +239,27 @@ static void flowdeckV3Task(void *param) {
   uart1Init(FLOWDECK_V3_UART_BAUDRATE);
   systemWaitStart();
 
-  ASSERT(uart1QueueMaxLength() >= sizeof(flowdeckV3UartFrame_t));
+  ASSERT(uart1QueueMaxLength() >= sizeof(flowdeckV3UartFlowFrame_t));
+  ASSERT(uart1QueueMaxLength() >= sizeof(flowdeckV3UartTofFrame_t));
 
-  uint32_t frameCount = 0;
   while (1) {
-    if (!flowdeckV3ReadData(&rxFrame)) {
-      continue;
-    }
-
-    // Flow -------------------------------------------------------
-    // Flip motion information to comply with sensor mounting
-    // (might need to be changed if mounted differently)
-    int16_t accpx = (int16_t) -((int32_t) rxFrame.deltaY + INT16_MIN);
-    int16_t accpy = (int16_t) -((int32_t) rxFrame.deltaX + INT16_MIN);
-
-    // Logged before the outlier removal, so that the raw sensor output is visible
-    flowMotionLog = (uint8_t)rxFrame.motion;
-    flowDeltaXLog = accpx;
-    flowDeltaYLog = accpy;
-    flowShutterLog = rxFrame.shutter;
-    flowRangeLog = rxFrame.rangeMm;
-    flowFrameCountLog++;
-
-    // Outlier removal
-    if (abs(accpx) < OULIER_LIMIT && abs(accpy) < OULIER_LIMIT) {
-       if (useAdaptiveStd) {
-        // The standard deviation is fitted by measurements flying over low and high texture
-        //   and looking at the shutter time
-        float shutter_f = (float)rxFrame.shutter;
-        stdFlow=0.0007984f *shutter_f + 0.4335f;
-
-        // The formula with the amount of features instead
-        /*float squal_f = (float)currentMotion.squal;
-        stdFlow =  -0.01257f * squal_f + 4.406f; */
-        if (stdFlow < 0.1f) stdFlow=0.1f;
-      } else {
-        stdFlow = flowStdFixed;
+    switch (flowdeckV3ReadHeader()) {
+      case FLOWDECK_V3_UART_FLOW_HEADER: {
+        flowdeckV3UartFlowFrame_t frame;
+        flowdeckV3ReadPayload(&frame, sizeof(frame));
+        flowdeckV3HandleFlow(&frame);
+        break;
       }
-    
-      flowData.stdDevX = stdFlow * 0.1f;
-      flowData.stdDevY = stdFlow * 0.1f;
-      flowData.dt = 1.0f / 126.0f;
-      frameCount++;
-
-      flowData.dpixelx = (float) accpx;
-      flowData.dpixely = (float) accpy;
-      
-      // Push measurements into the estimator if flow is not disabled
-      // and the PMW flow sensor indicates motion detection
-      if (!useFlowDisabled && rxFrame.motion & 0x80) {
-        estimatorEnqueueFlow(&flowData);
+      case FLOWDECK_V3_UART_TOF_HEADER: {
+        flowdeckV3UartTofFrame_t frame;
+        flowdeckV3ReadPayload(&frame, sizeof(frame));
+        flowdeckV3HandleTof(&frame);
+        break;
       }
-    } else {
-      outlierCount++;
+      case FLOWDECK_V3_UART_TEXT_HEADER:
+        flowdeckV3ReadText();
+        break;
     }
-
-    // Z-range -------------------------------------------------------
-    if (rxFrame.rangeMm != FLOWDECK_V3_RANGE_INVALID) {
-      rangeSet(rangeDown, rxFrame.rangeMm / 1000.0f);
-
-      // check if range is feasible and push into the estimator
-      // the sensor should not be able to measure >4 [m]
-      if (rxFrame.rangeMm < RANGE_OUTLIER_LIMIT) {
-        float distance = (float) rxFrame.rangeMm * 0.001f; // Scale from [mm] to [m]
-        float stdDev = expStdA * (1.0f  + expf( expCoeff * (distance - expPointA)));
-        rangeEnqueueDownRangeInEstimator(distance, stdDev, xTaskGetTickCount());
-      }
-    }
-
   }
 }
 
@@ -619,9 +633,7 @@ static void flowdeck3Init(DeckInfo *info) {
     DEBUG_PRINT("Failed to power the deck\n");
     return;
   }
-  
-  // pre-compute constant in the measurement noise model for kalman
-  expCoeff = logf(expStdB / expStdA) / (expPointB - expPointA);
+
 
   xTaskCreate(flowdeckV3Task, FLOW_TASK_NAME, FLOW_TASK_STACKSIZE, NULL,
               FLOW_TASK_PRI, NULL);
