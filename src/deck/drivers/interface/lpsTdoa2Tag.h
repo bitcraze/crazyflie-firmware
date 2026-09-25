@@ -10,7 +10,7 @@
 
 extern uwbAlgorithm_t uwbTdoa2TagAlgorithm;
 
-#define LOCODECK_NR_OF_TDOA2_ANCHORS CONFIG_DECK_LOCO_NR_OF_ANCHORS
+#define LOCODECK_NR_OF_TDOA2_ANCHORS 8 // must be kept in sync with NSLOTS in the anchor firmware lps-node-firmware for parsing to be correct. This unit currently handles the range 4-8.
 
 typedef struct {
   const locoAddress_t anchorAddress[LOCODECK_NR_OF_TDOA2_ANCHORS];
