@@ -33,7 +33,7 @@ void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof)
 
   // Only update the filter if the measurement is reliable (\hat{h} -> infty when R[2][2] -> 0)
   if (fabs(this->R[2][2]) > 0.1 && this->R[2][2] > 0){
-    float angle = fabsf(acosf(this->R[2][2])) - DEG_TO_RAD * (15.0f / 2.0f);
+    float angle = fabsf(acosf(this->R[2][2])) - tof->coneHalfAngle;
     if (angle < 0.0f) {
       angle = 0.0f;
     }

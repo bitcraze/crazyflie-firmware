@@ -61,3 +61,16 @@ float rangeGet(rangeDirection_t direction);
  * @param timeStamp The time when the range was sampled (in sys ticks)
  */
 void rangeEnqueueDownRangeInEstimator(float distance, float stdDev, uint32_t timeStamp);
+
+/**
+ * Enqueue a range measurement for distance to the ground in the current estimator,
+ * for a sensor with a specific field of view.
+ *
+ * @param distance Distance to the ground (m)
+ * @param stdDev The standard deviation of the range sample
+ * @param coneHalfAngle Half angle of the cone in which the sensor reports the
+ *                      closest surface (rad). Use 0 for a sensor that reports
+ *                      the distance along its axis.
+ * @param timeStamp The time when the range was sampled (in sys ticks)
+ */
+void rangeEnqueueDownRangeWithConeInEstimator(float distance, float stdDev, float coneHalfAngle, uint32_t timeStamp);

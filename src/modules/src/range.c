@@ -31,6 +31,10 @@
 #include "range.h"
 #include "stabilizer_types.h"
 #include "estimator.h"
+#include "cf_math.h"
+
+// Measurement cone of the VL53L0x and VL53L1x on the Z-ranger and flow decks
+#define DEFAULT_DOWN_RANGE_CONE_HALF_ANGLE (DEG_TO_RAD * (15.0f / 2.0f))
 
 static uint16_t ranges[RANGE_T_END] = {0,};
 
@@ -49,10 +53,15 @@ float rangeGet(rangeDirection_t direction)
 }
 
 void rangeEnqueueDownRangeInEstimator(float distance, float stdDev, uint32_t timeStamp) {
+  rangeEnqueueDownRangeWithConeInEstimator(distance, stdDev, DEFAULT_DOWN_RANGE_CONE_HALF_ANGLE, timeStamp);
+}
+
+void rangeEnqueueDownRangeWithConeInEstimator(float distance, float stdDev, float coneHalfAngle, uint32_t timeStamp) {
   tofMeasurement_t tofData;
   tofData.timestamp = timeStamp;
   tofData.distance = distance;
   tofData.stdDev = stdDev;
+  tofData.coneHalfAngle = coneHalfAngle;
   estimatorEnqueueTOF(&tofData);
 }
 

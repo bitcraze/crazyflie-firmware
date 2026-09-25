@@ -308,6 +308,7 @@ typedef struct tofMeasurement_s {
   uint32_t timestamp;
   float distance;
   float stdDev;
+  float coneHalfAngle; // [rad] Half angle of the cone in which the sensor reports the closest surface, 0 if it reports the distance along its axis
 } tofMeasurement_t;
 
 /** Absolute height measurement */

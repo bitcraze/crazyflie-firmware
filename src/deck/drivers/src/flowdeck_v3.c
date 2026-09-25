@@ -229,7 +229,9 @@ static void flowdeckV3HandleTof(const flowdeckV3UartTofFrame_t *frame) {
   if (frame->rangeMm < RANGE_OUTLIER_LIMIT) {
     float distance = (float) frame->rangeMm * 0.001f; // Scale from [mm] to [m]
     float stdDev = fmaxf(rangeStdMin, rangeStdRelative * distance);
-    rangeEnqueueDownRangeInEstimator(distance, stdDev, xTaskGetTickCount());
+    // The VL53L5CX reports each zone's distance along the sensor axis, not along
+    // the zone's own ray, so the mean over the zones has no cone to account for
+    rangeEnqueueDownRangeWithConeInEstimator(distance, stdDev, 0.0f, xTaskGetTickCount());
   }
 }
 
