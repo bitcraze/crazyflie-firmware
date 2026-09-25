@@ -62,8 +62,8 @@
  * CRTP-visible piece of Firmware core proper (port 0) -- retires debug.h's
  * Phase-3-era "no console.c yet, print DEBUG_PRINT straight to stdout"
  * branch, so DEBUG_PRINT now routes through consolePrintf() like real
- * hardware. heartbeatTask's periodic line is DEBUG_PRINT'd (in addition to
- * its existing local printf) so a client connecting at any point after boot
+ * hardware. heartbeatTask's periodic line is DEBUG_PRINT'd (console.c
+ * mirrors all console output to stdout on the sim) so a client connecting at any point after boot
  * -- not just in the boot-banner's narrow window -- still observes console
  * output, since Simmyflie is the UDP server and a boot-time DEBUG_PRINT sent
  * before the client's first packet has no known peer to reach yet.
@@ -216,10 +216,9 @@ static void heartbeatTask(void *pvParameters)
   for (;;) {
     vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(1000));
     unsigned long tick = (unsigned long)xTaskGetTickCount();
-    printf("Simmyflie: scheduler alive, tick=%lu\n", tick);
-    fflush(stdout);
-    /* Same line, over CRTP console (port 0) -- see the Phase 4.1 doc
-     * comment above for why this is periodic rather than boot-once. */
+    /* Over CRTP console (port 0), mirrored to stdout by console.c -- see
+     * the Phase 4.1 doc comment above for why this is periodic rather than
+     * boot-once. */
     DEBUG_PRINT("Simmyflie: scheduler alive, tick=%lu\n", tick);
   }
 }
