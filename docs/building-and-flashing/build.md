@@ -139,6 +139,7 @@ manually without installing them, use:
 ```
 $ PYTHONPATH=build python3 -c "import cffirmware"
 ```
+
 ## Make targets
 
 
