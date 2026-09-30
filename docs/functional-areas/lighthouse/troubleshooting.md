@@ -27,10 +27,12 @@ and the Crazyflie loses positioning data.
 
 ## Setup and configuration
 
-* **Firmware** - Make sure the Crazyflie firmware is up to date. The deck FPGA is updated as part of the normal
-  firmware flashing, with the deck mounted.
+* **Firmware** - The Lighthouse deck has its own firmware, and it only works if its version matches the Crazyflie
+  firmware. To keep them in sync, flash a firmware release (the release `.zip` file) with the Lighthouse deck
+  mounted, since this updates both the Crazyflie and the deck. Flashing only the STM32 firmware, does not update the deck. For more information, see the
+  [firmware upgrade guide](https://www.bitcraze.io/documentation/repository/crazyflie-clients-python/master/userguides/userguide_client/#firmware-upgrade).
 * **Base station channels** - Every V2 base station in the system must be set to a unique channel. Two base stations on
-  the same channel will corrupt each other's data.
+  the same channel will corrupt each other's data. See the [Getting started with the Lighthouse system](https://www.bitcraze.io/documentation/tutorials/getting-started-with-lighthouse/#configure-the-base-stations-channel) tutorial on how to do that.
 * **Calibration data** - The Crazyflie must receive calibration data from each base station before the geometry is
   estimated. Keep the Crazyflie in view of all base stations for about 20 seconds before starting the estimation.
 
