@@ -45,7 +45,30 @@ config DEBUG_PRINT_ON_UART1_BAUDRATE
     default 115200
     depends on DEBUG_PRINT_ON_UART1
     help
-      Set the baudrate of the debug output   
+      Set the baudrate of the debug output
+
+config DEBUG_PRINT_ON_SWO
+    bool "Switch DEBUG_PRINT to SWO (ITM stimulus port 0)"
+    depends on !DEBUG_PRINT_ON_UART1
+    default n
+    help
+      Switch output of DEBUG_PRINT from radio to the STM32 SWO pin (PB3) on
+      the debug connector. The firmware sets up the ITM and the TPIU itself
+      (NRZ/UART encoding), so any UART-capable SWO receiver at the configured
+      baudrate will do.
+      Note! PB3 only carries SWO while the debug port is in SWD mode. It
+      powers up in JTAG mode, and OpenOCD switches it back to JTAG when it
+      exits, so the probe must switch it to SWD (the Bugslayer deck's
+      "bsly swo" does this).
+
+config DEBUG_PRINT_ON_SWO_BAUDRATE
+    int "Debug print on SWO baudrate"
+    default 2000000
+    depends on DEBUG_PRINT_ON_SWO
+    help
+      SWO baudrate. The TPIU divides the 168 MHz core clock by an integer,
+      so pick a rate that 168 MHz divides evenly (e.g. 2000000, 1000000,
+      6000000) or it will be off by the rounding.
 
 
 

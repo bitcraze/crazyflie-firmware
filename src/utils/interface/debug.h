@@ -35,6 +35,10 @@
   #define uartPrintf uart1Printf
 #endif
 
+#ifdef CONFIG_DEBUG_PRINT_ON_SWO
+  int swoPutchar(int ch);
+#endif
+
 #ifdef DEBUG_PRINT_ON_SEGGER_RTT
   #include "SEGGER_RTT.h"
 #endif
@@ -56,9 +60,9 @@ void debugInit(void);
 #elif defined(CONFIG_DEBUG_PRINT_ON_UART1)
   #define DEBUG_PRINT(fmt, ...) uartPrintf(DEBUG_FMT(fmt), ##__VA_ARGS__)
   #define DEBUG_PRINT_OS(fmt, ...) uartPrintf(DEBUG_FMT(fmt), ##__VA_ARGS__)
-#elif defined(DEBUG_PRINT_ON_SWO)
-  #define DEBUG_PRINT(fmt, ...) eprintf(ITM_SendChar, fmt, ## __VA_ARGS__)
-  #define DEBUG_PRINT_OS(fmt, ...) eprintf(ITM_SendChar, fmt, ## __VA_ARGS__)
+#elif defined(CONFIG_DEBUG_PRINT_ON_SWO)
+  #define DEBUG_PRINT(fmt, ...) eprintf(swoPutchar, DEBUG_FMT(fmt), ## __VA_ARGS__)
+  #define DEBUG_PRINT_OS(fmt, ...) eprintf(swoPutchar, DEBUG_FMT(fmt), ## __VA_ARGS__)
 #elif defined(DEBUG_PRINT_ON_SEGGER_RTT)
   #define DEBUG_PRINT(fmt, ...) SEGGER_RTT_printf(0, fmt, ## __VA_ARGS__)
   #define DEBUG_PRINT_OS(fmt, ...) SEGGER_RTT_printf(0, fmt, ## __VA_ARGS__)
