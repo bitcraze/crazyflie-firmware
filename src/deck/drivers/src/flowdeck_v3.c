@@ -252,6 +252,7 @@ static void flowdeckV3Task(void *param) {
 // Deck controller GPIO mapping
 #define GPIO_RP_RUN   DECKCTRL_GPIO_PIN_0   // PA0 - RP2350 RUN, low holds the RP2350 in reset
 #define GPIO_PWR_EN   DECKCTRL_GPIO_PIN_12  // PC15 - Enables the 3V0 and 1V8 regulators
+#define GPIO_UART1_EN DECKCTRL_GPIO_PIN_2   // PA2 - Lets the RP2350 use UART1, released when low
 
 // Deck controller pins on the RP2350 flash bus, used by its SPI bridge
 #define GPIO_FLASH_CS   DECKCTRL_GPIO_PIN_4   // PA4
@@ -610,12 +611,22 @@ static void flowdeck3Init(DeckInfo *info) {
     deckctrl_gpio_set_direction(info, GPIO_PWR_EN, OUTPUT) &&
     deckctrl_gpio_write(info, GPIO_PWR_EN, HIGH);
 
+  // The RP2350 only drives UART1 (TX1/RX1) while its enable line is high, so
+  // that another deck can use the UART otherwise. Set before the RP2350 boots.
+  bool uartEnabled = deckctrl_gpio_set_direction(info, GPIO_UART1_EN, OUTPUT) &&
+    deckctrl_gpio_write(info, GPIO_UART1_EN, HIGH);
+
   vTaskDelay(M2T(POWER_UP_DELAY_MS));
 
   powered = powered && deckctrl_gpio_write(info, GPIO_RP_RUN, HIGH);
 
   if (!powered) {
     DEBUG_PRINT("Failed to power the deck\n");
+    return;
+  }
+
+  if (!uartEnabled) {
+    DEBUG_PRINT("Failed to enable the UART of the deck\n");
     return;
   }
   
