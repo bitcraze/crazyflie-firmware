@@ -9,6 +9,7 @@
 #define TEST_HANDSHAKE_BYTE 0x55
 #define TEST_HANDSHAKE_COUNT 32
 #define TEST_FLASH_BASE 0x23000000
+#define TEST_ISP_WRITE_ATTEMPTS 3
 
 static bccam_deck_controller_t deck_controller;
 static bccam_bootloader_uart_client_t client;
@@ -233,7 +234,7 @@ void testFailedFinalFlashWriteDoesNotDuplicateChunkOnRetry(void) {
                                                              sizeof(image),
                                                              image,
                                                              sizeof(image)));
-  TEST_ASSERT_EQUAL_UINT32(1, count_isp_command(0x31));
+  TEST_ASSERT_EQUAL_UINT32(TEST_ISP_WRITE_ATTEMPTS, count_isp_command(0x31));
   TEST_ASSERT_EQUAL_UINT16(sizeof(image),
                            isp_write_length(nth_isp_command(0x31, 0)));
 
@@ -244,9 +245,10 @@ void testFailedFinalFlashWriteDoesNotDuplicateChunkOnRetry(void) {
                                                             image,
                                                             sizeof(image)));
 
-  TEST_ASSERT_EQUAL_UINT32(2, count_isp_command(0x31));
+  TEST_ASSERT_EQUAL_UINT32(TEST_ISP_WRITE_ATTEMPTS + 1,
+                           count_isp_command(0x31));
   const bccam_bootloader_uart_client_test_trace_entry_t *retry =
-    nth_isp_command(0x31, 1);
+    nth_isp_command(0x31, TEST_ISP_WRITE_ATTEMPTS);
   TEST_ASSERT_EQUAL_UINT32(TEST_FLASH_BASE, isp_write_address(retry));
   TEST_ASSERT_EQUAL_UINT16(sizeof(image), isp_write_length(retry));
 }
@@ -282,7 +284,7 @@ void testFailedThresholdFlashWriteDoesNotDuplicateChunkOnRetry(void) {
                                                              sizeof(retry_chunk),
                                                              retry_chunk,
                                                              1024));
-  TEST_ASSERT_EQUAL_UINT32(1, count_isp_command(0x31));
+  TEST_ASSERT_EQUAL_UINT32(TEST_ISP_WRITE_ATTEMPTS, count_isp_command(0x31));
   TEST_ASSERT_EQUAL_UINT16(769,
                            isp_write_length(nth_isp_command(0x31, 0)));
 
@@ -293,9 +295,10 @@ void testFailedThresholdFlashWriteDoesNotDuplicateChunkOnRetry(void) {
                                                             retry_chunk,
                                                             1024));
 
-  TEST_ASSERT_EQUAL_UINT32(2, count_isp_command(0x31));
+  TEST_ASSERT_EQUAL_UINT32(TEST_ISP_WRITE_ATTEMPTS + 1,
+                           count_isp_command(0x31));
   const bccam_bootloader_uart_client_test_trace_entry_t *retry =
-    nth_isp_command(0x31, 1);
+    nth_isp_command(0x31, TEST_ISP_WRITE_ATTEMPTS);
   TEST_ASSERT_EQUAL_UINT32(TEST_FLASH_BASE, isp_write_address(retry));
   TEST_ASSERT_EQUAL_UINT16(769, isp_write_length(retry));
 
@@ -306,11 +309,76 @@ void testFailedThresholdFlashWriteDoesNotDuplicateChunkOnRetry(void) {
                                                             next_chunk,
                                                             1024));
 
-  TEST_ASSERT_EQUAL_UINT32(3, count_isp_command(0x31));
+  TEST_ASSERT_EQUAL_UINT32(TEST_ISP_WRITE_ATTEMPTS + 2,
+                           count_isp_command(0x31));
   const bccam_bootloader_uart_client_test_trace_entry_t *next =
-    nth_isp_command(0x31, 2);
+    nth_isp_command(0x31, TEST_ISP_WRITE_ATTEMPTS + 1);
   TEST_ASSERT_EQUAL_UINT32(TEST_FLASH_BASE + 0x301, isp_write_address(next));
   TEST_ASSERT_EQUAL_UINT16(sizeof(next_chunk), isp_write_length(next));
+}
+
+void testFlashWriteIsRetriedAfterNack(void) {
+  const uint8_t image[4] = { 1, 2, 3, 4 };
+  const uint8_t nack[] = { 'F', 'L', 0x01, 0x00 };
+
+  queue_ok();
+  bccam_bootloader_uart_client_test_queue_rx(nack, sizeof(nack));
+  queue_ok();
+
+  TEST_ASSERT_TRUE(bccam_bootloader_uart_client_write_flash(&client,
+                                                            TEST_FLASH_BASE,
+                                                            sizeof(image),
+                                                            image,
+                                                            sizeof(image)));
+
+  TEST_ASSERT_EQUAL_UINT32(2, count_isp_command(0x31));
+  const bccam_bootloader_uart_client_test_trace_entry_t *retry =
+    nth_isp_command(0x31, 1);
+  TEST_ASSERT_EQUAL_UINT32(TEST_FLASH_BASE, isp_write_address(retry));
+  TEST_ASSERT_EQUAL_UINT16(sizeof(image), isp_write_length(retry));
+  TEST_ASSERT_TRUE(bccam_bootloader_uart_client_flash_completed(&client));
+}
+
+void testWriteAtImageStartRestartsInterruptedFlashSession(void) {
+  const uint8_t chunk[4] = { 1, 2, 3, 4 };
+
+  queue_ok();
+  TEST_ASSERT_TRUE(bccam_bootloader_uart_client_write_flash(&client,
+                                                            TEST_FLASH_BASE,
+                                                            sizeof(chunk),
+                                                            chunk,
+                                                            8));
+  TEST_ASSERT_EQUAL_UINT32(1, count_isp_command(0x30));
+
+  // A new upload starts at the image start without re-entering the bootloader.
+  // Expect a new ROM handshake (handshake, boot info, flash parameters) and
+  // then a new erase.
+  queue_ok();
+  queue_ok();
+  queue_ok();
+  queue_ok();
+  TEST_ASSERT_TRUE(bccam_bootloader_uart_client_write_flash(&client,
+                                                            TEST_FLASH_BASE,
+                                                            sizeof(chunk),
+                                                            chunk,
+                                                            8));
+  TEST_ASSERT_EQUAL_UINT32(1, count_isp_command(0x10));
+  TEST_ASSERT_EQUAL_UINT32(2, count_isp_command(0x30));
+  TEST_ASSERT_EQUAL_UINT32(0, count_isp_command(0x31));
+
+  queue_ok();
+  TEST_ASSERT_TRUE(bccam_bootloader_uart_client_write_flash(&client,
+                                                            TEST_FLASH_BASE + 4,
+                                                            sizeof(chunk),
+                                                            chunk,
+                                                            8));
+
+  TEST_ASSERT_EQUAL_UINT32(1, count_isp_command(0x31));
+  const bccam_bootloader_uart_client_test_trace_entry_t *write =
+    nth_isp_command(0x31, 0);
+  TEST_ASSERT_EQUAL_UINT32(TEST_FLASH_BASE, isp_write_address(write));
+  TEST_ASSERT_EQUAL_UINT16(8, isp_write_length(write));
+  TEST_ASSERT_TRUE(bccam_bootloader_uart_client_flash_completed(&client));
 }
 
 void testEnterBootloaderSetsIspBaudrateBeforeReleasingReset(void) {

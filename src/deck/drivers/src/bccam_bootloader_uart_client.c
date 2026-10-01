@@ -19,6 +19,8 @@
 #define ISP_HANDSHAKE_BYTE        0x55
 #define ISP_HANDSHAKE_COUNT       32
 #define ISP_CMD_TIMEOUT           M2T(5000)
+#define ISP_WRITE_ACK_TIMEOUT     M2T(200)
+#define ISP_WRITE_ATTEMPTS        3
 #define ISP_CMD_GET_BOOTINFO      0x10
 #define ISP_CMD_FLASH_ERASE       0x30
 #define ISP_CMD_FLASH_WRITE       0x31
@@ -102,6 +104,10 @@ static TickType_t bootloader_now_ticks(void) {
   return test_tick++;
 }
 
+static bool bootloader_uart_did_overrun(void) {
+  return false;
+}
+
 static void bootloader_uart_init(uint32_t baudrate) {
   test_trace_append(BCCAM_BOOTLOADER_UART_CLIENT_TEST_UART_INIT);
   bccam_bootloader_uart_client_test_trace_entry_t *entry =
@@ -154,6 +160,10 @@ static bool bootloader_uart_recv(uint8_t *byte, uint32_t timeout_ticks) {
 #else
 static TickType_t bootloader_now_ticks(void) {
   return xTaskGetTickCount();
+}
+
+static bool bootloader_uart_did_overrun(void) {
+  return uart1DidOverrun();
 }
 
 static void bootloader_uart_init(uint32_t baudrate) {
@@ -246,15 +256,17 @@ static void isp_send_cmd(uint8_t cmd_id,
   }
 }
 
-static bool isp_wait_ack(void) {
+static bool isp_wait_ack_with_timeout(uint32_t timeout_ticks) {
   uint8_t prev = 0;
   bool have_prev = false;
   uint32_t scanned = 0;
 
   for (uint32_t i = 0; i < ISP_ACK_SCAN_MAX; i++) {
     uint8_t b;
-    if (!bootloader_uart_recv(&b, ISP_CMD_TIMEOUT)) {
-      DEBUG_PRINT("ISP: No ACK after %lu bytes\n", (unsigned long)scanned);
+    if (!bootloader_uart_recv(&b, timeout_ticks)) {
+      DEBUG_PRINT("ISP: No ACK after %lu bytes (last 0x%02X, overrun %d)\n",
+                  (unsigned long)scanned, prev,
+                  bootloader_uart_did_overrun());
       return false;
     }
     scanned++;
@@ -279,6 +291,10 @@ static bool isp_wait_ack(void) {
   return false;
 }
 
+static bool isp_wait_ack(void) {
+  return isp_wait_ack_with_timeout(ISP_CMD_TIMEOUT);
+}
+
 static bool isp_flash_erase(uint32_t start_addr, uint32_t end_addr) {
   uint8_t payload[8];
   memcpy(&payload[0], &start_addr, 4);
@@ -288,7 +304,9 @@ static bool isp_flash_erase(uint32_t start_addr, uint32_t end_addr) {
   return isp_wait_ack();
 }
 
-static bool isp_flash_write(uint32_t addr, const uint8_t *data, uint16_t len) {
+static bool isp_flash_write_once(uint32_t addr,
+                                 const uint8_t *data,
+                                 uint16_t len) {
   const uint16_t total_len = 4 + len;
   uint8_t header[8];
   header[0] = ISP_CMD_FLASH_WRITE;
@@ -308,7 +326,21 @@ static bool isp_flash_write(uint32_t addr, const uint8_t *data, uint16_t len) {
   bootloader_uart_send(sizeof(header), header);
   bootloader_uart_send_dma(len, data);
 
-  return isp_wait_ack();
+  return isp_wait_ack_with_timeout(ISP_WRITE_ACK_TIMEOUT);
+}
+
+static bool isp_flash_write(uint32_t addr, const uint8_t *data, uint16_t len) {
+  for (uint8_t attempt = 1; attempt <= ISP_WRITE_ATTEMPTS; attempt++) {
+    if (isp_flash_write_once(addr, data, len)) {
+      return true;
+    }
+
+    DEBUG_PRINT("ISP: Write @ 0x%08lX failed (attempt %u/%u)\n",
+                (unsigned long)addr, attempt, ISP_WRITE_ATTEMPTS);
+    isp_drain_rx(50);
+  }
+
+  return false;
 }
 
 static bool isp_flash_read(uint32_t addr, uint8_t *data, uint16_t len) {
@@ -447,6 +479,19 @@ bool bccam_bootloader_uart_client_write_flash(
   }
 
   client->image_complete = false;
+
+  // A write at the image start while a session is in progress means a new
+  // upload after an aborted or failed one. The bootloader stays active in that
+  // case, so nothing else resets the session, and the ROM may have left ISP
+  // command mode while idle. Re-enter the bootloader and start over with an
+  // erase.
+  if (client->flash_erased && mem_addr == client->image_base &&
+      client->bytes_written > 0) {
+    DEBUG_PRINT("ISP: Restarting flash session\n");
+    if (!bccam_bootloader_uart_client_enter(client)) {
+      return false;
+    }
+  }
 
   if (!client->flash_erased && new_fw_size > 0) {
     if (mem_addr > UINT32_MAX - (new_fw_size - 1u)) {
