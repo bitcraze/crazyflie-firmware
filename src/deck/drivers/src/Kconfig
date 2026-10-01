@@ -320,8 +320,8 @@ config DECK_LOCO
   range 4 8
   depends on DECK_LOCO
   help
-      The number of anchors in your Loco setup. See documentation on
-      https://www.bitcraze.io/ for more details.
+      The number of anchors in your Loco setup. Only applies to TWR.
+      See documentation on https://www.bitcraze.io/ for more details.
 
 choice
     prompt "Algorithm to use"
