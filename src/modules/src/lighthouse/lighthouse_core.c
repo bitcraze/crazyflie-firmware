@@ -74,7 +74,7 @@ static const uint32_t MAX_WAIT_TIME_FOR_HEALTH_MS = 4000;
 static const uint32_t MAX_TIME_SINCE_LAST_FRAME_MS = 1500;
 
 static pulseProcessorResult_t angles;
-static lighthouseUartFrame_t frame, frameIsr;
+static lighthouseUartFrame_t frame;
 static lighthouseBsIdentificationData_t bsIdentificationData;
 
 // Stats
@@ -141,8 +141,14 @@ static lighthouseBaseStationType_t previousSystemType = lighthouseBsTypeV2;
 static pulseProcessorProcessPulse_t pulseProcessorProcessPulse = pulseProcessorV2ProcessPulse;
 
 #define UART_FRAME_LENGTH 12
+// Only assemble and validate in the ISR; decode after the task receives it.
+typedef struct {
+  uint8_t data[UART_FRAME_LENGTH];
+  bool isSyncFrame;
+} lighthouseRawUartFrame_t;
+
 static xQueueHandle lhFramePacketQueue;
-STATIC_MEM_QUEUE_ALLOC(lhFramePacketQueue, 1, sizeof(lighthouseUartFrame_t));
+STATIC_MEM_QUEUE_ALLOC(lhFramePacketQueue, 1, sizeof(lighthouseRawUartFrame_t));
 
 
 // Written by lighthouseCoreTask(), read by lighthouseCoreDeckStatus() from the supervisor task
@@ -276,10 +282,11 @@ void lighthouseCoreSetSystemType(const lighthouseBaseStationType_t type)
 }
 
 static void uart1RxISRCallback(uint8_t rxByte, BaseType_t *xHigherPriorityTaskWoken) {
-  static uint8_t data[UART_FRAME_LENGTH];
+  static lighthouseRawUartFrame_t pulseFrame;
   static int index = 0;
   static int syncCounter = 0;
   static bool synchronized = false;
+  static const lighthouseRawUartFrame_t syncFrame = {.isSyncFrame = true};
 
   // Track sync bytes across candidate frame boundaries, including while lost.
   if (rxByte == 0xff) {
@@ -292,9 +299,7 @@ static void uart1RxISRCallback(uint8_t rxByte, BaseType_t *xHigherPriorityTaskWo
     index = 0;
     syncCounter = 0;
     synchronized = true;
-    memset(&frameIsr, 0, sizeof(frameIsr));
-    frameIsr.isSyncFrame = true;
-    xQueueSendFromISR(lhFramePacketQueue, &frameIsr, xHigherPriorityTaskWoken);
+    xQueueSendFromISR(lhFramePacketQueue, &syncFrame, xHigherPriorityTaskWoken);
     return;
   }
 
@@ -302,40 +307,48 @@ static void uart1RxISRCallback(uint8_t rxByte, BaseType_t *xHigherPriorityTaskWo
     return;
   }
 
-  data[index++] = rxByte;
+  pulseFrame.data[index++] = rxByte;
   if (index == UART_FRAME_LENGTH) {
     index = 0;
-    const bool isPaddingZero = (((data[5] | data[8]) & 0xfe) == 0);
+    const bool isPaddingZero = (((pulseFrame.data[5] | pulseFrame.data[8]) & 0xfe) == 0);
     if (!isPaddingZero) {
       synchronized = false;
       return;
     }
 
-    frameIsr.isSyncFrame = false;
-    frameIsr.data.sensor = data[0] & 0x03;
-    frameIsr.data.channelFound = (data[0] & 0x80) == 0;
-    frameIsr.data.channel = (data[0] >> 3) & 0x0f;
-    frameIsr.data.slowBit = (data[0] >> 2) & 0x01;
-    // Assign complete values so reused fields cannot retain upper bytes.
-    frameIsr.data.width = data[1] | ((uint32_t)data[2] << 8);
-    frameIsr.data.offset = data[3] | ((uint32_t)data[4] << 8) | ((uint32_t)data[5] << 16);
-    frameIsr.data.beamData = data[6] | ((uint32_t)data[7] << 8) | ((uint32_t)data[8] << 16);
-    frameIsr.data.timestamp = data[9] | ((uint32_t)data[10] << 8) | ((uint32_t)data[11] << 16);
-
-    // Offset is expressed in a 6 MHz clock, convert to the 24 MHz that is used for timestamps
-    frameIsr.data.offset *= 4;
-
-    xQueueSendFromISR(lhFramePacketQueue, &frameIsr, xHigherPriorityTaskWoken);
+    // The static pulse frame's isSyncFrame flag stays false. FreeRTOS copies
+    // the complete frame before returning, so the buffer can be reused.
+    xQueueSendFromISR(lhFramePacketQueue, &pulseFrame, xHigherPriorityTaskWoken);
   }
 }
 
 TESTABLE_STATIC bool getUartFrameRaw(lighthouseUartFrame_t *frame) {
-  if (xQueueReceive(lhFramePacketQueue, frame, LH_GET_FRAME_TIMEOUT) == pdTRUE) {
-    STATS_CNT_RATE_EVENT_DEBUG(&serialFrameRate);
-    return true;
+  lighthouseRawUartFrame_t rawFrame;
+  if (xQueueReceive(lhFramePacketQueue, &rawFrame, LH_GET_FRAME_TIMEOUT) != pdTRUE) {
+    return false;
   }
 
-  return false;
+  frame->isSyncFrame = rawFrame.isSyncFrame;
+  if (rawFrame.isSyncFrame) {
+    memset(&frame->data, 0, sizeof(frame->data));
+  } else {
+    const uint8_t* data = rawFrame.data;
+    frame->data.sensor = data[0] & 0x03;
+    frame->data.channelFound = (data[0] & 0x80) == 0;
+    frame->data.channel = (data[0] >> 3) & 0x0f;
+    frame->data.slowBit = (data[0] >> 2) & 0x01;
+    // Assign complete values so reused fields cannot retain upper bytes.
+    frame->data.width = data[1] | ((uint32_t)data[2] << 8);
+    frame->data.offset = data[3] | ((uint32_t)data[4] << 8) | ((uint32_t)data[5] << 16);
+    frame->data.beamData = data[6] | ((uint32_t)data[7] << 8) | ((uint32_t)data[8] << 16);
+    frame->data.timestamp = data[9] | ((uint32_t)data[10] << 8) | ((uint32_t)data[11] << 16);
+
+    // Offset uses a 6 MHz clock; timestamps use a 24 MHz clock.
+    frame->data.offset *= 4;
+  }
+
+  STATS_CNT_RATE_EVENT_DEBUG(&serialFrameRate);
+  return true;
 }
 
 void lighthouseCoreSetLeds(lighthouseCoreLedState_t red, lighthouseCoreLedState_t orange, lighthouseCoreLedState_t green)

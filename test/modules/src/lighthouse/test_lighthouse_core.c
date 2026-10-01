@@ -34,7 +34,8 @@ static const uint8_t pulseFrame[12] = {
   0xab, 0xcd, 0x01, 0x98, 0xba, 0xdc,
 };
 static lighthouseUartFrame_t frame;
-static lighthouseUartFrame_t queuedFrame;
+static uint8_t* queueStorage;
+static UBaseType_t queueItemSize;
 static bool queueOccupied;
 static UBaseType_t queueLength;
 static uart1RxCallback_t registeredUart1RxCallback;
@@ -48,9 +49,10 @@ QueueHandle_t xQueueGenericCreateStatic(const UBaseType_t length,
                                         uint8_t *storage,
                                         StaticQueue_t *queueBuffer,
                                         const uint8_t queueType) {
-  (void)storage;
+  queueStorage = storage;
+  queueItemSize = itemSize;
   (void)queueType;
-  TEST_ASSERT_EQUAL_UINT32(sizeof(lighthouseUartFrame_t), itemSize);
+  TEST_ASSERT_TRUE(itemSize > 0);
   TEST_ASSERT_EQUAL_UINT32(1, length);
   queueLength = length;
   queueOccupied = false;
@@ -64,7 +66,7 @@ BaseType_t xQueueReceive(QueueHandle_t queue, void * const buffer,
   if (!queueOccupied) {
     return pdFALSE;
   }
-  memcpy(buffer, &queuedFrame, sizeof(queuedFrame));
+  memcpy(buffer, queueStorage, queueItemSize);
   queueOccupied = false;
   return pdTRUE;
 }
@@ -80,7 +82,7 @@ BaseType_t xQueueGenericSendFromISR(QueueHandle_t queue,
   if (queueOccupied) {
     return pdFALSE;
   }
-  memcpy(&queuedFrame, item, sizeof(queuedFrame));
+  memcpy(queueStorage, item, queueItemSize);
   queueOccupied = true;
   *taskWoken = pdTRUE;
   return pdTRUE;
