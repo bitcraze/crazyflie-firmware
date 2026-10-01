@@ -126,16 +126,23 @@ Please go to [these instructions](/docs/development/kbuild.md) to learn how to u
 
 There are certain functions, like the high level commander and controllers, that have been wrapped to python bindings. These can be used to easily test these functions on a computer or use it in a simulation.
 
-First make sure that you have [SWIG](https://swig.org/) installed on your system. Then execute the following commands in the terminal
+First make sure that you have [SWIG](https://swig.org/) installed on your system and that the required Python packages are available: `numpy`, `pytest`, `pyyaml`, and `setuptools`. Then execute the following commands in the terminal
 
 ```
 $ make cf2_defconfig
-$ make bindings_python
-$ cd build
-$ python3 setup.py install --user
+$ make test_python
+```
+
+The `test_python` target builds the bindings and runs the Python tests with the
+build directory on `PYTHONPATH`. If you want to import the generated bindings
+manually without installing them, use:
+
+```
+$ PYTHONPATH=build python3 -c "import cffirmware"
 ```
 
 ## Make targets
+
 
 ### General targets
 ```
@@ -226,5 +233,5 @@ $ make flash
 
 ## Unit testing
 
-See the [unit testing](../development/unit_testing) page for how to run and
+See the [unit testing](/docs/development/unit_testing.md) page for how to run and
 configure unit tests locally or with the toolbelt.
