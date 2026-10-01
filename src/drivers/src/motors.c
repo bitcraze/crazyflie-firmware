@@ -478,6 +478,15 @@ static void motorsDshotInputSetup(int id)
 {
   dshotState[id] = DSHOT_STATE_INPUT;
 
+  TIM_ICInitTypeDef TIM_ICInitStructure;
+
+  TIM_ICInitStructure.TIM_Channel = motorMap[id]->timChannel;
+  TIM_ICInitStructure.TIM_ICPolarity = TIM_ICPolarity_BothEdge;
+  TIM_ICInitStructure.TIM_ICSelection = TIM_ICSelection_DirectTI;
+  TIM_ICInitStructure.TIM_ICPrescaler = TIM_ICPSC_DIV1;
+  TIM_ICInitStructure.TIM_ICFilter = 0x02;
+  TIM_ICInit(motorMap[id]->tim, &TIM_ICInitStructure);
+
   if (dshotState[0] == DSHOT_STATE_INPUT &&
       dshotState[2] == DSHOT_STATE_INPUT &&
       dshotState[3] == DSHOT_STATE_INPUT) {
@@ -498,15 +507,6 @@ static void motorsDshotInputSetup(int id)
     motorMap[1]->tim->CNT = 0;
     TIM_Cmd(motorMap[1]->tim, ENABLE);
    }
-
-  TIM_ICInitTypeDef TIM_ICInitStructure;
-  
-  TIM_ICInitStructure.TIM_Channel = motorMap[id]->timChannel;
-  TIM_ICInitStructure.TIM_ICPolarity = TIM_ICPolarity_BothEdge;
-  TIM_ICInitStructure.TIM_ICSelection = TIM_ICSelection_DirectTI;
-  TIM_ICInitStructure.TIM_ICPrescaler = TIM_ICPSC_DIV1;
-  TIM_ICInitStructure.TIM_ICFilter = 0x02;
-  TIM_ICInit(motorMap[id]->tim, &TIM_ICInitStructure);
 
   // Only changing what is different from output setup
   DMA_InitStructureShare.DMA_BufferSize = DSHOT_TELEMETRY_MAX_GCR_EDGES;
