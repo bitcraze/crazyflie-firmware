@@ -28,8 +28,7 @@ and the Crazyflie may fly off or crash.
 
 The [supervisor](/docs/functional-areas/supervisor/index.md) does **not** check estimator convergence. It is up to the app or client to wait for it.
 
-In cflib, `reset_estimator()` in `cflib.utils.reset_estimator` resets the estimator and then waits for the variances to settle. It
-works for a single Crazyflie as well as in swarms.
+In cflib, `reset_estimator()` in `cflib.utils.reset_estimator` resets the estimator and then waits for the variances to settle.
 
 ## 3. Arm the system
 
