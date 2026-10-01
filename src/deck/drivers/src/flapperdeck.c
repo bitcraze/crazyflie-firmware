@@ -142,10 +142,6 @@ LOG_ADD(LOG_FLOAT, current, &current)
 LOG_ADD(LOG_FLOAT, power, &power)
 LOG_GROUP_STOP(flapper)
 
-/**
- *
- * Current sensor parameters
- */
 PARAM_GROUP_START(flapper)
 /**
  * @brief Current sensor constant (A/V)
