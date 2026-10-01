@@ -3,7 +3,7 @@ title: Autonomous flight
 page_id: autonomous_flight
 ---
 
-# Take Off
+# Take off
 
 When flying autonomously, it's important to get a few things right before take-off. This applies both to apps running in the
 Crazyflie and to remote clients such as cflib, cflib2 and crazyflie-lib-rs. These are the minimum steps required to get
