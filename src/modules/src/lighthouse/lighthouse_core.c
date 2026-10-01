@@ -279,41 +279,53 @@ static void uart1RxISRCallback(uint8_t rxByte, BaseType_t *xHigherPriorityTaskWo
   static uint8_t data[UART_FRAME_LENGTH];
   static int index = 0;
   static int syncCounter = 0;
+  static bool synchronized = false;
 
-  data[index] = rxByte;
-  index += 1;
-  
-  if ((unsigned char)rxByte == 0xff) {
+  // Track sync bytes across candidate frame boundaries, including while lost.
+  if (rxByte == 0xff) {
     syncCounter += 1;
   } else {
     syncCounter = 0;
   }
 
-  if (index == UART_FRAME_LENGTH || syncCounter == UART_FRAME_LENGTH) {
-    const bool isSyncFrame = (syncCounter == UART_FRAME_LENGTH);
-
+  if (syncCounter == UART_FRAME_LENGTH) {
     index = 0;
     syncCounter = 0;
- 
-    frameIsr.isSyncFrame = isSyncFrame;
+    synchronized = true;
+    memset(&frameIsr, 0, sizeof(frameIsr));
+    frameIsr.isSyncFrame = true;
+    xQueueSendFromISR(lhFramePacketQueue, &frameIsr, xHigherPriorityTaskWoken);
+    return;
+  }
+
+  if (!synchronized) {
+    return;
+  }
+
+  data[index++] = rxByte;
+  if (index == UART_FRAME_LENGTH) {
+    index = 0;
+    const bool isPaddingZero = (((data[5] | data[8]) & 0xfe) == 0);
+    if (!isPaddingZero) {
+      synchronized = false;
+      return;
+    }
+
+    frameIsr.isSyncFrame = false;
     frameIsr.data.sensor = data[0] & 0x03;
     frameIsr.data.channelFound = (data[0] & 0x80) == 0;
     frameIsr.data.channel = (data[0] >> 3) & 0x0f;
     frameIsr.data.slowBit = (data[0] >> 2) & 0x01;
-    memcpy(&frameIsr.data.width, &data[1], 2);
-    memcpy(&frameIsr.data.offset, &data[3], 3);
-    memcpy(&frameIsr.data.beamData, &data[6], 3);
-    memcpy(&frameIsr.data.timestamp, &data[9], 3);
+    // Assign complete values so reused fields cannot retain upper bytes.
+    frameIsr.data.width = data[1] | ((uint32_t)data[2] << 8);
+    frameIsr.data.offset = data[3] | ((uint32_t)data[4] << 8) | ((uint32_t)data[5] << 16);
+    frameIsr.data.beamData = data[6] | ((uint32_t)data[7] << 8) | ((uint32_t)data[8] << 16);
+    frameIsr.data.timestamp = data[9] | ((uint32_t)data[10] << 8) | ((uint32_t)data[11] << 16);
 
     // Offset is expressed in a 6 MHz clock, convert to the 24 MHz that is used for timestamps
     frameIsr.data.offset *= 4;
 
-    bool isPaddingZero = (((data[5] | data[8]) & 0xfe) == 0);
-    bool isFrameValid = (isPaddingZero || frameIsr.isSyncFrame);
-
-    if (isFrameValid) {
-      xQueueSendFromISR(lhFramePacketQueue, &frameIsr, xHigherPriorityTaskWoken);
-    }
+    xQueueSendFromISR(lhFramePacketQueue, &frameIsr, xHigherPriorityTaskWoken);
   }
 }
 

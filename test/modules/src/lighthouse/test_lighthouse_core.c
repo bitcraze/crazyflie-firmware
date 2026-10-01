@@ -274,3 +274,31 @@ void testThatSyncRestoresAlignmentAtEveryPossibleByteOffset(void) {
     assertPulse();
   }
 }
+
+void testThatInterruptedSyncDoesNotRestoreAlignment(void) {
+  uint8_t corrupt[12] = {0};
+  corrupt[8] = 0x02;
+  feedBytes(corrupt, sizeof(corrupt));
+  feedBytes(syncFrame, 11);
+  const uint8_t interruption = 0;
+  feedBytes(&interruption, 1);
+  feedBytes(syncFrame, 11);
+  TEST_ASSERT_FALSE(getUartFrameRaw(&frame));
+  feedBytes(pulseFrame, sizeof(pulseFrame));
+  TEST_ASSERT_FALSE(getUartFrameRaw(&frame));
+  synchronize();
+  feedBytes(pulseFrame, sizeof(pulseFrame));
+  assertPulse();
+}
+
+void testThatSyncRestoresAlignmentEvenWhenQueueIsFull(void) {
+  feedBytes(pulseFrame, sizeof(pulseFrame));
+  const uint8_t garbage = 0xaa;
+  feedBytes(&garbage, 1);
+  feedBytes(syncFrame, sizeof(syncFrame));
+  // The sync notification is dropped, but the ISR must still realign.
+  assertPulse();
+  TEST_ASSERT_FALSE(getUartFrameRaw(&frame));
+  feedBytes(pulseFrame, sizeof(pulseFrame));
+  assertPulse();
+}
