@@ -9,7 +9,7 @@ When flying autonomously, it's important to get a few things right before take-o
 Crazyflie and to remote clients such as cflib, cflib2 and crazyflie-lib-rs. These are the minimum steps required to get
 off the ground, they are **not** a complete pre-flight checklist.
 
-Each step is described in other places too, but this page collects them in the order they must happen.
+This page collects the steps required in the order they must happen.
 
 ## 1. Wait for the system to start
 
