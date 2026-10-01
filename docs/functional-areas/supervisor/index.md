@@ -30,6 +30,11 @@ motors and free falling.
 The supervisor framework provides the possibility to handle situations in a more "clever" way, such as doing a controlled
 landing when possible, instead of free falling, but that is currently not implemented.
 
+## Flying autonomously
+
+Apps and remote clients that take off on their own have to wait for the estimator, arm the system and take off in
+time. See [Autonomous flight](/docs/userguides/autonomous_flight.md).
+
 ## Emergency stops
 
 The supervisor supports two emergency stop mechanisms: an immediate emergency stop command and an emergency stop watchdog.
