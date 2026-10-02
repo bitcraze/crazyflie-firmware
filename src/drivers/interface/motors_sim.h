@@ -57,6 +57,11 @@
  * #ifdef'd call): also a no-op, same reasoning as motorsResetESCs() --
  * motorsSetRatio() already applies the ratio directly, so there's no
  * separate hardware burst step to model.
+ *
+ * motorsGetRPM()/MOTORS_RPM_INVALID (Phase 4.10): the real supervisor.c
+ * reads motor RPM under CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+ * (set by cf21bl_defconfig). There is no ESC telemetry in sim, so every
+ * motor reports the constant MOTORS_SIM_RPM. See motors_sim.c.
  */
 #ifndef __MOTORS_SIM_H__
 #define __MOTORS_SIM_H__
@@ -69,6 +74,13 @@
 #define MOTOR_M2  1
 #define MOTOR_M3  2
 #define MOTOR_M4  3
+
+#define MOTORS_RPM_INVALID (UINT16_MAX)
+
+/* Constant RPM reported by motorsGetRPM(). Must lie inside the supervisor's
+ * arming window (CONFIG_MOTORS_ARMING_RPM_MIN..MAX, default 1000..3500) and
+ * at or above CONFIG_MOTORS_RPM_NOT_RESPONDING_THRESHOLD (default 500). */
+#define MOTORS_SIM_RPM 2000
 
 /* Test defines -- just the two health.c's propeller-test failure path
  * references (dead code by default, see above). */
@@ -97,6 +109,7 @@ void motorsInit(const void **motorMapSelect);
 bool motorsTest(void);
 void motorsSetRatio(uint32_t id, uint16_t ratio);
 uint16_t motorsGetRatio(uint32_t id);
+uint16_t motorsGetRPM(uint32_t motorId);
 void motorsStop(void);
 void motorsResetESCs(void);
 void motorsBurstDshot(void);

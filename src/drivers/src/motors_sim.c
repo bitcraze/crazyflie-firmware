@@ -92,6 +92,17 @@ uint16_t motorsGetRatio(uint32_t id)
   return 0;
 }
 
+uint16_t motorsGetRPM(uint32_t motorId)
+{
+  /* No ESC telemetry in sim: a constant that passes both of supervisor.c's
+   * RPM checks (arming window and motors-not-responding), regardless of the
+   * commanded ratio. Phase 5's physics model can supply a real rotor speed. */
+  if (motorId >= NBR_OF_MOTORS) {
+    return MOTORS_RPM_INVALID;
+  }
+  return MOTORS_SIM_RPM;
+}
+
 void motorsStop(void)
 {
   for (int i = 0; i < NBR_OF_MOTORS; i++) {
