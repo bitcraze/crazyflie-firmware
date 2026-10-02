@@ -40,7 +40,7 @@
 /* What config.h's MCU_ID_ADDRESS/MCU_FLASH_SIZE_ADDRESS point at in the sim.
  * system.c prints both at boot and exposes them as the cpu.id0-2 and
  * cpu.flash params. The id is the same for every instance. */
-const uint32_t simMcuId[3] = {0x004D4953, 0, 0}; // "SIM"
+const uint32_t simMcuId[3] = {0xFACEBEEF, 0xDEADC0DE, 0x00000BAD};
 const uint16_t simMcuFlashSize = 1024;
 
 int platformInit(void)
