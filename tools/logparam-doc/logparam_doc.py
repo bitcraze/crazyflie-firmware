@@ -471,8 +471,8 @@ def anchor(text: str) -> str:
 
 
 def inline(text: str) -> str:
-    """Comment text for use in markdown, links written as (%https://...) work as normal links."""
-    return re.sub(r"\(%(https?://)", r"(\1", text)
+    """Comment text without the % that stopped Doxygen from changing URLs (%https://...)."""
+    return re.sub(r"%(https?://)", r"\1", text)
 
 
 def cell(text: str) -> str:
@@ -547,9 +547,20 @@ def has_table(doc: Doc | None) -> bool:
     return bool(doc) and any(part.kind == "table" for part in doc.details)
 
 
+def detail_lines(doc: Doc) -> list[str]:
+    """The detail paragraphs and tables of a doc, each preceded by a blank line."""
+    out = []
+    for part in doc.details:
+        out += [""] + [inline(line) for line in part.lines]
+    return out
+
+
 def write_group(group: Group, ref: str) -> list[str]:
     out = ["", "---", "[back to group index](#index)", "", f"## {group.name}", ""]
-    out += [inline(group.doc.brief) if group.doc else "*No description*", ""]
+    if group.doc:
+        out += [inline(group.doc.brief)] + detail_lines(group.doc) + [""]
+    else:
+        out += ["*No description*", ""]
     if requires := group_requires(group, ref):
         out += [requires, ""]
     out += ["| Name | Type | Flags | Description | Requires |", "| --- | --- | --- | --- | --- |"]
@@ -574,9 +585,7 @@ def write_group(group: Group, ref: str) -> list[str]:
         out.append(f'| <span id="{anchor(full_name)}"></span>{full_name} | {raw.type} | {flags} | {description} | {requires} |')
 
     for full_name, doc in sections:
-        out += ["", f"#### {full_name} details", "", inline(doc.brief)]
-        for part in doc.details:
-            out += [""] + [inline(line) for line in part.lines]
+        out += ["", f"#### {full_name} details", "", inline(doc.brief)] + detail_lines(doc)
     return out
 
 
@@ -606,10 +615,12 @@ def json_type(kind: Kind, raw: RawVariable) -> str:
     return ", ".join(names)
 
 
-def json_desc(doc: Doc | None) -> str:
+def json_text(doc: Doc | None, brief: bool) -> str:
+    """Doc text for the JSON, paragraphs separated by a blank line, with the brief or only the details."""
     if not doc:
         return ""
-    return "\n\n".join("\n".join(part.lines) for part in doc.details)
+    parts = ([doc.brief] if brief else []) + ["\n".join(part.lines) for part in doc.details]
+    return inline("\n\n".join(parts))
 
 
 def write_json(groups: list[Group]) -> str:
@@ -617,13 +628,13 @@ def write_json(groups: list[Group]) -> str:
     result: dict[str, dict] = {"params": {}, "logs": {}}
     for group in documented(groups):
         result[group.kind + "s"][group.name] = {
-            "desc": group.doc.brief if group.doc else "",
+            "desc": json_text(group.doc, brief=True),
             "variables": {
                 name: {
                     "core": any("core" in d.variable.flags for d in variable.definitions),
-                    "short_desc": variable.first.doc.brief if variable.first.doc else "",
+                    "short_desc": inline(variable.first.doc.brief) if variable.first.doc else "",
                     "type": json_type(group.kind, variable.first),
-                    "desc": json_desc(variable.first.doc),
+                    "desc": json_text(variable.first.doc, brief=False),
                 }
                 for name, variable in group.variables.items()
             },

@@ -366,6 +366,28 @@ def test_markdown_unconditional_group(tmp_path):
     assert "Defined in [a.c](" in write_markdown(groups, "param", ref="master")
 
 
+def test_group_details_and_links(tmp_path):
+    source = """
+/**
+ * Sensor fusion parameters, see [docs](%https://example.com/fusion)
+ *
+ * Uses the accelerometer and the gyro.
+ */
+PARAM_GROUP_START(sensfusion6)
+/** @brief Gain, see [docs](%https://example.com/gain) and %https://example.com/pull/903 */
+PARAM_ADD(PARAM_FLOAT, kp, &kp)
+PARAM_GROUP_STOP(sensfusion6)
+"""
+    groups = generate(tmp_path, "obj-y += a.o\n", {"a.c": source})
+    md = write_markdown(groups, "param", ref="master")
+    assert ("## sensfusion6\n\nSensor fusion parameters, see [docs](https://example.com/fusion)\n\n"
+            "Uses the accelerometer and the gyro.\n") in md
+    group = json.loads(write_json(groups))["params"]["sensfusion6"]
+    assert group["desc"] == "Sensor fusion parameters, see [docs](https://example.com/fusion)\n\nUses the accelerometer and the gyro."
+    assert group["variables"]["kp"]["short_desc"] == "Gain, see [docs](https://example.com/gain) and https://example.com/pull/903"
+    assert "%http" not in write_json(groups)
+
+
 def test_groups_without_entries_are_left_out(tmp_path):
     groups = generate(tmp_path, "obj-y += a.o\n", {
         "a.c": "LOG_GROUP_START(empty)\n  //LOG_ADD(LOG_FLOAT, ox, &x)\nLOG_GROUP_STOP(empty)\n" + RANGING,
