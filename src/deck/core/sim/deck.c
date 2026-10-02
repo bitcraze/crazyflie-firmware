@@ -42,14 +42,24 @@
  * CORE/non-CORE flags match each driver's own declaration. bcLoadcell is
  * declared by both loadcell.c and loadcell_nau7802.c and appears once.
  * Keep in sync when a driver adds or removes a bc* param.
+ *
+ * Phase 4.10 adds deckSupervisorHasFault(), which the real supervisor.c
+ * polls under CONFIG_DECK_SUPERVISOR. deck_supervisor.h has no hardware
+ * dependency and is included as is. With no deck there is never a fault.
  */
 
 #include "sim/deck.h"
+#include "deck_supervisor.h"
 #include "param.h"
 
 static uint8_t noDeckAttached = 0;
 
 bool deckGetRequiredKalmanEstimatorAttitudeReversionOff(void)
+{
+  return false;
+}
+
+bool deckSupervisorHasFault(void)
 {
   return false;
 }

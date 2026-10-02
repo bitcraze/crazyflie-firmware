@@ -154,6 +154,14 @@
  * actually moves in response, not just that the estimator task loop runs.
  * Phase 5's real physics-backed "Simulated position and yaw measurements"
  * component replaces it wholesale.
+ *
+ * Phase 4.10 (Commander + Generic setpoint + Setpoint HL) adds
+ * crtpSupervisorInit() and commanderInit(), in the same positions real
+ * system.c calls them (after consoleInit(), and after commInit() but before
+ * estimatorKalmanTaskInit()). commanderInit() itself brings up
+ * crtp_commander.c (ports 3 and 7) and crtp_commander_high_level.c (port
+ * 8). The real supervisor.c replaces 4.8's supervisor_sim.c stub, so arming
+ * is live (4.2's known gap) and the stabilizer loop now drives the motors.
  */
 
 #include "FreeRTOSConfig.h"
@@ -169,6 +177,8 @@
 #include "instance_sim.h"
 #include "crtp.h"
 #include "comm.h"
+#include "commander.h"
+#include "crtp_supervisor.h"
 #include "udplink_sim.h"
 #include "phase3_verify_mock.h"
 
@@ -392,6 +402,7 @@ static void systemLaunch(void)
 
   debugInit();
   consoleInit();
+  crtpSupervisorInit();
   DEBUG_PRINT("Simmyflie: Phase 4.1 console wired in\n");
 
   foundationHalStubsInit();
@@ -416,6 +427,10 @@ static void systemLaunch(void)
 
   sensorAndActuatorStubInit();
   DEBUG_PRINT("Simmyflie: Phase 4.7 sensor/actuator stub wired in\n");
+
+  commanderInit();
+  DEBUG_PRINT("Simmyflie: Phase 4.10 commander %s\n",
+              commanderTest() ? "OK" : "FAILED");
 
 #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
   estimatorKalmanTaskInit();

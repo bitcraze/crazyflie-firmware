@@ -58,15 +58,28 @@ EXTRA_LDFLAGS += -Wl,--unique=.log.* -Wl,--unique=.param.*
 # hardware coupling was estimator_kalman.c's #include "deck.h", solved via
 # include-path shadowing (src/config/sim/hw_shims/deck.h), same mechanism
 # 4.8 used for motors.h/pm.h/platform.h.
+# Phase 4.10 (Commander + Generic setpoint + Setpoint HL, ports 3/7/8)
+# retires 4.8's three temporary stubs (commander_sim.o/
+# crtp_commander_high_level_sim.o/supervisor_sim.o) in favour of the real
+# commander.o, crtp_commander.o/_generic.o/_rpyt.o,
+# crtp_commander_high_level.o with its planner.o/pptraj.o/
+# pptraj_compressed.o, and supervisor.o/supervisor_state_machine.o/
+# crtp_supervisor.o (port 9). planner.c's arm_math.h include already
+# compiles on the host (cf_math.h has pulled it in since 4.9), and
+# supervisor.c's motors.h resolves to the 4.8 shim.
 obj-y += app_channel.o
 obj-y += axis3fSubSampler.o
 obj-y += collision_avoidance.o
 obj-y += comm.o
-obj-y += commander_sim.o
+obj-y += commander.o
 obj-y += console.o
 obj-y += crtp.o
-obj-y += crtp_commander_high_level_sim.o
+obj-y += crtp_commander.o
+obj-y += crtp_commander_generic.o
+obj-y += crtp_commander_high_level.o
+obj-y += crtp_commander_rpyt.o
 obj-y += crtp_mem.o
+obj-y += crtp_supervisor.o
 # estimator.c's estimatorEnqueue() calls eventTrigger() for a handful of
 # measurement types -- unreferenced (and so gc-sections-dropped) until 4.9's
 # kalmanMeasurementInjectionTask() (main_sim.c) becomes the first sim caller
@@ -80,13 +93,17 @@ obj-y += param_logic.o
 obj-y += param_task.o
 obj-y += peer_localization.o
 obj-y += phase3_verify_mock.o
+obj-y += planner.o
 obj-y += platformservice.o
 obj-y += power_distribution_quadrotor.o
+obj-y += pptraj.o
+obj-y += pptraj_compressed.o
 obj-y += queuemonitor.o
 obj-y += sensfusion6.o
 obj-y += stabilizer.o
 obj-y += static_mem.o
-obj-y += supervisor_sim.o
+obj-y += supervisor.o
+obj-y += supervisor_state_machine.o
 obj-y += system_sim.o
 obj-y += worker.o
 

@@ -70,6 +70,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+/* Mainline FreeRTOSConfig.h includes cfassert.h, and some mainline sources
+ * (crtp_commander_generic.c, crtp_commander_rpyt.c) rely on getting ASSERT()
+ * that way, through FreeRTOS.h. Mirrored here so they build unmodified. */
+#include "cfassert.h"
 #define configASSERT( x ) if( ( x ) == 0 ) { fprintf(stderr, "ASSERT FAILED %s:%d\n", __FILE__, __LINE__); abort(); }
 
 /* Milliseconds to OS ticks, matching mainline src/config/FreeRTOSConfig.h --
