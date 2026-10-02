@@ -1,4 +1,5 @@
 require 'fileutils'
+require 'stringio'
 require './vendor/unity/auto/unity_test_summary'
 require './vendor/unity/auto/generate_test_runner'
 require './vendor/unity/auto/colour_reporter'
@@ -161,9 +162,17 @@ module RakefileHelpers
   end
 
   def execute(command_string, logOutput: true)
-    report(command_string) if $logCmd
-    output = `#{command_string}`.chomp
-    report(output) if (logOutput && !output.nil? && (output.length > 0))
+    if @test_task_log
+      @test_task_log.puts(command_string)
+    else
+      report(command_string) if $logCmd
+    end
+    output = `#{command_string} 2>&1`.chomp
+    if @test_task_log
+      @test_task_log.puts(output) if logOutput && !output.empty?
+    else
+      report(output) if logOutput && !output.empty?
+    end
     if $?.exitstatus != 0
       raise "Command failed. (Returned #{$?.exitstatus})"
     end
@@ -198,8 +207,6 @@ module RakefileHelpers
   end
 
   def run_tests(test_files, defines, output_style)
-    report 'Running system tests...'
-
     # Tack on TEST define for compiling unit tests
     load_configuration($cfg_file)
     test_defines = ['TEST']
@@ -207,85 +214,127 @@ module RakefileHelpers
     $cfg['compiler']['defines']['items'] << 'TEST'
     $cfg['compiler']['defines']['items'].concat defines
 
-    # Supress logging of commands and all warningns in minimalistic output style
-    $logCmd = true
-    if output_style.include?('min')
-      $cfg['compiler']['options'] << '-w'
-      $logCmd = false
-    end
+    $logCmd = false
 
     include_dirs = get_local_include_dirs
 
     # Build and execute each unit test
-    test_files.each do |test|
-      obj_list = []
+    terminal = $stdout
+    passed_tests = 0
+    failed_files = []
+    test_files.each_with_index do |test, index|
+      progress = "[#{index + 1}/#{test_files.length}] #{terminal.tty? ? File.basename(test) : test}"
+      terminal.print("\r\e[2K#{progress} ...") if terminal.tty?
+      terminal.flush
+      @test_task_log = StringIO.new
+      $stdout = @test_task_log
+      failure = nil
+      begin
+        obj_list = []
 
-      # Detect dependencies and build required modules
-      header_list = extract_headers(test) + ['cmock.h']
+        # Detect dependencies and build required modules
+        header_list = extract_headers(test) + ['cmock.h']
 
-      header_list.each do |header|
+        header_list.each do |header|
 
-        #create mocks if needed
-        if (header =~ /mock_/)
-          include_name = header.gsub('mock_','')
-          header_file = find_file(include_name, include_dirs)
+          #create mocks if needed
+          if (header =~ /mock_/)
+            include_name = header.gsub('mock_','')
+            header_file = find_file(include_name, include_dirs)
 
-          require "./vendor/cmock/lib/cmock.rb"
-          @cmock ||= CMock.new($cfg_file)
-          @cmock.setup_mocks([header_file])
+            require "./vendor/cmock/lib/cmock.rb"
+            @cmock ||= CMock.new($cfg_file)
+            @cmock.setup_mocks([header_file])
+          end
+
         end
 
-      end
-
-      #compile all mocks
-      header_list.each do |header|
-        #compile source file header if it exists
-        src_file = find_source_file(header, include_dirs)
-        if !src_file.nil?
-          obj_list << compile(src_file, test_defines)
+        #compile all mocks
+        header_list.each do |header|
+          #compile source file header if it exists
+          src_file = find_source_file(header, include_dirs)
+          if !src_file.nil?
+            obj_list << compile(src_file, test_defines)
+          end
         end
+
+        # build libs
+        obj_list += add_lib_source_files(['TEST_SUPPORT'], test_defines)
+        lib_annotations = read_lib_annotations(test)
+        obj_list += add_lib_source_files(lib_annotations, test_defines)
+
+        # Build the test runner (generate if configured to do so)
+        test_base = File.basename(test, C_EXTENSION)
+        runner_name = test_base + '_Runner.c'
+        if $cfg['compiler']['runner_path'].nil?
+          runner_path = $cfg['compiler']['build_path'] + runner_name
+          test_gen = UnityTestRunnerGenerator.new($cfg_file)
+          test_gen.run(test, runner_path)
+        else
+          runner_path = $cfg['compiler']['runner_path'] + runner_name
+        end
+
+        obj_list << compile(runner_path, test_defines)
+
+        # Build the test module
+        obj_list << compile(test, test_defines)
+
+        # Link the test executable
+        link_it(test_base, obj_list)
+
+        # Execute unit test and generate results file
+        simulator = build_simulator_fields
+        executable = $cfg['linker']['bin_files']['destination'] + test_base + $cfg['linker']['bin_files']['extension']
+        if simulator.nil?
+          cmd_str = executable
+        else
+          cmd_str = "#{simulator[:command]} #{simulator[:pre_support]} #{executable} #{simulator[:post_support]}"
+        end
+        output = execute(cmd_str)
+        test_results = $cfg['compiler']['build_path'] + test_base
+        if output.match(/OK$/m).nil?
+          test_results += '.testfail'
+        else
+          test_results += '.testpass'
+        end
+        File.open(test_results, 'w') { |f| f.print output }
+        raise "Test executable did not report OK" unless output.match(/OK$/m)
+
+        counts = output.match(/(\d+) Tests (\d+) Failures (\d+) Ignored/)
+        passed_tests += counts[1].to_i if counts
+        $stdout = terminal
+        terminal.print("\r\e[2K") if terminal.tty?
+        terminal.puts(@test_task_log.string) if output_style.include?('verbose')
+        test_count = counts ? " (#{counts[1]} #{counts[1] == '1' ? 'test' : 'tests'})" : ''
+        if terminal.tty? && !output_style.include?('verbose')
+          terminal.print("#{progress}: PASS#{test_count}")
+          terminal.flush
+        else
+          terminal.puts("#{progress}: PASS#{test_count}")
+        end
+      rescue StandardError => error
+        failure = error
+        failed_files << test
+      ensure
+        $stdout = terminal
+        if failure
+          terminal.print("\r\e[2K") if terminal.tty?
+          terminal.puts("#{progress}: FAIL")
+          terminal.print(@test_task_log.string)
+          terminal.puts unless @test_task_log.string.end_with?("\n")
+          terminal.puts("#{failure.class}: #{failure.message}")
+          terminal.puts(failure.backtrace.join("\n")) if failure.backtrace
+        end
+        @test_task_log = nil
       end
-
-      # build libs
-      obj_list += add_lib_source_files(['TEST_SUPPORT'], test_defines)
-      lib_annotations = read_lib_annotations(test)
-      obj_list += add_lib_source_files(lib_annotations, test_defines)
-
-      # Build the test runner (generate if configured to do so)
-      test_base = File.basename(test, C_EXTENSION)
-      runner_name = test_base + '_Runner.c'
-      if $cfg['compiler']['runner_path'].nil?
-        runner_path = $cfg['compiler']['build_path'] + runner_name
-        test_gen = UnityTestRunnerGenerator.new($cfg_file)
-        test_gen.run(test, runner_path)
-      else
-        runner_path = $cfg['compiler']['runner_path'] + runner_name
-      end
-
-      obj_list << compile(runner_path, test_defines)
-
-      # Build the test module
-      obj_list << compile(test, test_defines)
-
-      # Link the test executable
-      link_it(test_base, obj_list)
-
-      # Execute unit test and generate results file
-      simulator = build_simulator_fields
-      executable = $cfg['linker']['bin_files']['destination'] + test_base + $cfg['linker']['bin_files']['extension']
-      if simulator.nil?
-        cmd_str = executable
-      else
-        cmd_str = "#{simulator[:command]} #{simulator[:pre_support]} #{executable} #{simulator[:post_support]}"
-      end
-      output = execute(cmd_str)
-      test_results = $cfg['compiler']['build_path'] + test_base
-      if output.match(/OK$/m).nil?
-        test_results += '.testfail'
-      else
-        test_results += '.testpass'
-      end
-      File.open(test_results, 'w') { |f| f.print output }
+    end
+    terminal.print("\r\e[2K") if terminal.tty? && !output_style.include?('verbose')
+    if failed_files.empty?
+      terminal.puts("Passed: #{passed_tests} #{passed_tests == 1 ? 'test' : 'tests'} in #{test_files.length} test #{test_files.length == 1 ? 'file' : 'files'}")
+    else
+      terminal.puts("Failed: #{failed_files.length} of #{test_files.length} test files")
+      terminal.flush
+      raise "Failed test files: #{failed_files.join(', ')}"
     end
   end
 
