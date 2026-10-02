@@ -54,6 +54,28 @@
 
 static uint8_t noDeckAttached = 0;
 
+/* system.c's deck calls. With no deck there is nothing to initialize or
+ * test, and no deck asks for an estimator or a radio mode. AutoSelect makes
+ * stabilizerInit() fall back to the Kconfig default estimator. */
+void deckInit(void)
+{
+}
+
+bool deckTest(void)
+{
+  return true;
+}
+
+StateEstimatorType deckGetRequiredEstimator(void)
+{
+  return StateEstimatorTypeAutoSelect;
+}
+
+bool deckGetRequiredLowInterferenceRadioMode(void)
+{
+  return false;
+}
+
 bool deckGetRequiredKalmanEstimatorAttitudeReversionOff(void)
 {
   return false;

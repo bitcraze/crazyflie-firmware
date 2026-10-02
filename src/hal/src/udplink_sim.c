@@ -47,7 +47,7 @@
  * syscall, not a FreeRTOS-aware wait -- this port's scheduler has no way to
  * know this task is "blocked" while parked in it, so it looks perpetually
  * ready and would starve every strictly-lower-priority task forever (found
- * by hand: heartbeatTask silently stopped ticking once this task existed at
+ * by hand: a lower priority task silently stopped running once this task existed at
  * priority 2). Phase 0's drift spike hit the same class of task and sidesteps
  * it the same way -- see its main.c comment on taskBusy/taskBlockingIO
  * sharing the lowest priority so time-slicing still gives everyone a turn. */

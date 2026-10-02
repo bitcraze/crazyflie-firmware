@@ -21,25 +21,25 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * watchdog_sim.c - watchdogNormalStartTest() backend for
- * CONFIG_PLATFORM_SIM (Simmyflie), Phase 4.0.
+ * watchdog_sim.c - watchdog.h backend for CONFIG_PLATFORM_SIM (Simmyflie).
  *
- * Deliberately does not include drivers/interface/watchdog.h: that header
- * includes stm32fxxx.h directly (IWDG_* register access), an STM32
- * hardware chain with no meaning off-target -- same reasoning as
- * platform_sim.c bypassing platform.h. The signature reproduced below is
- * otherwise identical (bool, no arguments), so this links against the real
- * declaration wherever one is visible.
- *
- * watchdogInit()/watchdogReset() (the IWDG_* hardware watchdog itself) are
- * out of scope for this chunk -- nothing in Phase 4.0's own systemLaunch()
- * calls them yet; only system.c's systemStart()/vApplicationIdleHook() do,
- * and that's Phase 4.10's cutover to worry about.
+ * There is no hardware watchdog in the sim: the start is always a normal
+ * one, and watchdogInit()/watchdogReset() do nothing. The declarations are
+ * in src/config/sim/hw_shims/watchdog.h, which shadows the real watchdog.h
+ * (that one includes stm32fxxx.h).
  */
 
-#include <stdbool.h>
+#include "watchdog.h"
+
+void watchdogInit(void)
+{
+}
 
 bool watchdogNormalStartTest(void)
 {
   return true;
+}
+
+void watchdogReset(void)
+{
 }

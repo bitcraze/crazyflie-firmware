@@ -44,8 +44,12 @@
 #ifndef __PLATFORM_SIM_H__
 #define __PLATFORM_SIM_H__
 
+#include <stdbool.h>
+
 int platformInit(void);
 const char* platformConfigGetDeviceTypeName(void);
 const void** platformConfigGetMotorMapping(void);
+bool platformConfigPhysicalLayoutAntennasAreClose(void);
+void platformSetLowInterferenceRadioMode(void);
 
 #endif // __PLATFORM_SIM_H__

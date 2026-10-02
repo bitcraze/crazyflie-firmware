@@ -34,7 +34,14 @@
 
 #include <stddef.h>
 
+#include "config.h"
 #include "platform_sim.h"
+
+/* What config.h's MCU_ID_ADDRESS/MCU_FLASH_SIZE_ADDRESS point at in the sim.
+ * system.c prints both at boot and exposes them as the cpu.id0-2 and
+ * cpu.flash params. The id is the same for every instance. */
+const uint32_t simMcuId[3] = {0x004D4953, 0, 0}; // "SIM"
+const uint16_t simMcuFlashSize = 1024;
 
 int platformInit(void)
 {
@@ -57,4 +64,15 @@ const char* platformConfigGetDeviceTypeName(void)
 const void** platformConfigGetMotorMapping(void)
 {
   return NULL;
+}
+
+/* system.c asks these two only to decide on the low interference radio
+ * mode, which a deck requests. The sim has neither decks nor a radio. */
+bool platformConfigPhysicalLayoutAntennasAreClose(void)
+{
+  return false;
+}
+
+void platformSetLowInterferenceRadioMode(void)
+{
 }

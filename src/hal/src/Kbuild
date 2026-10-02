@@ -6,6 +6,7 @@ obj-y += sensors_sim.o
 obj-y += storage_sim.o
 obj-y += syslink_sim.o
 obj-y += udplink_sim.o
+obj-y += usblink_sim.o
 obj-y += usec_time_sim.o
 else
 obj-y += amg8833.o

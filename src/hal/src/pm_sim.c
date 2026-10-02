@@ -50,6 +50,11 @@ void pmInit(void)
 {
 }
 
+bool pmTest(void)
+{
+  return true;
+}
+
 float pmGetBatteryVoltage(void)
 {
   return batteryVoltage;

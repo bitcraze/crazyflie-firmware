@@ -43,6 +43,9 @@
 #define configMAX_CO_ROUTINE_PRIORITIES        ( 2 )
 #define configQUEUE_REGISTRY_SIZE              10
 #define configUSE_APPLICATION_TASK_TAG         1
+/* sysload.c (built as is) lists the tasks with uxTaskGetSystemState() when
+ * the system.taskDump param is set. */
+#define configUSE_TRACE_FACILITY               1
 #define configSUPPORT_STATIC_ALLOCATION        1
 #define configSUPPORT_DYNAMIC_ALLOCATION       1
 
@@ -74,6 +77,10 @@
  * (crtp_commander_generic.c, crtp_commander_rpyt.c) rely on getting ASSERT()
  * that way, through FreeRTOS.h. Mirrored here so they build unmodified. */
 #include "cfassert.h"
+/* Likewise config.h: crtpservice.c takes its task name, priority and stack
+ * size from it without including it. This is the sim config.h next to this
+ * file, not the mainline one. */
+#include "config.h"
 #define configASSERT( x ) if( ( x ) == 0 ) { fprintf(stderr, "ASSERT FAILED %s:%d\n", __FILE__, __LINE__); abort(); }
 
 /* Milliseconds to OS ticks, matching mainline src/config/FreeRTOSConfig.h --

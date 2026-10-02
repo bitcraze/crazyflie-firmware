@@ -38,7 +38,13 @@
 #ifndef __PM_SIM_H__
 #define __PM_SIM_H__
 
+#include <stdbool.h>
+
+/* The real pm.h includes adc.h, and system.c gets adcInit() that way. */
+#include "adc.h"
+
 void pmInit(void);
+bool pmTest(void);
 float pmGetBatteryVoltage(void);
 
 #endif // __PM_SIM_H__

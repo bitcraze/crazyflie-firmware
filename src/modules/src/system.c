@@ -428,7 +428,7 @@ void vApplicationIdleHook( void )
 
   // Enter sleep mode. Does not work when debugging chip with SWD.
   // Currently saves about 20mA STM32F405 current consumption (~30%).
-#ifndef DEBUG
+#if !defined(DEBUG) && !defined(CONFIG_PLATFORM_SIM)
   { __asm volatile ("wfi"); }
 #endif
 }

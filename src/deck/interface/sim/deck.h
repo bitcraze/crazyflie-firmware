@@ -42,7 +42,16 @@
 #define __DECK_SIM_H__
 
 #include <stdbool.h>
+/* system.c uses memcpy() without including string.h and gets it through
+ * the hardware headers of the real deck.h. */
+#include <string.h>
 
+#include "estimator.h"
+
+void deckInit(void);
+bool deckTest(void);
+StateEstimatorType deckGetRequiredEstimator(void);
+bool deckGetRequiredLowInterferenceRadioMode(void);
 bool deckGetRequiredKalmanEstimatorAttitudeReversionOff(void);
 
 #endif // __DECK_SIM_H__

@@ -40,11 +40,18 @@
 #ifndef CONFIG_H_
 #define CONFIG_H_
 
+#include <stdint.h>
+
 #include "usec_time.h"
 
 #define CONFIG_BLOCK_ADDRESS    (2048 * (64-1))
-#define MCU_ID_ADDRESS          0x1FFF7A10
-#define MCU_FLASH_SIZE_ADDRESS  0x1FFF7A22
+// On the STM32 these are fixed addresses in system memory. system.c reads
+// through them, so in the sim they point at variables in platform_sim.c.
+// MCU_ID_ADDRESS is a byte pointer since system.c adds byte offsets to it.
+extern const uint32_t simMcuId[3];
+extern const uint16_t simMcuFlashSize;
+#define MCU_ID_ADDRESS          ((const uint8_t*)simMcuId)
+#define MCU_FLASH_SIZE_ADDRESS  (&simMcuFlashSize)
 #ifndef FREERTOS_HEAP_SIZE
   #define FREERTOS_HEAP_SIZE      30000
 #endif

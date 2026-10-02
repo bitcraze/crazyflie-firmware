@@ -21,23 +21,25 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * syslink_sim.c - syslinkSendPacket() stub for CONFIG_PLATFORM_SIM
- * (Simmyflie), Phase 4.2.
+ * syslink_sim.c - syslink stubs for CONFIG_PLATFORM_SIM (Simmyflie).
  *
- * The real syslink.c talks to the NRF51 companion radio chip over
- * uart_syslink.h/radiolink.h, neither of which exist in sim (same "NRF
- * companion chip doesn't exist in sim" reasoning Phase 4.0 used for
- * systemRequestNRFVersion()). platformservice.c's setContinuousWave
- * command is the only sim caller, forwarding a radio-test request that has
- * no meaning without real radio hardware -- stubbed to a no-op.
+ * Syslink is the UART protocol to the NRF51 radio chip, which the sim does
+ * not have. Packets sent to it are dropped: system.c's NRF version request
+ * and radio-ready notification, and platformservice.c's setContinuousWave.
+ * Nothing ever arrives from it, so enabling incoming packets does nothing.
  */
 
 #include <stdint.h>
 
 #include "syslink.h"
+#include "uart_syslink.h"
 
 int syslinkSendPacket(SyslinkPacket *slp)
 {
   (void)slp;
   return 0;
+}
+
+void uartslkEnableIncoming()
+{
 }

@@ -8,71 +8,19 @@ ifeq ($(CONFIG_PLATFORM_SIM),y)
 # this merge stage, not just the final image link.
 EXTRA_LDFLAGS += -Wl,--unique=.log.* -Wl,--unique=.param.*
 
-# Simmyflie Phase 3 (Communication): the CRTP port-dispatch layer plus its
-# two portable-FreeRTOS-only dependencies, and comm.c (gated internally on
-# CONFIG_PLATFORM_SIM to skip the hardware links/CRTP subsystems it
-# otherwise wires in). phase3_verify_mock.o is TEMPORARY verification
-# scaffolding (see phase3_verify_mock.c), not part of the real Firmware
-# core -- Phase 4 replaces it piece by piece with the rest of this file's
-# object list (commander, log, param, platformservice, stabilizer, system,
-# ...). Phase 4.1 (Console) adds console.o -- the first real replacement,
-# gated internally for its one hardware-only dependency (see console.c).
-# Phase 4.2 (Platform) adds platformservice.o (gated internally, see
-# platformservice.c) plus its app_channel.o/worker.o dependencies, and
-# supervisor_sim.o -- a stub for the 4 supervisor.h entry points
-# platformservice.c's deprecated arm/recover commands call; the real
-# supervisor.c isn't buildable yet (see supervisor_sim.c).
-# Phase 4.3 (Memory) adds mem.o/crtp_mem.o fully unmodified -- Simmyflie
-# reports CMD_INFO_NBR the same as real hardware with no decks attached
-# (nbr_of_mems=1, the always-registered memTester), not zero.
-# Phase 4.4 (Parameters) adds param_logic.o/param_task.o fully unmodified --
-# their _param_start/_param_stop/_sdata/_sidata/_stext linker-symbol
-# dependencies are supplied by tools/make/sim/linker/sim_toc_sections.ld
-# (see the Makefile's CONFIG_PLATFORM_SIM image_LDFLAGS), not a source
-# change.
-# Phase 4.5 (Logging) adds log.o, also fully unmodified -- its
-# _log_start/_log_stop TOC-bounds are supplied by the same linker script
-# (extended to add a second .log output section alongside .param). Retires
-# phase3_verify_mock.c's Log handler, including the CMD_RESET_LOGGING ch.1
-# quirk Phase 3 hand-fixed in the mock: real log.c's CONTROL_RESET case
-# (logControlProcess()) already answers it correctly.
-# Phase 4.8 (Estimator + controller + power distribution + stabilizer loop)
-# adds stabilizer.o plus its real, unmodified dependents -- collision_avoidance.o/
-# health.o/peer_localization.o/power_distribution_quadrotor.o, and the
-# controller/ and estimator/ subtrees (each portable; see
-# dev/implementation-plan-phase-4.md's 4.8 section for the per-file
-# dependency sweep) -- plus two TEMPORARY stubs, commander_sim.o/
-# crtp_commander_high_level_sim.o, standing in for 4.10's real
-# commander.c/crtp_commander_high_level.c until that chunk lands (see
-# those files' own header comments for why).
-# Phase 4.9 (Enable the Kalman estimator) adds axis3fSubSampler.o
-# (unconditional -- estimator_kalman.c needs it regardless of platform) and,
-# gated on CONFIG_ESTIMATOR_KALMAN_ENABLE (mainline's own default, y):
-# kalman_supervisor.o, the kalman_core/ subtree, and (auto-selected by
-# Kconfig once Kalman is on) the outlierfilter/ subtree. estimator_kalman.o
-# itself needs no new line here -- estimator/Kbuild's own
-# obj-$(CONFIG_ESTIMATOR_KALMAN_ENABLE) line already applies, that directory
-# is already recursed into unconditionally below. All of this tree's C files
-# are portable (no CMSIS/arm_math, confirmed by a full per-file #include
-# sweep -- see dev/implementation-plan-phase-4.md's 4.9 section); the only
-# hardware coupling was estimator_kalman.c's #include "deck.h", solved via
-# include-path shadowing (src/config/sim/hw_shims/deck.h), same mechanism
-# 4.8 used for motors.h/pm.h/platform.h.
-# Phase 4.10 (Commander + Generic setpoint + Setpoint HL, ports 3/7/8)
-# retires 4.8's three temporary stubs (commander_sim.o/
-# crtp_commander_high_level_sim.o/supervisor_sim.o) in favour of the real
-# commander.o, crtp_commander.o/_generic.o/_rpyt.o,
-# crtp_commander_high_level.o with its planner.o/pptraj.o/
-# pptraj_compressed.o, and supervisor.o/supervisor_state_machine.o/
-# crtp_supervisor.o (port 9). planner.c's arm_math.h include already
-# compiles on the host (cf_math.h has pulled it in since 4.9), and
-# supervisor.c's motors.h resolves to the 4.8 shim.
+# Simmyflie builds the hardware independent part of the list in the else
+# branch below, unmodified where possible. Left out: bootloader/DFU, ESC
+# passthrough, external RX, MSP, deck and lighthouse code, CPX, P2P and the
+# localization service (crtp_localization_service.o). The stubs here are
+# vcp_esc_passthrough_sim.o and cpxlink_sim.o, for the passthroughInit() and
+# cpxlinkInit() calls in system.c.
 obj-y += app_channel.o
 obj-y += axis3fSubSampler.o
 obj-y += collision_avoidance.o
 obj-y += comm.o
 obj-y += commander.o
 obj-y += console.o
+obj-$(CONFIG_ENABLE_CPX) += cpxlink_sim.o
 obj-y += crtp.o
 obj-y += crtp_commander.o
 obj-y += crtp_commander_generic.o
@@ -80,10 +28,7 @@ obj-y += crtp_commander_high_level.o
 obj-y += crtp_commander_rpyt.o
 obj-y += crtp_mem.o
 obj-y += crtp_supervisor.o
-# estimator.c's estimatorEnqueue() calls eventTrigger() for a handful of
-# measurement types -- unreferenced (and so gc-sections-dropped) until 4.9's
-# kalmanMeasurementInjectionTask() (main_sim.c) becomes the first sim caller
-# of estimatorEnqueuePosition()/estimatorEnqueueYawError(). Fully portable.
+obj-y += crtpservice.o
 obj-y += eventtrigger.o
 obj-y += health.o
 obj-$(CONFIG_ESTIMATOR_KALMAN_ENABLE) += kalman_supervisor.o
@@ -92,7 +37,6 @@ obj-y += mem.o
 obj-y += param_logic.o
 obj-y += param_task.o
 obj-y += peer_localization.o
-obj-y += phase3_verify_mock.o
 obj-y += planner.o
 obj-y += platformservice.o
 obj-y += power_distribution_quadrotor.o
@@ -100,11 +44,14 @@ obj-y += pptraj.o
 obj-y += pptraj_compressed.o
 obj-y += queuemonitor.o
 obj-y += sensfusion6.o
+obj-y += sound_cf2.o
 obj-y += stabilizer.o
 obj-y += static_mem.o
 obj-y += supervisor.o
 obj-y += supervisor_state_machine.o
-obj-y += system_sim.o
+obj-y += sysload.o
+obj-y += system.o
+obj-y += vcp_esc_passthrough_sim.o
 obj-y += worker.o
 
 obj-y += controller/
