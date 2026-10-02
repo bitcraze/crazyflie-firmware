@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # /// script
-# requires-python = ">=3.11"
+# requires-python = ">=3.10"
 # dependencies = []
 # ///
 """Generate the log and parameter documentation from the firmware source.
@@ -481,8 +481,10 @@ def cell(text: str) -> str:
 
 def default_ref(root: Path) -> str:
     """The release tag at HEAD, else the commit hash, else master when not in a git checkout."""
+    # safe.directory: also works when the checkout belongs to another user, e.g. mounted in a container
+    git = ["git", "-c", f"safe.directory={root.resolve()}", "-C", str(root)]
     for command in (["describe", "--tags", "--exact-match", "HEAD"], ["rev-parse", "HEAD"]):
-        result = subprocess.run(["git", "-C", str(root), *command], capture_output=True, text=True)
+        result = subprocess.run([*git, *command], capture_output=True, text=True)
         if result.returncode == 0:
             return result.stdout.strip()
     return "master"
