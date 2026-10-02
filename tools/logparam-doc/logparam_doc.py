@@ -13,7 +13,9 @@ builds a file and the #if lines around an entry are shown as text.
 from __future__ import annotations
 
 import argparse
+import json
 import re
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -258,7 +260,7 @@ def parse_doc(lines: list[str]) -> Doc | None:
     if not paragraphs:
         return None
 
-    brief = re.sub(r"^[@\\]brief\s*", "", " ".join(paragraphs[0]))
+    brief = re.sub(r"^[@\\]brief\s*", "", " ".join(" ".join(paragraphs[0]).split()))
     details: list[DocPart] = []
     for paragraph in paragraphs[1:]:
         # A paragraph can hold text and table rows, split it into runs
@@ -276,7 +278,7 @@ def parse_doc(lines: list[str]) -> Doc | None:
 def make_part(lines: list[str]) -> DocPart:
     if lines[0].startswith("|"):
         return DocPart("table", tuple(lines))
-    return DocPart("text", (" ".join(lines),))
+    return DocPart("text", (" ".join(" ".join(lines).split()),))
 
 
 def doc_above(lines: list[str], index: int) -> Doc | None:
@@ -455,13 +457,193 @@ def check_variable_doc(group: Group, variable: Variable) -> list[Diagnostic]:
 
 
 # ---------------------------------------------------------------------------
+# Writers
+
+SOURCE_URL = "https://github.com/bitcraze/crazyflie-firmware/blob/{ref}/{path}#L{line}"
+MD_FILES = {"log": "logs.md_raw", "param": "params.md_raw"}
+JSON_FILE = "log_param_doc.json"
+
+
+def anchor(text: str) -> str:
+    """The id kramdown gives a heading with this text."""
+    text = re.sub(r"[^a-z0-9 _-]", "", text.lower())
+    return text.replace(" ", "-")
+
+
+def inline(text: str) -> str:
+    """Comment text for use in markdown, links written as (%https://...) work as normal links."""
+    return re.sub(r"\(%(https?://)", r"(\1", text)
+
+
+def cell(text: str) -> str:
+    return inline(text).replace("|", "\\|")
+
+
+def default_ref(root: Path) -> str:
+    """The release tag at HEAD, else the commit hash, else master when not in a git checkout."""
+    for command in (["describe", "--tags", "--exact-match", "HEAD"], ["rev-parse", "HEAD"]):
+        result = subprocess.run(["git", "-C", str(root), *command], capture_output=True, text=True)
+        if result.returncode == 0:
+            return result.stdout.strip()
+    return "master"
+
+
+def source_link(location: Location, ref: str) -> str:
+    url = SOURCE_URL.format(ref=ref, path=location.file.as_posix(), line=location.line)
+    return f"[{location.file.name}]({url})"
+
+
+def condition_text(conditions: tuple[str, ...]) -> str:
+    return " and ".join(f"`{c}`" for c in conditions)
+
+
+def block_conditions(block: RawGroup) -> tuple[str, ...]:
+    return block.condition.kbuild + block.condition.preproc
+
+
+def shared_conditions(group: Group) -> tuple[str, ...]:
+    """The conditions every block of the group has."""
+    first, *rest = (block_conditions(b) for b in group.blocks)
+    return tuple(c for c in first if all(c in other for other in rest))
+
+
+def per_entry_conditions(group: Group) -> bool:
+    """True when the blocks of a split group are built under different conditions.
+
+    Then each entry shows its own condition, e.g. the deck group where every
+    deck driver adds its own entry.
+    """
+    return len({block_conditions(b) for b in group.blocks}) > 1
+
+
+def group_requires(group: Group, ref: str) -> str | None:
+    """A line with the conditions that build the group, and the files when they are the same for every entry."""
+    files = ", ".join(source_link(b.location, ref) for b in group.blocks)
+    shared = shared_conditions(group)
+    if per_entry_conditions(group):
+        return f"Requires {condition_text(shared)}" if shared else None
+    return f"Requires {condition_text(shared)} ({files})" if shared else f"Defined in {files}"
+
+
+def entry_requires(group: Group, variable: Variable, ref: str) -> str:
+    """The conditions an entry needs beyond the group line, alternatives joined with 'or'."""
+    shared = shared_conditions(group)
+    parts = []
+    for definition in variable.definitions:
+        conditions = definition.variable.condition.preproc
+        if per_entry_conditions(group):
+            own = tuple(c for c in block_conditions(definition.block) if c not in shared)
+            text = condition_text(own + conditions)
+            link = source_link(definition.variable.location, ref)
+            parts.append(f"{text} ({link})" if text else f"always ({link})")
+        elif conditions:
+            parts.append(condition_text(conditions))
+    return " or ".join(dict.fromkeys(parts))
+
+
+def has_table(doc: Doc | None) -> bool:
+    return bool(doc) and any(part.kind == "table" for part in doc.details)
+
+
+def write_group(group: Group, ref: str) -> list[str]:
+    out = ["", "---", "[back to group index](#index)", "", f"## {group.name}", ""]
+    out += [inline(group.doc.brief) if group.doc else "*No description*", ""]
+    if requires := group_requires(group, ref):
+        out += [requires, ""]
+    out += ["| Name | Type | Flags | Description | Requires |", "| --- | --- | --- | --- | --- |"]
+
+    sections = []
+    for variable in group.variables.values():
+        raw = variable.first
+        full_name = f"{group.name}.{variable.name}"
+        flags = ", ".join(f for f in ("core", "persistent", "read-only")
+                          if any(f in d.variable.flags for d in variable.definitions))
+        if raw.doc:
+            description = cell(raw.doc.brief)
+            if has_table(raw.doc):
+                description += f" [details below](#{anchor(full_name + ' details')})"
+                sections.append((full_name, raw.doc))
+            else:
+                details = "<br>".join(cell(p.lines[0]) for p in raw.doc.details)
+                description += f"<br><small>{details}</small>" if details else ""
+        else:
+            description = "*No description*"
+        requires = entry_requires(group, variable, ref)
+        out.append(f'| <span id="{anchor(full_name)}"></span>{full_name} | {raw.type} | {flags} | {description} | {requires} |')
+
+    for full_name, doc in sections:
+        out += ["", f"#### {full_name} details", "", inline(doc.brief)]
+        for part in doc.details:
+            out += [""] + [inline(line) for line in part.lines]
+    return out
+
+
+def documented(groups: list[Group]) -> list[Group]:
+    """Groups sorted by name, without groups that have no entries (clients never see those)."""
+    return sorted((g for g in groups if g.variables), key=lambda g: g.name.lower())
+
+
+def write_markdown(groups: list[Group], kind: Kind, ref: str) -> str:
+    groups = [g for g in documented(groups) if g.kind == kind]
+    out = ["## Index", ""]
+    letter = None
+    for group in groups:
+        if group.name[0].lower() != letter:
+            letter = group.name[0].lower()
+            out += ["", f"### {letter.upper()}"]
+        out.append(f"* [{group.name}](#{anchor(group.name)})")
+    for group in groups:
+        out += write_group(group, ref)
+    return "\n".join(out) + "\n"
+
+
+def json_type(kind: Kind, raw: RawVariable) -> str:
+    prefix = kind.upper()
+    names = [f"{prefix}_{raw.type.upper()}"]
+    names += [f"{prefix}_{name}" for flag, name in (("persistent", "PERSISTENT"), ("read-only", "RONLY")) if flag in raw.flags]
+    return ", ".join(names)
+
+
+def json_desc(doc: Doc | None) -> str:
+    if not doc:
+        return ""
+    return "\n\n".join("\n".join(part.lines) for part in doc.details)
+
+
+def write_json(groups: list[Group]) -> str:
+    """Same structure as the Doxygen based generator, the client reads desc and short_desc."""
+    result: dict[str, dict] = {"params": {}, "logs": {}}
+    for group in documented(groups):
+        result[group.kind + "s"][group.name] = {
+            "desc": group.doc.brief if group.doc else "",
+            "variables": {
+                name: {
+                    "core": any("core" in d.variable.flags for d in variable.definitions),
+                    "short_desc": variable.first.doc.brief if variable.first.doc else "",
+                    "type": json_type(group.kind, variable.first),
+                    "desc": json_desc(variable.first.doc),
+                }
+                for name, variable in group.variables.items()
+            },
+        }
+    return json.dumps(result)
+
+
+def write_output(groups: list[Group], out: Path, ref: str) -> None:
+    out.mkdir(parents=True, exist_ok=True)
+    for kind, file_name in MD_FILES.items():
+        (out / file_name).write_text(write_markdown(groups, kind, ref))
+    (out / JSON_FILE).write_text(write_json(groups))
+
+
+# ---------------------------------------------------------------------------
 # Command line
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("src", type=Path, help="firmware source directory, e.g. src")
     parser.add_argument("out", type=Path, help="output directory, e.g. docs/api")
-    parser.add_argument("--ref", default="master", help="git ref used in source links (default: master)")
+    parser.add_argument("--ref", help="git ref used in source links (default: the tag at HEAD, else the commit hash)")
     parser.add_argument("--root", type=Path, default=Path("."), help="firmware repository root (default: .)")
     parser.add_argument("--verbose", action="store_true", help="list every warning, not just the count")
     args = parser.parse_args(argv)
@@ -478,7 +660,10 @@ def main(argv: list[str] | None = None) -> int:
     print(f"{len(groups)} groups, {entries} entries, {len(errors)} errors, "
           f"{len(warnings)} entries without description" + ("" if args.verbose or not warnings else " (--verbose lists them)"),
           file=sys.stderr)
-    return 1 if errors else 0
+    if errors:
+        return 1
+    write_output(groups, args.out, args.ref or default_ref(args.root))
+    return 0
 
 
 if __name__ == "__main__":

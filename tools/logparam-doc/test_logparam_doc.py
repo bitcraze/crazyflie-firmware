@@ -4,7 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from logparam_doc import Condition, DocPart, merge, parse_doc, read_kbuild, scan, scan_file
+import json
+import subprocess
+
+from logparam_doc import (Condition, DocPart, anchor, default_ref, merge, parse_doc, read_kbuild, scan, scan_file,
+                          write_json, write_markdown)
 
 
 def write(root: Path, files: dict[str, str]) -> None:
@@ -269,6 +273,129 @@ def test_missing_descriptions(tmp_path):
     })
     assert messages(diagnostics) == ["core param g.c has no description"]
     assert messages(diagnostics, "warning") == ["param g.n has no description"]
+
+
+# Writers ---------------------------------------------------------------------
+
+POWER_DIST = """
+/** Power distribution parameters */
+PARAM_GROUP_START(powerDist)
+/**
+ * @brief Motor thrust to set at idle (default: 0)
+ *
+ * Needed for brushless motors.
+ */
+PARAM_ADD_CORE(PARAM_UINT32 | PARAM_PERSISTENT, idleThrust, &t)
+PARAM_GROUP_STOP(powerDist)
+"""
+
+RANGING = """
+/** Distances to anchors, see [docs](%https://example.com/loco) */
+LOG_GROUP_START(ranging)
+LOG_ADD(LOG_UINT16, state, &s)
+#if NR_OF_ANCHORS > 4
+/** @brief Distance to anchor 4 [m] */
+LOG_ADD(LOG_FLOAT, distance4, &d[4])
+#endif
+/**
+ * @brief Mode
+ *
+ * | Id | Mode |
+ * | -  | -    |\\n
+ * | 0  | Auto |\\n
+ *
+ * Set by the client.
+ */
+LOG_ADD(LOG_UINT8, mode, &m)
+LOG_GROUP_STOP(ranging)
+"""
+
+
+def generate(tmp_path: Path, kbuild: str, files: dict[str, str]):
+    groups, diagnostics = merge_files(tmp_path, kbuild, files)
+    assert messages(diagnostics) == []
+    return groups
+
+
+def test_anchor_matches_kramdown_ids():
+    assert anchor("ranging.distance0") == "rangingdistance0"
+    assert anchor("activeMarker") == "activemarker"
+    assert anchor("lighthouse.angle1y_1 details") == "lighthouseangle1y_1-details"
+
+
+def test_markdown_group(tmp_path):
+    groups = generate(tmp_path, "obj-$(CONFIG_DECK_LOCO) += loco.o\n", {"loco.c": RANGING})
+    md = write_markdown(groups, "log", ref="2026.04")
+    assert "* [ranging](#ranging)" in md
+    assert "## ranging\n\nDistances to anchors, see [docs](https://example.com/loco)\n" in md
+    assert ("Requires `CONFIG_DECK_LOCO` "
+            "([loco.c](https://github.com/bitcraze/crazyflie-firmware/blob/2026.04/src/loco.c#L3))") in md
+    assert '| <span id="rangingstate"></span>ranging.state | uint16 |  | *No description* |  |' in md
+    assert ('| <span id="rangingdistance4"></span>ranging.distance4 | float |  | Distance to anchor 4 [m] '
+            '| `NR_OF_ANCHORS > 4` |') in md
+    assert "| Mode [details below](#rangingmode-details) |" in md
+    assert "#### ranging.mode details\n\nMode\n\n| Id | Mode |\n| -  | -    |\n| 0  | Auto |\n\nSet by the client.\n" in md
+
+
+def test_markdown_flags_details_and_alternatives(tmp_path):
+    groups = generate(tmp_path, "obj-$(CONFIG_QUAD) += quad.o\nobj-$(CONFIG_FLAPPER) += flapper.o\n",
+                      {"quad.c": POWER_DIST, "flapper.c": POWER_DIST})
+    md = write_markdown(groups, "param", ref="master")
+    assert "Requires `CONFIG_" not in md  # nothing shared, each entry shows its own condition
+    assert ("| uint32 | core, persistent | Motor thrust to set at idle (default: 0)"
+            "<br><small>Needed for brushless motors.</small> | `CONFIG_FLAPPER` ([flapper.c]("
+            "https://github.com/bitcraze/crazyflie-firmware/blob/master/src/flapper.c#L9)) or `CONFIG_QUAD` ([quad.c](") in md
+
+
+def test_markdown_entries_with_their_own_conditions(tmp_path):
+    # Like the deck group: every driver adds its own entry under its own Kbuild symbol
+    deck = "/** @brief Nonzero if the {0} deck is attached */\nPARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bc{0}, &i)\n"
+    groups = generate(tmp_path, "obj-$(CONFIG_DECKS) += decks/\n", {
+        "decks/Kbuild": "obj-$(CONFIG_DECK_AI) += ai.o\nobj-$(CONFIG_DECK_FLOW) += flow.o\n",
+        "decks/ai.c": "/** Attached decks */\nPARAM_GROUP_START(deck)\n" + deck.format("AI") + "PARAM_GROUP_STOP(deck)\n",
+        "decks/flow.c": "PARAM_GROUP_START(deck)\n" + deck.format("Flow") + "PARAM_GROUP_STOP(deck)\n",
+    })
+    md = write_markdown(groups, "param", ref="master")
+    assert "\nRequires `CONFIG_DECKS`\n" in md  # shared by all entries, no files
+    assert "deck.bcAI | uint8 | core, read-only | Nonzero if the AI deck is attached | `CONFIG_DECK_AI` ([ai.c](" in md
+    assert "deck.bcFlow | uint8 | core, read-only | Nonzero if the Flow deck is attached | `CONFIG_DECK_FLOW` ([flow.c](" in md
+
+
+def test_markdown_unconditional_group(tmp_path):
+    groups = generate(tmp_path, "obj-y += a.o\n", {"a.c": POWER_DIST})
+    assert "Defined in [a.c](" in write_markdown(groups, "param", ref="master")
+
+
+def test_groups_without_entries_are_left_out(tmp_path):
+    groups = generate(tmp_path, "obj-y += a.o\n", {
+        "a.c": "LOG_GROUP_START(empty)\n  //LOG_ADD(LOG_FLOAT, ox, &x)\nLOG_GROUP_STOP(empty)\n" + RANGING,
+    })
+    assert "empty" not in write_markdown(groups, "log", ref="master")
+    assert "empty" not in json.loads(write_json(groups))["logs"]
+
+
+def test_default_ref(tmp_path):
+    def git(*args):
+        return subprocess.run(["git", "-C", str(tmp_path), *args], check=True, capture_output=True, text=True).stdout.strip()
+
+    assert default_ref(tmp_path) == "master"
+    git("init", "-q")
+    git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "first")
+    assert default_ref(tmp_path) == git("rev-parse", "HEAD")
+    git("tag", "2026.04")
+    assert default_ref(tmp_path) == "2026.04"
+
+
+def test_json_keeps_the_structure_the_client_reads(tmp_path):
+    groups = generate(tmp_path, "obj-y += a.o b.o\n", {"a.c": POWER_DIST, "b.c": RANGING})
+    data = json.loads(write_json(groups))
+    assert data["params"]["powerDist"] == {
+        "desc": "Power distribution parameters",
+        "variables": {"idleThrust": {"core": True, "short_desc": "Motor thrust to set at idle (default: 0)",
+                                     "type": "PARAM_UINT32, PARAM_PERSISTENT", "desc": "Needed for brushless motors."}},
+    }
+    assert data["logs"]["ranging"]["variables"]["state"] == {"core": False, "short_desc": "", "type": "LOG_UINT16", "desc": ""}
+    assert data["logs"]["ranging"]["variables"]["mode"]["desc"] == "| Id | Mode |\n| -  | -    |\n| 0  | Auto |\n\nSet by the client."
 
 
 # Firmware --------------------------------------------------------------------
