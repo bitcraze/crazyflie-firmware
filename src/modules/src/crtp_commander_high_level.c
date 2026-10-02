@@ -143,6 +143,7 @@ enum TrajectoryCommand_e {
   COMMAND_SPIRAL                  = 11,
   COMMAND_GO_TO_2                 = 12,
   COMMAND_START_TRAJECTORY_2      = 13,
+  COMMAND_LAND_PRECISE            = 14,
 };
 
 struct data_set_group_mask {
@@ -192,6 +193,19 @@ struct data_land_2 {
   float yaw;                // rad
   bool useCurrentYaw;       // If true, use the current yaw (ignore the yaw parameter)
   float duration;           // s (time it should take until target height is reached)
+} __attribute__((packed));
+
+// vertical land from current x-y position to given height, hovering briefly above the
+// target with temporarily-tuned controller gains before the final descent, for improved
+// landing precision when there's high-accuracy positioning data, e.g. Lighthouse or MoCap
+struct data_land_precise {
+  uint8_t groupMask;        // mask for which CFs this should apply to
+  float height;             // m (absolute)
+  float yaw;                // rad
+  bool useCurrentYaw;       // If true, use the current yaw (ignore the yaw parameter)
+  float duration;           // s (time it should take until target height is reached)
+  float hoverOffset;        // m, how far above the landing target to hover
+  float hoverDuration;      // s, how long to hover above the target before the final descent
 } __attribute__((packed));
 
 // vertical land from current x-y position to given height, with prescribed
@@ -279,6 +293,7 @@ static int takeoff(const struct data_takeoff* data);
 static int land(const struct data_land* data);
 static int takeoff2(const struct data_takeoff_2* data);
 static int land2(const struct data_land_2* data);
+static int land_precise(const struct data_land_precise* data);
 static int takeoff_with_velocity(const struct data_takeoff_with_velocity* data);
 static int land_with_velocity(const struct data_land_with_velocity* data);
 static int stop(const struct data_stop* data);
@@ -459,6 +474,9 @@ static int handleCommand(const enum TrajectoryCommand_e command, const uint8_t* 
     case COMMAND_DEFINE_TRAJECTORY:
       ret = define_trajectory((const struct data_define_trajectory*)data);
       break;
+    case COMMAND_LAND_PRECISE:
+      ret = land_precise((const struct data_land_precise*)data);
+      break;
     default:
       ret = ENOEXEC;
       break;
@@ -593,6 +611,29 @@ int land2(const struct data_land_2* data)
     }
 
     result = plan_land(&planner, pos, yaw, data->height, hover_yaw, data->duration, t);
+    xSemaphoreGive(lockTraj);
+  }
+  return result;
+}
+
+int land_precise(const struct data_land_precise* data)
+{
+  if (isBlocked) {
+    return EBUSY;
+  }
+
+  int result = 0;
+  if (isInGroup(data->groupMask)) {
+    xSemaphoreTake(lockTraj, portMAX_DELAY);
+    float t = usecTimestamp() / 1e6;
+
+    float hover_yaw = data->yaw;
+    if (data->useCurrentYaw) {
+      hover_yaw = yaw;
+    }
+
+    result = plan_precise_land(&planner, pos, yaw, data->height, hover_yaw, data->duration,
+                                data->hoverOffset, data->hoverDuration, t);
     xSemaphoreGive(lockTraj);
   }
   return result;
@@ -916,6 +957,37 @@ int crtpCommanderHighLevelLandYaw(const float absoluteHeight_m, const float dura
   return handleCommand(COMMAND_LAND_2, (const uint8_t*)&data);
 }
 
+int crtpCommanderHighLevelPreciseLand(const float absoluteHeight_m, const float duration_s, const float hoverOffset_m, const float hoverDuration_s)
+{
+  struct data_land_precise data =
+  {
+    .height = absoluteHeight_m,
+    .duration = duration_s,
+    .hoverOffset = hoverOffset_m,
+    .hoverDuration = hoverDuration_s,
+    .useCurrentYaw = true,
+    .groupMask = ALL_GROUPS,
+  };
+
+  return handleCommand(COMMAND_LAND_PRECISE, (const uint8_t*)&data);
+}
+
+int crtpCommanderHighLevelPreciseLandYaw(const float absoluteHeight_m, const float duration_s, const float hoverOffset_m, const float hoverDuration_s, const float yaw)
+{
+  struct data_land_precise data =
+  {
+    .height = absoluteHeight_m,
+    .duration = duration_s,
+    .hoverOffset = hoverOffset_m,
+    .hoverDuration = hoverDuration_s,
+    .useCurrentYaw = false,
+    .yaw = yaw,
+    .groupMask = ALL_GROUPS,
+  };
+
+  return handleCommand(COMMAND_LAND_PRECISE, (const uint8_t*)&data);
+}
+
 int crtpCommanderHighLevelStop()
 {
   struct data_stop data =
@@ -1103,3 +1175,4 @@ PARAM_ADD_CORE(PARAM_FLOAT, vland, &defaultLandingVelocity)
 PARAM_ADD_CORE(PARAM_UINT8, groupmask, &group_mask)
 
 PARAM_GROUP_STOP(hlCommander)
+

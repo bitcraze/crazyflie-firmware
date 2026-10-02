@@ -54,3 +54,6 @@ tools/dependency/web/data.js
 # Clangd
 compile_commands.json
 .cache/**
+
+venv/
+rust_venv/
