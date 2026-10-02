@@ -758,7 +758,7 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint, const state_t *state) {
           setpoint->velocity.z = 0;
         } else if (state->position.z > geofenceZmax) {
           setpoint->mode.z = modeAbs;
-          setpoint->position.z = geofenceZmax-geofenceWarningZone;
+          setpoint->position.z = geofenceZmax-geofenceWarningZone/2;
           setpoint->velocity.z = 0;
         }
       }
