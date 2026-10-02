@@ -21,19 +21,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * phase3_verify_mock.h - TEMPORARY Phase 3 verification scaffolding, not a
- * real Firmware core (Phase 4) implementation. See phase3_verify_mock.c.
+ * i2cdev.h (sim shim) - shadows src/drivers/interface/i2cdev.h for
+ * CONFIG_PLATFORM_SIM (Simmyflie), which pulls in i2c_drv.h -> stm32fxxx.h.
+ * Same include-path shadowing as motors.h/pm.h/platform.h in this directory.
+ *
+ * The sim has no I2C bus. system.c's i2cdevInit(I2C3_DEV)/
+ * i2cdevInit(I2C1_DEV) calls compile against these two macros and reach
+ * i2cdev_sim.c's no-op.
  */
-#ifndef PHASE3_VERIFY_MOCK_H_
-#define PHASE3_VERIFY_MOCK_H_
+#ifndef __I2CDEV_HW_SHIM_H__
+#define __I2CDEV_HW_SHIM_H__
 
-/**
- * Registers the minimal CRTP handlers needed for the real, unmodified
- * cfcli binary's connect() sequence to succeed: Link (15) linkSource, and
- * empty Log (5) / Param (2) TOCs. Call after crtpInit().
- * Platform (13) is real as of Phase 4.2 -- see platformserviceInit().
- * Memory (4) is real as of Phase 4.3 -- see memInit()/crtpMemInit().
- */
-void phase3VerifyMockInit(void);
+#include <stddef.h>
 
-#endif // PHASE3_VERIFY_MOCK_H_
+#define I2C1_DEV  NULL
+#define I2C3_DEV  NULL
+
+int i2cdevInit(void *dev);
+
+#endif // __I2CDEV_HW_SHIM_H__

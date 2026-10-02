@@ -21,23 +21,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * system_sim.c - Minimal system.h backend for CONFIG_PLATFORM_SIM
- * (Simmyflie), Phase 4.8.
+ * cpxlink_sim.c - cpxlinkInit() stub for CONFIG_PLATFORM_SIM (Simmyflie).
  *
- * EXPLICITLY TEMPORARY (see dev/implementation-plan-phase-4.md's 4.8
- * section): stabilizer.c's stabilizerTask() calls systemWaitStart()
- * unconditionally before its main loop -- on real hardware this blocks
- * until system.c's self-test-gated boot sequence (systemTask()) signals
- * startup is complete. That whole sequence is Phase 4.10's cutover
- * (main_sim.c still runs its own local systemLaunch() placeholder, not the
- * real system.c). Returning immediately is the correct sim behavior for
- * now, not just an expedient stub: there is no self-test gate yet for it to
- * legitimately wait on. Phase 4.10 replaces this file wholesale with the
- * real system.c, not by extending it.
+ * CPX is the link to the AI deck and other co-processors, none of which
+ * exist in the sim. system.c's systemInit() calls cpxlinkInit() when
+ * CONFIG_ENABLE_CPX is set, which a base config such as cf21bl carries into
+ * the sim build (DECK_AI selects it), so it has to exist.
  */
 
-#include "system.h"
+#include "cpxlink.h"
 
-void systemWaitStart(void)
+void cpxlinkInit()
 {
 }
