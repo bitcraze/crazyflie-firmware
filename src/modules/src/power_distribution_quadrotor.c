@@ -27,6 +27,8 @@
 
 #include "power_distribution.h"
 
+#include <limits.h>
+#include <stdint.h>
 #include <string.h>
 #include "debug.h"
 #include "log.h"
@@ -73,12 +75,60 @@ bool powerDistributionTest(void)
   return pass;
 }
 
-static uint16_t capMinThrust(float thrust, uint32_t minThrust) {
-  if (thrust < minThrust) {
-    return minThrust;
+/**
+ * @brief Saturate a motor PWM duty command to the safe hardware range.
+ *
+ * Motor PWM ratios are 16-bit values written out to the motor driver / ESC
+ * (via motorsSetRatio). Every path that produces a final duty must land in
+ * [minThrust, UINT16_MAX]; the lower bound enforces idle thrust for
+ * brushless spin-up, the upper bound prevents timer/DSHOT overflow.
+ */
+static uint16_t saturateMotorPwm(int32_t thrust, uint32_t minThrust) {
+  if (thrust < (int32_t)minThrust) {
+    return (uint16_t)minThrust;
+  }
+  if (thrust > (int32_t)UINT16_MAX) {
+    return UINT16_MAX;
+  }
+  return (uint16_t)thrust;
+}
+
+/**
+ * @brief Clamp a normalized force request to [0, 1] before scaling to PWM.
+ *
+ * Used by every allocation path that already speaks in normalized units so
+ * out-of-range controller output cannot produce a duty above UINT16_MAX
+ * before powerDistributionCap runs.
+ */
+static float clampNormalizedForce(float f) {
+  if (f < 0.0f) {
+    return 0.0f;
+  }
+  if (f > 1.0f) {
+    return 1.0f;
+  }
+  return f;
+}
+
+/**
+ * @brief Map a per-motor force in Newtons to an uncapped thrust integer.
+ *
+ * Negative force is treated as zero thrust. Values above THRUST_MAX are
+ * allowed so powerDistributionCap can apply coordinated multi-motor
+ * reduction (prioritize attitude over peak thrust). The result is saturated
+ * to INT32_MAX so float overflow cannot poison the cap arithmetic.
+ */
+static int32_t forceToThrustUncapped(float motorForce) {
+  if (motorForce < 0.0f) {
+    motorForce = 0.0f;
   }
 
-  return thrust;
+  /* THRUST_MAX is the nominal full-scale force (N) for one motor. */
+  const float scaled = motorForce / THRUST_MAX * (float)UINT16_MAX;
+  if (scaled >= (float)INT32_MAX) {
+    return INT32_MAX;
+  }
+  return (int32_t)scaled;
 }
 
 static void powerDistributionLegacy(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped)
@@ -107,12 +157,10 @@ static void powerDistributionForceTorque(const control_t *control, motors_thrust
   motorForces[3] = thrustPart + rollPart - pitchPart + yawPart;
 
   for (int motorIndex = 0; motorIndex < STABILIZER_NR_OF_MOTORS; motorIndex++) {
-    float motorForce = motorForces[motorIndex];
-    if (motorForce < 0.0f) {
-      motorForce = 0.0f;
-    }
-
-    motorThrustUncapped->list[motorIndex] = motorForce / THRUST_MAX * UINT16_MAX;
+    /* Lower-bound only here: values above full-scale stay uncapped so
+     * powerDistributionCap can reduce all motors together (attitude first).
+     * Final duty is still saturated to UINT16_MAX in saturateMotorPwm(). */
+    motorThrustUncapped->list[motorIndex] = forceToThrustUncapped(motorForces[motorIndex]);
   }
 }
 
@@ -125,17 +173,8 @@ static void powerDistributionForceTorque(const control_t *control, motors_thrust
  */
 static void powerDistributionForce(const control_t *control, motors_thrust_uncapped_t* motorThrustUncapped) {
   for (int i = 0; i < STABILIZER_NR_OF_MOTORS; i++) {
-    float f = control->normalizedForces[i];
-
-    if (f < 0.0f) {
-      f = 0.0f;
-    }
-
-    if (f > 1.0f) {
-      f = 1.0f;
-    }
-
-    motorThrustUncapped->list[i] = f * UINT16_MAX;
+    const float f = clampNormalizedForce(control->normalizedForces[i]);
+    motorThrustUncapped->list[i] = (int32_t)(f * (float)UINT16_MAX);
   }
 }
 
@@ -180,10 +219,14 @@ bool powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUnca
     isCapped = true;
   }
 
+  const uint32_t minThrust = powerDistributionGetIdleThrust();
   for (int motorIndex = 0; motorIndex < STABILIZER_NR_OF_MOTORS; motorIndex++)
   {
-    int32_t thrustCappedUpper = motorThrustBatCompUncapped->list[motorIndex] - reduction;
-    motorPwm->list[motorIndex] = capMinThrust(thrustCappedUpper, powerDistributionGetIdleThrust());
+    /* Coordinated reduction keeps relative torques; saturateMotorPwm is the
+     * last line of defence so a duty out of [min, UINT16_MAX] can never be
+     * handed to motorsSetRatio / the PWM hardware. */
+    const int32_t thrustCappedUpper = motorThrustBatCompUncapped->list[motorIndex] - reduction;
+    motorPwm->list[motorIndex] = saturateMotorPwm(thrustCappedUpper, minThrust);
   }
 
   return isCapped;
