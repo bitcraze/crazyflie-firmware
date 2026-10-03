@@ -30,7 +30,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define CRTP_PROTOCOL_VERSION 12
+/** Current version of the CRTP subsystem protocols. */
+#define CRTP_PROTOCOL_VERSION 13
 
 #define CRTP_MAX_DATA_SIZE 30
 
