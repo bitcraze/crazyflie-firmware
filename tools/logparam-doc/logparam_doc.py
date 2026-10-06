@@ -792,7 +792,9 @@ def write_output(groups: list[Group], out: Path, ref: str) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("src", type=Path, help="firmware source directory, e.g. src")
     parser.add_argument("out", type=Path, help="output directory, e.g. docs/api")
     parser.add_argument(
