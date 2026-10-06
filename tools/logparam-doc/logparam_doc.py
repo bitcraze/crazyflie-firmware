@@ -28,6 +28,7 @@ Severity = Literal["error", "warning"]
 # ---------------------------------------------------------------------------
 # Data model, layer 1: what the source says
 
+
 @dataclass(frozen=True)
 class Location:
     file: Path
@@ -51,15 +52,15 @@ class Doc:
 
 @dataclass(frozen=True)
 class Condition:
-    kbuild: tuple[str, ...]   # Kbuild symbols that build the file, empty for obj-y
+    kbuild: tuple[str, ...]  # Kbuild symbols that build the file, empty for obj-y
     preproc: tuple[str, ...]  # #if lines around the entry, as text
 
 
 @dataclass(frozen=True)
 class RawVariable:
     name: str
-    type: str                # "float", "uint8", ...
-    flags: frozenset[str]    # core, persistent, read-only
+    type: str  # "float", "uint8", ...
+    flags: frozenset[str]  # core, persistent, read-only
     doc: Doc | None
     condition: Condition
     location: Location
@@ -68,6 +69,7 @@ class RawVariable:
 @dataclass(frozen=True)
 class RawGroup:
     """One START...STOP block."""
+
     kind: Kind
     name: str
     doc: Doc | None
@@ -79,9 +81,11 @@ class RawGroup:
 # ---------------------------------------------------------------------------
 # Data model, layer 2: the merged view that gets documented
 
+
 @dataclass(frozen=True)
 class Definition:
     """One place where a variable is defined, with the block it is in."""
+
     block: RawGroup
     variable: RawVariable
 
@@ -126,7 +130,9 @@ class Diagnostic:
 KBUILD_LINE = re.compile(r"^obj-(?:y|\$\((CONFIG_\w+)\))\s*\+?=\s*(.*)$")
 
 
-def read_kbuild(root: Path, directory: Path, symbols: tuple[str, ...] = ()) -> dict[Path, tuple[str, ...]]:
+def read_kbuild(
+    root: Path, directory: Path, symbols: tuple[str, ...] = ()
+) -> dict[Path, tuple[str, ...]]:
     """Map each built source file below `directory` to the Kbuild symbols that build it.
 
     Make conditionals (ifeq/ifneq) are ignored. An object is built from foo.c,
@@ -160,7 +166,9 @@ def read_kbuild(root: Path, directory: Path, symbols: tuple[str, ...] = ()) -> d
 GROUP_START = re.compile(r"^(LOG|PARAM)_GROUP_START\((\w+)\)")
 GROUP_STOP = re.compile(r"^(LOG|PARAM)_GROUP_STOP\((\w+)\)")
 # Anything that looks like a registry macro inside a group
-REGISTRY_CALL = re.compile(r"^((?:LOG|PARAM|STATS_CNT_RATE_LOG)_\w+)\((.*)\)\s*;?\s*(?://.*|/\*.*\*/)?$")
+REGISTRY_CALL = re.compile(
+    r"^((?:LOG|PARAM|STATS_CNT_RATE_LOG)_\w+)\((.*)\)\s*;?\s*(?://.*|/\*.*\*/)?$"
+)
 PREPROC = re.compile(r"^#\s*(\w+)\s*(.*)$")
 
 # Macro -> (kind, flags given by the macro, index of the type argument, index of the name argument)
@@ -208,12 +216,16 @@ class PreprocStack:
     """The #if lines around the current line, as text."""
 
     def __init__(self) -> None:
-        self._stack: list[list[str]] = []  # per #if: the conditions of all branches so far
+        self._stack: list[
+            list[str]
+        ] = []  # per #if: the conditions of all branches so far
 
     def handle(self, directive: str, argument: str) -> None:
         argument = " ".join(strip_comment(argument).split())
         if directive in ("if", "ifdef", "ifndef"):
-            condition = {"if": argument, "ifdef": argument, "ifndef": f"!{argument}"}[directive]
+            condition = {"if": argument, "ifdef": argument, "ifndef": f"!{argument}"}[
+                directive
+            ]
             self._stack.append([condition])
         elif directive in ("elif", "else") and self._stack:
             self._stack[-1].append(argument if directive == "elif" else "")
@@ -293,10 +305,12 @@ def doc_above(lines: list[str], index: int) -> Doc | None:
         start -= 1
     if not lines[start].lstrip().startswith("/**"):
         return None
-    return parse_doc(lines[start:end + 1])
+    return parse_doc(lines[start : end + 1])
 
 
-def scan_file(root: Path, path: Path, kbuild: tuple[str, ...]) -> tuple[list[RawGroup], list[Diagnostic]]:
+def scan_file(
+    root: Path, path: Path, kbuild: tuple[str, ...]
+) -> tuple[list[RawGroup], list[Diagnostic]]:
     """Find all log and parameter groups in one source file."""
     lines = (root / path).read_text(errors="replace").splitlines()
     groups: list[RawGroup] = []
@@ -321,44 +335,107 @@ def scan_file(root: Path, path: Path, kbuild: tuple[str, ...]) -> tuple[list[Raw
         if match := GROUP_START.match(line):
             kind, name = match.group(1).lower(), match.group(2)
             if current:
-                diagnostics.append(Diagnostic("error", location, f"{kind} group '{name}' starts before group '{current['name']}' is stopped"))
-            current = {"kind": kind, "name": name, "doc": doc_above(lines, index), "variables": [],
-                       "condition": Condition(kbuild, preproc.conditions()), "location": location}
+                diagnostics.append(
+                    Diagnostic(
+                        "error",
+                        location,
+                        f"{kind} group '{name}' starts before group '{current['name']}' is stopped",
+                    )
+                )
+            current = {
+                "kind": kind,
+                "name": name,
+                "doc": doc_above(lines, index),
+                "variables": [],
+                "condition": Condition(kbuild, preproc.conditions()),
+                "location": location,
+            }
             continue
 
         if match := GROUP_STOP.match(line):
             kind, name = match.group(1).lower(), match.group(2)
             if not current:
-                diagnostics.append(Diagnostic("error", location, f"{kind} group '{name}' stopped without being started"))
+                diagnostics.append(
+                    Diagnostic(
+                        "error",
+                        location,
+                        f"{kind} group '{name}' stopped without being started",
+                    )
+                )
             elif (kind, name) != (current["kind"], current["name"]):
-                diagnostics.append(Diagnostic("error", location, f"{kind} group '{name}' stopped, but the open group is {current['kind']} group '{current['name']}'"))
+                diagnostics.append(
+                    Diagnostic(
+                        "error",
+                        location,
+                        f"{kind} group '{name}' stopped, but the open group is {current['kind']} group '{current['name']}'",
+                    )
+                )
                 current = None
             else:
-                groups.append(RawGroup(current["kind"], name, current["doc"], tuple(current["variables"]),
-                                       current["condition"], current["location"]))
+                groups.append(
+                    RawGroup(
+                        current["kind"],
+                        name,
+                        current["doc"],
+                        tuple(current["variables"]),
+                        current["condition"],
+                        current["location"],
+                    )
+                )
                 current = None
             continue
 
         if current and (match := REGISTRY_CALL.match(line)):
             macro, arguments = match.groups()
             if macro not in MACROS:
-                diagnostics.append(Diagnostic("error", location, f"unknown macro {macro} in {current['kind']} group '{current['name']}'"))
+                diagnostics.append(
+                    Diagnostic(
+                        "error",
+                        location,
+                        f"unknown macro {macro} in {current['kind']} group '{current['name']}'",
+                    )
+                )
                 continue
             kind, flags, type_index, name_index = MACROS[macro]
             if kind != current["kind"]:
-                diagnostics.append(Diagnostic("error", location, f"{macro} in {current['kind']} group '{current['name']}'"))
+                diagnostics.append(
+                    Diagnostic(
+                        "error",
+                        location,
+                        f"{macro} in {current['kind']} group '{current['name']}'",
+                    )
+                )
                 continue
             args = split_args(arguments)
-            var_type, type_flags = parse_type(args[type_index]) if type_index is not None else ("float", frozenset())
-            conditions = preproc.conditions()[len(current["condition"].preproc):]
-            if macro.endswith("_DEBUG"):  # only built with debug logging, see log.h and statsCnt.h
+            var_type, type_flags = (
+                parse_type(args[type_index])
+                if type_index is not None
+                else ("float", frozenset())
+            )
+            conditions = preproc.conditions()[len(current["condition"].preproc) :]
+            if macro.endswith(
+                "_DEBUG"
+            ):  # only built with debug logging, see log.h and statsCnt.h
                 conditions += ("CONFIG_DEBUG_LOG_ENABLE",)
-            current["variables"].append(RawVariable(
-                name=args[name_index], type=var_type, flags=flags | type_flags, doc=doc_above(lines, index),
-                condition=Condition(kbuild, conditions), location=location))
+            current["variables"].append(
+                RawVariable(
+                    name=args[name_index],
+                    type=var_type,
+                    flags=flags | type_flags,
+                    doc=doc_above(lines, index),
+                    condition=Condition(kbuild, conditions),
+                    location=location,
+                )
+            )
 
     if current:
-        diagnostics.append(Diagnostic("error", current["location"], f"{current['kind']} group '{current['name']}' is never stopped"))
+        diagnostics.append(
+            Diagnostic(
+                "error",
+                current["location"],
+                f"{current['kind']} group '{current['name']}' is never stopped",
+            )
+        )
     return groups, diagnostics
 
 
@@ -388,6 +465,7 @@ def scan(root: Path, src: Path) -> tuple[list[RawGroup], list[Diagnostic]]:
 # ---------------------------------------------------------------------------
 # Merge and validate
 
+
 def merge(blocks: list[RawGroup]) -> tuple[list[Group], list[Diagnostic]]:
     """Merge the blocks of each group and check the result.
 
@@ -396,10 +474,14 @@ def merge(blocks: list[RawGroup]) -> tuple[list[Group], list[Diagnostic]]:
     """
     groups: dict[tuple[Kind, str], Group] = {}
     for block in blocks:
-        group = groups.setdefault((block.kind, block.name), Group(block.kind, block.name, None, [], {}))
+        group = groups.setdefault(
+            (block.kind, block.name), Group(block.kind, block.name, None, [], {})
+        )
         group.blocks.append(block)
         for raw in block.variables:
-            variable = group.variables.setdefault(raw.name, Variable(block.name, raw.name, []))
+            variable = group.variables.setdefault(
+                raw.name, Variable(block.name, raw.name, [])
+            )
             variable.definitions.append(Definition(block, raw))
 
     diagnostics: list[Diagnostic] = []
@@ -418,8 +500,13 @@ def check_group_doc(group: Group) -> list[Diagnostic]:
     group.doc = distinct[0] if distinct else None
     if len(distinct) > 1:
         places = ", ".join(str(b.location) for b in documented)
-        return [Diagnostic("error", documented[0].location,
-                           f"{group.kind} group '{group.name}' has different descriptions in {places}, keep one")]
+        return [
+            Diagnostic(
+                "error",
+                documented[0].location,
+                f"{group.kind} group '{group.name}' has different descriptions in {places}, keep one",
+            )
+        ]
     return []
 
 
@@ -433,18 +520,28 @@ def check_duplicates(group: Group, variable: Variable) -> list[Diagnostic]:
     diagnostics = []
     definitions = variable.definitions
     for i, a in enumerate(definitions):
-        for b in definitions[i + 1:]:
+        for b in definitions[i + 1 :]:
             if a.inside_if or b.inside_if:
                 continue
             same_file = a.variable.location.file == b.variable.location.file
             same_kbuild = a.variable.condition.kbuild == b.variable.condition.kbuild
             if same_file or same_kbuild:
-                diagnostics.append(Diagnostic("error", b.variable.location,
-                                              f"{group.kind} {group.name}.{variable.name} is already defined at {a.variable.location}"))
+                diagnostics.append(
+                    Diagnostic(
+                        "error",
+                        b.variable.location,
+                        f"{group.kind} {group.name}.{variable.name} is already defined at {a.variable.location}",
+                    )
+                )
     if len(definitions) > 1 and len({d.variable.doc for d in definitions}) > 1:
         places = ", ".join(str(d.variable.location) for d in definitions)
-        diagnostics.append(Diagnostic("error", definitions[0].variable.location,
-                                      f"{group.kind} {group.name}.{variable.name} has different descriptions in {places}, make them identical"))
+        diagnostics.append(
+            Diagnostic(
+                "error",
+                definitions[0].variable.location,
+                f"{group.kind} {group.name}.{variable.name} has different descriptions in {places}, make them identical",
+            )
+        )
     return diagnostics
 
 
@@ -452,8 +549,20 @@ def check_variable_doc(group: Group, variable: Variable) -> list[Diagnostic]:
     if variable.first.doc:
         return []
     if any("core" in d.variable.flags for d in variable.definitions):
-        return [Diagnostic("error", variable.first.location, f"core {group.kind} {group.name}.{variable.name} has no description")]
-    return [Diagnostic("warning", variable.first.location, f"{group.kind} {group.name}.{variable.name} has no description")]
+        return [
+            Diagnostic(
+                "error",
+                variable.first.location,
+                f"core {group.kind} {group.name}.{variable.name} has no description",
+            )
+        ]
+    return [
+        Diagnostic(
+            "warning",
+            variable.first.location,
+            f"{group.kind} {group.name}.{variable.name} has no description",
+        )
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -483,7 +592,10 @@ def default_ref(root: Path) -> str:
     """The release tag at HEAD, else the commit hash, else master when not in a git checkout."""
     # safe.directory: also works when the checkout belongs to another user, e.g. mounted in a container
     git = ["git", "-c", f"safe.directory={root.resolve()}", "-C", str(root)]
-    for command in (["describe", "--tags", "--exact-match", "HEAD"], ["rev-parse", "HEAD"]):
+    for command in (
+        ["describe", "--tags", "--exact-match", "HEAD"],
+        ["rev-parse", "HEAD"],
+    ):
         result = subprocess.run([*git, *command], capture_output=True, text=True)
         if result.returncode == 0:
             return result.stdout.strip()
@@ -524,7 +636,11 @@ def group_requires(group: Group, ref: str) -> str | None:
     shared = shared_conditions(group)
     if per_entry_conditions(group):
         return f"Requires {condition_text(shared)}" if shared else None
-    return f"Requires {condition_text(shared)} ({files})" if shared else f"Defined in {files}"
+    return (
+        f"Requires {condition_text(shared)} ({files})"
+        if shared
+        else f"Defined in {files}"
+    )
 
 
 def entry_requires(group: Group, variable: Variable, ref: str) -> str:
@@ -534,7 +650,9 @@ def entry_requires(group: Group, variable: Variable, ref: str) -> str:
     for definition in variable.definitions:
         conditions = definition.variable.condition.preproc
         if per_entry_conditions(group):
-            own = tuple(c for c in block_conditions(definition.block) if c not in shared)
+            own = tuple(
+                c for c in block_conditions(definition.block) if c not in shared
+            )
             text = condition_text(own + conditions)
             link = source_link(definition.variable.location, ref)
             parts.append(f"{text} ({link})" if text else f"always ({link})")
@@ -563,14 +681,20 @@ def write_group(group: Group, ref: str) -> list[str]:
         out += ["*No description*", ""]
     if requires := group_requires(group, ref):
         out += [requires, ""]
-    out += ["| Name | Type | Flags | Description | Requires |", "| --- | --- | --- | --- | --- |"]
+    out += [
+        "| Name | Type | Flags | Description | Requires |",
+        "| --- | --- | --- | --- | --- |",
+    ]
 
     sections = []
     for variable in group.variables.values():
         raw = variable.first
         full_name = f"{group.name}.{variable.name}"
-        flags = ", ".join(f for f in ("core", "persistent", "read-only")
-                          if any(f in d.variable.flags for d in variable.definitions))
+        flags = ", ".join(
+            f
+            for f in ("core", "persistent", "read-only")
+            if any(f in d.variable.flags for d in variable.definitions)
+        )
         if raw.doc:
             description = cell(raw.doc.brief)
             if has_table(raw.doc):
@@ -582,10 +706,14 @@ def write_group(group: Group, ref: str) -> list[str]:
         else:
             description = "*No description*"
         requires = entry_requires(group, variable, ref)
-        out.append(f'| <span id="{anchor(full_name)}"></span>{full_name} | {raw.type} | {flags} | {description} | {requires} |')
+        out.append(
+            f'| <span id="{anchor(full_name)}"></span>{full_name} | {raw.type} | {flags} | {description} | {requires} |'
+        )
 
     for full_name, doc in sections:
-        out += ["", f"#### {full_name} details", "", inline(doc.brief)] + detail_lines(doc)
+        out += ["", f"#### {full_name} details", "", inline(doc.brief)] + detail_lines(
+            doc
+        )
     return out
 
 
@@ -611,7 +739,11 @@ def write_markdown(groups: list[Group], kind: Kind, ref: str) -> str:
 def json_type(kind: Kind, raw: RawVariable) -> str:
     prefix = kind.upper()
     names = [f"{prefix}_{raw.type.upper()}"]
-    names += [f"{prefix}_{name}" for flag, name in (("persistent", "PERSISTENT"), ("read-only", "RONLY")) if flag in raw.flags]
+    names += [
+        f"{prefix}_{name}"
+        for flag, name in (("persistent", "PERSISTENT"), ("read-only", "RONLY"))
+        if flag in raw.flags
+    ]
     return ", ".join(names)
 
 
@@ -619,7 +751,9 @@ def json_text(doc: Doc | None, brief: bool) -> str:
     """Doc text for the JSON, paragraphs separated by a blank line, with the brief or only the details."""
     if not doc:
         return ""
-    parts = ([doc.brief] if brief else []) + ["\n".join(part.lines) for part in doc.details]
+    parts = ([doc.brief] if brief else []) + [
+        "\n".join(part.lines) for part in doc.details
+    ]
     return inline("\n\n".join(parts))
 
 
@@ -631,8 +765,12 @@ def write_json(groups: list[Group]) -> str:
             "desc": json_text(group.doc, brief=True),
             "variables": {
                 name: {
-                    "core": any("core" in d.variable.flags for d in variable.definitions),
-                    "short_desc": inline(variable.first.doc.brief) if variable.first.doc else "",
+                    "core": any(
+                        "core" in d.variable.flags for d in variable.definitions
+                    ),
+                    "short_desc": inline(variable.first.doc.brief)
+                    if variable.first.doc
+                    else "",
                     "type": json_type(group.kind, variable.first),
                     "desc": json_text(variable.first.doc, brief=False),
                 }
@@ -652,13 +790,24 @@ def write_output(groups: list[Group], out: Path, ref: str) -> None:
 # ---------------------------------------------------------------------------
 # Command line
 
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("src", type=Path, help="firmware source directory, e.g. src")
     parser.add_argument("out", type=Path, help="output directory, e.g. docs/api")
-    parser.add_argument("--ref", help="git ref used in source links (default: the tag at HEAD, else the commit hash)")
-    parser.add_argument("--root", type=Path, default=Path("."), help="firmware repository root (default: .)")
-    parser.add_argument("--verbose", action="store_true", help="list every warning, not just the count")
+    parser.add_argument(
+        "--ref",
+        help="git ref used in source links (default: the tag at HEAD, else the commit hash)",
+    )
+    parser.add_argument(
+        "--root",
+        type=Path,
+        default=Path("."),
+        help="firmware repository root (default: .)",
+    )
+    parser.add_argument(
+        "--verbose", action="store_true", help="list every warning, not just the count"
+    )
     args = parser.parse_args(argv)
 
     blocks, diagnostics = scan(args.root, args.src)
@@ -670,9 +819,12 @@ def main(argv: list[str] | None = None) -> int:
     for diagnostic in errors + (warnings if args.verbose else []):
         print(diagnostic, file=sys.stderr)
     entries = sum(len(g.variables) for g in groups)
-    print(f"{len(groups)} groups, {entries} entries, {len(errors)} errors, "
-          f"{len(warnings)} entries without description" + ("" if args.verbose or not warnings else " (--verbose lists them)"),
-          file=sys.stderr)
+    print(
+        f"{len(groups)} groups, {entries} entries, {len(errors)} errors, "
+        f"{len(warnings)} entries without description"
+        + ("" if args.verbose or not warnings else " (--verbose lists them)"),
+        file=sys.stderr,
+    )
     if errors:
         return 1
     write_output(groups, args.out, args.ref or default_ref(args.root))
