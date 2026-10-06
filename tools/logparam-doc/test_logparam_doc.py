@@ -345,6 +345,24 @@ def test_alternatives_must_have_identical_descriptions(tmp_path):
     ]
 
 
+def test_alternatives_must_have_identical_types_and_flags(tmp_path):
+    _, diagnostics = merge_files(
+        tmp_path,
+        "obj-$(CONFIG_QUAD) += quad.o\nobj-$(CONFIG_FLAPPER) += flapper.o\n",
+        {
+            "quad.c": "PARAM_GROUP_START(powerDist)\n"
+            + DOCUMENTED
+            + "PARAM_GROUP_STOP(powerDist)\n",
+            "flapper.c": "PARAM_GROUP_START(powerDist)\n"
+            + DOCUMENTED.replace("PARAM_UINT32", "PARAM_UINT32 | PARAM_PERSISTENT")
+            + "PARAM_GROUP_STOP(powerDist)\n",
+        },
+    )
+    assert messages(diagnostics) == [
+        "param powerDist.idleThrust has different types or flags in src/flapper.c:3, src/quad.c:3, make them identical"
+    ]
+
+
 @pytest.mark.parametrize(
     "kbuild, files",
     [

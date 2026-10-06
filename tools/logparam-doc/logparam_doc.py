@@ -555,7 +555,8 @@ def check_duplicates(group: Group, variable: Variable) -> list[Diagnostic]:
 
     Definitions in different files with different Kbuild symbols, or inside an
     #if, are alternatives. Whether alternatives can still end up in the same
-    build is not decided here.
+    build is not decided here. Alternatives must have the same description,
+    type and flags.
     """
     diagnostics = []
     definitions = variable.definitions
@@ -580,6 +581,16 @@ def check_duplicates(group: Group, variable: Variable) -> list[Diagnostic]:
                 "error",
                 definitions[0].variable.location,
                 f"{group.kind} {group.name}.{variable.name} has different descriptions in {places}, make them identical",
+            )
+        )
+    # Clients see one type and one set of flags, whatever the build
+    if len({(d.variable.type, d.variable.flags) for d in definitions}) > 1:
+        places = ", ".join(str(d.variable.location) for d in definitions)
+        diagnostics.append(
+            Diagnostic(
+                "error",
+                definitions[0].variable.location,
+                f"{group.kind} {group.name}.{variable.name} has different types or flags in {places}, make them identical",
             )
         )
     return diagnostics
