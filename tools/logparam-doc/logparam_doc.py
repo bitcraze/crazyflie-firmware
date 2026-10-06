@@ -8,6 +8,9 @@
 Every log and parameter entry in the source is documented, whatever the build
 configuration. Build conditions are never evaluated: the Kbuild symbol that
 builds a file and the #if lines around an entry are shown as text.
+
+Terms: a log or param group is made of one or more blocks (GROUP_START...STOP).
+Each variable in a group (an entry in the docs) has one or more definitions.
 """
 
 from __future__ import annotations
@@ -19,7 +22,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, NamedTuple
 
 Kind = Literal["log", "param"]
 Severity = Literal["error", "warning"]
@@ -31,6 +34,8 @@ Severity = Literal["error", "warning"]
 
 @dataclass(frozen=True)
 class Location:
+    """A line in a source file, the path relative to the repository root."""
+
     file: Path
     line: int
 
@@ -40,24 +45,35 @@ class Location:
 
 @dataclass(frozen=True)
 class DocPart:
+    """A text paragraph or a table from the details of a doc comment."""
+
     kind: Literal["text", "table"]
     lines: tuple[str, ...]  # table: one row per line, text: one paragraph
 
 
 @dataclass(frozen=True)
 class Doc:
+    """A parsed /** ... */ comment: the first paragraph is the brief, the rest the details."""
+
     brief: str
     details: tuple[DocPart, ...]
 
 
 @dataclass(frozen=True)
 class Condition:
+    """What a group or variable needs to be built, as text, never evaluated.
+
+    For a variable, preproc only holds the #if lines inside its group.
+    """
+
     kbuild: tuple[str, ...]  # Kbuild symbols that build the file, empty for obj-y
     preproc: tuple[str, ...]  # #if lines around the entry, as text
 
 
 @dataclass(frozen=True)
 class RawVariable:
+    """One LOG_ADD, PARAM_ADD, ... line inside a group."""
+
     name: str
     type: str  # "float", "uint8", ...
     flags: frozenset[str]  # core, persistent, read-only
@@ -67,8 +83,8 @@ class RawVariable:
 
 
 @dataclass(frozen=True)
-class RawGroup:
-    """One START...STOP block."""
+class Block:
+    """One START...STOP block. A group can be split over many blocks and files."""
 
     kind: Kind
     name: str
@@ -86,16 +102,19 @@ class RawGroup:
 class Definition:
     """One place where a variable is defined, with the block it is in."""
 
-    block: RawGroup
+    block: Block
     variable: RawVariable
 
     @property
     def inside_if(self) -> bool:
+        """True when the block or the variable has a preprocessor condition, from an #if or a *_DEBUG macro."""
         return bool(self.block.condition.preproc or self.variable.condition.preproc)
 
 
 @dataclass
 class Variable:
+    """One group.name entry, with every place it is defined."""
+
     group: str
     name: str
     definitions: list[Definition]  # more than one means alternatives
@@ -107,15 +126,19 @@ class Variable:
 
 @dataclass
 class Group:
+    """All blocks of one log or param group. doc is set by check_group_doc."""
+
     kind: Kind
     name: str
     doc: Doc | None
-    blocks: list[RawGroup]
+    blocks: list[Block]
     variables: dict[str, Variable]
 
 
 @dataclass(frozen=True)
 class Diagnostic:
+    """A problem in the source. Errors stop the output, warnings are only counted."""
+
     severity: Severity
     location: Location
     message: str
@@ -127,6 +150,7 @@ class Diagnostic:
 # ---------------------------------------------------------------------------
 # Kbuild
 
+# obj-y += foo.o bar/   or   obj-$(CONFIG_DECK_FOO) += foo.o
 KBUILD_LINE = re.compile(r"^obj-(?:y|\$\((CONFIG_\w+)\))\s*\+?=\s*(.*)$")
 
 
@@ -165,24 +189,39 @@ def read_kbuild(
 
 GROUP_START = re.compile(r"^(LOG|PARAM)_GROUP_START\((\w+)\)")
 GROUP_STOP = re.compile(r"^(LOG|PARAM)_GROUP_STOP\((\w+)\)")
-# Anything that looks like a registry macro inside a group
+# A registry macro inside a group, the whole call on one line, an optional trailing comment:
+# LOG_ADD(LOG_FLOAT, x, &x)  // the x position
 REGISTRY_CALL = re.compile(
     r"^((?:LOG|PARAM|STATS_CNT_RATE_LOG)_\w+)\((.*)\)\s*;?\s*(?://.*|/\*.*\*/)?$"
 )
+# A preprocessor line, as (directive, argument): #ifdef FOO -> ("ifdef", "FOO"), #  endif -> ("endif", "")
 PREPROC = re.compile(r"^#\s*(\w+)\s*(.*)$")
 
-# Macro -> (kind, flags given by the macro, index of the type argument, index of the name argument)
-MACROS: dict[str, tuple[Kind, frozenset[str], int | None, int]] = {
-    "LOG_ADD": ("log", frozenset(), 0, 1),
-    "LOG_ADD_CORE": ("log", frozenset({"core"}), 0, 1),
-    "LOG_ADD_BY_FUNCTION": ("log", frozenset(), 0, 1),
-    "LOG_ADD_DEBUG": ("log", frozenset(), 0, 1),
-    "STATS_CNT_RATE_LOG_ADD": ("log", frozenset(), None, 0),
-    "STATS_CNT_RATE_LOG_ADD_DEBUG": ("log", frozenset(), None, 0),
-    "PARAM_ADD": ("param", frozenset(), 0, 1),
-    "PARAM_ADD_CORE": ("param", frozenset({"core"}), 0, 1),
-    "PARAM_ADD_WITH_CALLBACK": ("param", frozenset(), 0, 1),
-    "PARAM_ADD_CORE_WITH_CALLBACK": ("param", frozenset({"core"}), 0, 1),
+
+class EntryMacro(NamedTuple):
+    """How to read the arguments of a macro that adds an entry to a group."""
+
+    kind: Kind
+    flags: frozenset[str]  # flags the macro itself gives, e.g. core for LOG_ADD_CORE
+    type_arg: int | None  # index of the type argument, None when there is none
+    name_arg: int  # index of the name argument
+
+
+NO_FLAGS, CORE = frozenset(), frozenset({"core"})
+
+# The firmware macros that add an entry to a group (log.h, param.h, statsCnt.h).
+# Any other registry macro inside a group is an error, so add new macros here.
+ENTRY_MACROS: dict[str, EntryMacro] = {
+    "LOG_ADD": EntryMacro("log", NO_FLAGS, 0, 1),
+    "LOG_ADD_CORE": EntryMacro("log", CORE, 0, 1),
+    "LOG_ADD_BY_FUNCTION": EntryMacro("log", NO_FLAGS, 0, 1),
+    "LOG_ADD_DEBUG": EntryMacro("log", NO_FLAGS, 0, 1),
+    "STATS_CNT_RATE_LOG_ADD": EntryMacro("log", NO_FLAGS, None, 0),
+    "STATS_CNT_RATE_LOG_ADD_DEBUG": EntryMacro("log", NO_FLAGS, None, 0),
+    "PARAM_ADD": EntryMacro("param", NO_FLAGS, 0, 1),
+    "PARAM_ADD_CORE": EntryMacro("param", CORE, 0, 1),
+    "PARAM_ADD_WITH_CALLBACK": EntryMacro("param", NO_FLAGS, 0, 1),
+    "PARAM_ADD_CORE_WITH_CALLBACK": EntryMacro("param", CORE, 0, 1),
 }
 
 TYPES = {"UINT8", "UINT16", "UINT32", "INT8", "INT16", "INT32", "FLOAT", "FP16"}
@@ -233,6 +272,7 @@ class PreprocStack:
             self._stack.pop()
 
     def conditions(self) -> tuple[str, ...]:
+        """The conditions for the current line: earlier branches negated, then the current one."""
         result = []
         for branches in self._stack:
             *previous, current = branches
@@ -310,14 +350,14 @@ def doc_above(lines: list[str], index: int) -> Doc | None:
 
 def scan_file(
     root: Path, path: Path, kbuild: tuple[str, ...]
-) -> tuple[list[RawGroup], list[Diagnostic]]:
-    """Find all log and parameter groups in one source file."""
+) -> tuple[list[Block], list[Diagnostic]]:
+    """Find all log and parameter blocks in one source file."""
     lines = (root / path).read_text(errors="replace").splitlines()
-    groups: list[RawGroup] = []
+    blocks: list[Block] = []
     diagnostics: list[Diagnostic] = []
     preproc = PreprocStack()
 
-    current: dict | None = None  # the open group
+    current: dict | None = None  # the open block, becomes a Block at its STOP
     index = -1
     while index + 1 < len(lines):
         index += 1
@@ -372,8 +412,8 @@ def scan_file(
                 )
                 current = None
             else:
-                groups.append(
-                    RawGroup(
+                blocks.append(
+                    Block(
                         current["kind"],
                         name,
                         current["doc"],
@@ -387,7 +427,7 @@ def scan_file(
 
         if current and (match := REGISTRY_CALL.match(line)):
             macro, arguments = match.groups()
-            if macro not in MACROS:
+            if macro not in ENTRY_MACROS:
                 diagnostics.append(
                     Diagnostic(
                         "error",
@@ -396,8 +436,8 @@ def scan_file(
                     )
                 )
                 continue
-            kind, flags, type_index, name_index = MACROS[macro]
-            if kind != current["kind"]:
+            entry_macro = ENTRY_MACROS[macro]
+            if entry_macro.kind != current["kind"]:
                 diagnostics.append(
                     Diagnostic(
                         "error",
@@ -408,9 +448,9 @@ def scan_file(
                 continue
             args = split_args(arguments)
             var_type, type_flags = (
-                parse_type(args[type_index])
-                if type_index is not None
-                else ("float", frozenset())
+                parse_type(args[entry_macro.type_arg])
+                if entry_macro.type_arg is not None
+                else ("float", NO_FLAGS)
             )
             conditions = preproc.conditions()[len(current["condition"].preproc) :]
             if macro.endswith(
@@ -419,9 +459,9 @@ def scan_file(
                 conditions += ("CONFIG_DEBUG_LOG_ENABLE",)
             current["variables"].append(
                 RawVariable(
-                    name=args[name_index],
+                    name=args[entry_macro.name_arg],
                     type=var_type,
-                    flags=flags | type_flags,
+                    flags=entry_macro.flags | type_flags,
                     doc=doc_above(lines, index),
                     condition=Condition(kbuild, conditions),
                     location=location,
@@ -436,7 +476,7 @@ def scan_file(
                 f"{current['kind']} group '{current['name']}' is never stopped",
             )
         )
-    return groups, diagnostics
+    return blocks, diagnostics
 
 
 def parse_type(text: str) -> tuple[str, frozenset[str]]:
@@ -451,22 +491,22 @@ def parse_type(text: str) -> tuple[str, frozenset[str]]:
     return var_type, frozenset(flags)
 
 
-def scan(root: Path, src: Path) -> tuple[list[RawGroup], list[Diagnostic]]:
+def scan(root: Path, src: Path) -> tuple[list[Block], list[Diagnostic]]:
     """Scan every built source file below `src`."""
-    groups: list[RawGroup] = []
+    blocks: list[Block] = []
     diagnostics: list[Diagnostic] = []
     for path, kbuild in sorted(read_kbuild(root, src).items()):
-        file_groups, file_diagnostics = scan_file(root, path, kbuild)
-        groups.extend(file_groups)
+        file_blocks, file_diagnostics = scan_file(root, path, kbuild)
+        blocks.extend(file_blocks)
         diagnostics.extend(file_diagnostics)
-    return groups, diagnostics
+    return blocks, diagnostics
 
 
 # ---------------------------------------------------------------------------
 # Merge and validate
 
 
-def merge(blocks: list[RawGroup]) -> tuple[list[Group], list[Diagnostic]]:
+def merge(blocks: list[Block]) -> tuple[list[Group], list[Diagnostic]]:
     """Merge the blocks of each group and check the result.
 
     Checks that docs exist and that there is one unambiguous description for
@@ -546,6 +586,7 @@ def check_duplicates(group: Group, variable: Variable) -> list[Diagnostic]:
 
 
 def check_variable_doc(group: Group, variable: Variable) -> list[Diagnostic]:
+    """Core variables must have a description, others only get a warning."""
     if variable.first.doc:
         return []
     if any("core" in d.variable.flags for d in variable.definitions):
@@ -579,13 +620,13 @@ def anchor(text: str) -> str:
     return text.replace(" ", "-")
 
 
-def inline(text: str) -> str:
+def unescape_urls(text: str) -> str:
     """Comment text without the % that stopped Doxygen from changing URLs (%https://...)."""
     return re.sub(r"%(https?://)", r"\1", text)
 
 
 def cell(text: str) -> str:
-    return inline(text).replace("|", "\\|")
+    return unescape_urls(text).replace("|", "\\|")
 
 
 def default_ref(root: Path) -> str:
@@ -611,7 +652,7 @@ def condition_text(conditions: tuple[str, ...]) -> str:
     return " and ".join(f"`{c}`" for c in conditions)
 
 
-def block_conditions(block: RawGroup) -> tuple[str, ...]:
+def block_conditions(block: Block) -> tuple[str, ...]:
     return block.condition.kbuild + block.condition.preproc
 
 
@@ -669,14 +710,14 @@ def detail_lines(doc: Doc) -> list[str]:
     """The detail paragraphs and tables of a doc, each preceded by a blank line."""
     out = []
     for part in doc.details:
-        out += [""] + [inline(line) for line in part.lines]
+        out += [""] + [unescape_urls(line) for line in part.lines]
     return out
 
 
 def write_group(group: Group, ref: str) -> list[str]:
     out = ["", "---", "[back to group index](#index)", "", f"## {group.name}", ""]
     if group.doc:
-        out += [inline(group.doc.brief)] + detail_lines(group.doc) + [""]
+        out += [unescape_urls(group.doc.brief)] + detail_lines(group.doc) + [""]
     else:
         out += ["*No description*", ""]
     if requires := group_requires(group, ref):
@@ -711,19 +752,22 @@ def write_group(group: Group, ref: str) -> list[str]:
         )
 
     for full_name, doc in sections:
-        out += ["", f"#### {full_name} details", "", inline(doc.brief)] + detail_lines(
-            doc
-        )
+        out += [
+            "",
+            f"#### {full_name} details",
+            "",
+            unescape_urls(doc.brief),
+        ] + detail_lines(doc)
     return out
 
 
-def documented(groups: list[Group]) -> list[Group]:
+def groups_to_document(groups: list[Group]) -> list[Group]:
     """Groups sorted by name, without groups that have no entries (clients never see those)."""
     return sorted((g for g in groups if g.variables), key=lambda g: g.name.lower())
 
 
 def write_markdown(groups: list[Group], kind: Kind, ref: str) -> str:
-    groups = [g for g in documented(groups) if g.kind == kind]
+    groups = [g for g in groups_to_document(groups) if g.kind == kind]
     out = ["## Index", ""]
     letter = None
     for group in groups:
@@ -754,13 +798,13 @@ def json_text(doc: Doc | None, brief: bool) -> str:
     parts = ([doc.brief] if brief else []) + [
         "\n".join(part.lines) for part in doc.details
     ]
-    return inline("\n\n".join(parts))
+    return unescape_urls("\n\n".join(parts))
 
 
 def write_json(groups: list[Group]) -> str:
     """Same structure as the Doxygen based generator, the client reads desc and short_desc."""
     result: dict[str, dict] = {"params": {}, "logs": {}}
-    for group in documented(groups):
+    for group in groups_to_document(groups):
         result[group.kind + "s"][group.name] = {
             "desc": json_text(group.doc, brief=True),
             "variables": {
@@ -768,7 +812,7 @@ def write_json(groups: list[Group]) -> str:
                     "core": any(
                         "core" in d.variable.flags for d in variable.definitions
                     ),
-                    "short_desc": inline(variable.first.doc.brief)
+                    "short_desc": unescape_urls(variable.first.doc.brief)
                     if variable.first.doc
                     else "",
                     "type": json_type(group.kind, variable.first),
