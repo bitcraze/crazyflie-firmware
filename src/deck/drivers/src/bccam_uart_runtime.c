@@ -37,6 +37,8 @@ static void clear_control_state(bccam_uart_runtime_t *runtime) {
   runtime->control_schema_module_count = 0u;
   memset(runtime->control_schema_modules, 0,
          sizeof(runtime->control_schema_modules));
+  runtime->control_test_response_ready = false;
+  runtime->control_test_response_len = 0u;
 }
 
 static void reset_runtime_session(bccam_uart_runtime_t *runtime) {
@@ -345,6 +347,26 @@ static int release_control_rx(bccam_uart_runtime_t *runtime) {
   return result;
 }
 
+static int take_control_test_response(bccam_uart_runtime_t *runtime) {
+  uint8_t service = 0u;
+  uint16_t payload_len = 0u;
+  bool unit_present = false;
+  const int result = bccam_uart_link_take_rx(
+    &runtime->link, &service, runtime->control_test_response,
+    sizeof(runtime->control_test_response), &payload_len, &unit_present);
+  if (result != BCCAM_UART_OK) {
+    set_last_error(runtime, result);
+    return result;
+  }
+  if (!unit_present) {
+    return BCCAM_UART_OK;
+  }
+  runtime->control_test_response_len = payload_len;
+  runtime->control_test_response_ready = true;
+  runtime->control_rx_release_pending = true;
+  return release_control_rx(runtime);
+}
+
 int bccam_uart_runtime_step_control_probe(bccam_uart_runtime_t *runtime) {
   if (runtime == NULL) {
     return BCCAM_UART_ERR_BAD_ARGUMENT;
@@ -395,7 +417,7 @@ int bccam_uart_runtime_step_control_probe(bccam_uart_runtime_t *runtime) {
     }
   }
   if (runtime->control_probe_done) {
-    return BCCAM_UART_OK;
+    return take_control_test_response(runtime);
   }
   if (!runtime->control_rx_credit_opened) {
     const int result = bccam_uart_link_send_credit_update(
@@ -448,6 +470,40 @@ int bccam_uart_runtime_step_control_probe(bccam_uart_runtime_t *runtime) {
   }
   runtime->control_rx_release_pending = true;
   return release_control_rx(runtime);
+}
+
+int bccam_uart_runtime_control_test_send(bccam_uart_runtime_t *runtime,
+                                         const uint8_t *payload,
+                                         uint16_t payload_len) {
+  if (runtime == NULL || payload == NULL) {
+    return BCCAM_UART_ERR_BAD_ARGUMENT;
+  }
+  if (!runtime->control_service_bound || !runtime->control_probe_done) {
+    return BCCAM_UART_ERR_NOT_ACTIVE;
+  }
+  if (runtime->link.pending != BCCAM_UART_PENDING_NONE ||
+      runtime->link.tx_pending) {
+    return BCCAM_UART_ERR_TRANSACTION_BUSY;
+  }
+  return bccam_uart_link_send_normal(&runtime->link,
+                                     runtime->control_service_id,
+                                     payload, payload_len);
+}
+
+bool bccam_uart_runtime_control_test_take_response(bccam_uart_runtime_t *runtime,
+                                                   uint8_t *out,
+                                                   uint16_t out_capacity,
+                                                   uint16_t *out_len) {
+  if (runtime == NULL || out == NULL || out_len == NULL ||
+      !runtime->control_test_response_ready ||
+      runtime->control_test_response_len > out_capacity) {
+    return false;
+  }
+  memcpy(out, runtime->control_test_response,
+         runtime->control_test_response_len);
+  *out_len = runtime->control_test_response_len;
+  runtime->control_test_response_ready = false;
+  return true;
 }
 
 bool bccam_uart_runtime_control_probe_done(const bccam_uart_runtime_t *runtime) {

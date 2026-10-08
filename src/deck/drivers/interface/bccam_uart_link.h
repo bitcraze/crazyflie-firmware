@@ -11,7 +11,8 @@
 #define BCCAM_UART_NORMAL_MAX_PAYLOAD 256u
 #define BCCAM_UART_SERVICE_LINK_MANAGEMENT 0u
 #define BCCAM_UART_SERVICE_CONTRACT_ID_MAX_LEN 24u
-#define BCCAM_UART_CONTROL_CONTRACT_MAJOR 1u
+// Test firmware: the camera deck advertises bitcraze.control 0.0
+#define BCCAM_UART_CONTROL_CONTRACT_MAJOR 0u
 
 typedef enum bccam_uart_result_t {
   BCCAM_UART_OK = 0,

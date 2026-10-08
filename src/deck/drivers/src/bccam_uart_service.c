@@ -12,6 +12,8 @@
 #include "task.h"
 
 #if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
+#include "console.h"
+#include "param.h"
 #include "static_mem.h"
 #include "system.h"
 #include "uart1.h"
@@ -1132,6 +1134,404 @@ static void service_poll_once_at(uint32_t now_ticks) {
 }
 
 #if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
+// ---------------------------------------------------------------------------
+// Control Service test (test firmware only)
+//
+// Writing a param in the group ctrlTest sends one Control request to the
+// camera deck. Every completed request gives one line on the console:
+//   CTRL <n> <request> -> <response>
+// ---------------------------------------------------------------------------
+
+#define CTRL_TEST_QUEUE_LENGTH 4
+#define CTRL_TEST_TIMEOUT_MS 1000
+#define CTRL_TEST_LINE_SIZE 200
+
+#define CTRL_OP_GET 0x01u
+#define CTRL_OP_SET 0x02u
+#define CTRL_OP_OK 0x80u
+#define CTRL_OP_VALUE 0x81u
+#define CTRL_OP_ERROR 0x82u
+
+#define CTRL_TYPE_BOOL 0x01u
+#define CTRL_TYPE_U8 0x10u
+#define CTRL_TYPE_I8 0x11u
+#define CTRL_TYPE_U16 0x12u
+#define CTRL_TYPE_I16 0x13u
+#define CTRL_TYPE_U32 0x14u
+#define CTRL_TYPE_I32 0x15u
+#define CTRL_TYPE_STRING 0x20u
+#define CTRL_TYPE_BYTES 0x21u
+
+typedef enum {
+  CTRL_TEST_PATH_SCHEMA_MODULES = 0,
+  CTRL_TEST_PATH_QUALITY,
+  CTRL_TEST_PATH_MAX_QUALITY,
+  CTRL_TEST_PATH_UNKNOWN,
+} ctrl_test_path_t;
+
+static const char *const ctrl_test_paths[] = {
+  [CTRL_TEST_PATH_SCHEMA_MODULES] = "meta.schema_modules",
+  [CTRL_TEST_PATH_QUALITY] = "stream.mjpeg_quality",
+  [CTRL_TEST_PATH_MAX_QUALITY] = "stream.max_mjpeg_quality",
+  [CTRL_TEST_PATH_UNKNOWN] = "stream.no_such_path",
+};
+
+typedef struct {
+  uint8_t op;
+  uint8_t path;
+  uint8_t value_type;
+  uint16_t value;
+} ctrl_test_request_t;
+
+static xQueueHandle ctrl_test_queue;
+STATIC_MEM_QUEUE_ALLOC(ctrl_test_queue,
+                       CTRL_TEST_QUEUE_LENGTH,
+                       sizeof(ctrl_test_request_t));
+
+static uint32_t ctrl_test_counter;
+static bool ctrl_test_outstanding;
+static uint32_t ctrl_test_outstanding_counter;
+static uint8_t ctrl_test_outstanding_id;
+static TickType_t ctrl_test_deadline;
+// The line of the outstanding request, up to the arrow
+static char ctrl_test_line[CTRL_TEST_LINE_SIZE];
+static size_t ctrl_test_line_pos;
+static char ctrl_test_refused_line[CTRL_TEST_LINE_SIZE];
+static uint8_t ctrl_test_response[BCCAM_UART_NORMAL_MAX_PAYLOAD];
+
+static uint8_t ctrlTestGetSchemaModules;
+static uint8_t ctrlTestGetQuality;
+static uint8_t ctrlTestGetMaxQuality;
+static uint8_t ctrlTestSetMaxQuality;
+static uint8_t ctrlTestSetQuality;
+static uint16_t ctrlTestSetMaxQualityU16;
+static uint8_t ctrlTestGetUnknown;
+static uint8_t ctrlTestSetUnknown;
+
+static const char *ctrl_test_type_name(uint8_t type) {
+  switch (type) {
+    case CTRL_TYPE_BOOL: return "bool";
+    case CTRL_TYPE_U8: return "u8";
+    case CTRL_TYPE_I8: return "i8";
+    case CTRL_TYPE_U16: return "u16";
+    case CTRL_TYPE_I16: return "i16";
+    case CTRL_TYPE_U32: return "u32";
+    case CTRL_TYPE_I32: return "i32";
+    default: return NULL;
+  }
+}
+
+static const char *ctrl_test_error_name(uint8_t code) {
+  switch (code) {
+    case 0x01u: return "malformed_message";
+    case 0x02u: return "unknown_operation";
+    case 0x03u: return "unknown_path";
+    case 0x04u: return "unsupported_value_type";
+    case 0x05u: return "invalid_value";
+    case 0x06u: return "operation_not_supported";
+    case 0x07u: return "command_rejected";
+    case 0x08u: return "busy";
+    case 0x09u: return "internal_error";
+    default: return NULL;
+  }
+}
+
+static void ctrl_test_append_hex(char *buffer,
+                                 size_t buffer_size,
+                                 size_t *position,
+                                 const uint8_t *data,
+                                 uint16_t length) {
+  static const char digits[] = "0123456789abcdef";
+  for (uint16_t i = 0; i < length; i++) {
+    append_char(buffer, buffer_size, position, digits[data[i] >> 4]);
+    append_char(buffer, buffer_size, position, digits[data[i] & 0x0fu]);
+  }
+}
+
+static void ctrl_test_append_request(char *buffer,
+                                     size_t buffer_size,
+                                     size_t *position,
+                                     uint32_t counter,
+                                     const ctrl_test_request_t *request) {
+  append_string(buffer, buffer_size, position, "CTRL ");
+  append_uint(buffer, buffer_size, position, counter);
+  append_string(buffer, buffer_size, position,
+                request->op == CTRL_OP_SET ? " SET " : " GET ");
+  append_string(buffer, buffer_size, position, ctrl_test_paths[request->path]);
+  if (request->op == CTRL_OP_SET) {
+    append_char(buffer, buffer_size, position, ' ');
+    append_string(buffer, buffer_size, position,
+                  ctrl_test_type_name(request->value_type));
+    append_char(buffer, buffer_size, position, ' ');
+    append_uint(buffer, buffer_size, position, request->value);
+  }
+}
+
+static bool ctrl_test_append_value(char *buffer,
+                                   size_t buffer_size,
+                                   size_t *position,
+                                   const uint8_t *tlv,
+                                   uint16_t tlv_len) {
+  if (tlv_len < 2u || tlv_len != (uint16_t)(2u + tlv[1])) {
+    return false;
+  }
+  const uint8_t type = tlv[0];
+  const uint8_t len = tlv[1];
+  const uint8_t *data = &tlv[2];
+
+  if (type == CTRL_TYPE_BYTES || type == CTRL_TYPE_STRING) {
+    append_string(buffer, buffer_size, position,
+                  type == CTRL_TYPE_BYTES ? "VALUE bytes[" : "VALUE string[");
+    append_uint(buffer, buffer_size, position, len);
+    append_char(buffer, buffer_size, position, ']');
+    if (len > 0u) {
+      append_char(buffer, buffer_size, position, ' ');
+      ctrl_test_append_hex(buffer, buffer_size, position, data, len);
+    }
+    return true;
+  }
+
+  const char *name = ctrl_test_type_name(type);
+  if (name == NULL) {
+    return false;
+  }
+  const bool is_signed = type == CTRL_TYPE_I8 || type == CTRL_TYPE_I16 ||
+                         type == CTRL_TYPE_I32;
+  const uint8_t expected_len =
+    (type == CTRL_TYPE_U32 || type == CTRL_TYPE_I32) ? 4u :
+    (type == CTRL_TYPE_U16 || type == CTRL_TYPE_I16) ? 2u : 1u;
+  if (len != expected_len) {
+    return false;
+  }
+  uint32_t raw = 0;
+  for (uint8_t i = 0; i < len; i++) {
+    raw |= (uint32_t)data[i] << (8u * i);
+  }
+  append_string(buffer, buffer_size, position, "VALUE ");
+  append_string(buffer, buffer_size, position, name);
+  append_char(buffer, buffer_size, position, ' ');
+  if (is_signed) {
+    const int32_t value = len == 1u ? (int32_t)(int8_t)raw :
+                          len == 2u ? (int32_t)(int16_t)raw : (int32_t)raw;
+    append_int(buffer, buffer_size, position, value);
+  } else {
+    append_uint(buffer, buffer_size, position, raw);
+  }
+  return true;
+}
+
+static void ctrl_test_append_response(char *buffer,
+                                      size_t buffer_size,
+                                      size_t *position,
+                                      const uint8_t *response,
+                                      uint16_t response_len) {
+  const size_t start = *position;
+
+  if (response_len == 2u && response[0] == CTRL_OP_OK) {
+    append_string(buffer, buffer_size, position, "OK");
+    return;
+  }
+  if (response_len >= 4u && response[0] == CTRL_OP_VALUE &&
+      ctrl_test_append_value(buffer, buffer_size, position, &response[2],
+                             (uint16_t)(response_len - 2u))) {
+    return;
+  }
+  if (response[0] == CTRL_OP_ERROR &&
+      (response_len == 3u ||
+       (response_len >= 4u && response_len == (uint16_t)(4u + response[3])))) {
+    const char *name = ctrl_test_error_name(response[2]);
+    append_string(buffer, buffer_size, position, "ERROR ");
+    if (name != NULL) {
+      append_string(buffer, buffer_size, position, name);
+    } else {
+      append_uint(buffer, buffer_size, position, response[2]);
+    }
+    return;
+  }
+
+  *position = start;
+  buffer[start < buffer_size ? start : buffer_size - 1u] = '\0';
+  append_string(buffer, buffer_size, position, "MALFORMED ");
+  ctrl_test_append_hex(buffer, buffer_size, position, response, response_len);
+}
+
+static void ctrl_test_finish_outstanding(const char *ending) {
+  append_string(ctrl_test_line, sizeof(ctrl_test_line), &ctrl_test_line_pos,
+                ending);
+  consolePrintf("%s\n", ctrl_test_line);
+  ctrl_test_outstanding = false;
+}
+
+static void ctrl_test_handle_response(void) {
+  uint16_t response_len = 0;
+  if (!bccam_uart_runtime_control_test_take_response(
+        &firmware_client.runtime, ctrl_test_response,
+        sizeof(ctrl_test_response), &response_len)) {
+    return;
+  }
+  // A response to a request that has timed out matches no outstanding
+  // request and is discarded.
+  if (!ctrl_test_outstanding ||
+      (response_len >= 2u && ctrl_test_response[1] != ctrl_test_outstanding_id)) {
+    return;
+  }
+  ctrl_test_append_response(ctrl_test_line, sizeof(ctrl_test_line),
+                            &ctrl_test_line_pos, ctrl_test_response,
+                            response_len);
+  ctrl_test_finish_outstanding("");
+}
+
+static void ctrl_test_start_request(const ctrl_test_request_t *request,
+                                    uint32_t now_ticks) {
+  const uint32_t counter = ++ctrl_test_counter;
+
+  if (ctrl_test_outstanding) {
+    size_t pos = 0;
+    ctrl_test_append_request(ctrl_test_refused_line,
+                             sizeof(ctrl_test_refused_line), &pos, counter,
+                             request);
+    append_string(ctrl_test_refused_line, sizeof(ctrl_test_refused_line), &pos,
+                  " NOT_SENT (request ");
+    append_uint(ctrl_test_refused_line, sizeof(ctrl_test_refused_line), &pos,
+                ctrl_test_outstanding_counter);
+    append_string(ctrl_test_refused_line, sizeof(ctrl_test_refused_line), &pos,
+                  " outstanding)");
+    consolePrintf("%s\n", ctrl_test_refused_line);
+    return;
+  }
+
+  uint8_t message[BCCAM_UART_CAMERA_PROFILE_MTU];
+  const char *path = ctrl_test_paths[request->path];
+  const uint8_t path_len = (uint8_t)strlen(path);
+  uint16_t message_len = 0;
+  message[message_len++] = request->op;
+  message[message_len++] = (uint8_t)counter;
+  message[message_len++] = path_len;
+  memcpy(&message[message_len], path, path_len);
+  message_len = (uint16_t)(message_len + path_len);
+  if (request->op == CTRL_OP_SET) {
+    message[message_len++] = request->value_type;
+    if (request->value_type == CTRL_TYPE_U16) {
+      message[message_len++] = 2u;
+      message[message_len++] = (uint8_t)(request->value & 0xffu);
+      message[message_len++] = (uint8_t)(request->value >> 8);
+    } else {
+      message[message_len++] = 1u;
+      message[message_len++] = (uint8_t)request->value;
+    }
+  }
+
+  ctrl_test_line_pos = 0;
+  ctrl_test_append_request(ctrl_test_line, sizeof(ctrl_test_line),
+                           &ctrl_test_line_pos, counter, request);
+
+  const int result = is_firmware_state(service_state) ?
+    bccam_uart_runtime_control_test_send(&firmware_client.runtime, message,
+                                         message_len) :
+    BCCAM_UART_ERR_NOT_ACTIVE;
+  if (result != BCCAM_UART_OK) {
+    append_string(ctrl_test_line, sizeof(ctrl_test_line), &ctrl_test_line_pos,
+                  " NOT_SENT (");
+    append_string(ctrl_test_line, sizeof(ctrl_test_line), &ctrl_test_line_pos,
+                  uart_result_name(result));
+    ctrl_test_finish_outstanding(")");
+    return;
+  }
+
+  (void)bccam_firmware_uart_client_pump_tx(&firmware_client);
+  append_string(ctrl_test_line, sizeof(ctrl_test_line), &ctrl_test_line_pos,
+                " -> ");
+  ctrl_test_outstanding = true;
+  ctrl_test_outstanding_counter = counter;
+  ctrl_test_outstanding_id = (uint8_t)counter;
+  ctrl_test_deadline = (TickType_t)now_ticks + M2T(CTRL_TEST_TIMEOUT_MS);
+}
+
+static bool ctrl_test_poll(uint32_t now_ticks) {
+  ctrl_test_handle_response();
+
+  if (ctrl_test_outstanding &&
+      tick_has_reached((TickType_t)now_ticks, ctrl_test_deadline)) {
+    ctrl_test_finish_outstanding("TIMEOUT");
+  }
+
+  ctrl_test_request_t request;
+  if (xQueueReceive(ctrl_test_queue, &request, 0) != pdTRUE) {
+    return false;
+  }
+  ctrl_test_start_request(&request, now_ticks);
+  return true;
+}
+
+// Runs in the param task: only hands the request to the deck driver task.
+static void ctrl_test_submit(uint8_t op,
+                             ctrl_test_path_t path,
+                             uint8_t value_type,
+                             uint16_t value) {
+  if (ctrl_test_queue == NULL) {
+    return;
+  }
+  const ctrl_test_request_t request = {
+    .op = op,
+    .path = (uint8_t)path,
+    .value_type = value_type,
+    .value = value,
+  };
+  (void)xQueueSend(ctrl_test_queue, &request, 0);
+  if (bcCamUartTaskHandle != NULL) {
+    (void)xTaskNotifyGive(bcCamUartTaskHandle);
+  }
+}
+
+static void ctrlTestGetSchemaModulesCb(void) {
+  ctrl_test_submit(CTRL_OP_GET, CTRL_TEST_PATH_SCHEMA_MODULES, 0, 0);
+}
+
+static void ctrlTestGetQualityCb(void) {
+  ctrl_test_submit(CTRL_OP_GET, CTRL_TEST_PATH_QUALITY, 0, 0);
+}
+
+static void ctrlTestGetMaxQualityCb(void) {
+  ctrl_test_submit(CTRL_OP_GET, CTRL_TEST_PATH_MAX_QUALITY, 0, 0);
+}
+
+static void ctrlTestSetMaxQualityCb(void) {
+  ctrl_test_submit(CTRL_OP_SET, CTRL_TEST_PATH_MAX_QUALITY, CTRL_TYPE_U8,
+                   ctrlTestSetMaxQuality);
+}
+
+static void ctrlTestSetQualityCb(void) {
+  ctrl_test_submit(CTRL_OP_SET, CTRL_TEST_PATH_QUALITY, CTRL_TYPE_U8,
+                   ctrlTestSetQuality);
+}
+
+static void ctrlTestSetMaxQualityU16Cb(void) {
+  ctrl_test_submit(CTRL_OP_SET, CTRL_TEST_PATH_MAX_QUALITY, CTRL_TYPE_U16,
+                   ctrlTestSetMaxQualityU16);
+}
+
+static void ctrlTestGetUnknownCb(void) {
+  ctrl_test_submit(CTRL_OP_GET, CTRL_TEST_PATH_UNKNOWN, 0, 0);
+}
+
+static void ctrlTestSetUnknownCb(void) {
+  ctrl_test_submit(CTRL_OP_SET, CTRL_TEST_PATH_UNKNOWN, CTRL_TYPE_U8,
+                   ctrlTestSetUnknown);
+}
+
+PARAM_GROUP_START(ctrlTest)
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, getSchemaModules, &ctrlTestGetSchemaModules, &ctrlTestGetSchemaModulesCb)
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, getQuality, &ctrlTestGetQuality, &ctrlTestGetQualityCb)
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, getMaxQuality, &ctrlTestGetMaxQuality, &ctrlTestGetMaxQualityCb)
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, setMaxQuality, &ctrlTestSetMaxQuality, &ctrlTestSetMaxQualityCb)
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, setQuality, &ctrlTestSetQuality, &ctrlTestSetQualityCb)
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT16, setMaxQualityU16, &ctrlTestSetMaxQualityU16, &ctrlTestSetMaxQualityU16Cb)
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, getUnknown, &ctrlTestGetUnknown, &ctrlTestGetUnknownCb)
+PARAM_ADD_WITH_CALLBACK(PARAM_UINT8, setUnknown, &ctrlTestSetUnknown, &ctrlTestSetUnknownCb)
+PARAM_GROUP_STOP(ctrlTest)
+#endif
+
+#if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
 static void bcCamUartTask(void *arg) {
   (void)arg;
   systemWaitStart();
@@ -1156,6 +1556,7 @@ static void bcCamUartTask(void *arg) {
     if (!did_rx_work) {
       service_poll_once_at(now_ticks);
     }
+    did_work = ctrl_test_poll(now_ticks) || did_work;
     update_service_status_cache();
 
     if (!did_work) {
@@ -1174,6 +1575,7 @@ void bccam_uart_service_init(DeckInfo *deck_info_arg) {
 #if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
   request_queue = STATIC_MEM_QUEUE_CREATE(request_queue);
   rx_queue = STATIC_MEM_QUEUE_CREATE(rx_queue);
+  ctrl_test_queue = STATIC_MEM_QUEUE_CREATE(ctrl_test_queue);
   reset_rx_collector_for_firmware_mode();
   reset_rx_queue_state();
 #endif

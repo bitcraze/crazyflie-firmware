@@ -60,6 +60,10 @@ typedef struct bccam_uart_runtime_t {
   uint8_t control_schema_module_count;
   bccam_uart_control_schema_module_t
     control_schema_modules[BCCAM_UART_CONTROL_MAX_SCHEMA_MODULES];
+  // Control test: the last response received after the probe is done
+  bool control_test_response_ready;
+  uint16_t control_test_response_len;
+  uint8_t control_test_response[BCCAM_UART_NORMAL_MAX_PAYLOAD];
 } bccam_uart_runtime_t;
 
 void bccam_uart_runtime_init(bccam_uart_runtime_t *runtime);
@@ -109,6 +113,17 @@ uint8_t bccam_uart_runtime_control_schema_module_count(
 const bccam_uart_control_schema_module_t *
 bccam_uart_runtime_control_schema_module(const bccam_uart_runtime_t *runtime,
                                          uint8_t index);
+
+/* Control test: send one Control request after the probe is done. */
+int bccam_uart_runtime_control_test_send(bccam_uart_runtime_t *runtime,
+                                         const uint8_t *payload,
+                                         uint16_t payload_len);
+
+/* Control test: take the response that was received, if any. */
+bool bccam_uart_runtime_control_test_take_response(bccam_uart_runtime_t *runtime,
+                                                   uint8_t *out,
+                                                   uint16_t out_capacity,
+                                                   uint16_t *out_len);
 
 uint16_t bccam_uart_runtime_get_control_malformed_count(
   const bccam_uart_runtime_t *runtime);
