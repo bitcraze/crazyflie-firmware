@@ -54,6 +54,16 @@ KBUILD_OUTPUT ?= build
 
 -include $(KBUILD_OUTPUT)/include/config/auto.conf
 
+#
+# Let an out-of-tree app shadow in-tree interface headers (e.g. a custom
+# platform_defaults.h) by putting them in an "overrides" subfolder, which
+# gets first priority in the include search path, ahead of every other
+# INCLUDES entry below.
+#
+ifneq ($(OOT),)
+INCLUDES += -I$(OOT)/overrides
+endif
+
 ifeq ($(CONFIG_PLATFORM_SIM),y)
 
 # Simmyflie: native Linux build on the vendored FreeRTOS POSIX port. No
@@ -189,6 +199,11 @@ INCLUDES += -I$(KBUILD_OUTPUT)/include/generated
 ifneq ($(CONFIG_DECK_LOCO_2D_POSITION_HEIGHT),)
 unquoted = $(patsubst "%",%,$(CONFIG_DECK_LOCO_2D_POSITION_HEIGHT))
 ARCH_CFLAGS += -DDECK_LOCO_2D_POSITION_HEIGHT=$(unquoted)
+endif
+
+ifneq ($(CONFIG_DECK_LOCO_TDOA_DISTANCE_RATIO_LIMIT),)
+unquoted = $(patsubst "%",%,$(CONFIG_DECK_LOCO_TDOA_DISTANCE_RATIO_LIMIT))
+ARCH_CFLAGS += -DDECK_LOCO_TDOA_DISTANCE_RATIO_LIMIT=$(unquoted)
 endif
 
 ifeq ($(CONFIG_PLATFORM_CF21BL), y)

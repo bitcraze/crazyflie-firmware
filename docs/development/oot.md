@@ -50,6 +50,44 @@ If you have header files in another folder, use `EXTRA_CFLAGS` in the Makefile t
 EXTRA_CFLAGS += -I$(PWD)/src/inc
 ```
 
+### Overriding in-tree headers
+
+If you need to override a header that lives inside the main firmware tree
+(for example to tweak the PID gains or physical constants in
+`platform_defaults_cf2.h` for your build, without editing the in-tree file),
+place your replacement in an `overrides` folder next to your OOT `Makefile`.
+`$(OOT)/overrides` is searched before every other include path, so a file
+placed there is picked up instead of its in-tree namesake, for the whole
+firmware build — not just your own OOT sources.
+
+This only works for a header that is `#include`d (with quotes) from a file
+**outside** the directory the header itself lives in — the C preprocessor
+always checks the includer's own directory first, before any `-I` path, so a
+header included by a neighbour in the same directory can never be shadowed
+this way.
+
+`platform_defaults_cf2.h` (and its sibling platform headers) is *not*
+directly shadowable by this rule: it's only ever included from
+`platform_defaults.h`, which lives right next to it in
+`src/platform/interface`. Overriding it therefore requires overriding
+**both** files together:
+
+```
+your_oot_folder/
+├── Makefile
+├── overrides/
+│   ├── platform_defaults.h        # unmodified copy of the in-tree file
+│   └── platform_defaults_cf2.h    # your changes go here
+└── ...
+```
+
+`platform_defaults.h` itself *is* directly shadowable, since it's included
+from files spread across `src/hal`, `src/drivers`, `src/modules`, etc. — none
+of which live in `src/platform/interface`. Once your copy of it is the one
+being compiled, its own `#include "platform_defaults_cf2.h"` resolves
+relative to *its* location (`overrides/`), which is what lets your copy of
+`platform_defaults_cf2.h` be found in turn.
+
 OOT builds can be configured with [Kbuild](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/development/kbuild/) using terminal interfaces like `make menuconfig` or by loading a default configuration, such as with `make cf2_defconfig`. Any definitions in $(OOT_CONFIG) will override conflicting settings.
 
 > **Note:** If you are using **macOS** you may encounter errors when trying to build your app, such as: 
