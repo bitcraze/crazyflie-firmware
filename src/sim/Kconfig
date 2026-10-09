@@ -1,0 +1,54 @@
+menu "Simulation"
+    depends on PLATFORM_SIM
+
+choice
+    prompt "Physics engine"
+    default SIM_PHYSICS_ENGINE_BUILTIN
+
+config SIM_PHYSICS_ENGINE_BUILTIN
+    bool "Built-in physics engine"
+
+endchoice
+
+config SIM_BUILTIN_MASS_MG
+    int "Mass without load (mg)"
+    depends on SIM_PHYSICS_ENGINE_BUILTIN
+    default 40000
+    help
+        Mass of the simulated Crazyflie in the built-in physics engine,
+        without propeller guards. The inertia does not follow this value.
+
+config SIM_BUILTIN_PROPELLER_GUARDS
+    bool "Propeller guards"
+    depends on SIM_PHYSICS_ENGINE_BUILTIN
+    default n
+    help
+        Simulate a Crazyflie with propeller guards in the built-in physics
+        engine: 4000 mg is added to the mass and the inertia is the one
+        measured with guards.
+
+config SIM_CRASH_SPEED_LIMIT_MM_S
+    int "Crash speed limit (mm/s)"
+    default 4000
+    help
+        Reaching ground level faster than this is a crash.
+
+config SIM_CRASH_ANGLE_LIMIT_DEG
+    int "Crash angle limit, pitch or roll (degrees)"
+    default 45
+    help
+        Reaching ground level with pitch or roll beyond this is a crash.
+
+config SIM_START_X_MM
+    int "Start position x (mm)"
+    default 0
+
+config SIM_START_Y_MM
+    int "Start position y (mm)"
+    default 0
+
+config SIM_START_YAW_DEG
+    int "Start yaw (degrees)"
+    default 0
+
+endmenu

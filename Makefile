@@ -132,6 +132,8 @@ INCLUDES += -I$(srctree)/src/init
 # Must come before the src/drivers/interface -I$(srctree)/src/hal/interface
 # -I$(srctree)/src/platform/interface entries below so these win.
 INCLUDES += -I$(srctree)/src/config/sim/hw_shims
+# The sim-only components' interfaces
+INCLUDES += -I$(srctree)/src/sim/interface
 
 # src/config/sim must come before the common -I$(srctree)/src/config below
 # so our FreeRTOSConfig.h wins over the mainline one.

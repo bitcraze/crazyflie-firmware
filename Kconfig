@@ -274,3 +274,5 @@ endmenu
 endmenu
 
 source "src/modules/src/Kconfig"
+
+source "src/sim/Kconfig"

@@ -23,6 +23,8 @@ obj-y += hal/
 obj-y += init/
 obj-y += modules/
 obj-y += platform/
+# The sim-only components (Physics engine)
+obj-y += sim/src/
 obj-y += utils/
 else
 obj-y += deck/
