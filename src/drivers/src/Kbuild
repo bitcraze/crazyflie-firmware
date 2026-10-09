@@ -1,3 +1,10 @@
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+obj-y += adc_sim.o
+obj-y += i2cdev_sim.o
+obj-y += led_sim.o
+obj-y += motors_sim.o
+obj-y += watchdog_sim.o
+else
 obj-y += ak8963.o
 obj-y += cppm.o
 obj-y += eeprom.o
@@ -25,3 +32,4 @@ obj-y += vl53l0x.o
 obj-y += vl53l1x.o
 obj-y += watchdog.o
 obj-y += ws2812_cf2.o
+endif

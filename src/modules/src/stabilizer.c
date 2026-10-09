@@ -267,7 +267,7 @@ void rateSupervisorTask(void *pvParameters) {
       // Validate the rate
       if (!rateSupervisorValidate(&rateSupervisorContext, xTaskGetTickCount())) {
         if (!rateWarningDisplayed) {
-          DEBUG_PRINT("WARNING: stabilizer loop rate is off (%lu)\n", rateSupervisorLatestCount(&rateSupervisorContext));
+          DEBUG_PRINT("WARNING: stabilizer loop rate is off (%lu)\n", (unsigned long)rateSupervisorLatestCount(&rateSupervisorContext));
           rateWarningDisplayed = true;
         }
       }
@@ -289,7 +289,7 @@ void rateSupervisorTask(void *pvParameters) {
 static void stabilizerTask(void* param)
 {
   stabilizerStep_t stabilizerStep;
-  uint32_t lastWakeTime;
+  TickType_t lastWakeTime;
   vTaskSetApplicationTaskTag(0, (void*)TASK_STABILIZER_ID_NBR);
 
   //Wait for the system to be fully started to start stabilization loop

@@ -24,7 +24,14 @@
  * position_estimator_altitude.c: Altitude-only position estimator
  */
 
+#include "autoconf.h"
+#ifndef CONFIG_PLATFORM_SIM
+/* Simmyflie: unused in this file (no STM32 symbol referenced below) --
+ * genuinely just gated out, not a behavior change. autoconf.h must be
+ * included explicitly first -- CONFIG_PLATFORM_SIM isn't visible for free
+ * (console.c's own precedent does the same). */
 #include "stm32f4xx.h"
+#endif
 
 #include "FreeRTOS.h"
 #include "task.h"

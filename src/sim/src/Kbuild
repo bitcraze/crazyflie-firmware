@@ -1,0 +1,1 @@
+obj-$(CONFIG_SIM_PHYSICS_ENGINE_BUILTIN) += physics_engine_builtin.o

@@ -59,6 +59,8 @@ compiler:
       - 'src/modules/src/outlierfilter/'
       - 'src/platform/interface/'
       - 'src/platform/src/'
+      - 'src/sim/interface/'
+      - 'src/sim/src/'
       - 'src/utils/interface/'
       - 'src/utils/interface/lighthouse/'
       - 'src/utils/interface/tdoa'

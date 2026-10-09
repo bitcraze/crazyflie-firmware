@@ -1,4 +1,12 @@
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+# Simmyflie Phase 4.9: only core/ (and, within it, only core/sim/) is
+# needed -- api/, backends/ and drivers/src/ are all deck-hardware-only
+# (deck discovery, GPIO/SPI/I2C probing) and out of scope with no deck bus
+# in sim (i2cdevInit() is a no-op stub, see i2cdev_sim.c/Phase 4.0).
+obj-y += core/
+else
 obj-y += api/
 obj-y += backends/
 obj-y += core/
 obj-y += drivers/src/
+endif

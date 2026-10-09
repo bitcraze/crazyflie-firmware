@@ -57,7 +57,7 @@
 
 // Matrix data must be aligned on 4 byte bundaries
 static inline void assert_aligned_4_bytes(const arm_matrix_instance_f32* matrix) {
-  const uint32_t address = (uint32_t)matrix->pData;
+  const uintptr_t address = (uintptr_t)matrix->pData;
   ASSERT((address & 0x3) == 0);
 }
 

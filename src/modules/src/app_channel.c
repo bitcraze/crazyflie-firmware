@@ -64,7 +64,7 @@ size_t appchannelReceivePacket(void* buffer, size_t max_length, int timeout_ms) 
 
 size_t appchannelReceiveDataPacket(void* buffer, size_t max_length, int timeout_ms) {
   static CRTPPacket packet;
-  int tickToWait = 0;
+  TickType_t tickToWait = 0;
 
   if (timeout_ms < 0) {
     tickToWait = portMAX_DELAY;

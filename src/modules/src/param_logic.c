@@ -97,22 +97,22 @@ static const uint64_t dummyZero64 = 0;
 
 static void * paramGetDefault(int index)
 {
-  uint32_t valueRelative;
-  uint32_t address;
+  uintptr_t valueRelative;
+  uintptr_t address;
   void *ptrDefaultValue;
 
-  address = (uint32_t)(params[index].address);
+  address = (uintptr_t)(params[index].address);
 
   // Is variable in data section?
-  if (address >= (uint32_t)&_sdata &&
-      address <= (uint32_t)&_edata)
+  if (address >= (uintptr_t)&_sdata &&
+      address <= (uintptr_t)&_edata)
   {
-    valueRelative =  address - (uint32_t)&_sdata;
-    ptrDefaultValue = (void *)((uint32_t)&_sidata + valueRelative);
+    valueRelative =  address - (uintptr_t)&_sdata;
+    ptrDefaultValue = (void *)((uintptr_t)&_sidata + valueRelative);
   }
   // Is variable in flash section?
-  else if (address >= (uint32_t)&_stext &&
-           address <= (uint32_t)&_etext)
+  else if (address >= (uintptr_t)&_stext &&
+           address <= (uintptr_t)&_etext)
   {
     ptrDefaultValue = (void *)(address);
   }
