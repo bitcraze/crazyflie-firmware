@@ -61,8 +61,8 @@
 void uart2Init(const uint32_t baudrate);
 
 /**
- * Change the baud rate of an already initialized UART. Blocks until any
- * ongoing transmission is completed.
+ * Change the baud rate of an already initialized UART. The caller must make
+ * sure that no other task is sending on the UART while the rate is changed.
  *
  * @param[in] baudrate  The new baud rate
  */
