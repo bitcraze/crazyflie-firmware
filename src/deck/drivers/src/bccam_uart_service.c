@@ -58,6 +58,10 @@ static bccam_bootloader_uart_client_t bootloader_client;
 static bccam_firmware_uart_client_t firmware_client;
 static uint32_t firmware_startup_deadline_tick;
 static uint32_t firmware_startup_reset_count;
+/** Deadline for reporting a startup that stalls after the link is active. */
+static uint32_t startup_stall_deadline_tick;
+/** True once the stall has been reported for the current link session. */
+static bool startup_stall_reported;
 
 #if defined(UNIT_TEST) || defined(UNIT_TEST_MODE)
 static bool test_firmware_startup_result_forced;
@@ -66,10 +70,9 @@ static bool test_firmware_control_probe_phase_forced;
 static bccam_uart_control_probe_phase_t test_firmware_control_probe_phase;
 static uint16_t test_rx_post_drain_poll_count;
 static uint16_t test_incompatible_report_count;
+static uint16_t test_startup_stall_report_count;
 static bool test_bootloader_enter_result_forced;
 static bool test_bootloader_enter_result;
-/** Forced enabled-and-bound Console state used by watchdog host tests. */
-static bool test_console_diagnostics_active;
 #endif
 
 #ifdef CONFIG_DECK_BCCAM_DEBUG
@@ -115,18 +118,6 @@ STATIC_MEM_QUEUE_ALLOC(rx_queue,
                        sizeof(bccam_uart_rx_event_t));
 STATIC_MEM_TASK_ALLOC(bcCamUartTask, BCCAM_UART_TASK_STACKSIZE);
 #endif
-
-/** Check whether a client can currently use Console for startup diagnosis. */
-static bool console_diagnostics_active(void)
-{
-#if defined(UNIT_TEST) || defined(UNIT_TEST_MODE)
-  return test_console_diagnostics_active;
-#else
-  return console_source_registered &&
-    bccam_uart_runtime_console_service_bound(&firmware_client.runtime) &&
-    consoleSourceIsEnabled(&console_source);
-#endif
-}
 
 static void observe_firmware_client(
   bccam_firmware_uart_client_observation_t *observation) {
@@ -601,6 +592,8 @@ static void enter_fw_resetting(void) {
 #endif
   service_state = BCCAM_UART_SERVICE_STATE_FW_RESETTING;
   firmware_startup_deadline_tick = 0;
+  startup_stall_deadline_tick = 0;
+  startup_stall_reported = false;
   reset_control_probe_logging();
   reset_rx_queue_state();
   // The camera commits transmitted bytes, so retain an accepted receive slot
@@ -949,16 +942,11 @@ static void report_advertised_services(void) {
   }
 }
 
-static void report_firmware_startup_recovery(
-  const char *phase_message,
-  bccam_uart_control_probe_phase_t probe_phase) {
-  DEBUG_PRINT("bcCam UART: Camera deck startup did not complete within %u ms; resetting camera deck processor and retrying.\n",
+static void report_firmware_startup_recovery(const char *phase_message) {
+  DEBUG_PRINT("bcCam UART: Camera deck UART link was not active within %u ms; resetting camera deck processor and retrying.\n",
               BCCAM_FW_STARTUP_TIMEOUT_MS);
   if (phase_message != NULL) {
     DEBUG_PRINT("bcCam UART: %s\n", phase_message);
-  }
-  if (probe_phase == BCCAM_UART_CONTROL_PROBE_WAITING_FOR_CONTROL_SERVICE) {
-    report_advertised_services();
   }
 }
 
@@ -973,34 +961,77 @@ static void report_firmware_startup_incompatible(const char *phase_message) {
   report_advertised_services();
 }
 
+static void report_firmware_startup_stall(
+  const char *phase_message,
+  bccam_uart_control_probe_phase_t probe_phase) {
+#if defined(UNIT_TEST) || defined(UNIT_TEST_MODE)
+  test_startup_stall_report_count++;
+#endif
+  DEBUG_PRINT("bcCam UART: Camera deck startup did not complete within %u ms after the link came up; not resetting.\n",
+              BCCAM_FW_STARTUP_TIMEOUT_MS);
+  if (phase_message != NULL) {
+    DEBUG_PRINT("bcCam UART: %s\n", phase_message);
+  }
+  if (probe_phase == BCCAM_UART_CONTROL_PROBE_WAITING_FOR_CONTROL_SERVICE) {
+    report_advertised_services();
+  }
+}
+
+/**
+ * Report, once per link session, a startup that stalls above the link.
+ *
+ * Services above the link are not recovered by resetting the deck; their
+ * state stays observable, and the deck's own Console can explain the stall.
+ */
+static void update_startup_stall_report(
+  uint32_t now_ticks,
+  const bccam_firmware_uart_client_observation_t *observation) {
+  if (startup_stall_reported ||
+      observation->startup_result != BCCAM_UART_FIRMWARE_STARTUP_WAITING) {
+    startup_stall_deadline_tick = 0;
+    return;
+  }
+
+  if (startup_stall_deadline_tick == 0) {
+    startup_stall_deadline_tick = now_ticks + M2T(BCCAM_FW_STARTUP_TIMEOUT_MS);
+    return;
+  }
+
+  if (!tick_has_reached((TickType_t)now_ticks,
+                        (TickType_t)startup_stall_deadline_tick)) {
+    return;
+  }
+
+  startup_stall_reported = true;
+  startup_stall_deadline_tick = 0;
+  report_firmware_startup_stall(startup_phase_message(),
+                                observation->control_probe_phase);
+}
+
+/**
+ * Reset the deck when the UART link is not active within the startup timeout.
+ *
+ * The watchdog is a link-level construct: once the link is active it stays
+ * idle, whatever happens to the services above it.
+ */
 static bool update_startup_recovery_watchdog(
   uint32_t now_ticks,
-  const char **phase_message,
-  bccam_uart_control_probe_phase_t *probe_phase) {
+  const char **phase_message) {
   if (phase_message != NULL) {
     *phase_message = NULL;
   }
 
   bccam_firmware_uart_client_observation_t observation;
   observe_firmware_client(&observation);
-  if (probe_phase != NULL) {
-    *probe_phase = observation.control_probe_phase;
-  }
 
-  if (observation.startup_result == BCCAM_UART_FIRMWARE_STARTUP_READY ||
-      observation.startup_result == BCCAM_UART_FIRMWARE_STARTUP_INCOMPATIBLE ||
-      observation.startup_result == BCCAM_UART_FIRMWARE_STARTUP_ABNORMAL) {
+  if (observation.link_state == BCCAM_UART_LINK_ACTIVE) {
     firmware_startup_deadline_tick = 0;
+    update_startup_stall_report(now_ticks, &observation);
     return false;
   }
 
-  if (console_diagnostics_active()) {
-    // Keep the timeout paused while the diagnostic source is enabled and bound.
-    // CRTP does not track client connections reliably, so a disconnected
-    // client may leave the timeout paused. Disabling starts a fresh timeout.
-    firmware_startup_deadline_tick = 0;
-    return false;
-  }
+  startup_stall_deadline_tick = 0;
+  startup_stall_reported = false;
 
   if (firmware_startup_deadline_tick == 0) {
     firmware_startup_deadline_tick =
@@ -1061,12 +1092,8 @@ static void poll_firmware_link_at(uint32_t now_ticks) {
   }
 
   const char *phase_message = NULL;
-  bccam_uart_control_probe_phase_t probe_phase =
-    BCCAM_UART_CONTROL_PROBE_WAITING_FOR_LINK;
-  if (update_startup_recovery_watchdog(now_ticks,
-                                       &phase_message,
-                                       &probe_phase)) {
-    report_firmware_startup_recovery(phase_message, probe_phase);
+  if (update_startup_recovery_watchdog(now_ticks, &phase_message)) {
+    report_firmware_startup_recovery(phase_message);
   }
 
   update_service_status_cache();
@@ -1488,7 +1515,9 @@ void bccam_uart_service_test_reset(void) {
     BCCAM_UART_CONTROL_PROBE_WAITING_FOR_LINK;
   test_bootloader_enter_result_forced = false;
   test_bootloader_enter_result = false;
-  test_console_diagnostics_active = false;
+  test_startup_stall_report_count = 0;
+  startup_stall_deadline_tick = 0;
+  startup_stall_reported = false;
   console_source_registered = false;
   console_frame_length = 0u;
   console_frame_offset = 0u;
@@ -1545,11 +1574,6 @@ void bccam_uart_service_test_set_bootloader_enter_result(bool result) {
   test_bootloader_enter_result = result;
 }
 
-void bccam_uart_service_test_set_console_diagnostics_active(bool active)
-{
-  test_console_diagnostics_active = active;
-}
-
 void bccam_uart_service_test_set_console_source_registered(bool registered)
 {
   console_source_registered = registered;
@@ -1597,6 +1621,10 @@ uint16_t bccam_uart_service_test_incompatible_report_count(void) {
   return test_incompatible_report_count;
 }
 
+uint16_t bccam_uart_service_test_startup_stall_report_count(void) {
+  return test_startup_stall_report_count;
+}
+
 bool bccam_uart_service_test_flash_write_allowed(void) {
   return flash_write_allowed();
 }
@@ -1614,10 +1642,8 @@ bool bccam_uart_service_test_update_startup_watchdog(
   uint32_t now_ticks,
   bccam_uart_service_test_startup_recovery_report_t *report) {
   const char *phase_message = NULL;
-  bccam_uart_control_probe_phase_t probe_phase =
-    BCCAM_UART_CONTROL_PROBE_WAITING_FOR_LINK;
   const bool recovered =
-    update_startup_recovery_watchdog(now_ticks, &phase_message, &probe_phase);
+    update_startup_recovery_watchdog(now_ticks, &phase_message);
   populate_startup_report(report,
                           false,
                           recovered ? BCCAM_FW_STARTUP_TIMEOUT_MS : 0,

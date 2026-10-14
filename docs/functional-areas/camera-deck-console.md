@@ -26,9 +26,14 @@ spool, subject to the deck's storage limit. A radio activity timeout does not
 clear Console packets already queued on the Crazyflie. Queue acceptance does
 not confirm delivery to a client.
 
-The Camera Deck startup-recovery watchdog is suspended while the source is
-enabled and its Console service is bound. This leaves the deck running during
-diagnosis, even if the Control probe has stalled. Disabling the source starts a
-fresh recovery timeout if Control is still stalled. Accepted frames remain
-pending while the source is disabled and can be forwarded after it is enabled
-again.
+Accepted frames remain pending while the source is disabled and can be
+forwarded after it is enabled again.
+
+The Camera Deck startup-recovery watchdog works at the link level only. The
+Crazyflie resets the deck immediately on a link fault, and when the UART link
+is not active within 3 seconds. Once the link is active, the watchdog does not
+reset the deck, whatever the state of the services above the link, and
+enabling the console has no effect on it. If startup still has not completed
+3 seconds after the link came up, for example because the Control probe
+stalled, the Crazyflie reports it once on its own console. The deck's console
+output then remains available to explain the stall.

@@ -97,13 +97,6 @@ void bccam_uart_service_test_set_firmware_control_probe_phase(
 void bccam_uart_service_test_set_bootloader_enter_result(bool result);
 
 /**
- * Force whether tests model an enabled and bound diagnostic Console source.
- *
- * @param active true to suspend startup recovery as production does while the
- *               source is enabled and bound; false otherwise.
- */
-void bccam_uart_service_test_set_console_diagnostics_active(bool active);
-/**
  * Model whether Console accepted the Camera Deck source for forwarding tests.
  *
  * @param registered Whether the Camera Deck Console source was registered.
@@ -124,6 +117,7 @@ void bccam_uart_service_test_handle_rx_events(
   uint8_t event_count);
 uint16_t bccam_uart_service_test_rx_post_drain_poll_count(void);
 uint16_t bccam_uart_service_test_incompatible_report_count(void);
+uint16_t bccam_uart_service_test_startup_stall_report_count(void);
 bool bccam_uart_service_test_flash_write_allowed(void);
 void bccam_uart_service_test_start_firmware_establishment(void);
 const char *bccam_uart_service_test_startup_phase_message(void);
