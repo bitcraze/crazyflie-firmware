@@ -27,7 +27,9 @@ clear Console packets already queued on the Crazyflie. Queue acceptance does
 not confirm delivery to a client.
 
 Accepted frames remain pending while the source is disabled and can be
-forwarded after it is enabled again.
+forwarded after it is enabled again. They also survive a Camera Deck reboot
+or a link fault, so output sent just before a reboot is not lost on the
+Crazyflie.
 
 The Camera Deck startup-recovery watchdog works at the link level only. The
 Crazyflie resets the deck immediately on a link fault, and when the UART link

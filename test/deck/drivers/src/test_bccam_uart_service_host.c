@@ -629,7 +629,6 @@ void testPartiallyForwardedConsoleFrameSurvivesRepeatedRecovery(void)
   const uint8_t live[] = "live";
   accept_console_frame(text, sizeof(text));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_service_test_forward_console());
-  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_service_test_forward_console());
   TEST_ASSERT_EQUAL_UINT(CRTP_MAX_DATA_SIZE - 1u, console_output_length);
   console_enabled_after_first_check = false;
   recover_firmware_while_disabled();
@@ -657,4 +656,69 @@ void testPartiallyForwardedConsoleFrameSurvivesRepeatedRecovery(void)
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_service_test_forward_console());
   TEST_ASSERT_EQUAL_UINT(sizeof(text) + sizeof(live), console_output_length);
   TEST_ASSERT_EQUAL_UINT8_ARRAY(live, &console_output[sizeof(text)], sizeof(live));
+}
+
+/** Forward until the console output stops growing. */
+static void forward_all_console_output(void)
+{
+  for (unsigned int i = 0u; i < 8u; i++) {
+    TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_service_test_forward_console());
+    bccam_uart_service_test_poll_once();
+  }
+}
+
+/** Verify output sent just before a camera reboot is not lost. */
+void testConsoleFrameSurvivesCameraBootNotice(void)
+{
+  const uint8_t text[] = "last words before reboot";
+  const uint8_t boot_notice[] = { BCCAM_UART_LINK_OP_BOOT_NOTICE, 0 };
+  accept_console_frame(text, sizeof(text));
+
+  service_receive_management(boot_notice, sizeof(boot_notice));
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_SERVICE_STATE_FW_ESTABLISHING,
+                        bccam_uart_service_get_state());
+  complete_console_service_link_establishment();
+
+  forward_all_console_output();
+  TEST_ASSERT_EQUAL_UINT(sizeof(text), console_output_length);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(text, console_output, sizeof(text));
+}
+
+/** Verify output received before a link fault is not lost. */
+void testConsoleFrameSurvivesLinkFault(void)
+{
+  const uint8_t text[] = "output before fault";
+  const uint8_t malformed[] = { 0xeeu };
+  accept_console_frame(text, sizeof(text));
+
+  service_receive_management(malformed, sizeof(malformed));
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_SERVICE_STATE_FW_RESETTING,
+                        bccam_uart_service_get_state());
+  bccam_uart_service_test_poll_once();
+  complete_console_service_link_establishment();
+
+  forward_all_console_output();
+  TEST_ASSERT_EQUAL_UINT(sizeof(text), console_output_length);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(text, console_output, sizeof(text));
+}
+
+/** Verify a frame received after a disable waits until the next enable. */
+void testConsoleFrameReceivedWhileDisabledIsForwardedAfterEnable(void)
+{
+  const uint8_t text[] = "late frame";
+  establish_console_service_link();
+  console_enabled_after_first_check = true;
+  console_accept_output = true;
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_service_test_forward_console());
+  bccam_uart_service_test_poll_once();
+
+  console_enabled_after_first_check = false;
+  receive_console_frame(text, sizeof(text));
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_service_test_forward_console());
+  TEST_ASSERT_EQUAL_UINT(0u, console_output_length);
+
+  console_enabled_after_first_check = true;
+  forward_all_console_output();
+  TEST_ASSERT_EQUAL_UINT(sizeof(text), console_output_length);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(text, console_output, sizeof(text));
 }

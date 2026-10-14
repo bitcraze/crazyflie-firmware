@@ -596,22 +596,8 @@ static void enter_fw_resetting(void) {
   startup_stall_reported = false;
   reset_control_probe_logging();
   reset_rx_queue_state();
-  // The camera commits transmitted bytes, so retain an accepted receive slot
-  // before establishment clears the old link session. Taking it grants no
-  // credit and is safe even when the source is disabled.
-  if (!console_frame_pending &&
-      bccam_uart_runtime_console_service_bound(&firmware_client.runtime)) {
-    uint16_t length = 0u;
-    bool present = false;
-    const int result = bccam_uart_runtime_take_console_rx(
-      &firmware_client.runtime, console_frame, sizeof(console_frame),
-      &length, &present);
-    if (result == BCCAM_UART_OK && present) {
-      console_frame_length = length;
-      console_frame_offset = 0u;
-      console_frame_pending = length > 0u;
-    }
-  }
+  // Received Console bytes were dispatched out of the link session as they
+  // arrived, so a pending frame survives the reset and is forwarded later.
   if (!console_frame_pending) {
     console_frame_length = 0u;
     console_frame_offset = 0u;
@@ -1165,31 +1151,65 @@ static int forward_console(void)
     return result;
   }
 
-  uint16_t length = 0u;
-  bool present = false;
-  int result = bccam_uart_runtime_take_console_rx(
-    &firmware_client.runtime, console_frame, sizeof(console_frame),
-    &length, &present);
-  if (result != BCCAM_UART_OK || !present) {
-    if (result == BCCAM_UART_OK && enabled) {
-      bool published = false;
-      result = publish_console_credit_if_enabled(false, &published);
-    }
-    return result;
-  }
+  bool published = false;
+  return publish_console_credit_if_enabled(false, &published);
+}
 
-  if (enabled) {
-    console_frame_length = length;
-    console_frame_offset = 0u;
-    console_frame_pending = true;
-    console_frame_needs_release = true;
-    if (length == 0u) {
-      console_frame_pending = false;
-      console_release_pending = true;
-      console_frame_needs_release = false;
+/**
+ * Accept one Console frame dispatched from the link.
+ *
+ * The frame holds this session's single receive credit, so console_frame is
+ * empty when it arrives; completing it releases the slot.
+ */
+static void console_receive_frame(const uint8_t *payload, uint16_t length)
+{
+  if (console_frame_pending || console_release_pending) {
+    DEBUG_PRINT("bcCam UART: dropped Console frame received without credit\n");
+    return;
+  }
+  memcpy(console_frame, payload, length);
+  console_frame_length = length;
+  console_frame_offset = 0u;
+  console_frame_pending = length > 0u;
+  console_frame_needs_release = length > 0u;
+  console_release_pending = length == 0u;
+}
+
+/** Receive handler for one service bound on the Camera Link. */
+typedef struct {
+  /** Move a received frame for the service out of the link, if any. */
+  int (*take)(bccam_uart_runtime_t *runtime, uint8_t *payload,
+              size_t payload_capacity, uint16_t *payload_len,
+              bool *unit_present);
+  /** Handle one received frame. */
+  void (*receive)(const uint8_t *payload, uint16_t length);
+} rx_service_handler_t;
+
+static const rx_service_handler_t rx_service_handlers[] = {
+  { bccam_uart_runtime_take_console_rx, console_receive_frame },
+};
+
+/**
+ * Hand frames received on the link to their service handlers.
+ *
+ * Called after every RX event, so a frame leaves the link session before a
+ * later event (boot notice, fault) can clear it. Handlers run whatever their
+ * service's client-facing state: taking a frame grants no new credit.
+ */
+static void dispatch_received_frames(void)
+{
+  uint8_t payload[BCCAM_UART_CAMERA_PROFILE_MTU];
+  for (size_t i = 0u;
+       i < sizeof(rx_service_handlers) / sizeof(rx_service_handlers[0]);
+       i++) {
+    uint16_t length = 0u;
+    bool present = false;
+    const int result = rx_service_handlers[i].take(
+      &firmware_client.runtime, payload, sizeof(payload), &length, &present);
+    if (result == BCCAM_UART_OK && present) {
+      rx_service_handlers[i].receive(payload, length);
     }
   }
-  return BCCAM_UART_OK;
 }
 
 static bool handle_rx_event(const bccam_uart_rx_event_t *event) {
@@ -1206,6 +1226,7 @@ static bool handle_rx_event(const bccam_uart_rx_event_t *event) {
     return true;
   }
 
+  dispatch_received_frames();
   return true;
 }
 
