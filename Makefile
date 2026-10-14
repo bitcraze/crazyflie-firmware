@@ -166,9 +166,19 @@ else
   LOAD_ADDRESS = $(LOAD_ADDRESS_$(CPU))
 endif
 
+# The outer make proxies this target to the build directory when KBUILD_OUTPUT is set.
+ifeq ($(KBUILD_SRC),)
+ifeq ($(KBUILD_OUTPUT),)
+UNIT_RUN_HERE := 1
+endif
+else
+UNIT_RUN_HERE := 1
+endif
+ifeq ($(UNIT_RUN_HERE),1)
 unit:
 # The flag "-DUNITY_INCLUDE_DOUBLE" allows comparison of double values in Unity. See: https://stackoverflow.com/a/37790196
-	rake unit "DEFINES=$(ARCH_CFLAGS) -DUNITY_INCLUDE_DOUBLE" "FILES=$(FILES)" "UNIT_TEST_STYLE=$(UNIT_TEST_STYLE)"
+	@rake --silent unit "DEFINES=$(ARCH_CFLAGS) -DUNITY_INCLUDE_DOUBLE" "FILES=$(FILES)" "UNIT_TEST_STYLE=$(UNIT_TEST_STYLE)"
+endif
 
 #Flash the stm.
 flash:
