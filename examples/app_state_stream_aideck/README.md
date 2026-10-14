@@ -8,7 +8,7 @@ The message format comes from [NanoCockpit](https://github.com/idsia-robotics/na
 
 ## Limitations
 
-- UART1 is also used by the Lighthouse deck and the camera deck, so this app cannot be combined with them.
+- This app cannot be used together with other decks that use UART1. Check the [deck pin allocation](https://www.bitcraze.io/documentation/system/platform/cf2-expansiondecks/#deck-pin-allocation) to see which decks use it.
 - The state is read from the `stateEstimateZ` log variables. The values are read one by one and stamped when read, so a message is not an exact snapshot of one estimator update (the difference is about a millisecond). Upstream NanoCockpit modifies the Crazyflie firmware to forward a timestamped snapshot instead.
 
 See the App layer API guide and build instructions [here](https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/userguides/app_layer/)
