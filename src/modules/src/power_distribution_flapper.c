@@ -226,7 +226,7 @@ PARAM_GROUP_STOP(powerDist)
 
 /**
  *
- * Flapper Drone configration parameters
+ * Flapper Drone configuration parameters
  */
 PARAM_GROUP_START(flapper)
 /**
@@ -253,10 +253,9 @@ PARAM_ADD(PARAM_UINT8 | PARAM_PERSISTENT, servPitchNeutr, &flapperConfig.pitchSe
  */
 PARAM_ADD(PARAM_UINT8 | PARAM_PERSISTENT, servYawNeutr, &flapperConfig.yawServoNeutral)
 /**
- * @brief Yaw servo neutral <25%; 75%> (default 50%)
+ * @brief Maximum thrust command (default 60000)
  *
- * The parameter sets the neutral position of the yaw servo, such that the yaw control arm is pointed spanwise. If in flight
- * you observe drift in the clock-wise direction, increase this parameter and vice-versa if the drift is counter-clock-wise.
+ * Thrust commands above this value are limited to it before the power distribution.
  */
 PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, flapperMaxThrust, &flapperConfig.maxThrust)
 
