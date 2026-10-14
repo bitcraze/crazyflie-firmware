@@ -46,13 +46,15 @@ static CrtpCallback consoleCallback;
 static CRTPPacket sentPackets[32];
 /** Number of packets accepted by the host CRTP transmit fixture. */
 static size_t sentPacketCount;
-/** Nesting depth of the simulated task critical section. */
-static unsigned int criticalDepth;
+/** Handle of the source mutex created by Console initialization. */
+static QueueHandle_t sourceLockHandle;
+/** True while the simulated source mutex is held. */
+static bool sourceLockHeld;
 /** Result returned by the non-blocking CRTP send stub. */
 static int nonblockingSendResult;
 /** Inject a disable attempt at the next sourced-packet enqueue. */
 static bool injectDisableAtSend;
-/** Defer the injected disable until the simulated critical section exits. */
+/** Defer the injected disable until the source mutex is released. */
 static bool disableDeferred;
 /** Source ID used by the injected disable request. */
 static uint8_t injectedDisableSourceId;
@@ -81,21 +83,6 @@ static void dispatchInjectedDisable(void) {
   consoleCallback(&request);
 }
 
-/** Host stub for entering a FreeRTOS critical section. */
-void vPortEnterCritical(void) {
-  criticalDepth++;
-}
-
-/** Host stub for leaving a FreeRTOS critical section. */
-void vPortExitCritical(void) {
-  TEST_ASSERT_GREATER_THAN(0u, criticalDepth);
-  criticalDepth--;
-  if (criticalDepth == 0u && disableDeferred) {
-    disableDeferred = false;
-    dispatchInjectedDisable();
-  }
-}
-
 /** Capture one CRTP packet in the host fixture. */
 static int capturePacket(CRTPPacket *packet) {
   TEST_ASSERT_LESS_THAN(sizeof(sentPackets) / sizeof(sentPackets[0]), sentPacketCount);
@@ -110,9 +97,10 @@ int crtpSendPacket(CRTPPacket *packet) {
   }
   if (injectDisableAtSend) {
     injectDisableAtSend = false;
-    if (criticalDepth == 0u) {
+    if (!sourceLockHeld) {
       dispatchInjectedDisable();
     } else {
+      // A real control request would block on the mutex until it is given.
       disableDeferred = true;
     }
   }
@@ -147,22 +135,44 @@ QueueHandle_t xQueueGenericCreate(const UBaseType_t length,
   return (QueueHandle_t)&queueStorage;
 }
 
-/** Accept a queued item in the host fixture. */
+/** Return the caller's buffer as the fixture source mutex handle. */
+QueueHandle_t xQueueCreateMutexStatic(const uint8_t queueType,
+                                      StaticQueue_t *staticQueue) {
+  (void)queueType;
+  sourceLockHandle = (QueueHandle_t)staticQueue;
+  return sourceLockHandle;
+}
+
+/** Accept a queued item, releasing the source mutex when it is given. */
 BaseType_t xQueueGenericSend(QueueHandle_t queue,
                              const void * const item,
                              TickType_t ticksToWait,
                              const BaseType_t copyPosition) {
-  (void)queue;
   (void)item;
   (void)ticksToWait;
   (void)copyPosition;
+  if (queue == sourceLockHandle) {
+    TEST_ASSERT_TRUE(sourceLockHeld);
+    sourceLockHeld = false;
+    if (disableDeferred) {
+      disableDeferred = false;
+      dispatchInjectedDisable();
+    }
+  }
   return pdTRUE;
 }
 
-/** Make the fixture semaphore immediately available. */
+/** Take the fixture semaphore, modelling the source mutex ownership. */
 BaseType_t xQueueSemaphoreTake(QueueHandle_t queue, TickType_t ticksToWait) {
-  (void)queue;
-  (void)ticksToWait;
+  if (queue != sourceLockHandle) {
+    return pdTRUE;
+  }
+  if (sourceLockHeld) {
+    // The fixture never blocks; blocking takers are deferred by the caller.
+    TEST_ASSERT_EQUAL_UINT32(0u, ticksToWait);
+    return pdFALSE;
+  }
+  sourceLockHeld = true;
   return pdTRUE;
 }
 
@@ -191,7 +201,8 @@ void setUp(void) {
   consoleResetForTest();
   consoleCallback = NULL;
   sentPacketCount = 0u;
-  criticalDepth = 0u;
+  sourceLockHandle = NULL;
+  sourceLockHeld = false;
   nonblockingSendResult = pdTRUE;
   injectDisableAtSend = false;
   disableDeferred = false;
@@ -436,17 +447,34 @@ void testSourceSendFramesDataAndReportsBackpressure(void) {
   TEST_ASSERT_FALSE(consoleSourceSend(&testSources[0], payload, CRTP_MAX_DATA_SIZE));
 }
 
+/** A busy source mutex makes a send fail fast without enqueuing. */
+void testSourceSendFailsFastWhileSourceLockIsHeld(void) {
+  static const uint8_t payload[] = {'x'};
+  TEST_ASSERT_EQUAL_INT(0, registerSource("deck:bcCam"));
+  consoleSourceFreeze();
+  dispatchRequest(2u, 3u, 0u, 0u, 1u);
+  clearSentPackets();
+
+  sourceLockHeld = true;
+  TEST_ASSERT_FALSE(consoleSourceSend(&testSources[0], payload, sizeof(payload)));
+  TEST_ASSERT_EQUAL_UINT32(0u, sentPacketCount);
+
+  sourceLockHeld = false;
+  TEST_ASSERT_TRUE(consoleSourceSend(&testSources[0], payload, sizeof(payload)));
+  TEST_ASSERT_EQUAL_UINT32(1u, sentPacketCount);
+  TEST_ASSERT_FALSE(sourceLockHeld);
+}
+
 /** Console initializes accepted nodes and leaves rejected nodes unchanged. */
 void testSourceCatalogRejectsDuplicateNodesAndPaths(void) {
   ConsoleSource *first = newSource("deck:first");
   first->next = first;
   first->id = 0xffu;
   first->pathLength = 0xffu;
-  first->enabled = true;
   TEST_ASSERT_EQUAL_INT(0, consoleSourceRegister(first));
   TEST_ASSERT_EQUAL_UINT8(0u, first->id);
   TEST_ASSERT_NULL(first->next);
-  TEST_ASSERT_FALSE(first->enabled);
+  TEST_ASSERT_FALSE(consoleSourceIsEnabled(first));
   TEST_ASSERT_EQUAL_INT(EEXIST, consoleSourceRegister(first));
 
   ConsoleSource *duplicate = newSource("deck:first");

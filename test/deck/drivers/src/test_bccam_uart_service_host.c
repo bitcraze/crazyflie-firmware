@@ -22,7 +22,6 @@ static size_t console_output_length;
 static uint8_t console_enabled_check_count;
 static bool console_enabled_after_first_check;
 static unsigned int critical_depth;
-static bool console_recheck_was_critical;
 
 void vPortEnterCritical(void) {
   critical_depth++;
@@ -37,9 +36,6 @@ bool consoleSourceIsEnabled(const ConsoleSource *source) {
   (void)source;
   const bool enabled = console_enabled_check_count == 0u ||
     console_enabled_after_first_check;
-  if (console_enabled_check_count > 0u && critical_depth > 0u) {
-    console_recheck_was_critical = true;
-  }
   console_enabled_check_count++;
   return enabled;
 }
@@ -62,7 +58,6 @@ void setUp(void) {
   console_enabled_check_count = 0u;
   console_enabled_after_first_check = false;
   critical_depth = 0u;
-  console_recheck_was_critical = false;
   bccam_uart_service_test_reset();
 }
 void tearDown(void) {}
@@ -168,7 +163,6 @@ void testDisableDuringForwardingDoesNotPublishFreshConsoleCredit(void) {
   bccam_uart_service_test_poll_once();
 
   TEST_ASSERT_EQUAL_UINT8(sends_before_forward, uart_send_count());
-  TEST_ASSERT_TRUE(console_recheck_was_critical);
 }
 
 void testInitialStateIsUninitialized(void) {

@@ -85,7 +85,6 @@ typedef struct ConsoleSource {
   struct ConsoleSource *next;  ///< Console-owned list link.
   uint8_t id;                 ///< Console-owned wire ID.
   uint8_t pathLength;         ///< Console-owned encoded path length.
-  volatile bool enabled;      ///< Console-owned runtime state.
 } ConsoleSource;
 
 /**
@@ -95,8 +94,9 @@ typedef struct ConsoleSource {
  * and at most 27 encoded bytes. On success, source becomes the handle for the
  * functions below. Failure does not change the node or catalog. A node from
  * an earlier successful call remains registered if it is passed again.
- * Call from task context. Console protects the catalog and enabled state with
- * critical sections.
+ * Call only from the startup task, before consoleSourceFreeze(). Registration
+ * takes no lock: the catalog has a single writer until it is frozen, and the
+ * freeze publishes it to the CRTP handlers.
  *
  * @return 0 on success; EINVAL for a NULL source or invalid path, EEXIST for
  *         a previously registered node or path, ENOSPC for 255 entries, or
@@ -128,7 +128,8 @@ bool consoleSourceIsEnabled(const ConsoleSource *source);
  * The stream is intended as UTF-8, but a chunk may split a code point or
  * contain invalid bytes. Console copies the data before this call returns.
  * The enabled-state check and CRTP enqueue are ordered with runtime disable:
- * a successful disable response cannot overtake an accepted chunk.
+ * a successful disable response cannot overtake an accepted chunk. Call from
+ * task context only.
  *
  * @param source Successfully registered node pointer. Any other value violates
  *               the API contract.
@@ -137,8 +138,8 @@ bool consoleSourceIsEnabled(const ConsoleSource *source);
  *               CRTP packet (at most CRTP_MAX_DATA_SIZE - 1).
  * @return true if the CRTP transmit queue accepted the chunk. This does not
  *         confirm delivery to a client. Returns false if the source is
- *         disabled, data is NULL, length is too large, or the queue cannot
- *         accept the packet immediately.
+ *         disabled, data is NULL, length is too large, or the packet cannot
+ *         be enqueued immediately. Callers should retry later.
  */
 bool consoleSourceSend(const ConsoleSource *source, const uint8_t *data,
                        size_t length);

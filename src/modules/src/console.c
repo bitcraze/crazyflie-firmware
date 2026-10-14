@@ -26,6 +26,7 @@
 
 #include <string.h>
 #include <errno.h>
+#include <stdatomic.h>
 
 /*FreeRtos includes*/
 #include "FreeRTOS.h"
@@ -59,8 +60,20 @@ static ConsoleSource *sourceHead;
 static ConsoleSource *sourceTail;
 /** Count can reach 255, one past the highest assignable source ID. */
 static uint16_t sourceCount;
-/** True after source registration has permanently closed. */
-static bool sourcesFrozen;
+/**
+ * True after source registration has permanently closed. The release store in
+ * consoleSourceFreeze() publishes the catalog; readers load it with acquire
+ * and then walk the immutable list without a lock.
+ */
+static atomic_bool sourcesFrozen;
+/** Runtime enable state, indexed by source ID. */
+static atomic_bool sourceEnabled[CONSOLE_SOURCE_MAX];
+/**
+ * Orders the enabled check and CRTP enqueue in consoleSourceSend() with enable
+ * changes, so a disable response cannot overtake an accepted chunk.
+ */
+static SemaphoreHandle_t sourceLock;
+static StaticSemaphore_t sourceLockBuffer;
 
 #ifdef STM32F40_41xxx
 #include "stm32f4xx.h"
@@ -157,6 +170,7 @@ void consoleInit()
   messageToPrint.size = 0;
   messageToPrint.header = CRTP_HEADER(CRTP_PORT_CONSOLE, CONSOLE_CHANNEL_LOCAL);
   vSemaphoreCreateBinary(synch);
+  sourceLock = xSemaphoreCreateMutexStatic(&sourceLockBuffer);
   messageSendingIsPending = false;
   crtpRegisterPortCB(CRTP_PORT_CONSOLE, consoleCrtpCallback);
 
@@ -189,50 +203,47 @@ int consoleSourceRegister(ConsoleSource *source)
   if (segmentStart || length > (CRTP_MAX_DATA_SIZE - 3u)) {
     return EINVAL;
   }
-  taskENTER_CRITICAL();
-  if (sourcesFrozen) {
-    taskEXIT_CRITICAL();
+  // No lock: registration only happens from the startup task before the
+  // freeze, so the catalog has a single writer.
+  if (atomic_load_explicit(&sourcesFrozen, memory_order_relaxed)) {
     return EBUSY;
   }
   for (ConsoleSource *entry = sourceHead; entry != NULL; entry = entry->next) {
     if (entry == source || strcmp(entry->path, path) == 0) {
-      taskEXIT_CRITICAL();
       return EEXIST;
     }
   }
   if (sourceCount >= CONSOLE_SOURCE_MAX) {
-    taskEXIT_CRITICAL();
     return ENOSPC;
   }
 
   source->next = NULL;
   source->id = (uint8_t)sourceCount++;
   source->pathLength = (uint8_t)length;
-  source->enabled = false;
+  atomic_store_explicit(&sourceEnabled[source->id], false, memory_order_relaxed);
   if (sourceTail == NULL) {
     sourceHead = source;
   } else {
     sourceTail->next = source;
   }
   sourceTail = source;
-  taskEXIT_CRITICAL();
   return 0;
 }
 
 void consoleSourceFreeze(void)
 {
-  taskENTER_CRITICAL();
-  sourcesFrozen = true;
-  taskEXIT_CRITICAL();
+  atomic_store_explicit(&sourcesFrozen, true, memory_order_release);
+}
+
+/** Return true once the catalog is frozen and safe to read without a lock. */
+static bool consoleSourcesAreFrozen(void)
+{
+  return atomic_load_explicit(&sourcesFrozen, memory_order_acquire);
 }
 
 bool consoleSourceIsEnabled(const ConsoleSource *source)
 {
-  bool enabled = false;
-  taskENTER_CRITICAL();
-  enabled = source->enabled;
-  taskEXIT_CRITICAL();
-  return enabled;
+  return atomic_load_explicit(&sourceEnabled[source->id], memory_order_relaxed);
 }
 
 bool consoleSourceSend(const ConsoleSource *source, const uint8_t *data, size_t length)
@@ -248,12 +259,16 @@ bool consoleSourceSend(const ConsoleSource *source, const uint8_t *data, size_t 
   packet.data[0] = source->id;
   memcpy(&packet.data[1], data, length);
 
+  // Do not wait for the lock: a busy lock is reported like a full queue and
+  // the caller retries later.
+  if (xSemaphoreTake(sourceLock, 0) != pdTRUE) {
+    return false;
+  }
   bool accepted = false;
-  taskENTER_CRITICAL();
-  if (source->enabled) {
+  if (consoleSourceIsEnabled(source)) {
     accepted = crtpSendPacket(&packet) == pdTRUE;
   }
-  taskEXIT_CRITICAL();
+  xSemaphoreGive(sourceLock);
   return accepted;
 }
 
@@ -263,7 +278,11 @@ void consoleResetForTest(void)
   sourceHead = NULL;
   sourceTail = NULL;
   sourceCount = 0u;
-  sourcesFrozen = false;
+  atomic_store(&sourcesFrozen, false);
+  for (size_t i = 0u; i < CONSOLE_SOURCE_MAX; i++) {
+    atomic_store(&sourceEnabled[i], false);
+  }
+  sourceLock = NULL;
   messageSendingIsPending = false;
   synch = NULL;
   isInit = false;
@@ -317,23 +336,28 @@ static void consoleHandleControl(CRTPPacket *packet)
   }
 
   const uint8_t sourceId = packet->data[1];
+  const bool enabled = packet->data[2] != 0u;
   uint8_t result = 0u;
-  taskENTER_CRITICAL();
-  if (!sourcesFrozen) {
+  if (!consoleSourcesAreFrozen()) {
     result = EAGAIN;
-  } else if (sourceId == CONSOLE_SOURCE_ALL) {
-    for (ConsoleSource *source = sourceHead; source != NULL; source = source->next) {
-      source->enabled = packet->data[2] != 0u;
-    }
   } else {
-    ConsoleSource *source = consoleSourceById(sourceId);
-    if (source != NULL) {
-      source->enabled = packet->data[2] != 0u;
+    // Hold the lock while changing state so no sourced chunk can be enqueued
+    // after a disable and before its response, which is sent after release.
+    xSemaphoreTake(sourceLock, portMAX_DELAY);
+    if (sourceId == CONSOLE_SOURCE_ALL) {
+      for (ConsoleSource *source = sourceHead; source != NULL; source = source->next) {
+        atomic_store_explicit(&sourceEnabled[source->id], enabled, memory_order_relaxed);
+      }
     } else {
-      result = ENOENT;
+      ConsoleSource *source = consoleSourceById(sourceId);
+      if (source != NULL) {
+        atomic_store_explicit(&sourceEnabled[source->id], enabled, memory_order_relaxed);
+      } else {
+        result = ENOENT;
+      }
     }
+    xSemaphoreGive(sourceLock);
   }
-  taskEXIT_CRITICAL();
   if (result != 0u) {
     consoleSendCommandError(packet, result);
   } else {
@@ -369,11 +393,7 @@ static void consoleHandleCatalog(CRTPPacket *packet)
       return;
   }
 
-  bool frozen;
-  taskENTER_CRITICAL();
-  frozen = sourcesFrozen;
-  taskEXIT_CRITICAL();
-  if (!frozen) {
+  if (!consoleSourcesAreFrozen()) {
     consoleSendCommandError(packet, EAGAIN);
     return;
   }

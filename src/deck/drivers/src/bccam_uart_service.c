@@ -1079,20 +1079,24 @@ static bool temporary_console_result(int result)
          result == BCCAM_UART_ERR_NO_CREDIT;
 }
 
-/** Publish Console receive credit only while the source remains enabled. */
+/**
+ * Publish Console receive credit only while the source is enabled.
+ *
+ * A disable may land between the check and the publish. The camera then sends
+ * one frame, which waits in console_frame: consoleSourceSend() re-checks the
+ * enabled state under the Console lock, so nothing reaches CRTP.
+ */
 static int publish_console_credit_if_enabled(bool release_consumed_slot,
                                              bool *published)
 {
   int result = BCCAM_UART_OK;
   *published = false;
-  taskENTER_CRITICAL();
   if (consoleSourceIsEnabled(&console_source)) {
     result = release_consumed_slot ?
       bccam_uart_runtime_release_console_rx(&firmware_client.runtime) :
       bccam_uart_runtime_open_console_rx(&firmware_client.runtime);
     *published = result == BCCAM_UART_OK;
   }
-  taskEXIT_CRITICAL();
   return result;
 }
 
