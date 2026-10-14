@@ -170,7 +170,6 @@ struct crtpLinkOperations
   int (*sendPacket)(CRTPPacket *pk);
   int (*receivePacket)(CRTPPacket *pk);
   bool (*isConnected)(void);
-  int (*reset)(void);
 };
 
 void crtpSetLink(struct crtpLinkOperations * lk);
@@ -182,13 +181,5 @@ void crtpSetLink(struct crtpLinkOperations * lk);
  * @return true if conencted, otherwise false
  */
 bool crtpIsConnected(void);
-
-/**
- * Reset the CRTP communication by flushing all the queues that
- * contain packages.
- *
- * @return 0 for success
- */
-int crtpReset(void);
 
 #endif /*CRTP_H_*/
