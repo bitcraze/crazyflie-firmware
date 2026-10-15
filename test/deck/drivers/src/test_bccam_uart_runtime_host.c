@@ -125,6 +125,88 @@ void testRuntimeEstablishesThenStreamsCatalogOneDescriptorAtATime(void) {
   TEST_ASSERT_EQUAL_UINT8(0x91, bccam_uart_runtime_control_service_id(&runtime));
 }
 
+/** Verify Console remains consumable while a compatible Control probe runs. */
+void testConsoleFrameRemainsAvailableWhileControlProbeRuns(void) {
+  bccam_uart_runtime_t runtime;
+  writer_t writer = { .succeed = true };
+  bccam_uart_frame_t frame;
+
+  establish_and_get_count(&runtime, &writer, 2);
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_runtime_step_control_probe(&runtime));
+  TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_GET_SERVICE_DESCRIPTOR,
+    flush_operation(&runtime, &writer, &frame));
+  feed_descriptor_for_last_request(&runtime, &frame, 1, 1, 0,
+                                   "bitcraze.control");
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_runtime_step_control_probe(&runtime));
+  TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_GET_SERVICE_DESCRIPTOR,
+    flush_operation(&runtime, &writer, &frame));
+  feed_descriptor_for_last_request(&runtime, &frame, 2, 1, 0,
+                                   "bitcraze.console");
+  TEST_ASSERT_TRUE(bccam_uart_runtime_console_service_bound(&runtime));
+  TEST_ASSERT_FALSE(bccam_uart_runtime_control_probe_done(&runtime));
+
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_runtime_open_console_rx(&runtime));
+  TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_CREDIT_UPDATE,
+    flush_operation(&runtime, &writer, &frame));
+  TEST_ASSERT_EQUAL_UINT8(2, frame.payload[2]);
+
+  uint8_t raw[BCCAM_UART_FRAME_MAX_ENCODED_SIZE];
+  size_t raw_len = 0u;
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_frame_encode_version(1, 2, (const uint8_t *)"deck", 4,
+                                    raw, sizeof(raw), &raw_len));
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_runtime_on_raw_frame(&runtime, raw, (uint16_t)raw_len));
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_runtime_step_control_probe(&runtime));
+  TEST_ASSERT_FALSE(bccam_uart_runtime_control_probe_done(&runtime));
+
+  uint8_t payload[64];
+  uint16_t payload_len = 0u;
+  bool present = false;
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_runtime_take_console_rx(&runtime, payload, sizeof(payload),
+                                       &payload_len, &present));
+  TEST_ASSERT_TRUE(present);
+  TEST_ASSERT_EQUAL_UINT16(4, payload_len);
+  TEST_ASSERT_EQUAL_MEMORY("deck", payload, 4);
+}
+
+/** Verify incompatible Control metadata does not block Console credit. */
+void testConsoleOpensWhenAdvertisedControlVersionIsIncompatible(void) {
+  bccam_uart_runtime_t runtime;
+  writer_t writer = { .succeed = true };
+  bccam_uart_frame_t frame;
+
+  establish_and_get_count(&runtime, &writer, 2);
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_runtime_step_control_probe(&runtime));
+  TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_GET_SERVICE_DESCRIPTOR,
+    flush_operation(&runtime, &writer, &frame));
+  feed_descriptor_for_last_request(&runtime, &frame, 1, 0, 0,
+                                   "bitcraze.control");
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_runtime_step_control_probe(&runtime));
+  TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_GET_SERVICE_DESCRIPTOR,
+    flush_operation(&runtime, &writer, &frame));
+  feed_descriptor_for_last_request(&runtime, &frame, 2, 1, 0,
+                                   "bitcraze.console");
+
+  TEST_ASSERT_FALSE(bccam_uart_runtime_control_service_bound(&runtime));
+  TEST_ASSERT_TRUE(bccam_uart_runtime_console_service_bound(&runtime));
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_FIRMWARE_STARTUP_INCOMPATIBLE,
+    bccam_uart_runtime_firmware_startup_result(&runtime));
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_runtime_open_console_rx(&runtime));
+  TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_CREDIT_UPDATE,
+    flush_operation(&runtime, &writer, &frame));
+  TEST_ASSERT_EQUAL_UINT8(2, frame.payload[2]);
+  TEST_ASSERT_EQUAL_UINT8(1, frame.payload[3]);
+}
+
 void testControlZeroZeroStopsCleanlyAfterDiscoveryWithoutServiceBurst(void) {
   bccam_uart_runtime_t runtime;
   writer_t writer = { .succeed = true };
@@ -236,6 +318,47 @@ void testEmptyIncomingControlUnitIsMalformedAndRxCreditIsReplenished(void) {
   TEST_ASSERT_EQUAL_UINT8(1, frame.payload[3]);
 }
 
+/** Verify the completed one-shot probe does not invite unconsumed traffic. */
+void testSuccessfulOneShotControlProbeKeepsReceiveCreditClosed(void) {
+  bccam_uart_runtime_t runtime;
+  writer_t writer = { .succeed = true };
+  uint8_t raw[BCCAM_UART_FRAME_MAX_ENCODED_SIZE];
+  size_t raw_len = 0;
+  const uint8_t response[] = { 0x81, 0x00, 0x21, 0x01, 0x00 };
+
+  bccam_uart_runtime_init(&runtime);
+  runtime.link.state = BCCAM_UART_LINK_ACTIVE;
+  runtime.link.active_link_version = 1;
+  runtime.link.negotiated_payload = 64;
+  runtime.link.service_count_known = true;
+  runtime.link.service_count = 1;
+  runtime.link.descriptors_received = 1;
+  runtime.link.seen_ordinals[0] = 1;
+  runtime.next_descriptor_ordinal = 1;
+  runtime.link.control_binding.valid = true;
+  runtime.link.control_binding.descriptor.handle = 0x55;
+  runtime.link.control_binding.rx_advertised_credit = 1;
+  runtime.control_service_bound = true;
+  runtime.control_service_id = 0x55;
+  runtime.control_rx_credit_opened = true;
+  runtime.control_request_sent = true;
+
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_frame_encode_version(1, 0x55, response, sizeof(response),
+                                    raw, sizeof(raw), &raw_len));
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_runtime_on_raw_frame(&runtime, raw, (uint16_t)raw_len));
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_runtime_step_control_probe(&runtime));
+
+  TEST_ASSERT_TRUE(bccam_uart_runtime_control_probe_done(&runtime));
+  TEST_ASSERT_EQUAL_UINT8(0,
+    bccam_uart_link_get_rx_advertised_credit(&runtime.link, 0x55));
+  writer.length = 0;
+  flush(&runtime, &writer);
+  TEST_ASSERT_EQUAL_size_t(0, writer.length);
+}
+
 void testSynchronousTxFailureIsFailStopAndNeverRetriedDuringBootstrap(void) {
   bccam_uart_runtime_t runtime;
   writer_t failing = { .succeed = false };
@@ -325,7 +448,7 @@ void testCompleteRawPacketWithTrailingByteIsBadLengthAndFaultsActive(void) {
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_ERR_BAD_LENGTH,
     bccam_uart_runtime_on_raw_frame(&runtime, raw, (uint16_t)(raw_len + 1u)));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_LINK_FAULT, runtime.link.state);
-  TEST_ASSERT_FALSE(runtime.link.rx_pending);
+  TEST_ASSERT_FALSE(runtime.link.control_binding.rx_pending);
 }
 
 void testCorruptActiveUartPacketEntersLinkFault(void) {
