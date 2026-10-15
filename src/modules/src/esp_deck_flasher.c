@@ -41,6 +41,9 @@
 #include "uart2.h"
 
 
+// The sync is done at 115200 baud, the rate is raised after that to speed up the transfer of the binary
+#define ESP_FLASH_BAUDRATE 921600
+
 uint32_t espDeckFlasherNewBinarySize = 0;
 
 static uint32_t sequenceNumber;
@@ -53,6 +56,11 @@ static uint32_t sendBufferIndex;
 static bool initialize() {
   if (!espRomBootloaderSync(&sendBuffer[0])){
     DEBUG_PRINT("Write failed - cannot sync with bootloader\n");
+    return false;
+  }
+
+  if (!espRomBootloaderChangeBaudrate(&sendBuffer[0], ESP_FLASH_BAUDRATE)){
+    DEBUG_PRINT("Write failed - cannot change baud rate\n");
     return false;
   }
 
