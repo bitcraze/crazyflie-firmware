@@ -251,7 +251,7 @@ static void kalmanTask(void* parameters) {
       STATS_CNT_RATE_EVENT(&predictionCounter);
 
       if (!rateSupervisorValidate(&rateSupervisorContext, nowMs)) {
-        DEBUG_PRINT("WARNING: Kalman prediction rate off (%lu)\n", rateSupervisorLatestCount(&rateSupervisorContext));
+        DEBUG_PRINT("WARNING: Kalman prediction rate off (%lu)\n", (unsigned long)rateSupervisorLatestCount(&rateSupervisorContext));
       }
     }
 

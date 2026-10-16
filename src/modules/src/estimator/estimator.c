@@ -1,4 +1,12 @@
+#include "autoconf.h"
+#ifndef CONFIG_PLATFORM_SIM
+/* Simmyflie: no SCB register to probe interrupt context from (see
+ * estimatorEnqueue() below) -- same gate console.c's consolePutchar() uses
+ * (Phase 4.1), itself matching CrazySim's own console.c fork. autoconf.h
+ * must be included explicitly first -- CONFIG_PLATFORM_SIM isn't visible
+ * for free (console.c's own precedent does the same). */
 #include "stm32fxxx.h"
+#endif
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "static_mem.h"
@@ -177,7 +185,11 @@ void estimatorEnqueue(const measurement_t *measurement) {
   }
 
   portBASE_TYPE result;
+#ifdef CONFIG_PLATFORM_SIM
+  bool isInInterrupt = false;
+#else
   bool isInInterrupt = (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) != 0;
+#endif
   if (isInInterrupt) {
     portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
     result = xQueueSendFromISR(measurementsQueue, measurement, &xHigherPriorityTaskWoken);

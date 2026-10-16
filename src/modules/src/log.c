@@ -721,7 +721,7 @@ void logRunBlock(void * arg)
       if (blk->droppedPackets++ % 100 == 0)
       {
         DEBUG_PRINT("WARNING: LOG packets drop detected (%lu packets lost)\n",
-                    blk->droppedPackets);
+                    (unsigned long)blk->droppedPackets);
       }
     }
   }
