@@ -21,27 +21,27 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * motors_sim.h - declares motors_sim.c's public surface for
- * CONFIG_PLATFORM_SIM (Simmyflie).
+ * motors_sim.h - declares the public surface of motors_sim.c, the Actuator
+ * shim of the Simmyflie (CONFIG_PLATFORM_SIM).
  *
  * Not "motors.h": that header pulls in the STM32 hardware chain directly
  * (stm32fxxx.h) plus MotorPerifDef's ST peripheral-register fields (see
  * motors_sim.c's own header comment). motorsInit()'s motor-map argument is
  * narrowed from motors.h's real `const MotorPerifDef**` to `const void**`,
- * same precedent as Phase 4.0's i2cdevInit(void*) -- link-compatible with
+ * same precedent as i2cdev_sim.c's i2cdevInit(void*) -- link-compatible with
  * real callers since C linking matches symbol names only, not per-TU
  * parameter types. Every other signature matches current mainline motors.h
- * exactly (verified against stabilizer.c's setMotorRatios()), which is what
- * should let Phase 4.8's stabilizer.c call this stub unmodified.
+ * exactly (verified against stabilizer.c's setMotorRatios()), so
+ * stabilizer.c calls the shim unmodified.
  *
  * Single source of truth for these signatures -- both motors_sim.c (the
  * definitions) and every consumer (main_sim.c; and, via
- * src/config/sim/hw_shims/motors.h, stabilizer.c/health.c -- see Phase 4.8)
+ * src/config/sim/hw_shims/motors.h, stabilizer.c/health.c)
  * include this header instead of hand-typing matching forward declarations.
  *
- * Phase 4.8 additions (motorsResetESCs/motorsCompensateBatteryVoltage/
- * motorsBeep/motorsGetHealthTestSettings/testsound/NBR_OF_MOTORS/
- * MOTOR_M1..M4/MotorHealthTestDef): the rest of real motors.h's surface that
+ * motorsResetESCs/motorsCompensateBatteryVoltage/motorsBeep/
+ * motorsGetHealthTestSettings/testsound/NBR_OF_MOTORS/MOTOR_M1..M4/
+ * MotorHealthTestDef: the rest of real motors.h's surface that
  * stabilizer.c/health.c reference. All narrower-than-mainline stubs --
  * motorsCompensateBatteryVoltage() is a pass-through (no battery-voltage
  * model exists in sim, matching pm_sim.c's constant-voltage scope),
@@ -58,7 +58,7 @@
  * motorsSetRatio() already applies the ratio directly, so there's no
  * separate hardware burst step to model.
  *
- * motorsGetRPM()/MOTORS_RPM_INVALID (Phase 4.10): the real supervisor.c
+ * motorsGetRPM()/MOTORS_RPM_INVALID: the real supervisor.c
  * reads motor RPM under CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
  * (set by cf21bl_defconfig). There is no ESC telemetry in sim, so every
  * motor reports the constant MOTORS_SIM_RPM. See motors_sim.c.

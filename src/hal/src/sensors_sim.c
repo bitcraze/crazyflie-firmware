@@ -21,50 +21,110 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * sensors_sim.c - sensors.h backend for CONFIG_PLATFORM_SIM (Simmyflie),
- * Phase 4.7.
+ * sensors_sim.c - the Sensor shim of the Simmyflie (CONFIG_PLATFORM_SIM):
+ * the sensors.h backend.
  *
- * EXPLICITLY TEMPORARY (see implementation-plan-phase-4.md's 4.7 section):
- * this is a fixed-value stand-in for the real Sensor shim, narrower than the
- * design spec's own target ("passes through Physics model's true state with
- * no noise/error injection") because there is no Physics model yet -- that's
- * Phase 5's job. Phase 5 replaces this file wholesale rather than extending
- * it, same spirit as Phase 3's phase3_verify_mock.c being retired outright
- * rather than grown.
+ * Once per tick, in sensorsWaitDataReady(), the shim steps the physics
+ * through the Physics engine manager, reads the true state and turns it into
+ * the readings the firmware expects. It never calls the physics engine. The
+ * readings are perfect: no noise or error is injected.
+ *
+ * - Gyro: the body angular rate, in deg/s.
+ * - Accelerometer: the world acceleration minus the gravity vector, rotated
+ *   into the body frame, in g. At rest this is 1 g on body z.
+ * - Pose: every tenth tick (100 Hz) the true position and attitude are
+ *   enqueued to the estimator as a pose measurement, as a motion capture
+ *   system does on a real Crazyflie (crtp_localization_service.c). The
+ *   standard deviations are the firmware defaults extPosStdDev and
+ *   extQuatStdDev; they can not be zero although the values are exact.
+ * - Barometer: fixed sea-level values. The Kalman filter ignores the
+ *   barometer by default.
+ * - No magnetometer: matches real hardware with no deck attached.
+ *
+ * While the sensors are suspended (sensorsSuspend()) the physics is still
+ * stepped and the readings updated; only the enqueues are skipped, so the
+ * physics never stops.
  *
  * sensors.h itself (unlike motors.h/pm.h/platform.h) only pulls in
  * stabilizer_types.h -- no STM32 hardware chain -- so it's included
  * normally here, no forward-declare workaround needed.
- *
- * Fixed values represent a stationary, level, on-the-ground Crazyflie:
- * acc = (0, 0, 1) g (gravity on Z, matching every real accelerometer driver's
- * convention -- see e.g. sensors_bmi088_bmp3xx.c), gyro = (0, 0, 0) deg/s (no
- * rotation), baro = fixed sea-level standard values. No magnetometer: matches
- * real hardware with no deck attached (default CF2.1 has no onboard mag
- * either -- sensorsReadMag() returns false and leaves *mag untouched, same
- * contract the real no-mag drivers use).
  */
 
 #include "sensors.h"
+
+#include <stdint.h>
 
 #include "FreeRTOS.h"
 #include "task.h"
 #include "usec_time.h"
 #include "estimator.h"
+#include "physics_engine_manager.h"
+
+#define STEP_DT 0.001f                   // s, one tick
+#define GRAVITY 9.81f                    // m/s^2, the built-in engine's value
+#define DEG_PER_RAD (180.0f / 3.14159265358979f)
+#define POSE_INTERVAL_TICKS 10           // 100 Hz
+#define POSE_STD_DEV_POS 0.01f           // m, firmware default extPosStdDev
+#define POSE_STD_DEV_QUAT 4.5e-3f        // firmware default extQuatStdDev
 
 static bool isInit = false;
 static bool suspended = false;
+static uint32_t tickCount = 0;
+static trueState_t trueState;
 
-static const Axis3f fixedGyro = {.x = 0.0f, .y = 0.0f, .z = 0.0f};
-static const Axis3f fixedAcc = {.x = 0.0f, .y = 0.0f, .z = 1.0f};
+// The readings of the current tick
+static Axis3f gyro;
+static Axis3f acc;
+
 static const baro_t fixedBaro = {
   .pressure = 1013.25f,
   .temperature = 25.0f,
   .asl = 0.0f,
 };
 
+// Gyro (deg/s) and accelerometer (g) readings from a true state
+static void convertToReadings(const trueState_t *state, Axis3f *gyroOut, Axis3f *accOut)
+{
+  gyroOut->x = state->angularRate.x * DEG_PER_RAD;
+  gyroOut->y = state->angularRate.y * DEG_PER_RAD;
+  gyroOut->z = state->angularRate.z * DEG_PER_RAD;
+
+  // Specific force in the world frame: acceleration minus gravity (0, 0, -g)
+  const float fx = state->acceleration.x;
+  const float fy = state->acceleration.y;
+  const float fz = state->acceleration.z + GRAVITY;
+
+  // Into the body frame with the transpose of the body to world rotation
+  const float w = state->attitude.w, x = state->attitude.x, y = state->attitude.y, z = state->attitude.z;
+  const float r00 = 1.0f - 2.0f * (y * y + z * z), r01 = 2.0f * (x * y - w * z), r02 = 2.0f * (x * z + w * y);
+  const float r10 = 2.0f * (x * y + w * z), r11 = 1.0f - 2.0f * (x * x + z * z), r12 = 2.0f * (y * z - w * x);
+  const float r20 = 2.0f * (x * z - w * y), r21 = 2.0f * (y * z + w * x), r22 = 1.0f - 2.0f * (x * x + y * y);
+
+  accOut->x = (r00 * fx + r10 * fy + r20 * fz) / GRAVITY;
+  accOut->y = (r01 * fx + r11 * fy + r21 * fz) / GRAVITY;
+  accOut->z = (r02 * fx + r12 * fy + r22 * fz) / GRAVITY;
+}
+
+static void enqueuePose(const trueState_t *state)
+{
+  // trueStateQuat_t is w, x, y, z and quaternion_t x, y, z, w: field by field
+  const poseMeasurement_t pose = {
+    .x = state->position.x,
+    .y = state->position.y,
+    .z = state->position.z,
+    .quat = {.x = state->attitude.x, .y = state->attitude.y, .z = state->attitude.z, .w = state->attitude.w},
+    .stdDevPos = POSE_STD_DEV_POS,
+    .stdDevQuat = POSE_STD_DEV_QUAT,
+  };
+  estimatorEnqueuePose(&pose);
+}
+
 void sensorsInit(void)
 {
+  // The manager's snapshot is valid from its init, before the first step
+  physicsEngineManagerGetTrueState(&trueState);
+  convertToReadings(&trueState, &gyro, &acc);
+  tickCount = 0;
   isInit = true;
 }
 
@@ -85,22 +145,25 @@ bool sensorsManufacturingTest(void)
 
 void sensorsAcquire(sensorData_t *sensors)
 {
-  sensors->gyro = fixedGyro;
-  sensors->acc = fixedAcc;
+  sensors->gyro = gyro;
+  sensors->acc = acc;
   sensors->mag = (Axis3f){.x = 0.0f, .y = 0.0f, .z = 0.0f};
   sensors->baro = fixedBaro;
   sensors->interruptTimestamp = usecTimestamp();
 }
 
-/* Mirrors the real sensor tasks (e.g. sensors_bmi088_bmp3xx.c): one gyro and
- * one acc measurement enqueued to the estimator per stabilizer tick. The
- * estimators only see IMU data through this queue -- without it the Kalman
- * prediction runs with zero acceleration, free-falls, and trips the
- * supervisor's velocity bound. No baro enqueue: the Kalman filter ignores it
- * unless kalman.useBaroUpdate is set. */
+/* The clock of the physics, and the stand-in for the real sensor tasks
+ * (e.g. sensors_bmi088_bmp3xx.c): one gyro and one accelerometer measurement
+ * enqueued to the estimator per stabilizer tick. No baro enqueue: the Kalman
+ * filter ignores it unless kalman.useBaroUpdate is set. */
 void sensorsWaitDataReady(void)
 {
   vTaskDelay(pdMS_TO_TICKS(1));
+
+  physicsEngineManagerStep(STEP_DT);
+  physicsEngineManagerGetTrueState(&trueState);
+  convertToReadings(&trueState, &gyro, &acc);
+  tickCount++;
 
   if (suspended) {
     return;
@@ -108,30 +171,33 @@ void sensorsWaitDataReady(void)
 
   measurement_t measurement;
   measurement.type = MeasurementTypeGyroscope;
-  measurement.data.gyroscope.gyro = fixedGyro;
+  measurement.data.gyroscope.gyro = gyro;
   estimatorEnqueue(&measurement);
 
   measurement.type = MeasurementTypeAcceleration;
-  measurement.data.acceleration.acc = fixedAcc;
+  measurement.data.acceleration.acc = acc;
   estimatorEnqueue(&measurement);
+
+  if (tickCount % POSE_INTERVAL_TICKS == 0) {
+    enqueuePose(&trueState);
+  }
 }
 
-bool sensorsReadGyro(Axis3f *gyro)
+bool sensorsReadGyro(Axis3f *gyroOut)
 {
-  *gyro = fixedGyro;
+  *gyroOut = gyro;
   return true;
 }
 
-bool sensorsReadAcc(Axis3f *acc)
+bool sensorsReadAcc(Axis3f *accOut)
 {
-  *acc = fixedAcc;
+  *accOut = acc;
   return true;
 }
 
 bool sensorsReadMag(Axis3f *mag)
 {
-  /* No magnetometer on the default sim platform -- matches real hardware
-   * with no deck attached. */
+  (void)mag;
   return false;
 }
 

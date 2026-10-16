@@ -21,14 +21,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * motors_sim.c - motors.h backend for CONFIG_PLATFORM_SIM (Simmyflie),
- * Phase 4.7.
+ * motors_sim.c - the Actuator shim of the Simmyflie (CONFIG_PLATFORM_SIM):
+ * the motors.h backend.
  *
- * EXPLICITLY TEMPORARY (see implementation-plan-phase-4.md's 4.7 section):
- * motorsSetRatio() just records the requested ratio, no forward to a Physics
- * model -- that model doesn't exist yet (Phase 5's job). Phase 5 replaces
- * this file wholesale rather than extending it, same spirit as
- * sensors_sim.c.
+ * motorsSetRatio() stores the ratio the firmware writes and passes it on,
+ * unchanged, to the Physics engine manager with
+ * physicsEngineManagerSetMotorRatio(). motorsStop() does the same with four
+ * zeros. Passing a ratio on never advances the true state: the Sensor shim
+ * steps the physics once per tick. The shim holds no physical knowledge of
+ * motors and never calls the physics engine.
  *
  * Not "motors.h": see motors_sim.h for why (STM32 hardware chain) and for
  * the signature-narrowing rationale (motorsInit()'s motor-map argument).
@@ -38,9 +39,9 @@
  * entries (m1_rpm.. -- CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL has no
  * meaning in sim, there's no real ESC to report RPM from).
  *
- * Phase 4.8 additions (motorsResetESCs/motorsCompensateBatteryVoltage/
- * motorsBeep/motorsGetHealthTestSettings/testsound): see motors_sim.h's
- * header comment for why each is a narrower-than-mainline stub.
+ * motorsResetESCs/motorsCompensateBatteryVoltage/motorsBeep/
+ * motorsGetHealthTestSettings/testsound: see motors_sim.h's header comment
+ * for why each is a narrower-than-mainline stub.
  */
 
 #include <stdbool.h>
@@ -48,6 +49,7 @@
 
 #include "log.h"
 #include "motors_sim.h"
+#include "physics_engine_manager.h"
 
 const uint16_t testsound[NBR_OF_MOTORS] = {A4, A5, F5, D5};
 
@@ -81,6 +83,7 @@ void motorsSetRatio(uint32_t id, uint16_t ratio)
 {
   if (id < NBR_OF_MOTORS) {
     motor_ratios[id] = ratio;
+    physicsEngineManagerSetMotorRatio(id, ratio);
   }
 }
 
@@ -96,7 +99,7 @@ uint16_t motorsGetRPM(uint32_t motorId)
 {
   /* No ESC telemetry in sim: a constant that passes both of supervisor.c's
    * RPM checks (arming window and motors-not-responding), regardless of the
-   * commanded ratio. Phase 5's physics model can supply a real rotor speed. */
+   * commanded ratio and of the true rotor speeds (trueState.rotor1..4). */
   if (motorId >= NBR_OF_MOTORS) {
     return MOTORS_RPM_INVALID;
   }
@@ -105,8 +108,9 @@ uint16_t motorsGetRPM(uint32_t motorId)
 
 void motorsStop(void)
 {
-  for (int i = 0; i < NBR_OF_MOTORS; i++) {
+  for (uint32_t i = 0; i < NBR_OF_MOTORS; i++) {
     motor_ratios[i] = 0;
+    physicsEngineManagerSetMotorRatio(i, 0);
   }
 }
 

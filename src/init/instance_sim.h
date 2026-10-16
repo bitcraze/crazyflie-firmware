@@ -22,7 +22,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * instance_sim.h - Simmyflie instance/process management (CONFIG_PLATFORM_SIM):
- * CLI port argument and bind-before-scheduler-start UDP socket setup.
+ * command-line arguments, bind-before-scheduler-start UDP socket setup, and
+ * the start of the Physics engine manager.
  */
 #ifndef INSTANCE_SIM_H_
 #define INSTANCE_SIM_H_
@@ -30,13 +31,17 @@
 #include <stdint.h>
 
 /**
- * Parses the UDP port number from argv (default 50000 if omitted, or via
- * "--port <n>" / "-p <n>" / "--port=<n>"), then creates and binds a UDP
- * socket to it. Must be called before vTaskStartScheduler().
+ * Parses argv (see --help: --port/-p, --start-x, --start-y, --start-yaw,
+ * --ground-level, each as "--name value" or "--name=value"), creates and
+ * binds a UDP socket to the port (default 50000), then fills the physics
+ * engine configuration from the arguments and the Kconfig defaults and
+ * starts the Physics engine manager with it. Must be called before
+ * vTaskStartScheduler().
  *
- * On any failure (bad argument, port already in use, ...) prints an error
- * to stderr and terminates the process with a non-zero exit status --
- * this function does not return in that case.
+ * --help prints the arguments and exits with status 0. On any failure (bad
+ * argument, port already in use, engine that cannot start) prints an error
+ * to stderr and exits with status 1 -- this function does not return in
+ * those cases.
  */
 void instanceInit(int argc, char **argv);
 
