@@ -36,6 +36,8 @@
 
 #include "unity.h"
 #include "mock_physics_engine.h"
+#include "mock_beacon_sender.h"
+#include "freertosMocks.h"
 
 #define NBR_OF_ROTORS TRUE_STATE_NBR_OF_ROTORS
 #define DT 0.001f
@@ -74,6 +76,12 @@ static trueState_t placedState;
 static int nbrOfPlaces;
 
 static physicsEngineConfig_t config;
+
+// What the mocked Beacon sender was given
+static trueState_t beaconState;
+static physicsEngineStatus_t beaconStatus;
+static uint32_t beaconSimTime;
+static int nbrOfBeaconTicks;
 
 static void record(const engineCall_t call)
 {
@@ -119,10 +127,21 @@ static void placeCallback(const trueState_t *state, int cmock_num_calls)
   nbrOfPlaces++;
 }
 
+static void beaconTickCallback(const trueState_t *state, physicsEngineStatus_t status, uint32_t simTime,
+                               int cmock_num_calls)
+{
+  (void)cmock_num_calls;
+  beaconState = *state;
+  beaconStatus = status;
+  beaconSimTime = simTime;
+  nbrOfBeaconTicks++;
+}
+
 static void clearCalls(void)
 {
   nbrOfCalls = 0;
   nbrOfPlaces = 0;
+  nbrOfBeaconTicks = 0;
 }
 
 static void assertCalls(const engineCall_t *expected, const int nbrOfExpected)
@@ -198,6 +217,7 @@ void setUp(void)
   physicsEngineGetState_StubWithCallback(getStateCallback);
   physicsEngineGetStatus_StubWithCallback(getStatusCallback);
   physicsEnginePlace_StubWithCallback(placeCallback);
+  beaconSenderTick_StubWithCallback(beaconTickCallback);
 
   clearCalls();
   engineInitResult = true;
@@ -712,4 +732,49 @@ void testThatGetTrueStateReturnsTheSnapshotNotTheEngineState(void)
 
   // Assert
   assertStatesEqual(&expected, &actual);
+}
+
+// Beacon sender
+
+void testThatInitDoesNotTickTheBeaconSender(void)
+{
+  // Fixture
+  engineStatus = physicsEngineStatusAtRest;
+
+  // Test
+  TEST_ASSERT_TRUE(physicsEngineManagerInit(&config));
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT(0, nbrOfBeaconTicks);
+}
+
+void testThatEveryStepTicksTheBeaconSenderOnce(void)
+{
+  // Fixture
+  initAt(physicsEngineStatusAtRest);
+
+  // Test
+  physicsEngineManagerStep(DT);
+  physicsEngineManagerStep(DT);
+  physicsEngineManagerStep(DT);
+
+  // Assert
+  TEST_ASSERT_EQUAL_INT(3, nbrOfBeaconTicks);
+}
+
+void testThatStepPassesTheNewStateStatusAndTickCountToTheBeaconSender(void)
+{
+  // Fixture: the engine's state and status change in the step
+  initAt(physicsEngineStatusAtRest);
+  engineState.position.x = 100.0f;
+  engineStatus = physicsEngineStatusFlying;
+  const trueState_t expected = engineState;
+
+  // Test
+  physicsEngineManagerStep(DT);
+
+  // Assert
+  assertStatesEqual(&expected, &beaconState);
+  TEST_ASSERT_EQUAL_INT(physicsEngineStatusFlying, beaconStatus);
+  TEST_ASSERT_EQUAL_UINT32(xTaskGetTickCount(), beaconSimTime);
 }

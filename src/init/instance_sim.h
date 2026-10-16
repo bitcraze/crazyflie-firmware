@@ -22,8 +22,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  * instance_sim.h - Simmyflie instance/process management (CONFIG_PLATFORM_SIM):
- * command-line arguments, bind-before-scheduler-start UDP socket setup, and
- * the start of the Physics engine manager.
+ * command-line arguments, bind-before-scheduler-start UDP socket setup, the
+ * beacon socket, and the start of the Physics engine manager.
  */
 #ifndef INSTANCE_SIM_H_
 #define INSTANCE_SIM_H_
@@ -32,8 +32,10 @@
 
 /**
  * Parses argv (see --help: --port/-p, --start-x, --start-y, --start-yaw,
- * --ground-level, each as "--name value" or "--name=value"), creates and
- * binds a UDP socket to the port (default 50000), then fills the physics
+ * --ground-level, --beacon, each as "--name value" or "--name=value"),
+ * creates and binds a UDP socket to the port (default 50000), creates the
+ * beacon socket and starts the Beacon sender with the beacon address
+ * (default 239.255.50.0:49999), then fills the physics
  * engine configuration from the arguments and the Kconfig defaults and
  * starts the Physics engine manager with it. Must be called before
  * vTaskStartScheduler().

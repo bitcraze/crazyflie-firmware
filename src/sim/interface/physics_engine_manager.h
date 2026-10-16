@@ -62,8 +62,8 @@ void physicsEngineManagerSetMotorRatio(uint32_t id, uint16_t ratio);
 
 /**
  * @brief Advance the true state by dt: apply a written start pose if the
- * status allows it, step the engine with the stored ratios, and read the
- * state and status into the snapshot.
+ * status allows it, step the engine with the stored ratios, read the state
+ * and status into the snapshot, and pass them to the Beacon sender.
  *
  * @param dt  Time to advance (s)
  */

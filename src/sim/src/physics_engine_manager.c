@@ -29,6 +29,9 @@
  * stores the value before it calls the callback, so a set mark means the
  * value is in place. A write that lands after the step has taken the marks
  * sets its mark again and is applied on the next step.
+ *
+ * Every step ends by handing the new state and status to the Beacon sender,
+ * with the firmware tick count as sim time.
  */
 
 #define DEBUG_MODULE "SIM"
@@ -36,6 +39,10 @@
 #include <math.h>
 #include <stdint.h>
 
+#include "FreeRTOS.h"
+#include "task.h"
+
+#include "beacon_sender.h"
 #include "debug.h"
 #include "log.h"
 #include "param.h"
@@ -140,6 +147,8 @@ void physicsEngineManagerStep(float dt)
   physicsEngineStep(motorRatios, dt);
   physicsEngineGetState(&snapshot);
   status = (uint8_t)physicsEngineGetStatus();
+
+  beaconSenderTick(&snapshot, (physicsEngineStatus_t)status, (uint32_t)xTaskGetTickCount());
 }
 
 void physicsEngineManagerGetTrueState(trueState_t *state)
