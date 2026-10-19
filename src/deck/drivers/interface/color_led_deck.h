@@ -22,4 +22,5 @@
 
 #define COLORLED_REQUEST_SIZE 5  // Stable legacy commands, including GET_VERSION
 #define COLORLED_FADE_REQUEST_SIZE 9
+#define COLORLED_MAX_FADE_SECONDS 60.0f  // The deck clamps to the same limit
 #define RXBUFFERSIZE  9

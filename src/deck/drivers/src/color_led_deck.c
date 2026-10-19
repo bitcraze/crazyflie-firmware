@@ -471,7 +471,13 @@ static void task(void *param) {
           (uint8_t)(ctx->wrgb8888 >> 8),
           (uint8_t)(ctx->wrgb8888)
         };
-        memcpy(&cmd[5], &ctx->tFade, sizeof(float));
+        float tFade = ctx->tFade;
+        if (!isfinite(tFade) || tFade < 0.0f) {
+          tFade = 0.0f;
+        } else if (tFade > COLORLED_MAX_FADE_SECONDS) {
+          tFade = COLORLED_MAX_FADE_SECONDS;
+        }
+        memcpy(&cmd[5], &tFade, sizeof(float));
 
         if (i2cdevWrite(I2C1_DEV, ctx->i2cAddress, sizeof(cmd), cmd)) {
           ctx->currentWrgb8888 = ctx->wrgb8888;
@@ -691,7 +697,7 @@ PARAM_ADD(PARAM_UINT32, wrgb8888, &contexts[BOTTOM_IDX].wrgb8888)
 PARAM_ADD(PARAM_UINT8, brightCorr, &contexts[BOTTOM_IDX].brightnessCorr)
 
 /**
- * @brief Fade duration in seconds for bottom deck. 0=instant. Applies to the next wrgb8888 change
+ * @brief Fade duration in seconds for bottom deck (0-60). 0=instant. Applies to the next wrgb8888 change
  */
 PARAM_ADD(PARAM_FLOAT, tfade, &contexts[BOTTOM_IDX].tFade)
 
@@ -711,7 +717,7 @@ PARAM_ADD(PARAM_UINT32, wrgb8888, &contexts[TOP_IDX].wrgb8888)
 PARAM_ADD(PARAM_UINT8, brightCorr, &contexts[TOP_IDX].brightnessCorr)
 
 /**
- * @brief Fade duration in seconds for top deck. 0=instant. Applies to the next wrgb8888 change
+ * @brief Fade duration in seconds for top deck (0-60). 0=instant. Applies to the next wrgb8888 change
  */
 PARAM_ADD(PARAM_FLOAT, tfade, &contexts[TOP_IDX].tFade)
 
