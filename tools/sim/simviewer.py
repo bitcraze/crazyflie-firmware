@@ -213,6 +213,29 @@ ROTOR_RADIUS = 0.022
 ROTOR_SEGMENTS = 24
 LABEL_OFFSET_Z = 0.08
 
+# Shadow: the body flattened onto z = 0. Lighter than the black background,
+# so that it can be seen. Raised a little to stay above the ground grid.
+SHADOW_COLOR = (0.35, 0.35, 0.35, 1.0)
+SHADOW_LOST_COLOR = (0.35, 0.35, 0.35, LOST_ALPHA)
+SHADOW_Z = 0.001
+# Not quite zero, since vispy needs to invert the transform
+SHADOW_FLATTEN = 1e-3
+
+# World, in m
+GRID_EXTENT = 5
+TICK_SPACING = 1
+TICK_LENGTH = 0.1
+TICK_LABEL_OFFSET = 0.25
+# vispy scales text in a 3D view with distance, like an object in the world.
+TICK_LABEL_SIZE = 50
+AXIS_NAME_SIZE = 100
+AXIS_NAME_OFFSET = 0.5  # Beyond the positive end of the axis
+X_AXIS_COLOR = (0.9, 0.3, 0.3, 1.0)
+Y_AXIS_COLOR = (0.3, 0.9, 0.3, 1.0)
+HUMAN_SPACING = 5
+HUMAN_HEIGHT = 1.8
+HUMAN_COLOR = (0.8, 0.8, 1.0, 0.2)
+
 
 def status_color(status, lost):
     r, g, b = STATUS_COLORS.get(status, STATUS_COLORS[STATUS_UNKNOWN])
@@ -281,6 +304,34 @@ def build_body_mesh():
     return _merge(parts)
 
 
+def build_human_mesh(x, y):
+    """A standing human, HUMAN_HEIGHT tall, built from boxes, facing +x."""
+    h = HUMAN_HEIGHT
+    leg_top = 0.47 * h
+    torso_top = 0.82 * h
+    head_bottom = 0.86 * h
+    parts = []
+    for side in (-1, 1):
+        # Leg
+        parts.append(_box((x, y + side * 0.09, leg_top / 2),
+                          (0.14, 0.13, leg_top)))
+        # Arm
+        parts.append(_box((x, y + side * 0.245, torso_top - 0.17 * h),
+                          (0.1, 0.09, 0.34 * h)))
+    parts.append(_box((x, y, (leg_top + torso_top) / 2),
+                      (0.22, 0.4, torso_top - leg_top)))
+    parts.append(_box((x, y, (head_bottom + h) / 2),
+                      (0.2, 0.18, h - head_bottom)))
+    return _merge(parts)
+
+
+def build_humans_mesh():
+    """A human at every HUMAN_SPACING in x and y, within the ground grid."""
+    n = GRID_EXTENT // HUMAN_SPACING
+    return _merge([build_human_mesh(i * HUMAN_SPACING, j * HUMAN_SPACING)
+                   for i in range(-n, n + 1) for j in range(-n, n + 1)])
+
+
 def quaternion_to_matrix(w, x, y, z):
     """Rotation matrix (column vector convention) from a unit quaternion."""
     n = math.sqrt(w * w + x * x + y * y + z * z)
@@ -300,6 +351,15 @@ def pose_matrix(position, quaternion):
     m[:3, :3] = quaternion_to_matrix(*quaternion).T
     m[3, :3] = position
     return m
+
+
+def shadow_matrix(pose):
+    """The pose followed by a projection straight down onto z = SHADOW_Z,
+    in vispy's row vector convention."""
+    flatten = np.eye(4)
+    flatten[2, 2] = SHADOW_FLATTEN
+    flatten[3, 2] = SHADOW_Z
+    return pose @ flatten
 
 
 def main():
@@ -328,6 +388,10 @@ def main():
 
     class SimmyflieVisual:
         def __init__(self, parent, body_vertices, body_faces, label):
+            self.shadow = scene.visuals.Mesh(
+                vertices=body_vertices, faces=body_faces, shading=None,
+                color=SHADOW_COLOR, parent=parent)
+            self.shadow.transform = scene.transforms.MatrixTransform()
             self.body = scene.visuals.Mesh(
                 vertices=body_vertices, faces=body_faces, shading=None,
                 parent=parent)
@@ -339,7 +403,9 @@ def main():
 
         def update(self, track, lost):
             b = track.beacon
-            self.body.transform.matrix = pose_matrix(b.position, b.quaternion)
+            pose = pose_matrix(b.position, b.quaternion)
+            self.body.transform.matrix = pose
+            self.shadow.transform.matrix = shadow_matrix(pose)
             color = status_color(b.status, lost)
             if color != self._color:
                 self._color = color
@@ -347,11 +413,15 @@ def main():
                 self.label.color = color
                 gl_state = "translucent" if lost else "opaque"
                 self.body.set_gl_state(gl_state, depth_test=True)
+                self.shadow.color = SHADOW_LOST_COLOR if lost else SHADOW_COLOR
+                self.shadow.set_gl_state(gl_state, depth_test=True)
+                self.shadow.order = 1 if lost else 0
                 self.label.order = 1 if lost else 0
             x, y, z = b.position
             self.label.pos = (x, y, z + LABEL_OFFSET_Z)
 
         def remove(self):
+            self.shadow.parent = None
             self.body.parent = None
             self.label.parent = None
 
@@ -382,7 +452,7 @@ def main():
             self.freeze()
 
         def _add_world(self):
-            extent = 5
+            extent = GRID_EXTENT
             lines = []
             for i in range(-extent, extent + 1):
                 lines += [(i, -extent, 0), (i, extent, 0),
@@ -390,8 +460,50 @@ def main():
             scene.visuals.Line(
                 pos=np.array(lines, dtype=np.float32), connect="segments",
                 color=(0.3, 0.3, 0.3, 1.0), parent=self._view.scene)
+            self._add_axis_ticks()
             axis = scene.visuals.XYZAxis(width=2, parent=self._view.scene)
             axis.transform = scene.transforms.STTransform(scale=(0.5, 0.5, 0.5))
+            self._add_humans()
+
+        def _add_axis_ticks(self):
+            """A mark every TICK_SPACING along the x- and y-axis, with its
+            value, and the name of the axis at its positive end."""
+            values = range(-GRID_EXTENT, GRID_EXTENT + 1, TICK_SPACING)
+            t = TICK_LENGTH
+            d = TICK_LABEL_OFFSET
+            for axis, color in ((0, X_AXIS_COLOR), (1, Y_AXIS_COLOR)):
+                lines = [(-GRID_EXTENT, 0, 0), (GRID_EXTENT, 0, 0)]
+                for v in values:
+                    lines += [(v, -t, 0), (v, t, 0), (v, 0, -t), (v, 0, t)]
+                label_pos = [(v, -d, 0) for v in values]
+                if axis == 1:
+                    # Swap x and y, labels go on the -x side of the y-axis
+                    lines = [(y, x, z) for x, y, z in lines]
+                    label_pos = [(-d, v, 0) for v in values]
+                scene.visuals.Line(
+                    pos=np.array(lines, dtype=np.float32), connect="segments",
+                    color=color, width=2, parent=self._view.scene)
+                scene.visuals.Text(
+                    [f"{v}" for v in values],
+                    pos=np.array(label_pos, dtype=np.float32),
+                    color=color, font_size=TICK_LABEL_SIZE, parent=self._view.scene)
+                name_pos = [0, 0, 0]
+                name_pos[axis] = GRID_EXTENT + AXIS_NAME_OFFSET
+                scene.visuals.Text(
+                    "xy"[axis], pos=name_pos, color=color, bold=True,
+                    font_size=AXIS_NAME_SIZE, parent=self._view.scene)
+
+        def _add_humans(self):
+            vertices, faces = build_humans_mesh()
+            humans = scene.visuals.Mesh(
+                vertices=vertices, faces=faces, color=HUMAN_COLOR,
+                shading=None, parent=self._view.scene)
+            # Drawn last, so that everything behind or inside a human is
+            # still seen through it. Only front faces, so that the far side
+            # of a body part does not add to its opacity.
+            humans.set_gl_state("translucent", depth_test=True,
+                                cull_face=True)
+            humans.order = 2
 
         def _read_beacons(self, *_):
             now = time.monotonic()
