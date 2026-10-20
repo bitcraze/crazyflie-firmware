@@ -12,6 +12,8 @@ This is still an experimental functionalities but the intention is to eventually
 
 When compiling the Crazyflie with `CONFIG_APP_ENABLE=y` the firmware will call a function `void appMain()` from a task after the startup sequence has completed. This function should not return.
 
+Note that "startup sequence has completed" does not mean that the Crazyflie is ready to fly. If your app is going to fly, see [Flying from an app](#flying-from-an-app).
+
 If you want more control, you can define a function `void appInit()`. `appInit()` will be called by the firmware during initialization, no task will be created and so `appMain()` will not be automatically called.
 This function must return to allow the Crazyflie initialization sequence to continue.
 
@@ -112,6 +114,12 @@ The packets can contain anything of a size up to 30 bytes, the protocol is defin
 
 For more information about the API see the header file `src/modules/interface/app_channel.h`.
 An example of how to use the app channel is in `examples/app_appchannel_test/`
+
+## Flying from an app
+
+Before an app can take off, it has to wait for the position estimate to converge and make sure the supervisor is armed, and it has to take off before the preflight timeout expires. More details can be found in [Autonomous flight](/docs/userguides/autonomous_flight.md).
+
+The `vTaskDelay(M2T(2000))` at the start of many examples is only there to let the system settle before printing. It is not a replacement for these steps.
 
 ## Examples
 
