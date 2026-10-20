@@ -122,7 +122,7 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   struct vec v_error;
   struct vec target_thrust;
   struct vec z_axis;
-  float current_thrust = 0;
+  float thrust = 0;
   struct vec x_axis_desired;
   struct vec y_axis_desired;
   struct vec x_c_des;
@@ -158,6 +158,7 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   self->i_error_y += r_error.y * dt;
   self->i_error_y = clamp(self->i_error_y, -self->i_range_xy, self->i_range_xy);
 
+  // --- Compute desired yaw ---
   // Rate-controlled YAW is moving YAW angle setpoint
   if (setpoint->mode.yaw == modeVelocity) {
     desiredYaw = state->attitude.yaw + setpoint->attitudeRate.yaw * dt;
@@ -174,15 +175,18 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   struct mat33 R = quat2rotmat(q);
   z_axis = mcolumn(R, 2);
 
-  // Calculate desired axes and current thrust
-  if (setpoint->mode.x == modeAbs) {
+  // --- Compute desired axes and thrust ---
+  // Each branch sets both
+  if (setpoint->mode.x == modeAbs &&
+      setpoint->mode.y == modeAbs &&
+      setpoint->mode.z == modeAbs) { // Position control
     // Desired thrust [F_des]
     target_thrust.x = self->mass * setpoint->acceleration.x                       + self->kp_xy * r_error.x + self->kd_xy * v_error.x + self->ki_xy * self->i_error_x;
     target_thrust.y = self->mass * setpoint->acceleration.y                       + self->kp_xy * r_error.y + self->kd_xy * v_error.y + self->ki_xy * self->i_error_y;
     target_thrust.z = self->mass * (setpoint->acceleration.z + GRAVITY_MAGNITUDE) + self->kp_z  * r_error.z + self->kd_z  * v_error.z + self->ki_z  * self->i_error_z;
 
     // Current thrust [F]
-    current_thrust = vdot(target_thrust, z_axis);
+    thrust = self->massThrust * vdot(target_thrust, z_axis);
 
     // Calculate axis [zB_des]
     self->z_axis_desired = vnormalize(target_thrust);
@@ -199,8 +203,7 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   } else if (setpoint->mode.pitch == modeAbs &&
              setpoint->mode.roll  == modeAbs &&
              setpoint->mode.z     == modeDisable) { // Manual mode, no assist
-    // Directly compute desired rotation for attitude-only control
-    // No need to calculate current_thrust as it is not used in this mode
+    // Directly compute desired rotation for attitude-only control, thrust from the setpoint
     float cmd_roll  =  radians(setpoint->attitude.roll);
     float cmd_pitch = -radians(setpoint->attitude.pitch);
     float cmd_yaw   =  radians(desiredYaw);
@@ -212,8 +215,12 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
     x_axis_desired       = mcolumn(R_cmd, 0);
     y_axis_desired       = mcolumn(R_cmd, 1);
     self->z_axis_desired = mcolumn(R_cmd, 2);
-  } else { // Unknown combination of modes
-    // Hover using the received z setpoint (safe behaviour)
+
+    thrust = setpoint->thrust;
+  } else {
+    // Level with the current yaw and hold the z setpoint. This is the normal path for hover,
+    // zDistance and the supervisor level-out, as well as any other mode combination.
+    // Assumptions: mode.z == modeAbs
     target_thrust.x = 0;
     target_thrust.y = 0;
     target_thrust.z = self->mass * GRAVITY_MAGNITUDE + self->kp_z  * r_error.z + self->kd_z  * v_error.z + self->ki_z  * self->i_error_z;
@@ -231,27 +238,12 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
     // [xB_des]
     x_axis_desired = vcross(y_axis_desired, self->z_axis_desired);
 
-    current_thrust = vdot(target_thrust, z_axis);
+    thrust = self->massThrust * vdot(target_thrust, z_axis);
   }
 
 
-  // [eR]
-  // Slow version
-  // struct mat33 Rdes = mcolumns(
-  //   mkvec(x_axis_desired.x, x_axis_desired.y, x_axis_desired.z),
-  //   mkvec(y_axis_desired.x, y_axis_desired.y, y_axis_desired.z),
-  //   mkvec(z_axis_desired.x, z_axis_desired.y, z_axis_desired.z));
-
-  // struct mat33 R_transpose = mtranspose(R);
-  // struct mat33 Rdes_transpose = mtranspose(Rdes);
-
-  // struct mat33 eRM = msub(mmult(Rdes_transpose, R), mmult(R_transpose, Rdes));
-
-  // eR.x = eRM.m[2][1];
-  // eR.y = -eRM.m[0][2];
-  // eR.z = eRM.m[1][0];
-
-  // Fast version (generated using Mathematica)
+  // --- Compute attitude error ---
+  // Generated using Mathematica
   float x = q.x;
   float y = q.y;
   float z = q.z;
@@ -263,7 +255,7 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   // Account for Crazyflie coordinate system
   eR.y = -eR.y;
 
-  // [ew]
+  // --- Compute rate error [ew] and its derivative ---
   float err_d_roll = 0;
   float err_d_pitch = 0;
 
@@ -283,7 +275,7 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   self->prev_setpoint_omega_roll = radians(setpoint->attitudeRate.roll);
   self->prev_setpoint_omega_pitch = radians(setpoint->attitudeRate.pitch);
 
-  // Integral Error
+  // --- Compute attitude integral error ---
   self->i_error_m_x += (-eR.x) * dt;
   self->i_error_m_x = clamp(self->i_error_m_x, -self->i_range_m_xy, self->i_range_m_xy);
 
@@ -293,17 +285,13 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   self->i_error_m_z += (-eR.z) * dt;
   self->i_error_m_z = clamp(self->i_error_m_z, -self->i_range_m_z, self->i_range_m_z);
 
-  // Moment:
+  // --- Compute moment ---
   M.x = -self->kR_xy * eR.x + self->kw_xy * ew.x + self->ki_m_xy * self->i_error_m_x + self->kd_omega_rp * err_d_roll;
   M.y = -self->kR_xy * eR.y + self->kw_xy * ew.y + self->ki_m_xy * self->i_error_m_y + self->kd_omega_rp * err_d_pitch;
   M.z = -self->kR_z  * eR.z + self->kw_z  * ew.z + self->ki_m_z  * self->i_error_m_z;
 
-  // Output
-  if (setpoint->mode.z == modeDisable) {
-    control->thrust = setpoint->thrust;
-  } else {
-    control->thrust = self->massThrust * current_thrust;
-  }
+  // --- Write output ---
+  control->thrust = thrust;
 
   self->cmd_thrust = control->thrust;
   self->r_roll = radians(sensors->gyro.x);
@@ -321,6 +309,7 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
     self->cmd_yaw = control->yaw;
 
   } else {
+    // Reset
     control->roll = 0;
     control->pitch = 0;
     control->yaw = 0;

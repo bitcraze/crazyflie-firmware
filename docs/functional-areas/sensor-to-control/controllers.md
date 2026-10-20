@@ -71,6 +71,17 @@ https://doi.org/10.1109/ICRA.2011.5980409
 
 The implementation follows the paper, also for the names of the variables. The main difference is the addition of I-gains and a D-term for the angular velocity.
 
+### Supported setpoint modes
+
+The Mellinger controller supports these types of setpoints:
+
+| Setpoint | Support |
+|----------|---------|
+| High-level commander, position setpoints, full state setpoints | Supported |
+| Manual flight in angle mode | Supported |
+
+For any other combination of [setpoint modes](/docs/functional-areas/sensor-to-control/commanders_setpoints/#setpoint-structure), the controller tries to level the Crazyflie, keeps the current yaw and holds the z position of the setpoint. There is no horizontal control, so the Crazyflie keeps any horizontal speed it has and drifts. This is a safety fallback, not a supported mode. Don't depend on that it is working.
+
 ## INDI Controller
 
 This control algorithm is the Incremental Nonlinear Dynamic Inversion (INDI) controller. Details are given in the following scientific publication:
