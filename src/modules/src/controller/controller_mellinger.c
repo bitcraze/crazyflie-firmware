@@ -148,7 +148,7 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   // Velocity Error (ev)
   v_error = vsub(setpointVel, stateVel);
 
-  // Integral Error
+  // Position Integral Error
   self->i_error_z += r_error.z * dt;
   self->i_error_z = clamp(self->i_error_z, -self->i_range_z, self->i_range_z);
 
@@ -185,7 +185,7 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
     target_thrust.y = self->mass * setpoint->acceleration.y                       + self->kp_xy * r_error.y + self->kd_xy * v_error.y + self->ki_xy * self->i_error_y;
     target_thrust.z = self->mass * (setpoint->acceleration.z + GRAVITY_MAGNITUDE) + self->kp_z  * r_error.z + self->kd_z  * v_error.z + self->ki_z  * self->i_error_z;
 
-    // Current thrust [F]
+    // Current thrust
     thrust = self->massThrust * vdot(target_thrust, z_axis);
 
     // Calculate axis [zB_des]
