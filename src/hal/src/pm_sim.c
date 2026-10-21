@@ -31,20 +31,26 @@
  * than platform.h could in platform_sim.c (see that file's header comment
  * for the same reasoning). None of that state machine has meaning under the
  * MVP's constant-voltage, infinite-battery requirement, so this is a full
- * HAL swap, not a narrowed real pm.c: just pmInit() and the pm.vbat log
- * variable real hardware exposes, fixed at 4.2 V forever, no drain, no
- * charge/low/shutdown states. Nothing in the sim build calls any other
- * pm.h entry point yet (deck drivers/motors.c/stabilizer.c/health.c/info.c
+ * HAL swap, not a narrowed real pm.c: just pmInit() and the pm.vbat and
+ * pm.state log variables real hardware exposes, fixed at 4.2 V and 0
+ * (battery) forever, no drain, no charge/low/shutdown states. Nothing in
+ * the sim build calls any other pm.h entry point yet (deck drivers/motors.c/stabilizer.c/health.c/info.c
  * all reference pmGetBatteryVoltage() and friends, but none of those
  * translation units are built under PLATFORM_SIM until Phase 5+) -- add the
  * rest of pm.h's surface here if and when a real sim caller needs it,
  * rather than guessing at it now.
  */
 
+#include <stdint.h>
+
 #include "log.h"
 #include "pm_sim.h"
 
 static float batteryVoltage = 4.2f;
+/* PMStates value 0 (battery); pm.h's enum is out of reach (see above).
+ * int8_t rather than an enum: the real pmState is 1 byte on ARM
+ * (-fshort-enums), a host enum would be 4. */
+static int8_t pmState = 0;
 
 void pmInit(void)
 {
@@ -68,4 +74,17 @@ LOG_GROUP_START(pm)
  * @brief Battery voltage [V] -- fixed at 4.2, Simmyflie has no battery drain.
  */
 LOG_ADD_CORE(LOG_FLOAT, vbat, &batteryVoltage)
+/**
+ * @brief State of power management -- fixed at 0 (Battery), Simmyflie
+ * never charges, runs low or shuts down. Same encoding as real hardware:
+ *
+ * | State | Meaning   | \n
+ * | -     | -         | \n
+ * | 0     | Battery   | \n
+ * | 1     | Charging  | \n
+ * | 2     | Charged   | \n
+ * | 3     | Low power | \n
+ * | 4     | Shutdown  | \n
+ */
+LOG_ADD_CORE(LOG_INT8, state, &pmState)
 LOG_GROUP_STOP(pm)
