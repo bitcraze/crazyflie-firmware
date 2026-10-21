@@ -305,10 +305,6 @@ int uartslkPutchar(int ch)
 
 void uartslkSendDataDmaBlocking(uint32_t size, uint8_t* data)
 {
-  if (dmaNrfFlowControlBufferFull) {
-    dmaSendWhileNrfBufferFull++;
-  }
-
   if (isUartDmaInitialized)
   {
     xSemaphoreTake(uartBusy, portMAX_DELAY);
@@ -320,8 +316,6 @@ void uartslkSendDataDmaBlocking(uint32_t size, uint8_t* data)
     initialDMACount = (uint16_t)size;
     // Init new DMA stream
     DMA_Init(UARTSLK_DMA_TX_STREAM, &DMA_InitStructureShareTX);
-    // Enable the Transfer Complete interrupt
-    DMA_ITConfig(UARTSLK_DMA_TX_STREAM, DMA_IT_TC, ENABLE);
     // Enable USART DMA TX Requests
     // Critical section is needed as the RX DMA that runs form interrupt can
     // change the same USARTx->CR3 register at the wrong point (not atomic).
@@ -330,8 +324,28 @@ void uartslkSendDataDmaBlocking(uint32_t size, uint8_t* data)
     taskEXIT_CRITICAL();
     // Clear transfer complete
     USART_ClearFlag(UARTSLK_TYPE, USART_FLAG_TC);
-    // Enable DMA USART TX Stream
-    DMA_Cmd(UARTSLK_DMA_TX_STREAM, ENABLE);
+    // The flow control interrupt only pauses a transfer that is running when
+    // the nRF raises the line. If it is already raised (e.g. it rose during the
+    // last bytes of the previous packet), start the transfer paused and let the
+    // interrupt start it when the line goes low. Otherwise the nRF UART overruns
+    // and the packet is lost. The flow control interrupt is masked while deciding,
+    // an edge in the meantime stays pending and is handled after.
+    NVIC_DisableIRQ(EXTI4_IRQn);
+    if (GPIO_ReadInputDataBit(UARTSLK_TXEN_PORT, UARTSLK_TXEN_PIN) == Bit_SET)
+    {
+      dmaSendWhileNrfBufferFull++;
+      dmaNrfFlowControlBufferFull = true;
+      remainingDMACount = (uint16_t)size;
+      dmaIsPaused = true;
+    }
+    else
+    {
+      // Enable the Transfer Complete interrupt
+      DMA_ITConfig(UARTSLK_DMA_TX_STREAM, DMA_IT_TC, ENABLE);
+      // Enable DMA USART TX Stream
+      DMA_Cmd(UARTSLK_DMA_TX_STREAM, ENABLE);
+    }
+    NVIC_EnableIRQ(EXTI4_IRQn);
     xSemaphoreTake(waitUntilSendDone, portMAX_DELAY);
     xSemaphoreGive(uartBusy);
   }
