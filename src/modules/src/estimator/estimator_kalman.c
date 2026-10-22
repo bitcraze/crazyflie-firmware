@@ -80,6 +80,7 @@
 #include "deck.h"
 
 #include "statsCnt.h"
+#include "eventtrigger.h"
 #include "rateSupervisor.h"
 
 // Measurement models
@@ -159,6 +160,9 @@ static OutlierFilterLhState_t sweepOutlierFilterState;
 // Indicates that the internal state is corrupt and should be reset
 bool resetEstimation = false;
 
+// Marks each reset in the event log, for example on the SD card
+EVENTTRIGGER(kalmanReset)
+
 static kalmanCoreParams_t coreParams = {
   KALMAN_CORE_DEFAULT_PARAMS_INIT
 };
@@ -228,6 +232,7 @@ static void kalmanTask(void* parameters) {
     if (resetEstimation) {
       estimatorKalmanInit();
       resetEstimation = false;
+      eventTrigger(&eventTrigger_kalmanReset);
     }
 
     #ifdef CONFIG_ESTIMATOR_KALMAN_GENERAL_PURPOSE
