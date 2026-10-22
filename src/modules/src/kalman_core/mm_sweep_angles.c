@@ -24,6 +24,11 @@
  */
 
 #include "mm_sweep_angles.h"
+#include <math.h>
+
+// Attitude error (rad) above which a sweep update folds the error into the attitude right away,
+// instead of at the end of the estimator loop. 0.01 rad is about 0.6 degrees.
+#define SWEEP_ATTITUDE_RELINEARIZATION_THRESHOLD 0.01f
 
 
 void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasurement_t *sweepInfo, const uint32_t nowMs, OutlierFilterLhState_t* sweepOutlierFilterState) {
@@ -141,6 +146,18 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
 
       arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
       kalmanCoreScalarUpdate(this, &H, error, sweepInfo->stdDev);
+
+      // The prediction and H above use the attitude in this->R, which kalmanCoreFinalize() normally updates
+      // once, after all measurements of the estimator loop. A base station frame gives up to eight sweeps,
+      // which are usually processed in the same loop. After a large attitude correction, the next sweeps
+      // would be predicted at the old attitude and apply much of the same correction again, for example
+      // while converging from a wrong initial attitude. In that case, fold the attitude error into the
+      // attitude now. Small corrections are left for the end of the loop.
+      if (fabsf(this->S[KC_STATE_D0]) > SWEEP_ATTITUDE_RELINEARIZATION_THRESHOLD ||
+          fabsf(this->S[KC_STATE_D1]) > SWEEP_ATTITUDE_RELINEARIZATION_THRESHOLD ||
+          fabsf(this->S[KC_STATE_D2]) > SWEEP_ATTITUDE_RELINEARIZATION_THRESHOLD) {
+        kalmanCoreFinalize(this);
+      }
     }
   }
 }
