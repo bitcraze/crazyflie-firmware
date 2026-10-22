@@ -142,6 +142,7 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   struct vec statePos = mkvec(state->position.x, state->position.y, state->position.z);
   struct vec stateVel = mkvec(state->velocity.x, state->velocity.y, state->velocity.z);
 
+  // --- Compute position and velocity errors ---
   // Position Error (ep)
   r_error = vsub(setpointPos, statePos);
 
@@ -218,9 +219,8 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
 
     thrust = setpoint->thrust;
   } else {
-    // Level with the current yaw and hold the z setpoint. This is the normal path for hover,
+    // Level with the current yaw. With z Abs, hold the z setpoint. This is the normal path for hover,
     // zDistance and the supervisor level-out, as well as any other mode combination.
-    // Assumptions: mode.z == modeAbs
     target_thrust.x = 0;
     target_thrust.y = 0;
     target_thrust.z = self->mass * GRAVITY_MAGNITUDE + self->kp_z  * r_error.z + self->kd_z  * v_error.z + self->ki_z  * self->i_error_z;
@@ -238,9 +238,12 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
     // [xB_des]
     x_axis_desired = vcross(y_axis_desired, self->z_axis_desired);
 
-    thrust = self->massThrust * vdot(target_thrust, z_axis);
+    if (setpoint->mode.z == modeDisable) {
+      thrust = setpoint->thrust;
+    } else {
+      thrust = self->massThrust * vdot(target_thrust, z_axis);
+    }
   }
-
 
   // --- Compute attitude error ---
   // Generated using Mathematica
