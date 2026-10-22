@@ -2,12 +2,6 @@ import argparse
 import struct
 import sys
 
-try:
-    from elftools.elf.elffile import ELFFile
-except ImportError:
-    print('pytelftools missing, install to run this script', file=sys.stderr)
-    print('https://github.com/eliben/pyelftools#installing', file=sys.stderr)
-    sys.exit(1)
 
 
 class Colors:
@@ -70,15 +64,118 @@ def log_type_to_str(t: int) -> str:
     return '{:12}{}'.format(log_type_to_str_dict[int_type], extra)
 
 
+class ElfError(Exception):
+    pass
+
+
+class ElfFile:
+    """
+    Minimal reader for 32-bit little-endian ELF files, using only the standard
+    library. It reads the program headers and the symbol table, which is all
+    that is needed to find the log and param tables in the firmware.
+    """
+
+    PT_LOAD = 1
+
+    def __init__(self, stream):
+        self.stream = stream
+        self._symbols = None
+
+        self.stream.seek(0)
+        if self.stream.read(4) != b'\x7fELF':
+            raise ElfError('not an ELF file')
+        ident = self._read_at(0, 16)
+        if ident[4] != 1 or ident[5] != 1:
+            raise ElfError('not a 32-bit little-endian ELF file')
+
+        (_, _, _, _, e_phoff, e_shoff, _, _, e_phentsize, e_phnum,
+         e_shentsize, e_shnum, e_shstrndx) = struct.unpack('<HHIIIIIHHHHHH', self._read_at(16, 36))
+
+        self.segments = []
+        for i in range(e_phnum):
+            p_type, p_offset, p_vaddr, _, p_filesz = struct.unpack(
+                '<IIIII', self._read_at(e_phoff + i * e_phentsize, 20))
+            if p_type == self.PT_LOAD:
+                self.segments.append((p_vaddr, p_filesz, p_offset))
+
+        self.sections = []
+        for i in range(e_shnum):
+            sh_name, _, _, _, sh_offset, sh_size, sh_link, _, _, sh_entsize = struct.unpack(
+                '<IIIIIIIIII', self._read_at(e_shoff + i * e_shentsize, 40))
+            self.sections.append({'name_offset': sh_name, 'offset': sh_offset, 'size': sh_size,
+                                  'link': sh_link, 'entsize': sh_entsize})
+
+        if e_shstrndx >= len(self.sections):
+            raise ElfError('section name string table not found')
+        shstrtab = self.sections[e_shstrndx]
+        for section in self.sections:
+            section['name'] = self.read_string(shstrtab['offset'] + section['name_offset'])
+
+    def _read_at(self, offset, size):
+        self.stream.seek(offset)
+        data = self.stream.read(size)
+        if len(data) != size:
+            raise ElfError('unexpected end of file at offset 0x{:x}'.format(offset))
+        return data
+
+    def read_string(self, offset):
+        """Read a null-terminated ASCII string at a file offset"""
+        self.stream.seek(offset)
+        chars = []
+        while True:
+            c = self.stream.read(1)
+            if not c:
+                raise ElfError('unexpected end of file in string at offset 0x{:x}'.format(offset))
+            if c == b'\x00':
+                try:
+                    return b''.join(chars).decode('ascii')
+                except UnicodeDecodeError:
+                    raise ElfError('string at offset 0x{:x} is not ASCII'.format(offset))
+            chars.append(c)
+
+    def get_section_by_name(self, name):
+        for section in self.sections:
+            if section['name'] == name:
+                return section
+        return None
+
+    def get_symbol_value(self, name):
+        if self._symbols is None:
+            self._symbols = self._read_symbols()
+        if name not in self._symbols:
+            raise ElfError('symbol {} not found'.format(name))
+        return self._symbols[name]
+
+    def _read_symbols(self):
+        symtab = self.get_section_by_name('.symtab')
+        if symtab is None:
+            raise ElfError('no .symtab section (is the file stripped?)')
+        if symtab['link'] >= len(self.sections):
+            raise ElfError('string table of .symtab not found')
+        strtab = self.sections[symtab['link']]
+        strings = self._read_at(strtab['offset'], strtab['size'])
+        entries = self._read_at(symtab['offset'], symtab['size'])
+
+        symbols = {}
+        entsize = symtab['entsize'] or 16
+        for i in range(len(entries) // entsize):
+            st_name, st_value = struct.unpack_from('<II', entries, i * entsize)
+            end = strings.find(b'\x00', st_name)
+            if st_name != 0 and end >= 0:
+                symbols.setdefault(strings[st_name:end].decode('ascii', 'replace'), st_value)
+        return symbols
+
+
 def process_file(filename, list_params: bool, list_logs: bool, core: bool):
     with open(filename, 'rb') as f:
-        parameters = check_structs(f, 'param', core)
+        elf = ElfFile(f)
+        parameters = check_structs(elf, 'param', core)
         if list_params:
             for key in sorted(parameters.keys()):
                 t = parameters[key]
                 print('{:25}\t{}'.format(key, param_type_to_str(t)))
 
-        logs = check_structs(f, 'log', core)
+        logs = check_structs(elf, 'log', core)
         if list_logs:
             for key in sorted(logs.keys()):
                 t = logs[key]
@@ -90,31 +187,21 @@ def process_file(filename, list_params: bool, list_logs: bool, core: bool):
 
 
 def get_offset_of(elf, addr):
-    for seg in elf.iter_segments():
-        if seg.header['p_type'] != 'PT_LOAD':
-            continue
-
+    for p_vaddr, p_filesz, p_offset in elf.segments:
         # If the symbol is inside the range of a LOADed segment, calculate the
         # file offset by subtracting the virtual start address and adding the
         # file offset of the loaded section(s)
-        if addr >= seg['p_vaddr'] and addr < seg['p_vaddr'] + seg['p_filesz']:
-            return addr - seg['p_vaddr'] + seg['p_offset']
+        if addr >= p_vaddr and addr < p_vaddr + p_filesz:
+            return addr - p_vaddr + p_offset
 
-    return None
+    raise ElfError('address 0x{:08x} is not in a loaded segment'.format(addr))
 
 
 def get_offset_of_symbol(elf, name):
-    section = elf.get_section_by_name('.symtab')
-    sym = section.get_symbol_by_name(name)[0]
-    if not sym:
-        print('symbol %s not found' % name, file=sys.stderr)
-        sys.exit(1)
-
-    return get_offset_of(elf, sym['st_value'])
+    return get_offset_of(elf, elf.get_symbol_value(name))
 
 
-def check_structs(stream, what: str, core: bool) -> dict:
-    elf = ELFFile(stream)
+def check_structs(elf, what: str, core: bool) -> dict:
     offset = get_offset_of_symbol(elf, '_{}_start'.format(what))
     stop_offset = get_offset_of_symbol(elf, '_{}_stop'.format(what))
 
@@ -161,8 +248,7 @@ def check_structs(stream, what: str, core: bool) -> dict:
         #
         # And read the name from that offset
         #
-        elf.stream.seek(addr)
-        name = ''.join(iter(lambda: stream.read(1).decode('ascii'), '\x00'))
+        name = elf.read_string(addr)
         #
         # Check if this is start of a group
         #
@@ -205,7 +291,12 @@ if __name__ == '__main__':
     parser.add_argument('filename', nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
-    if args.filename:
-        process_file(args.filename[0], args.list_params, args.list_logs, args.core)
-    else:
+    if not args.filename:
+        parser.error('no ELF file given')
+
+    filename = args.filename[0]
+    try:
+        process_file(filename, args.list_params, args.list_logs, args.core)
+    except (OSError, ElfError) as e:
+        print('{}ELF check failed!{} {}: {}'.format(Colors.RED, Colors.END, filename, e), file=sys.stderr)
         sys.exit(1)
