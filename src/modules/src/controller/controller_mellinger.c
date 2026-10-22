@@ -128,7 +128,7 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   struct vec x_c_des;
   struct vec eR, ew, M;
   float dt;
-  float desiredYaw = 0; //deg
+  float desired_yaw = 0; //rad
 
   if (!RATE_DO_EXECUTE(ATTITUDE_RATE, stabilizerStep)) {
     return;
@@ -149,13 +149,13 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   // --- Compute desired yaw ---
   // Rate-controlled YAW is moving YAW angle setpoint
   if (setpoint->mode.yaw == modeVelocity) {
-    desiredYaw = state->attitude.yaw + setpoint->attitudeRate.yaw * dt;
+    desired_yaw = radians(state->attitude.yaw + setpoint->attitudeRate.yaw * dt);
   } else if (setpoint->mode.yaw == modeAbs) {
-    desiredYaw = setpoint->attitude.yaw;
+    desired_yaw = radians(setpoint->attitude.yaw);
   } else if (setpoint->mode.quat == modeAbs) {
-    struct quat setpoint_quat = mkquat(setpoint->attitudeQuaternion.x, setpoint->attitudeQuaternion.y, setpoint->attitudeQuaternion.z, setpoint->attitudeQuaternion.w);
-    struct vec rpy = quat2rpy(setpoint_quat);
-    desiredYaw = degrees(rpy.z);
+    struct quat setpointQuat = mkquat(setpoint->attitudeQuaternion.x, setpoint->attitudeQuaternion.y, setpoint->attitudeQuaternion.z, setpoint->attitudeQuaternion.w);
+    struct vec rpy = quat2rpy(setpointQuat);
+    desired_yaw = rpy.z;
   }
 
   // --- Compute position and velocity errors ---
@@ -193,8 +193,8 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
 
     // [xC_des]
     // x_axis_desired = z_axis_desired x [sin(yaw), cos(yaw), 0]^T
-    x_c_des.x = cosf(radians(desiredYaw));
-    x_c_des.y = sinf(radians(desiredYaw));
+    x_c_des.x = cosf(desired_yaw);
+    x_c_des.y = sinf(desired_yaw);
     x_c_des.z = 0;
     // [yB_des]
     y_axis_desired = vnormalize(vcross(self->z_axis_desired, x_c_des));
@@ -206,7 +206,7 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
     // Directly compute desired rotation for attitude-only control, thrust from the setpoint
     float cmd_roll  =  radians(setpoint->attitude.roll);
     float cmd_pitch = -radians(setpoint->attitude.pitch);
-    float cmd_yaw   =  radians(desiredYaw);
+    float cmd_yaw   =  desired_yaw;
 
     struct vec cmd_rpy = mkvec(cmd_roll, cmd_pitch, cmd_yaw);
     struct quat q_cmd = rpy2quat(cmd_rpy);
