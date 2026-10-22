@@ -289,6 +289,7 @@ static void estimatePositionSweepsLh1(const pulseProcessor_t* appState, pulsePro
   sweepInfo.rotorPos = &appState->bsGeometry[baseStation].origin;
   sweepInfo.t = 0;
   sweepInfo.calibrationMeasurementModel = lighthouseCalibrationMeasurementModelLh1;
+  sweepInfo.calibrationMeasurementModelGradient = lighthouseCalibrationMeasurementModelGradientLh1;
   sweepInfo.baseStationId = baseStation;
 
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
@@ -338,6 +339,7 @@ static void estimatePositionSweepsLh2(const pulseProcessor_t* appState, pulsePro
   sweepInfo.rotorRot = &appState->bsGeometry[baseStation].mat;
   sweepInfo.rotorRotInv = &appState->bsGeoCache[baseStation].baseStationInvertedRotationMatrixes;
   sweepInfo.calibrationMeasurementModel = lighthouseCalibrationMeasurementModelLh2;
+  sweepInfo.calibrationMeasurementModelGradient = lighthouseCalibrationMeasurementModelGradientLh2;
   sweepInfo.baseStationId = baseStation;
 
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {

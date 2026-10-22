@@ -64,37 +64,21 @@ void kalmanCoreUpdateWithSweepAngles(kalmanCoreData_t *this, sweepAngleMeasureme
   const float y = sr[1];
   const float z = sr[2];
   const float t = sweepInfo->t;
-  // Use the calibrated rotor tilt, so that H below is the gradient of the same
-  // function the residual is computed from (lighthouseCalibrationMeasurementModel*,
-  // which applies asin(z * tan(t - calib->tilt) / r)). Holds for both LH1, where
-  // t is 0, and LH2, where t is -/+30 degrees.
-  const float tan_t = tanf(t - sweepInfo->calib->tilt);
-
-  const float r2 = x * x + y * y;
-  const float r = arm_sqrt(r2);
+  const float r = arm_sqrt(x * x + y * y);
 
   const float predictedSweepAngle = sweepInfo->calibrationMeasurementModel(x, y, z, t, sweepInfo->calib);
   const float measuredSweepAngle = sweepInfo->measuredSweepAngle;
   const float error = measuredSweepAngle - predictedSweepAngle;
 
   if (outlierFilterLighthouseValidateSweep(sweepOutlierFilterState, r, error, nowMs)) {
-    // Calculate H vector (in the rotor reference frame)
-    const float z_tan_t = z * tan_t;
-    const float qDen = r2 - z_tan_t * z_tan_t;
-    // Avoid singularity
-    if (qDen > 0.0001f) {
-      // Position Jacobians: ∂α/∂x, ∂α/∂y, ∂α/∂z, where x y and z are the sensor position in the rotor reference frame
-
-      const float q = tan_t / arm_sqrt(qDen);
-
-      // Jacobian of the sweep angle measurement α w.r.t sensor position (x, y, z)
-      // Computed in the rotor reference frame:
-      // gr = [ ∂α/∂x, ∂α/∂y, ∂α/∂z ] (rotor frame)
-      //
-      // For derivation review the paper:
-      // Taffanel et al. (2021), "Lighthouse positioning system: Dataset, accuracy, and precision for UAV research", arXiv:2104.11523
-      vec3d gr = {(-y - x * z * q) / r2, (x - y * z * q) / r2 , q};
-
+    // Jacobian of the sweep angle measurement α w.r.t sensor position (x, y, z)
+    // Computed in the rotor reference frame:
+    // gr = [ ∂α/∂x, ∂α/∂y, ∂α/∂z ] (rotor frame)
+    //
+    // The gradient function belongs to the measurement model used for the prediction above, so the
+    // calibration terms are the same in both.
+    vec3d gr;
+    if (sweepInfo->calibrationMeasurementModelGradient(x, y, z, t, sweepInfo->calib, gr)) {
       // Jacobian of the sweep angle measurement α w.r.t sensor position,
       // rotated from rotor frame (gr) into the global reference frame:
       // g = [ ∂α/∂X, ∂α/∂Y, ∂α/∂Z ] (global frame)

@@ -66,6 +66,7 @@
 void set_calibration_model(sweepAngleMeasurement_t *sweep, lighthouseCalibrationSweep_t *calib_in)
 {
     sweep->calibrationMeasurementModel = lighthouseCalibrationMeasurementModelLh2;
+    sweep->calibrationMeasurementModelGradient = lighthouseCalibrationMeasurementModelGradientLh2;
     sweep->calib = calib_in;
 }
 struct poly4d* piecewise_get(struct piecewise_traj *pp, int i)
