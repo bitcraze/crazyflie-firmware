@@ -217,7 +217,6 @@ def check_structs(elf, what: str, core: bool) -> dict:
         struct_len = 20
 
     while offset < stop_offset:
-        elf.stream.seek(offset)
         #
         # Parsing log or param, first unpack the struct:
         # struct [log_s] {
@@ -238,11 +237,11 @@ def check_structs(elf, what: str, core: bool) -> dict:
         # We want the type and the name. For params, extended_type is added
         # as the upper byte of the type, as in the TYPE of PARAM_ADD_FULL().
         #
-        buffer = elf.stream.read(struct_len)
+        buffer = elf._read_at(offset, struct_len)
         if what == 'log':
-            t, addr = struct.unpack('@Bxxxixxxx', buffer)
+            t, addr = struct.unpack('<BxxxI4x', buffer)
         else:
-            t, extended_type, addr = struct.unpack('@BBxxixxxxxxxxxxxx', buffer)
+            t, extended_type, addr = struct.unpack('<BBxxI12x', buffer)
             t |= extended_type << 8
 
         #
