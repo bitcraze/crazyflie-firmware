@@ -27,6 +27,8 @@
 #define UART1_H_
 
 #include <stdbool.h>
+#include <stdint.h>
+#include "FreeRTOS.h"
 #include "eprintf.h"
 
 #define UART1_BAUDRATE           9600
@@ -57,6 +59,10 @@ typedef enum {
     uart1ParityNone, uart1ParityEven, uart1ParityOdd
 } uart1Parity_t;
 
+typedef void (*uart1RxCallback_t)(uint8_t byte,
+                                  BaseType_t *higher_priority_task_woken);
+typedef void (*uart1ErrorCallback_t)(BaseType_t *higher_priority_task_woken);
+
 /**
  * Initialize the UART with parity None
  */
@@ -86,6 +92,19 @@ void uart1SetBaudrate(const uint32_t baudrate);
  * @return true if the UART is initialized
  */
 bool uart1Test(void);
+
+void uart1SetRxCallback(uart1RxCallback_t callback);
+
+void uart1ClearRxCallback(void);
+
+void uart1SetErrorCallback(uart1ErrorCallback_t callback);
+
+void uart1ClearErrorCallback(void);
+
+void uart1SetCallbacks(uart1RxCallback_t rx_callback,
+                       uart1ErrorCallback_t error_callback);
+
+void uart1ClearCallbacks(void);
 
 /**
  * Read a byte of data from incoming queue with a timeout
@@ -135,6 +154,25 @@ uint32_t uart1QueueMaxLength();
  * @param[in] data  Pointer to data
  */
 void uart1SendData(uint32_t size, uint8_t* data);
+
+/**
+ * Sends all bytes using polling and waits until the final stop bit has left
+ * the USART shift register.
+ *
+ * The STM32 USART exposes no asynchronous TX-error indication in the 8N1,
+ * no-flow-control configuration used by UART1. This function can therefore
+ * report invalid/uninitialized submission, and otherwise returns only after
+ * the hardware Transmission Complete flag is set.
+ *
+ * @param[in] size  Number of bytes to send
+ * @param[in] data  Bytes to send; may be NULL only when size is zero
+ * @param[in] timeoutTicks  Maximum ticks for submission and completion
+ * @return true after complete local transmission, false on invalid submission
+ *         or timeout with potentially partial transmission
+ */
+bool uart1SendDataWaitComplete(uint32_t size,
+                               const uint8_t* data,
+                               uint32_t timeoutTicks);
 
 /**
  * Sends raw data using DMA transfer.

@@ -27,13 +27,14 @@
 #include <stdlib.h>
 #include "lighthouse_throttle.h"
 #include "param.h"
+#include "autoconf.h"
 
 // Uncomment next line to add extra debug log variables
 // #define CONFIG_DEBUG_LOG_ENABLE 1
 #include "log.h"
 
 static const uint32_t evaluationIntervalMs = 100;
-static uint16_t maxRate = 50;  // Samples / second
+static uint16_t maxRate = CONFIG_DECK_LIGHTHOUSE_MAX_RATE;  // Samples / second
 static float discardProbability = 0.0f;
 
 bool throttleLh2Samples(const uint32_t nowMs) {

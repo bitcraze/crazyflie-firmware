@@ -39,6 +39,7 @@
 #include "supervisor.h"
 #include "supervisor_state_machine.h"
 #include "platform_defaults.h"
+#include "deck_supervisor.h"
 #include "crtp_supervisor.h"
 #include "system.h"
 #include "autoconf.h"
@@ -65,6 +66,16 @@
 
 static uint16_t preflightTimeoutDuration = PREFLIGHT_TIMEOUT_MS;
 static uint16_t landingTimeoutDuration = LANDING_TIMEOUT_MS;
+static uint16_t armingSpinupTimeoutDuration = ARMING_SPINUP_TIMEOUT_MS;
+static float crashDetectionGs = CONFIG_SUPERVISOR_CRASH_DETECTION_G;
+static float crashDetectionAccNorm;
+
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+static uint16_t rpmCheckMin = CONFIG_MOTORS_ARMING_RPM_MIN;
+static uint16_t rpmCheckMax = CONFIG_MOTORS_ARMING_RPM_MAX;
+static uint16_t rpmCheckDurationMs = CONFIG_MOTORS_ARMING_RPM_DURATION_MS;
+static uint16_t motorsNotRespondingRpmThreshold = CONFIG_MOTORS_RPM_NOT_RESPONDING_THRESHOLD;
+#endif
 
 typedef struct {
   bool canFly;
@@ -83,6 +94,21 @@ typedef struct {
 
   // The time (in ticks) of the latest arming event. 0=no arming event yet
   uint32_t latestArmingTick;
+
+  // The time (in ticks) when the Arming state was entered. 0=not in Arming state
+  uint32_t armingSpinupStartTick;
+
+  // The time (in ticks) when all motors first entered the valid RPM range. 0=not in range
+  uint32_t allMotorsInRangeStartTick;
+
+  // The time (in ticks) when any motor first reported low non-zero RPM while arming. 0=no fault
+  uint32_t motorsNotRespondingStartTick;
+
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+  // Bit masks of motors that currently fail RPM checks, used for transition feedback.
+  uint32_t rpmAtArmingFailMask;
+  uint32_t motorsNotRespondingMask;
+#endif
 
   // The time (in ticks) of the latest landing event. 0=no landing event yet
   uint32_t latestLandingTick;
@@ -104,6 +130,12 @@ const static setpoint_t nullSetpoint;
 void infoDump(const SupervisorMem_t* this);
 
 bool supervisorCanFly() {
+  supervisorMem.canFly = 
+    (supervisorMem.state == supervisorStateReadyToFly) ||
+    (supervisorMem.state == supervisorStateFlying) ||
+    (supervisorMem.state == supervisorStateWarningLevelOut) ||
+    (supervisorMem.state == supervisorStateLanded);
+
   return supervisorMem.canFly;
 }
 
@@ -172,6 +204,61 @@ bool supervisorRequestCrashRecovery(const bool doRecovery) {
   return false;
 }
 
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+static bool isRPMatArmingValid(SupervisorMem_t* this, const uint32_t currentTick) {
+  uint32_t failingMask = 0;
+
+  for (int i = 0; i < NBR_OF_MOTORS; i++) {
+    const uint16_t rpm = motorsGetRPM(i);
+    if (rpm < rpmCheckMin || rpm > rpmCheckMax) {
+      failingMask |= (1u << i);
+    }
+  }
+
+  if (failingMask != 0) {
+    this->rpmAtArmingFailMask = failingMask;
+    this->allMotorsInRangeStartTick = 0;
+    return false;
+  }
+
+  if (this->allMotorsInRangeStartTick == 0) {
+    this->allMotorsInRangeStartTick = currentTick;
+  }
+
+  return (currentTick - this->allMotorsInRangeStartTick) >= M2T(rpmCheckDurationMs);
+}
+
+static bool isMotorsNotResponding(SupervisorMem_t* this, const uint32_t currentTick) {
+  if (!supervisorCanFly()) {
+    this->motorsNotRespondingStartTick = 0;
+    this->motorsNotRespondingMask = 0;
+    return false;
+  }
+
+  uint32_t failingMask = 0;
+  for (int i = 0; i < NBR_OF_MOTORS; i++) {
+    const uint16_t rpm = motorsGetRPM(i);
+    if (rpm != 0 && rpm != MOTORS_RPM_INVALID && rpm < motorsNotRespondingRpmThreshold) {
+      failingMask |= (1u << i);
+    }
+  }
+
+  if (failingMask == 0) {
+    this->motorsNotRespondingMask = 0;
+    this->motorsNotRespondingStartTick = 0;
+    return false;
+  }
+
+  this->motorsNotRespondingMask = failingMask;
+
+  if (this->motorsNotRespondingStartTick == 0) {
+    this->motorsNotRespondingStartTick = currentTick;
+  }
+
+  return (currentTick - this->motorsNotRespondingStartTick) >= M2T(rpmCheckDurationMs);
+}
+#endif
+
 bool supervisorRequestArming(const bool doArm) {
   if (doArm == supervisorMem.isArmingActivated) {
     return true;
@@ -223,12 +310,22 @@ static bool isFlyingCheck(SupervisorMem_t* this, const uint32_t tick) {
 //
 static bool isTumbledCheck(SupervisorMem_t* this, const sensorData_t *data, const uint32_t tick) {
   const float freeFallThreshold = 0.1;
+  const float oneG = 1.0f;
 
   const float acceptedTiltAccZ = SUPERVISOR_TUMBLE_CHECK_ACCEPTED_TILT_ACCZ;  // 60 degrees tilt (when stationary)
   const uint32_t maxTiltTime = M2T(SUPERVISOR_TUMBLE_CHECK_ACCEPTED_TILT_TIME);
 
   const float acceptedUpsideDownAccZ = SUPERVISOR_TUMBLE_CHECK_ACCEPTED_UPSIDEDOWN_ACCZ;
   const uint32_t maxUpsideDownTime = M2T(SUPERVISOR_TUMBLE_CHECK_ACCEPTED_UPSIDEDOWN_TIME);
+
+  crashDetectionAccNorm = sqrtf((data->acc.x * data->acc.x) + (data->acc.y * data->acc.y) + (data->acc.z * data->acc.z));
+
+  if (crashDetectionGs > 0.0f) {
+    if (fabsf(crashDetectionAccNorm - oneG) > crashDetectionGs) {
+      DEBUG_PRINT("Crash detected @ %.2f Gs (max %.2f)\n", (double)crashDetectionAccNorm, (double)crashDetectionGs);
+      return true;
+    }
+  }
 
   const bool isFreeFalling = (fabsf(data->acc.z) < freeFallThreshold && fabsf(data->acc.y) < freeFallThreshold && fabsf(data->acc.x) < freeFallThreshold);
   if (isFreeFalling) {
@@ -275,6 +372,20 @@ static bool checkEmergencyStopWatchdog(const uint32_t tick) {
 static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t previousState, const uint32_t currentTick) {
   const supervisorState_t newState = this->state;
 
+  if (newState == supervisorStateArming) {
+    this->armingSpinupStartTick = currentTick;
+    this->allMotorsInRangeStartTick = 0;
+    this->motorsNotRespondingStartTick = 0;
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+    this->rpmAtArmingFailMask = 0;
+    this->motorsNotRespondingMask = 0;
+#endif
+  } else {
+    this->armingSpinupStartTick = 0;
+    this->allMotorsInRangeStartTick = 0;
+    this->motorsNotRespondingStartTick = 0;
+  }
+
   if (newState == supervisorStateReadyToFly) {
     if (!AUTO_ARMING){
       DEBUG_PRINT("Ready to fly\n");
@@ -287,10 +398,37 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
   }
 
   if (((previousState == supervisorStateFlying || previousState == supervisorStateLanded) && (newState == supervisorStateReset))
-       || (previousState == supervisorStateReadyToFly && newState == supervisorStatePreFlChecksPassed)) {
+       || (previousState == supervisorStateReadyToFly && newState == supervisorStatePreFlChecksNotPassed)
+       || (previousState == supervisorStateArming && newState == supervisorStatePreFlChecksNotPassed)) {
     if (!AUTO_ARMING){
       DEBUG_PRINT("Disarming\n");
     }
+  }
+
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+  if (previousState == supervisorStateArming && 
+      newState == supervisorStatePreFlChecksNotPassed && 
+      this->rpmAtArmingFailMask != 0) {
+    for (int i = 0; i < NBR_OF_MOTORS; i++) {
+      if (this->rpmAtArmingFailMask & (1u << i)) {
+        DEBUG_PRINT("M%d arming RPM check (%u-%urpm) [FAIL]\n", i+1, rpmCheckMin, rpmCheckMax);
+      }
+    }
+  }
+#endif
+
+  if (newState == supervisorStateExceptFreeFall) {
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+    if (this->motorsNotRespondingMask != 0) {
+      for (int i = 0; i < NBR_OF_MOTORS; i++) {
+        if (this->motorsNotRespondingMask & (1u << i)) {
+          DEBUG_PRINT("M%d blocked or not responding [FAIL]\n", i+1);
+        }
+      }
+    }
+#endif
+    
+    DEBUG_PRINT("free falling!\n");
   }
 
   if (newState == supervisorStateLocked) {
@@ -302,7 +440,8 @@ static void postTransitionActions(SupervisorMem_t* this, const supervisorState_t
     supervisorRequestCrashRecovery(false);
   }
 
-  if (newState != supervisorStateReadyToFly &&
+  if (newState != supervisorStateArming &&
+      newState != supervisorStateReadyToFly &&
       newState != supervisorStateFlying &&
       newState != supervisorStateWarningLevelOut &&
       newState != supervisorStateLanded) {
@@ -371,11 +510,35 @@ static supervisorConditionBits_t updateAndPopulateConditions(SupervisorMem_t* th
     conditions |= SUPERVISOR_CB_LANDING_TIMEOUT;
   }
 
+#ifdef CONFIG_DECK_SUPERVISOR
+  if (deckSupervisorHasFault()) {
+    conditions |= SUPERVISOR_CB_DECK_FAULT;
+  }
+#endif
+
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+  if (this->state == supervisorStateArming && isRPMatArmingValid(this, currentTick)) {
+    conditions |= SUPERVISOR_CB_RPM_AT_ARMING_VALID;
+  }
+
+  if (isMotorsNotResponding(this, currentTick)) {
+    conditions |= SUPERVISOR_CB_MOTORS_NOT_RESPONDING;
+  }
+#else
+  conditions |= SUPERVISOR_CB_RPM_AT_ARMING_VALID;
+#endif
+
+  if (this->state == supervisorStateArming && this->armingSpinupStartTick != 0) {
+    if ((currentTick - this->armingSpinupStartTick) > M2T(armingSpinupTimeoutDuration)) {
+      conditions |= SUPERVISOR_CB_SPINUP_TIMEOUT;
+    }
+  }
+
   return conditions;
 }
 
 static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t conditions) {
-  this->canFly = supervisorAreMotorsAllowedToRun();
+  this->canFly = supervisorCanFly();
   this->isFlying = (this->state == supervisorStateFlying) || (this->state == supervisorStateWarningLevelOut);
   this->isTumbled = (conditions & SUPERVISOR_CB_IS_TUMBLED) != 0;
 
@@ -404,7 +567,6 @@ static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t
   if (this->isCrashed) {
     this->infoBitfield |= 0x0080;
   }
-
   enum trajectory_state traj_state =  crtpCommanderHighLevelGetPlannerState();
 
   if ((traj_state & TRAJECTORY_STATE_FLYING) == TRAJECTORY_STATE_FLYING) {
@@ -415,6 +577,10 @@ static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t
   }
   if (traj_state == TRAJECTORY_STATE_DISABLED) {
       this->infoBitfield |= 0x0400;  // high level control is not producing setpoints
+  }
+
+  if (conditions & SUPERVISOR_CB_DECK_FAULT) {
+      this->infoBitfield |= 0x0800;  // a deck has reported a hardware fault
   }
 
 }
@@ -446,6 +612,8 @@ void supervisorUpdate(const sensorData_t *sensors, const setpoint_t* setpoint, s
 void supervisorOverrideSetpoint(setpoint_t* setpoint) {
   SupervisorMem_t* this = &supervisorMem;
   switch(this->state){
+    case supervisorStateArming:
+      // Fall through
     case supervisorStateReadyToFly:
       // Fall through
     case supervisorStateLanded:
@@ -475,7 +643,8 @@ void supervisorOverrideSetpoint(setpoint_t* setpoint) {
 
 bool supervisorAreMotorsAllowedToRun() {
   SupervisorMem_t* this = &supervisorMem;
-  return (this->state == supervisorStateReadyToFly) ||
+  return (this->state == supervisorStateArming) ||
+         (this->state == supervisorStateReadyToFly) ||
          (this->state == supervisorStateFlying) ||
          (this->state == supervisorStateWarningLevelOut) ||
          (this->state == supervisorStateLanded);
@@ -549,8 +718,13 @@ LOG_GROUP_START(supervisor)
  * Bit 8 = high level control is actively flying the drone
  * Bit 9 = high level trajectory has finished
  * Bit 10 = high level control is disabled and not producing setpoints
+ * Bit 11 = deck fault - a deck has reported a hardware fault
  */
 LOG_ADD(LOG_UINT16, info, &supervisorMem.infoBitfield)
+/**
+ * @brief Acceleration norm in Gs used by crash/tumble detection.
+ */
+LOG_ADD(LOG_FLOAT, accNorm, &crashDetectionAccNorm)
 LOG_GROUP_STOP(supervisor)
 
 
@@ -579,5 +753,16 @@ PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, landedTimeout, &landingTimeoutDuratio
  * @brief Set to zero to disable tumble check
  */
 PARAM_ADD(PARAM_UINT8 | PARAM_PERSISTENT, tmblChckEn, &tumbleCheckEnabled)
+
+/**
+ * @brief Motor spin-up wait timeout (ms) before arming is aborted
+ */
+PARAM_ADD(PARAM_UINT16 | PARAM_PERSISTENT, spinupTimeout, &armingSpinupTimeoutDuration)
+
+/**
+ * @brief Crash detection threshold (Gs)
+ * Maximum allowed | |acc| - 1G | for tumble/crash detection. Set to 0 to disable.
+ */
+PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, crashDetectGs, &crashDetectionGs)
 
 PARAM_GROUP_STOP(supervisor)

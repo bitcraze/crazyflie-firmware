@@ -69,7 +69,7 @@ void kalmanCoreUpdateWithTdoa(kalmanCoreData_t* this, tdoaMeasurement_t *tdoa, c
     h[KC_STATE_Y] = (dy1 / d1 - dy0 / d0);
     h[KC_STATE_Z] = (dz1 / d1 - dz0 / d0);
 
-  #if CONFIG_ESTIMATOR_KALMAN_TDOA_OUTLIERFILTER_FALLBACK
+    #if CONFIG_ESTIMATOR_KALMAN_TDOA_OUTLIERFILTER_FALLBACK
     vector_t jacobian = {
       .x = h[KC_STATE_X],
       .y = h[KC_STATE_Y],

@@ -73,6 +73,34 @@ bool espRomBootloaderSync(uint8_t *sendBuffer)
   return sync;
 }
 
+bool espRomBootloaderChangeBaudrate(uint8_t *sendBuffer, uint32_t baudrate)
+{
+  senderPacket.command = CHANGE_BAUDRATE;
+  senderPacket.dataSize = 0x8;
+  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 0] = (uint8_t)((baudrate >> 0) & 0x000000FF);
+  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 1] = (uint8_t)((baudrate >> 8) & 0x000000FF);
+  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 2] = (uint8_t)((baudrate >> 16) & 0x000000FF);
+  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 3] = (uint8_t)((baudrate >> 24) & 0x000000FF);
+  // Old baud rate, must be 0 for the ROM bootloader
+  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 4] = 0x00;
+  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 5] = 0x00;
+  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 6] = 0x00;
+  sendBuffer[1 + ESP_SLIP_OVERHEAD_LEN + 7] = 0x00;
+
+  //
+  // The ESP32 responds at the old baud rate and then switches, follow it once the response is received.
+  //
+  if (!espSlipExchange(sendBuffer, &receiverPacket, &senderPacket, uart2SendDataDmaBlocking, uart2GetCharWithTimeout, 100))
+  {
+    return false;
+  }
+
+  uart2SetBaudrate(baudrate);
+  vTaskDelay(M2T(50));
+
+  return true;
+}
+
 bool espRomBootloaderSpiAttach(uint8_t *sendBuffer)
 {
   senderPacket.command = SPI_ATTACH;

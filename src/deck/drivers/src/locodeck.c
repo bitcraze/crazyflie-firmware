@@ -85,6 +85,9 @@
 
 #define DEFAULT_RX_TIMEOUT 10000
 
+// Time (ms) without received packets after which we probe the chip over SPI
+static const uint32_t locoHealthProbeMs = 2000;
+
 // The anchor position can be set using parameters
 // As an option you can set a static position in this file and set
 // combinedAnchorPositionOk to enable sending the anchor rangings to the Kalman filter
@@ -126,8 +129,20 @@ static uwbAlgorithm_t *algorithm = &uwbTwrTagAlgorithm;
 #endif
 
 static bool isInit = false;
+
+uint8_t locoEnableEstimator = 1;
+
 static TaskHandle_t uwbTaskHandle = 0;
 static SemaphoreHandle_t algoSemaphore;
+
+// Liveness tracking for the positioning watchdog. chipResponding is written by
+// uwbTask() and read by locoDeckStatus() from the supervisor task.
+static volatile bool chipResponding = false;
+static uint32_t lastUwbActivityTick = 0;
+// CHAN_CTRL value captured at init. It survives mode switches but reverts to
+// default on a chip reset (e.g. power glitch), so a mismatch means the chip
+// has lost its configuration even though it still answers over SPI.
+static uint32_t expectedChanCtrl = 0;
 
 // Event counters for mode-switch diagnostics
 static uint32_t dbgRxCount = 0;
@@ -392,16 +407,35 @@ static void uwbTask(void* parameters) {
     handleModeSwitch();
     xSemaphoreGive(algoSemaphore);
 
-    if (ulTaskNotifyTake(pdTRUE, timeout / portTICK_PERIOD_MS) > 0) {
+    // Bound the wait so the health probe runs even when the algorithm requests a
+    // very long (TDoA2 uses portMAX_DELAY) timeout
+    uint32_t waitTicks = timeout / portTICK_PERIOD_MS;
+    const uint32_t probeTicks = M2T(locoHealthProbeMs);
+    if (waitTicks > probeTicks) {
+      waitTicks = probeTicks;
+    }
+
+    if (ulTaskNotifyTake(pdTRUE, waitTicks) > 0) {
+      lastUwbActivityTick = xTaskGetTickCount();
+      chipResponding = true;
       do{
         xSemaphoreTake(algoSemaphore, portMAX_DELAY);
         dwHandleInterrupt(dwm);
         xSemaphoreGive(algoSemaphore);
       } while(digitalRead(GPIO_PIN_IRQ) != 0);
     } else {
+      bool probeFailed = false;
       xSemaphoreTake(algoSemaphore, portMAX_DELAY);
       timeout = algorithm->onEvent(dwm, eventTimeout);
+      if ((xTaskGetTickCount() - lastUwbActivityTick) > M2T(locoHealthProbeMs)) {
+        const bool wasResponding = chipResponding;
+        chipResponding = (dwSpiRead32(dwm, CHAN_CTRL, NO_SUB) == expectedChanCtrl);
+        probeFailed = wasResponding && !chipResponding;
+      }
       xSemaphoreGive(algoSemaphore);
+      if (probeFailed) {
+        DEBUG_PRINT("Watchdog: DW1000 lost its configuration (CHAN_CTRL mismatch)\n");
+      }
     }
   }
 }
@@ -504,6 +538,15 @@ static dwOps_t dwOps = {
   .delayms = delayms,
 };
 
+static uint8_t locoDeckStatus() {
+  // If init failed we can't trust the chip state to probe it
+  if (!isInit) {
+    return 1;
+  }
+
+  return chipResponding ? 0 : 1;
+}
+
 /*********** Deck driver initialization ***************/
 
 static void dwm1000Init(DeckInfo *info)
@@ -573,6 +616,8 @@ static void dwm1000Init(DeckInfo *info)
     isInit = false;
     return;
   }
+  expectedChanCtrl = dwSpiRead32(dwm, CHAN_CTRL, NO_SUB);
+  chipResponding = true;
 
   memoryRegisterHandler(&memDef);
 
@@ -637,6 +682,7 @@ static const DeckDriver dwm1000_deck = {
 
   .init = dwm1000Init,
   .test = dwm1000Test,
+  .status = locoDeckStatus,
 };
 
 DECK_DRIVER(dwm1000_deck);
@@ -656,6 +702,21 @@ PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcDWM1000, &isInit)
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcLoco, &isInit)
 
 PARAM_GROUP_STOP(deck)
+
+
+static uint8_t locoStatusLogger(uint32_t timestamp, void* data) {
+  return locoDeckStatus();
+}
+static logByFunction_t locoStatusLoggerDef = {.acquireUInt8 = locoStatusLogger, .data = 0};
+
+LOG_GROUP_START(deckStatus)
+
+/**
+ * @brief Loco deck status: 0 = ok, non-zero = error
+ */
+LOG_ADD_BY_FUNCTION(LOG_UINT8, bcLoco, &locoStatusLoggerDef)
+
+LOG_GROUP_STOP(deckStatus)
 
 LOG_GROUP_START(ranging)
 LOG_ADD(LOG_UINT16, state, &algoOptions.rangingState)
@@ -740,5 +801,14 @@ PARAM_GROUP_START(loco)
  * |   3   | TDoA 3 |\n
  */
 PARAM_ADD_CORE(PARAM_UINT8, mode, &algoOptions.userRequestedMode)
+
+/**
+ * @brief Feed loco measurements into the state estimator (default: 1)
+ *
+ * Set to 0 to stop pushing loco (TWR/TDoA distance, TDoA and absolute height)
+ * measurements into the Kalman filter, while keeping the loco system otherwise
+ * running.
+ */
+PARAM_ADD_CORE(PARAM_UINT8, fwdToEstimator, &locoEnableEstimator)
 
 PARAM_GROUP_STOP(loco)

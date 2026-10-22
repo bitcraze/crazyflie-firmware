@@ -1,12 +1,7 @@
 """Compiles the cffirmware C extension."""
 
 from setuptools import setup, Extension
-try:
-    # setuptools >= 62.4 (e.g. local Python 3.13 where distutils is gone)
-    from setuptools.command.build import build
-except ImportError:
-    # Older setuptools (e.g. the CI builder image on Python 3.10)
-    from distutils.command.build import build
+from setuptools.command.build import build
 import os
 
 include = [
@@ -82,7 +77,7 @@ cffirmware = Extension(
 # Override build command to specify custom "build" directory
 class BuildCommand(build):
     def initialize_options(self):
-        super().initialize_options()
+        build.initialize_options(self)
         self.build_base = "build"
 
 setup(

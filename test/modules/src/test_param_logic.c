@@ -42,6 +42,10 @@ static int32_t* fetchMockBuffer = 0;
 static size_t fetchMockBufferLength = 0;
 static char* fetchMockExpectedKey = "";
 
+// Storage foreach mock: captures the callback passed to storageForeach() so
+// tests can invoke it directly, simulating a key found in storage at boot.
+static storageFunc_t capturedForeachFunc = 0;
+
 // Mock getter function for testing paramGetDefaultValueV2 with getter
 static uint8_t getterReturnValue = 0;
 static void* testGetter(void) {
@@ -81,6 +85,7 @@ void setUp(void) {
   fetchMockBuffer = 0;
   fetchMockBufferLength = 0;
   fetchMockExpectedKey = "";
+  capturedForeachFunc = 0;
 
   paramLogicInit();
 }
@@ -293,6 +298,53 @@ void testPersistentSetGetFloat(void) {
 
   // Assert
   TEST_ASSERT_EQUAL_FLOAT(expected, actual);
+}
+
+void testPersistentStoreByVarIdStoresPersistentParam(void) {
+  // Fixture
+  myPersistentFloat = 3.5f;
+  paramVarId_t varid = paramGetVarId("myGroup", "myPersistentFloat");
+
+  storageStore_ExpectAndReturn("prm/myGroup.myPersistentFloat", &myPersistentFloat, sizeof(myPersistentFloat), true);
+
+  // Test
+  bool result = paramPersistentStoreByVarId(varid);
+
+  // Assert
+  TEST_ASSERT_TRUE(result);
+}
+
+void testPersistentStoreByVarIdRefusesNonPersistentParam(void) {
+  // Fixture
+  paramVarId_t varid = paramGetVarId("myGroup", "myFloat");
+
+  // storageStore is intentionally not expected: a non-persistent param must
+  // be refused before storage is ever touched.
+
+  // Test
+  bool result = paramPersistentStoreByVarId(varid);
+
+  // Assert
+  TEST_ASSERT_FALSE(result);
+}
+
+void testPersistentStoreCrtpRefusesNonPersistentParam(void) {
+  // Fixture
+  CRTPPacket testPk;
+  paramVarId_t varid = paramGetVarId("myGroup", "myFloat");
+
+  testPk.data[0] = 0;
+  testPk.data[1] = varid.id & 0xffu;
+  testPk.data[2] = (varid.id >> 8) & 0xffu;
+
+  crtpSendPacketBlock_StubWithCallback(crtpReply);
+
+  // Test
+  paramPersistentStore(&testPk);
+
+  // Assert
+  TEST_ASSERT_EQUAL_UINT8(4, replyPk.size);
+  TEST_ASSERT_EQUAL_UINT8(ENOENT, replyPk.data[3]);
 }
 
 void testReadProcessUint8(void) {
@@ -699,4 +751,48 @@ void testGetExtendedTypeV2_UnambiguousFormat(void) {
 
   // Even if extended_type was 2 (ENOENT), the status byte would be 0x00
   // and size would be 5, making it unambiguous from error response
+}
+
+// ============================================================================
+// Tests for paramLogicStorageInit / persistentParamFromStorage
+// ============================================================================
+
+static bool storageForeachMockFunc(const char *prefix, storageFunc_t func, int cmock_num_calls)
+{
+  TEST_ASSERT_EQUAL_STRING("prm/", prefix);
+  capturedForeachFunc = func;
+  return true;
+}
+
+void testStorageInitRestoresPersistentParam(void) {
+  // Fixture
+  myPersistentFloat = 0.0f;
+  float storedValue = 12.5f;
+
+  storageForeach_StubWithCallback(storageForeachMockFunc);
+
+  // Test
+  paramLogicStorageInit();
+  TEST_ASSERT_NOT_NULL(capturedForeachFunc);
+  capturedForeachFunc("prm/myGroup.myPersistentFloat", &storedValue, sizeof(storedValue));
+
+  // Assert
+  TEST_ASSERT_EQUAL_FLOAT(storedValue, myPersistentFloat);
+}
+
+void testStorageInitSkipsNonPersistentParam(void) {
+  // Fixture: simulate a key left over in storage for a param that is not
+  // (or no longer) marked PARAM_PERSISTENT, e.g. stored under old firmware.
+  myFloat = 0.0f;
+  float storedValue = 99.0f;
+
+  storageForeach_StubWithCallback(storageForeachMockFunc);
+
+  // Test
+  paramLogicStorageInit();
+  TEST_ASSERT_NOT_NULL(capturedForeachFunc);
+  capturedForeachFunc("prm/myGroup.myFloat", &storedValue, sizeof(storedValue));
+
+  // Assert
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, myFloat);
 }

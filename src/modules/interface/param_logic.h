@@ -132,6 +132,16 @@ void paramSetInt(paramVarId_t varid, int valuei);
  */
 void paramSetFloat(paramVarId_t varid, float valuef);
 
+/** Persist the current value of a parameter to storage
+ *
+ * The value will be restored on the next boot. Equivalent to calling
+ * paramPersistentStore via CRTP, but callable from app code.
+ *
+ * @param varid variable ID, returned by paramGetVarId()
+ * @return true if the value was stored successfully
+ */
+bool paramPersistentStoreByVarId(paramVarId_t varid);
+
 /**
  * @brief Initialize the parameter subsystem
  */

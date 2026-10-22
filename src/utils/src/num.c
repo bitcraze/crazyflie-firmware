@@ -58,7 +58,7 @@ uint16_t single2half(float number)
     if (e<(127-15))
         return 0; //Do not handle generating subnormalised representation
 
-    return (s<<15) | ((e-127+15)<<10) | (((num>>13)&0x3FF)+((num>>12)&0x01));
+    return (s<<15) | (((e-127+15)<<10) + (((num>>13)&0x3FF)+((num>>12)&0x01)));
 }
 
 float half2single(uint16_t number)

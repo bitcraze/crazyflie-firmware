@@ -118,6 +118,7 @@ void appMain() {
     paramGetUint(id);
     paramSetInt(id, 0);
     paramSetFloat(id, 0.0f);
+    paramPersistentStoreByVarId(id);
   }
 
   // Power management

@@ -44,6 +44,16 @@ image_LDFLAGS += -Wl,-Map=$(PROG).map,--cref,--gc-sections,--undefined=uxTopUsed
 image_LDFLAGS += -L$(srctree)/tools/make/F405/linker
 image_LDFLAGS += -T $(LINKER_DIR)/FLASH_CLOAD.ld
 
+#
+# Let an out-of-tree app shadow in-tree interface headers (e.g. a custom
+# platform_defaults.h) by putting them in an "overrides" subfolder, which
+# gets first priority in the include search path, ahead of every other
+# INCLUDES entry below.
+#
+ifneq ($(OOT),)
+INCLUDES += -I$(OOT)/overrides
+endif
+
 INCLUDES += -I$(srctree)/vendor/CMSIS/CMSIS/Core/Include -I$(srctree)/vendor/CMSIS/CMSIS/DSP/Include
 INCLUDES += -I$(srctree)/vendor/libdw1000/inc
 INCLUDES += -I$(FREERTOS)/include -I$(PORT)
@@ -95,6 +105,11 @@ KBUILD_OUTPUT ?= build
 ifneq ($(CONFIG_DECK_LOCO_2D_POSITION_HEIGHT),)
 unquoted = $(patsubst "%",%,$(CONFIG_DECK_LOCO_2D_POSITION_HEIGHT))
 ARCH_CFLAGS += -DDECK_LOCO_2D_POSITION_HEIGHT=$(unquoted)
+endif
+
+ifneq ($(CONFIG_DECK_LOCO_TDOA_DISTANCE_RATIO_LIMIT),)
+unquoted = $(patsubst "%",%,$(CONFIG_DECK_LOCO_TDOA_DISTANCE_RATIO_LIMIT))
+ARCH_CFLAGS += -DDECK_LOCO_TDOA_DISTANCE_RATIO_LIMIT=$(unquoted)
 endif
 
 ifeq ($(CONFIG_PLATFORM_CF21BL), y)

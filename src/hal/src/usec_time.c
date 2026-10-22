@@ -54,7 +54,7 @@ void usecTimerInit(void)
   TIM_TimeBaseStructure.TIM_Period = 0xFFFF;
   // APB1 clock is /4, but APB clock inputs to timers are doubled when
   // the APB clock runs slower than /1, so APB1 timers see a /2 clock
-  TIM_TimeBaseStructure.TIM_Prescaler = SystemCoreClock / (1000 * 1000) / 2;
+  TIM_TimeBaseStructure.TIM_Prescaler = (SystemCoreClock / (1000 * 1000) / 2) - 1;
   TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
   TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
   TIM_TimeBaseStructure.TIM_RepetitionCounter = 0;

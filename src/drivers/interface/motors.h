@@ -354,6 +354,15 @@ void motorsSetRatio(uint32_t id, uint16_t ratio);
  */
 uint16_t motorsGetRatio(uint32_t id);
 
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
+#define MOTORS_RPM_INVALID (UINT16_MAX)
+/**
+ * Get the last measured RPM of the motor 'id'. Returns MOTORS_RPM_INVALID if
+ * telemetry is unavailable.
+ */
+uint16_t motorsGetRPM(uint32_t motorId);
+#endif
+
 /**
  * FreeRTOS Task to test the Motors driver
  */

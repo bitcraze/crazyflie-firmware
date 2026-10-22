@@ -231,10 +231,10 @@ static uint8_t gap8DeckFlasherPropertiesQuery()
 static void resetEspToBootloader() {
   espMode = ESP_MODE_PREPARE_FOR_BOOTLOADER;
 
-  // Free up the UART and re-initialize it to the correct
-  // baud rate.
+  // Free up the UART and set it to the baud rate of the
+  // ROM bootloader.
   cpxUARTTransportDeinit();
-  uart2Init(115200);
+  uart2SetBaudrate(115200);
 
   // Set ESP in reset
   pinMode(DECK_GPIO_IO4, OUTPUT);
@@ -313,9 +313,6 @@ static void aideckInit(DeckInfo *info)
 {
   if (isInit)
     return;
-
-  pinMode(DECK_GPIO_IO2, OUTPUT);
-  pinMode(DECK_GPIO_IO3, OUTPUT);
 
   bootloaderSync = xEventGroupCreate();
 
