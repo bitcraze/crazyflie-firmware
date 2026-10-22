@@ -1,0 +1,4 @@
+# Settings of the local setup (URI, QTM computer), see local_settings.example.json
+local_settings.json
+# Run data: log files, motion capture, runs.jsonl
+lh_mocap_*/
