@@ -36,11 +36,29 @@ class EstimatorKalmanEmulator:
         anchor_positions=None,
         basestation_poses=None,
         basestation_calibration=None,
+        attitude_reversion_off=None,
+        observes_absolute_yaw_at_rest=None,
     ) -> None:
+        """
+        Args:
+            attitude_reversion_off: disable attitude reversion, as for a deck that sets
+                requiredKalmanEstimatorAttitudeReversionOff.
+            observes_absolute_yaw_at_rest: use a wide initial yaw prior, as for a deck that sets
+                observesAbsoluteYawAtRest.
+            Both default to True when base station data is given (the Lighthouse deck sets both flags),
+            False otherwise.
+        """
         self.logger = logging.getLogger(self.__class__.__name__)
         self.anchor_positions = anchor_positions
         self.basestation_poses = basestation_poses
         self.basestation_calibration = basestation_calibration
+        has_lighthouse_data = basestation_calibration is not None
+        if attitude_reversion_off is None:
+            attitude_reversion_off = has_lighthouse_data
+        if observes_absolute_yaw_at_rest is None:
+            observes_absolute_yaw_at_rest = has_lighthouse_data
+        self.attitude_reversion_off = attitude_reversion_off
+        self.observes_absolute_yaw_at_rest = observes_absolute_yaw_at_rest
         self.accSubSampler = cffirmware.Axis3fSubSampler_t()
         self.gyroSubSampler = cffirmware.Axis3fSubSampler_t()
         self.coreData = cffirmware.kalmanCoreData_t()
@@ -56,13 +74,10 @@ class EstimatorKalmanEmulator:
         self._sensor_pos_cache = {}
         self._rotor_geometry_cache = {}
 
-        # Simplification, assume always flying
-        self.logger.warning(
-            'Assuming the quad is always flying. This simplification must be considered '
-            'as it can affect the results. If you need to handle both flying and non-flying '
-            'states, ensure this matches your recorded data. Automatic handling is not '
-            'currently implemented.'
-        )
+        # Simplification: the quad is assumed to be on the ground until the first
+        # acceleration sample with acc.z > 1.1 g, and flying from then on. The
+        # firmware uses the supervisor instead, so take-off and landing timing can
+        # differ from the recording.
         self.quad_is_flying = False
 
         self.TDOA_ENGINE_MEASUREMENT_NOISE_STD = 0.30
@@ -136,9 +151,11 @@ class EstimatorKalmanEmulator:
 
         self.coreParams = cffirmware.kalmanCoreParams_t()
         cffirmware.kalmanCoreDefaultParams(self.coreParams)
-        # Note: If the emulator is used with data from a deck that uses roll/pitch/yaw zero reversion, this should be
-        # set to a non-zero value to behave like the CF. See estimatorKalmanInit() in estimator_kalman.c
-        # self.coreParams.AttitudeReversion = 0.001
+        if self.attitude_reversion_off:
+            self.coreParams.attitudeReversion = 0.0
+        if self.observes_absolute_yaw_at_rest:
+            # sigma = pi/sqrt(3) rad: uniform over [-pi, pi], so the filter can converge from any initial heading
+            self.coreParams.stdDevInitialAttitude_yaw = 1.81
 
         cffirmware.outlierFilterTdoaReset(self.outlierFilterTDOA)
         cffirmware.outlierFilterLighthouseReset(self.outlierFilterLH, self.now_ms)
