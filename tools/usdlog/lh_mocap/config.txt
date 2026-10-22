@@ -1,0 +1,46 @@
+1        # config format version (must be 1)
+8192     # ring buffer bytes. Do not raise: malloc'd from a 30000 byte FreeRTOS
+         # heap, and failure asserts at boot. On drops, cut events instead.
+lhmocap  # log file name prefix (at most 10 characters, firmware appends 00..99)
+0        # enable logging on startup (0/1); 0 -> the script starts it with usd.logging 1
+
+# Lighthouse flights with motion capture, for replaying the Kalman estimator offline.
+# Needs the firmware of this branch (usd counters, kalmanReset event) and the default
+# lighthouse.method 1. Geometry and calibration are not in the log; capture them in
+# the same session with:
+#   cfcli lh config read -o lh.yaml
+
+# Raw sweep angles.
+on:estSweepAngle
+
+# Yaw error from the crossing beams method (lighthouse.method 1).
+on:estYawError
+
+# IMU, needed to drive the Kalman replay offline.
+on:estAcceleration
+acc.x
+acc.y
+acc.z
+on:estGyroscope
+gyro.x
+gyro.y
+gyro.z
+
+# Sync with motion capture: logged at each active marker mode change (the sync pulses).
+on:activeMarkerModeChanged
+
+# On-board estimate: reference for the replay of the same firmware, and for comparison
+# with motion capture.
+on:fixedFrequency
+100      # Hz
+1        # mode: 1 = synchronous with stabilizer loop
+stateEstimate.x
+stateEstimate.y
+stateEstimate.z
+stateEstimate.qx
+stateEstimate.qy
+stateEstimate.qz
+stateEstimate.qw
+
+# Each Kalman estimator reset, where the replay can start.
+on:kalmanReset
