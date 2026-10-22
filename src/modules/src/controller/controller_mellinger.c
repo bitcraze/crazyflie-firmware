@@ -130,17 +130,33 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   float dt;
   float desiredYaw = 0; //deg
 
-  control->controlMode = controlModeLegacy;
-
   if (!RATE_DO_EXECUTE(ATTITUDE_RATE, stabilizerStep)) {
     return;
   }
 
+  control->controlMode = controlModeLegacy;
   dt = (float)(1.0f/ATTITUDE_RATE);
+  
+  // --- Prepare inputs ---
   struct vec setpointPos = mkvec(setpoint->position.x, setpoint->position.y, setpoint->position.z);
   struct vec setpointVel = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);
   struct vec statePos = mkvec(state->position.x, state->position.y, state->position.z);
   struct vec stateVel = mkvec(state->velocity.x, state->velocity.y, state->velocity.z);
+  struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
+  struct mat33 R = quat2rotmat(q);
+  z_axis = mcolumn(R, 2);
+
+  // --- Compute desired yaw ---
+  // Rate-controlled YAW is moving YAW angle setpoint
+  if (setpoint->mode.yaw == modeVelocity) {
+    desiredYaw = state->attitude.yaw + setpoint->attitudeRate.yaw * dt;
+  } else if (setpoint->mode.yaw == modeAbs) {
+    desiredYaw = setpoint->attitude.yaw;
+  } else if (setpoint->mode.quat == modeAbs) {
+    struct quat setpoint_quat = mkquat(setpoint->attitudeQuaternion.x, setpoint->attitudeQuaternion.y, setpoint->attitudeQuaternion.z, setpoint->attitudeQuaternion.w);
+    struct vec rpy = quat2rpy(setpoint_quat);
+    desiredYaw = degrees(rpy.z);
+  }
 
   // --- Compute position and velocity errors ---
   // Position Error (ep)
@@ -158,23 +174,6 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
 
   self->i_error_y += r_error.y * dt;
   self->i_error_y = clamp(self->i_error_y, -self->i_range_xy, self->i_range_xy);
-
-  // --- Compute desired yaw ---
-  // Rate-controlled YAW is moving YAW angle setpoint
-  if (setpoint->mode.yaw == modeVelocity) {
-    desiredYaw = state->attitude.yaw + setpoint->attitudeRate.yaw * dt;
-  } else if (setpoint->mode.yaw == modeAbs) {
-    desiredYaw = setpoint->attitude.yaw;
-  } else if (setpoint->mode.quat == modeAbs) {
-    struct quat setpoint_quat = mkquat(setpoint->attitudeQuaternion.x, setpoint->attitudeQuaternion.y, setpoint->attitudeQuaternion.z, setpoint->attitudeQuaternion.w);
-    struct vec rpy = quat2rpy(setpoint_quat);
-    desiredYaw = degrees(rpy.z);
-  }
-
-  // Z-Axis [zB]
-  struct quat q = mkquat(state->attitudeQuaternion.x, state->attitudeQuaternion.y, state->attitudeQuaternion.z, state->attitudeQuaternion.w);
-  struct mat33 R = quat2rotmat(q);
-  z_axis = mcolumn(R, 2);
 
   // --- Compute desired axes and thrust ---
   // Each branch sets both
