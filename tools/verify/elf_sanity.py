@@ -3,7 +3,6 @@ import struct
 import sys
 
 
-
 class Colors:
     RED = '\033[91m'
     BLUE = '\033[94m'
@@ -33,7 +32,10 @@ def param_type_to_str(t: int) -> str:
     if t & (1 << 6):  # PARAM_RONLY set
         extra += ' | PARAM_RONLY'
 
-    int_type = t & ~(1 << 5 | 1 << 6)
+    if t & (1 << 8):  # PARAM_PERSISTENT set (in extended_type)
+        extra += ' | PARAM_PERSISTENT'
+
+    int_type = t & 0x0F  # PARAM_TYPE_MASK
 
     return '{:12}{}'.format(param_type_to_str_dict[int_type], extra)
 
@@ -233,13 +235,15 @@ def check_structs(elf, what: str, core: bool) -> dict:
         #   void * getter;
         # };
         #
-        # We want the type and the name.
+        # We want the type and the name. For params, extended_type is added
+        # as the upper byte of the type, as in the TYPE of PARAM_ADD_FULL().
         #
         buffer = elf.stream.read(struct_len)
         if what == 'log':
             t, addr = struct.unpack('@Bxxxixxxx', buffer)
         else:
-            t, addr = struct.unpack('@Bxxxixxxxxxxxxxxx', buffer)
+            t, extended_type, addr = struct.unpack('@BBxxixxxxxxxxxxxx', buffer)
+            t |= extended_type << 8
 
         #
         # Next, convert address of name to offset in elf
