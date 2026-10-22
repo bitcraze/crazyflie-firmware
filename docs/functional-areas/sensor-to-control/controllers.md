@@ -76,11 +76,11 @@ The implementation follows the paper, also for the names of the variables. The m
 The Mellinger controller supports these types of setpoints:
 
 - High-level commander
-- Position setpoints
-- Full state setpoints
-- Manual flight in angle mode
+- Position setpoints, i.e. x, y and z absolute (`positionDecoder` and the rpyt position mode)
+- Full state setpoints (`fullStateDecoder`)
+- Manual flight in angle mode, i.e. roll and pitch absolute with z disabled
 
-For any other combination of [setpoint modes](/docs/functional-areas/sensor-to-control/commanders_setpoints/#setpoint-structure), the controller tries to level the Crazyflie and keeps the current yaw. If the z mode is absolute, it holds the z position of the setpoint. If the z mode is disabled, it uses the thrust of the setpoint. There is no horizontal control, so the Crazyflie keeps any horizontal speed it has and drifts. This is a safety fallback, not a supported mode. Don't depend on that it is working.
+For any other combination of [setpoint modes](/docs/functional-areas/sensor-to-control/commanders_setpoints.md#setpoint-structure), the controller tries to level the Crazyflie. The yaw setpoint is not used, but the yaw rate setpoint is still tracked. If the z mode is absolute, it holds the z position of the setpoint. If the z mode is disabled, it uses the thrust of the setpoint. A z mode of velocity (e.g. altitude hold) is not supported. There is no horizontal control, so the Crazyflie keeps any horizontal speed it has and drifts. This is a safety fallback, not a supported mode. Don't rely on it.
 
 ## INDI Controller
 

@@ -130,13 +130,14 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   float dt;
   float desired_yaw = 0; //rad
 
+  control->controlMode = controlModeLegacy;
+
   if (!RATE_DO_EXECUTE(ATTITUDE_RATE, stabilizerStep)) {
     return;
   }
 
-  control->controlMode = controlModeLegacy;
   dt = (float)(1.0f/ATTITUDE_RATE);
-  
+
   // --- Prepare inputs ---
   struct vec setpointPos = mkvec(setpoint->position.x, setpoint->position.y, setpoint->position.z);
   struct vec setpointVel = mkvec(setpoint->velocity.x, setpoint->velocity.y, setpoint->velocity.z);
@@ -176,7 +177,7 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   self->i_error_y = clamp(self->i_error_y, -self->i_range_xy, self->i_range_xy);
 
   // --- Compute desired axes and thrust ---
-  // Each branch sets both
+  // Each branch sets the desired axes and thrust
   if (setpoint->mode.x == modeAbs &&
       setpoint->mode.y == modeAbs &&
       setpoint->mode.z == modeAbs) { // Position control
@@ -218,8 +219,9 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
 
     thrust = setpoint->thrust;
   } else {
-    // Level with the current yaw. With z Abs, hold the z setpoint. This is the normal path for hover,
-    // zDistance and the supervisor level-out, as well as any other mode combination.
+    // Fallback for any other mode combination, e.g. hover, zDistance and the supervisor level-out.
+    // Only z and leveling are honoured: level with the current yaw, with z Abs hold the z setpoint,
+    // with z Disable use the setpoint thrust. Horizontal velocity, roll and pitch setpoints are ignored.
     target_thrust.x = 0;
     target_thrust.y = 0;
     target_thrust.z = self->mass * GRAVITY_MAGNITUDE + self->kp_z  * r_error.z + self->kd_z  * v_error.z + self->ki_z  * self->i_error_z;
@@ -245,7 +247,7 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   }
 
   // --- Compute attitude error ---
-  // Generated using Mathematica
+  // eR = (R_des^T R - R^T R_des)^vee (no 1/2 as in the paper), generated using Mathematica
   float x = q.x;
   float y = q.y;
   float z = q.z;
