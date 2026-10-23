@@ -61,8 +61,8 @@ static void timerHandler(xTimerHandle timer);
 static void debugPrint();
 static bool filter(Data* queueData);
 static void debugPrintQueue(Data* queueData);
-static Data* getQueueData(xQueueHandle* xQueue);
-static int getMaxWaiting(xQueueHandle* xQueue, int prevPeak);
+static Data* getQueueData(xQueueHandle xQueue);
+static int getMaxWaiting(xQueueHandle xQueue, int prevPeak);
 static void resetCounters();
 
 unsigned char ucQueueGetQueueNumber( xQueueHandle xQueue );
@@ -97,7 +97,7 @@ void qm_traceQUEUE_SEND_FAILED(void* xQueue) {
   }
 }
 
-void qmRegisterQueue(xQueueHandle* xQueue, char* fileName, char* queueName) {
+void qmRegisterQueue(xQueueHandle xQueue, char* fileName, char* queueName) {
   ASSERT(initialized);
   ASSERT(nrOfQueues < MAX_NR_OF_QUEUES);
   Data* queueData = &data[nrOfQueues];
@@ -109,13 +109,13 @@ void qmRegisterQueue(xQueueHandle* xQueue, char* fileName, char* queueName) {
   nrOfQueues++;
 }
 
-static Data* getQueueData(xQueueHandle* xQueue) {
+static Data* getQueueData(xQueueHandle xQueue) {
   unsigned char number = uxQueueGetQueueNumber(xQueue);
   ASSERT(number < MAX_NR_OF_QUEUES);
   return &data[number];
 }
 
-static int getMaxWaiting(xQueueHandle* xQueue, int prevPeak) {
+static int getMaxWaiting(xQueueHandle xQueue, int prevPeak) {
   // We get here before the current item is added to the queue.
   // Must add 1 to get the peak value.
   unsigned portBASE_TYPE waiting = uxQueueMessagesWaitingFromISR(xQueue) + 1;
