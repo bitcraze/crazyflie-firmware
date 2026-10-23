@@ -339,6 +339,7 @@ typedef struct {
   float stdDev;
   const lighthouseCalibrationSweep_t* calib;
   lighthouseCalibrationMeasurementModel_t calibrationMeasurementModel;
+  lighthouseCalibrationMeasurementModelGradient_t calibrationMeasurementModelGradient;
 } sweepAngleMeasurement_t;
 
 /** gyroscope measurement */

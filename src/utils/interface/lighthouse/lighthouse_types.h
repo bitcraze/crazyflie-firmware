@@ -29,3 +29,17 @@ typedef struct {
  *
  */
 typedef float (*lighthouseCalibrationMeasurementModel_t)(const float x, const float y, const float z, const float t, const lighthouseCalibrationSweep_t* calib);
+
+/**
+ * @brief Generic function pointer type for the gradient of a calibration measurement model.
+ *        Each measurement model has a matching gradient function. Keep the two in sync: the Kalman filter
+ *        computes its residual with the model and its measurement Jacobian with the gradient.
+ * @param x meters
+ * @param y meters
+ * @param z meters
+ * @param t Tilt of the light plane in radians
+ * @param calib Calibration data for the rotor
+ * @param gradient Output: derivative of the predicted sweep angle with respect to x, y and z (rotor reference frame), rad/m
+ * @return bool false if the gradient is not defined at this position (close to the singularity of the light plane), true otherwise
+ */
+typedef bool (*lighthouseCalibrationMeasurementModelGradient_t)(const float x, const float y, const float z, const float t, const lighthouseCalibrationSweep_t* calib, float gradient[3]);

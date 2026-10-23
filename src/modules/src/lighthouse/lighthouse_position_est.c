@@ -293,6 +293,7 @@ static void estimatePositionSweepsLh1(const pulseProcessor_t* appState, pulsePro
   sweepInfo.rotorPos = &appState->bsGeometry[baseStation].origin;
   sweepInfo.t = 0;
   sweepInfo.calibrationMeasurementModel = lighthouseCalibrationMeasurementModelLh1;
+  sweepInfo.calibrationMeasurementModelGradient = lighthouseCalibrationMeasurementModelGradientLh1;
   sweepInfo.baseStationId = baseStation;
 
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
@@ -346,6 +347,7 @@ static void estimatePositionSweepsLh2(const pulseProcessor_t* appState, pulsePro
   sweepInfo.rotorRot = &appState->bsGeometry[baseStation].mat;
   sweepInfo.rotorRotInv = &appState->bsGeoCache[baseStation].baseStationInvertedRotationMatrixes;
   sweepInfo.calibrationMeasurementModel = lighthouseCalibrationMeasurementModelLh2;
+  sweepInfo.calibrationMeasurementModelGradient = lighthouseCalibrationMeasurementModelGradientLh2;
   sweepInfo.baseStationId = baseStation;
 
   for (size_t sensor = 0; sensor < PULSE_PROCESSOR_N_SENSORS; sensor++) {
@@ -446,9 +448,11 @@ static bool estimateYawDeltaOneBaseStation(const int bs, const pulseProcessorRes
 }
 
 static void estimateYaw(const pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation) {
-  // TODO Most of these calculations should be moved into the estimator instead. It is a
-  // bit dirty to get the state from the kalman filer here and calculate the yaw error outside
+  // NOTE: The following calculations are only used for the crossing beams method.
+  // It is a bit dirty to get the state from the kalman filer here and calculate the yaw error outside
   // the estimator, but it will do for now.
+  // When using the sweep angle measurement model with the EKF, full orientation
+  // (roll, pitch, yaw) is directly estimated within the estimator itself.
 
   // Get data from the current estimated state
   point_t cfPosP;
@@ -485,7 +489,6 @@ void lighthousePositionEstimatePoseCrossingBeams(const pulseProcessor_t *state, 
 void lighthousePositionEstimatePoseSweeps(const pulseProcessor_t *state, pulseProcessorResult_t* angles, int baseStation) {
   if (state->bsGeometry[baseStation].valid) {
     estimatePositionSweeps(state, angles, baseStation);
-    estimateYaw(state, angles, baseStation);
   }
 }
 
