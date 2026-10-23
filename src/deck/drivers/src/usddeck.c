@@ -488,6 +488,12 @@ static void usddeckWriteEventData(const usdLogEventConfig_t* cfg, const uint8_t*
 
   xSemaphoreTake(logBufferMutex, portMAX_DELAY);
 
+  // Logging may have stopped while we waited for the mutex.
+  if (!enableLogging) {
+    xSemaphoreGive(logBufferMutex);
+    return;
+  }
+
   // Incremented from several task contexts, so keep it under the mutex.
   ++usdLogStats.eventsRequested;
 
