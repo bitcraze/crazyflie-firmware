@@ -1,1 +1,12 @@
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+# Phase 4.8: this directory's own partial link (src/modules/built-in.o) is
+# one more merge stage above src/modules/src/Kbuild's own --unique fix --
+# without it here too, the split .log.controller/.param.* sections
+# EXTRA_LDFLAGS preserved one level down get silently re-merged at this
+# level instead (found empirically: fixing only src/modules/src/Kbuild
+# left this level's src/modules/built-in.o corrupted again). See the top
+# Makefile's and src/Kbuild's comments for the full reasoning.
+EXTRA_LDFLAGS += -Wl,--unique=.log.* -Wl,--unique=.param.*
+endif
+
 obj-y += src/
