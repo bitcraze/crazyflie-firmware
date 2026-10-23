@@ -36,6 +36,11 @@ its own UDP port.
 * **Beacon**: a small message each Simmyflie sends periodically to anyone on
   the computer who listens, with its pose and status. It does not use a CRTP
   connection. Viewers such as the simviewer use beacons.
+* **Positioning**: The Simmyflie has perfect positioning, in the sense that 
+  the Kalman filter is fed perfect position and pose measurements, as well as
+  perfect IMU data.
+* **Battery**: The Simmyflie has infinite battery, and will report a constant
+  4.2 V.
 
 ## Building
 
@@ -129,6 +134,43 @@ Simmyflie has:
   (`rotor1` to `rotor4`) and `status` (0 = at rest, 1 = flying,
   2 = crashed). All values are in SI units. Compare with `stateEstimate` to
   see how well the estimator is doing.
+
+## Physics models
+
+The Simmyflie at the moment only carries one physics model. This could change.
+It is described below.
+
+### Built-in CF2.1 Brushless
+
+The built-in physics engine is the only one, and it is used whatever
+platform the firmware is configured for. It is the Crazyflie 2.1 Brushless
+model from A. Graefe, C. Scherer, W. Hönig and S. Trimpe, "How to Model Your
+Crazyflie Brushless" (2026). The physics is stepped once per firmware tick,
+at 1 kHz.
+
+What is modelled:
+
+* A rigid body with mass and inertia, without or with propeller guards. The
+  mass can be changed in `menuconfig`; the inertia stays the one from the
+  paper.
+* The motors: each rotor speed follows the motor command with a 50 ms time
+  constant.
+* The thrust and drag torque of each rotor, as polynomials of the rotor speed
+  fitted in the paper, and the reaction torque from accelerating a rotor.
+
+Limitations:
+
+* No aerodynamic effects beyond the rotor thrust and torque: no body drag,
+  no ground effect, no downwash and no wind.
+* No battery. The rotor speed depends only on the motor command, not on the
+  battery voltage, and the battery voltage is always 4.2 V.
+* No motor or propeller differences: all four are identical and ideal.
+* The ground is the only thing a Simmyflie can hit. There are no walls or
+  obstacles, and Simmyflies fly through each other.
+* The ground contact is simple. Reaching ground level slower than the crash
+  limits is a landing: the Simmyflie stops at once and is set level, keeping
+  its yaw. Otherwise it is a crash and it freezes. It cannot slide, bounce or
+  tip over.
 
 ## Beacons
 
@@ -295,3 +337,21 @@ uv run tools/sim/simviewer.py
 
 # Terminal 3: fly them with a cflib script
 ```
+
+## Limitations
+
+The Simmyflie has some limitations compared to the real Crazyflie:
+
+- There are no decks. Deck drivers are not built, and every `deck.bc*`
+  parameter reads 0.
+- Out-of-tree apps cannot be built into the Simmyflie.
+- The physics engine always uses Crazyflie Brushless dynamics, also when the
+  firmware is configured for another platform, for example with
+  `cf2_defconfig`.
+- Persistent parameters are not stored. Storing one reports success, but
+  nothing is saved, and the parameter is back at its default after a
+  restart.
+- The Simmyflie runs in real time, on the computer's clock. It cannot run
+  faster or slower than real time, and a heavily loaded computer can make
+  its timing uneven.
+
