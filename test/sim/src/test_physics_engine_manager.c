@@ -25,7 +25,8 @@
  * of the Simmyflie, against a mocked physics engine.
  *
  * Every engine function is stubbed with a callback that records the call, so
- * the tests can check the order of the calls and what was passed.
+ * the tests can check the order of the calls and what was passed. The
+ * FreeRTOS tick count and critical sections are stubbed here.
  */
 
 // File under test
@@ -37,7 +38,8 @@
 #include "unity.h"
 #include "mock_physics_engine.h"
 #include "mock_beacon_sender.h"
-#include "freertosMocks.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 #define NBR_OF_ROTORS TRUE_STATE_NBR_OF_ROTORS
 #define DT 0.001f
@@ -77,11 +79,21 @@ static int nbrOfPlaces;
 
 static physicsEngineConfig_t config;
 
-// What the mocked Beacon sender was given
-static trueState_t beaconState;
-static physicsEngineStatus_t beaconStatus;
-static uint32_t beaconSimTime;
-static int nbrOfBeaconTicks;
+// What the stubbed xTaskGetTickCount() returns
+static TickType_t tickCount;
+
+TickType_t xTaskGetTickCount(void)
+{
+  return tickCount;
+}
+
+void vPortEnterCritical(void)
+{
+}
+
+void vPortExitCritical(void)
+{
+}
 
 static void record(const engineCall_t call)
 {
@@ -127,21 +139,10 @@ static void placeCallback(const trueState_t *state, int cmock_num_calls)
   nbrOfPlaces++;
 }
 
-static void beaconTickCallback(const trueState_t *state, physicsEngineStatus_t status, uint32_t simTime,
-                               int cmock_num_calls)
-{
-  (void)cmock_num_calls;
-  beaconState = *state;
-  beaconStatus = status;
-  beaconSimTime = simTime;
-  nbrOfBeaconTicks++;
-}
-
 static void clearCalls(void)
 {
   nbrOfCalls = 0;
   nbrOfPlaces = 0;
-  nbrOfBeaconTicks = 0;
 }
 
 static void assertCalls(const engineCall_t *expected, const int nbrOfExpected)
@@ -217,7 +218,6 @@ void setUp(void)
   physicsEngineGetState_StubWithCallback(getStateCallback);
   physicsEngineGetStatus_StubWithCallback(getStatusCallback);
   physicsEnginePlace_StubWithCallback(placeCallback);
-  beaconSenderTick_StubWithCallback(beaconTickCallback);
 
   clearCalls();
   engineInitResult = true;
@@ -227,6 +227,7 @@ void setUp(void)
   memset(&placedState, 0, sizeof(placedState));
   memset(stepRatios, 0xff, sizeof(stepRatios));
   stepDt = 0.0f;
+  tickCount = 1;
 
   config = (physicsEngineConfig_t){
     .startPose = {.x = 0.25f, .y = -0.75f, .yaw = 30.0f * DEG},
@@ -734,47 +735,85 @@ void testThatGetTrueStateReturnsTheSnapshotNotTheEngineState(void)
   assertStatesEqual(&expected, &actual);
 }
 
-// Beacon sender
+// Snapshot
 
-void testThatInitDoesNotTickTheBeaconSender(void)
+void testThatGetSnapshotAfterInitReturnsTheStateAndStatusReadAtInit(void)
 {
   // Fixture
-  engineStatus = physicsEngineStatusAtRest;
+  engineStatus = physicsEngineStatusCrashed;
+  TEST_ASSERT_TRUE(physicsEngineManagerInit(&config));
+  const trueState_t expected = engineState;
+  engineState.position.x = 100.0f;
+  engineStatus = physicsEngineStatusFlying;
+  physicsEngineManagerSnapshot_t actual;
 
   // Test
-  TEST_ASSERT_TRUE(physicsEngineManagerInit(&config));
+  physicsEngineManagerGetSnapshot(&actual);
 
   // Assert
-  TEST_ASSERT_EQUAL_INT(0, nbrOfBeaconTicks);
+  assertStatesEqual(&expected, &actual.state);
+  TEST_ASSERT_EQUAL_INT(physicsEngineStatusCrashed, actual.status);
 }
 
-void testThatEveryStepTicksTheBeaconSenderOnce(void)
+void testThatGetSnapshotCallsNoEngineFunction(void)
 {
   // Fixture
   initAt(physicsEngineStatusAtRest);
+  physicsEngineManagerSnapshot_t actual;
 
   // Test
-  physicsEngineManagerStep(DT);
-  physicsEngineManagerStep(DT);
-  physicsEngineManagerStep(DT);
+  physicsEngineManagerGetSnapshot(&actual);
 
   // Assert
-  TEST_ASSERT_EQUAL_INT(3, nbrOfBeaconTicks);
+  TEST_ASSERT_EQUAL_INT(0, nbrOfCalls);
 }
 
-void testThatStepPassesTheNewStateStatusAndTickCountToTheBeaconSender(void)
+void testThatGetSnapshotAfterAStepReturnsTheStateStatusAndTickCountOfTheStep(void)
 {
   // Fixture: the engine's state and status change in the step
   initAt(physicsEngineStatusAtRest);
   engineState.position.x = 100.0f;
   engineStatus = physicsEngineStatusFlying;
+  tickCount = 12345;
   const trueState_t expected = engineState;
+  physicsEngineManagerStep(DT);
+  physicsEngineManagerSnapshot_t actual;
+
+  // Test
+  physicsEngineManagerGetSnapshot(&actual);
+
+  // Assert
+  assertStatesEqual(&expected, &actual.state);
+  TEST_ASSERT_EQUAL_INT(physicsEngineStatusFlying, actual.status);
+  TEST_ASSERT_EQUAL_UINT32(12345, actual.simTime);
+}
+
+void testThatGetSnapshotHoldsTheSameStateAsGetTrueState(void)
+{
+  // Fixture
+  initAt(physicsEngineStatusAtRest);
+  engineState.position.x = 100.0f;
+  physicsEngineManagerStep(DT);
+  trueState_t trueState;
+  physicsEngineManagerSnapshot_t actual;
+
+  // Test
+  physicsEngineManagerGetTrueState(&trueState);
+  physicsEngineManagerGetSnapshot(&actual);
+
+  // Assert
+  assertStatesEqual(&trueState, &actual.state);
+}
+
+// Beacon sender
+
+void testThatAStepDoesNotCallTheBeaconSender(void)
+{
+  // Fixture: no call to the mocked Beacon sender is expected, so any call
+  // fails the test
+  initAt(physicsEngineStatusAtRest);
 
   // Test
   physicsEngineManagerStep(DT);
-
-  // Assert
-  assertStatesEqual(&expected, &beaconState);
-  TEST_ASSERT_EQUAL_INT(physicsEngineStatusFlying, beaconStatus);
-  TEST_ASSERT_EQUAL_UINT32(xTaskGetTickCount(), beaconSimTime);
+  physicsEngineManagerStep(DT);
 }

@@ -23,11 +23,12 @@
  *
  * beacon_sender.c - see beacon_sender.h.
  *
- * Only called from the step of the Physics engine manager, so the state,
- * status and sim time in a beacon are from the same step and no lock is
- * needed. The send is non-blocking, since a blocking call stalls the FreeRTOS
- * POSIX port, and a failed send is dropped silently: nobody needs to hear a
- * beacon.
+ * The beacon task wakes every BEACON_INTERVAL_TICKS ticks and sends the
+ * snapshot of the Physics engine manager. The snapshot is copied out in one
+ * call, so the state, status and sim time in a beacon are from the same step,
+ * although the step runs on the stabilizer task. The send is non-blocking,
+ * since a blocking call stalls the FreeRTOS POSIX port, and a failed send is
+ * dropped silently: nobody needs to hear a beacon.
  */
 
 #include "beacon_sender.h"
@@ -37,13 +38,22 @@
 
 #include <sys/socket.h>
 
+#include "FreeRTOS.h"
+#include "task.h"
+
+#include "config.h"
+#include "physics_engine.h"
+#include "physics_engine_manager.h"
+#include "static_mem.h"
 #include "test_support.h"
+#include "true_state.h"
 
 static bool isInit = false;
 static int beaconFd = -1;
 static struct sockaddr_in beaconDest;
 static uint16_t beaconUdpPort;
-static uint32_t tickCount;
+
+STATIC_MEM_TASK_ALLOC(beaconTask, BEACON_TASK_STACKSIZE);
 
 // The wire values, defined here so the format does not follow the enum order
 static uint8_t wireStatusOf(const physicsEngineStatus_t status)
@@ -103,31 +113,45 @@ TESTABLE_STATIC void beaconPack(uint8_t buffer[BEACON_SIZE], const trueState_t *
   }
 }
 
-void beaconSenderInit(int fd, const struct sockaddr_in *dest, uint16_t udpPort)
-{
-  beaconFd = fd;
-  beaconDest = *dest;
-  beaconUdpPort = udpPort;
-  tickCount = 0;
-  isInit = true;
-}
-
-void beaconSenderTick(const trueState_t *state, physicsEngineStatus_t status, uint32_t simTime)
+// One beacon, of the latest snapshot. Does nothing before init.
+TESTABLE_STATIC void beaconSenderSendOnce(void)
 {
   if (!isInit) {
     return;
   }
 
-  tickCount++;
-  if (tickCount < BEACON_INTERVAL_TICKS) {
-    return;
-  }
-  tickCount = 0;
+  physicsEngineManagerSnapshot_t snapshot;
+  physicsEngineManagerGetSnapshot(&snapshot);
 
   uint8_t buffer[BEACON_SIZE];
-  beaconPack(buffer, state, status, beaconUdpPort, simTime);
+  beaconPack(buffer, &snapshot.state, snapshot.status, beaconUdpPort, snapshot.simTime);
 
   // Dropped on any failure, e.g. EAGAIN; the next beacon is sent as usual
   (void)sendto(beaconFd, buffer, sizeof(buffer), MSG_DONTWAIT,
                (const struct sockaddr *)&beaconDest, sizeof(beaconDest));
+}
+
+static void beaconTask(void *param)
+{
+  (void)param;
+  TickType_t lastWakeTime = xTaskGetTickCount();
+
+  while (true) {
+    vTaskDelayUntil(&lastWakeTime, BEACON_INTERVAL_TICKS);
+    beaconSenderSendOnce();
+  }
+}
+
+void beaconSenderInit(int fd, const struct sockaddr_in *dest, uint16_t udpPort)
+{
+  if (isInit) {
+    return;
+  }
+
+  beaconFd = fd;
+  beaconDest = *dest;
+  beaconUdpPort = udpPort;
+  isInit = true;
+
+  STATIC_MEM_TASK_CREATE(beaconTask, beaconTask, BEACON_TASK_NAME, NULL, BEACON_TASK_PRI);
 }

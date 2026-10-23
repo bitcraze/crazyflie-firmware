@@ -28,9 +28,11 @@
  * next step, the start pose parameters (param group "sim"), and the snapshot
  * of the true state that is logged (log group "trueState").
  *
- * Every function except physicsEngineManagerSetMotorRatio() is called from
- * one task, the one that steps (the stabilizer task), apart from the init
- * call before the scheduler starts.
+ * physicsEngineManagerStep() and physicsEngineManagerGetTrueState() are
+ * called from one task, the one that steps (the stabilizer task), and
+ * physicsEngineManagerInit() before the scheduler starts.
+ * physicsEngineManagerSetMotorRatio() and physicsEngineManagerGetSnapshot()
+ * may be called from any task.
  */
 
 #pragma once
@@ -40,6 +42,13 @@
 
 #include "physics_engine.h"
 #include "true_state.h"
+
+// The true state, status and sim time of one step
+typedef struct {
+  trueState_t state;
+  physicsEngineStatus_t status;
+  uint32_t simTime;  // firmware tick count at the step (ms)
+} physicsEngineManagerSnapshot_t;
 
 /**
  * @brief Set the start pose parameters from the config, start the engine and
@@ -63,7 +72,7 @@ void physicsEngineManagerSetMotorRatio(uint32_t id, uint16_t ratio);
 /**
  * @brief Advance the true state by dt: apply a written start pose if the
  * status allows it, step the engine with the stored ratios, read the state
- * and status into the snapshot, and pass them to the Beacon sender.
+ * and status, and store them in the snapshot with the tick count.
  *
  * @param dt  Time to advance (s)
  */
@@ -71,5 +80,13 @@ void physicsEngineManagerStep(float dt);
 
 /**
  * @brief Copy out the snapshot of the true state. Does not call the engine.
+ * For the task that steps only: there is no lock.
  */
 void physicsEngineManagerGetTrueState(trueState_t *state);
+
+/**
+ * @brief Copy out the true state, status and sim time of the latest step, or
+ * of init before the first step, all from the same step. Does not call the
+ * engine. May be called from any task.
+ */
+void physicsEngineManagerGetSnapshot(physicsEngineManagerSnapshot_t *snapshot);

@@ -24,10 +24,9 @@
  * beacon_sender.h - the Beacon sender of the Simmyflie.
  *
  * Sends a beacon, a fixed-size UDP datagram with the true pose, rotor speeds
- * and status, on every BEACON_INTERVAL_TICKS tick. It has no task of its own
- * and knows nothing of where the state comes from: the Physics engine manager
- * calls beaconSenderTick() at the end of every step, with the state and
- * status of that step.
+ * and status, every BEACON_INTERVAL_TICKS ticks. It runs on a task of its own,
+ * created by beaconSenderInit(), and reads what it sends from the Physics
+ * engine manager. Nothing calls it after init.
  *
  * Wire format, version 1: BEACON_SIZE bytes, little-endian, no padding, in
  * Python struct format "<BBHI11f":
@@ -43,9 +42,6 @@
 
 #include <netinet/in.h>
 
-#include "physics_engine.h"
-#include "true_state.h"
-
 #define BEACON_VERSION 1
 #define BEACON_SIZE 52
 #define BEACON_INTERVAL_TICKS 20  // 1 ms tick, so 50 Hz
@@ -56,22 +52,12 @@
 
 /**
  * @brief Start sending to dest on the given socket, which is set up by the
- * caller (multicast options, non-blocking). Called before the scheduler
- * starts.
+ * caller (multicast options, non-blocking), and create the beacon task.
+ * Called before the scheduler starts; the task first runs when it has
+ * started.
  *
  * @param fd       Socket to send on
  * @param dest     Beacon address
  * @param udpPort  UDP port of the instance, put in every beacon
  */
 void beaconSenderInit(int fd, const struct sockaddr_in *dest, uint16_t udpPort);
-
-/**
- * @brief Count one tick, and on every BEACON_INTERVAL_TICKS tick send a
- * beacon of the given state and status. Never blocks: a beacon that cannot be
- * sent is dropped. Does nothing before init.
- *
- * @param state    True state after this step
- * @param status   Status after this step
- * @param simTime  Firmware tick count at this step (ms)
- */
-void beaconSenderTick(const trueState_t *state, physicsEngineStatus_t status, uint32_t simTime);

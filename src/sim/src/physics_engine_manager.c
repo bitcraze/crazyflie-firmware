@@ -30,8 +30,10 @@
  * value is in place. A write that lands after the step has taken the marks
  * sets its mark again and is applied on the next step.
  *
- * Every step ends by handing the new state and status to the Beacon sender,
- * with the firmware tick count as sim time.
+ * Every step ends by storing the new state, status and firmware tick count
+ * in a critical section, and physicsEngineManagerGetSnapshot() copies them out
+ * in one too, so a reader on another task gets all three from the same step.
+ * The trueState log group reads the stored state without a lock.
  */
 
 #define DEBUG_MODULE "SIM"
@@ -42,7 +44,6 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "beacon_sender.h"
 #include "debug.h"
 #include "log.h"
 #include "param.h"
@@ -61,6 +62,7 @@ static float groundLevel;  // m
 static uint16_t motorRatios[TRUE_STATE_NBR_OF_ROTORS];
 static trueState_t snapshot;
 static uint8_t status;     // physicsEngineStatus_t, logged
+static uint32_t simTime;   // tick count at the latest step (ms)
 static uint32_t marks;
 
 // Start pose parameters, the last written start pose
@@ -123,6 +125,7 @@ bool physicsEngineManagerInit(const physicsEngineConfig_t *config)
   const bool result = physicsEngineInit(config);
   physicsEngineGetState(&snapshot);
   status = (uint8_t)physicsEngineGetStatus();
+  simTime = 0;
   return result;
 }
 
@@ -145,15 +148,30 @@ void physicsEngineManagerStep(float dt)
   }
 
   physicsEngineStep(motorRatios, dt);
-  physicsEngineGetState(&snapshot);
-  status = (uint8_t)physicsEngineGetStatus();
+  trueState_t state;
+  physicsEngineGetState(&state);
+  const physicsEngineStatus_t newStatus = physicsEngineGetStatus();
+  const uint32_t tickCount = (uint32_t)xTaskGetTickCount();
 
-  beaconSenderTick(&snapshot, (physicsEngineStatus_t)status, (uint32_t)xTaskGetTickCount());
+  taskENTER_CRITICAL();
+  snapshot = state;
+  status = (uint8_t)newStatus;
+  simTime = tickCount;
+  taskEXIT_CRITICAL();
 }
 
 void physicsEngineManagerGetTrueState(trueState_t *state)
 {
   *state = snapshot;
+}
+
+void physicsEngineManagerGetSnapshot(physicsEngineManagerSnapshot_t *copy)
+{
+  taskENTER_CRITICAL();
+  copy->state = snapshot;
+  copy->status = (physicsEngineStatus_t)status;
+  copy->simTime = simTime;
+  taskEXIT_CRITICAL();
 }
 
 /**

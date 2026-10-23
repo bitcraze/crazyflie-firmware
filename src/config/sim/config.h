@@ -102,6 +102,7 @@ extern const uint16_t simMcuFlashSize;
 #define COLORLED_TASK_PRIO        1
 #define WORKER_TASK_PRI           1
 #define SUPERVISOR_TASK_PRI       1
+#define BEACON_TASK_PRI           1
 
 // Task names
 #define SYSTEM_TASK_NAME          "SYSTEM"
@@ -157,6 +158,7 @@ extern const uint16_t simMcuFlashSize;
 #define COLORLED_TASK_NAME        "COLORLED-DECK"
 #define WORKER_TASK_NAME          "WORKER"
 #define SUPERVISOR_TASK_NAME      "SUPERVISOR"
+#define BEACON_TASK_NAME          "BEACON"
 
 //Task stack sizes
 #define SYSTEM_TASK_STACKSIZE           (2* configMINIMAL_STACK_SIZE)
@@ -206,6 +208,7 @@ extern const uint16_t simMcuFlashSize;
 #define COLORLED_TASK_STACKSIZE         configMINIMAL_STACK_SIZE
 #define WORKER_TASK_STACKSIZE           (2 * configMINIMAL_STACK_SIZE)
 #define SUPERVISOR_TASK_STACKSIZE       (2 * configMINIMAL_STACK_SIZE)
+#define BEACON_TASK_STACKSIZE           (2 * configMINIMAL_STACK_SIZE)
 
 #define BAT_LOADING_SAG_THRESHOLD  0.70f
 
