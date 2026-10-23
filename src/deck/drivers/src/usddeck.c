@@ -122,7 +122,7 @@ typedef struct usdLogStats_s {
   uint32_t eventsRequested;
   // Events that fit in the log buffer; the rest were dropped.
   uint32_t eventsAccepted;
-  // FRESULT of the first failed write or close of the run, 0 if none.
+  // FRESULT of the first failed open, write or close of the run, 0 if none.
   uint8_t writeError;
 } usdLogStats_t;
 
@@ -879,8 +879,9 @@ static void usdWriteTask(void* prm)
       }
 
       /* try to create file */
-      if (f_open(&logFile, usdLogConfig.filename, FA_CREATE_ALWAYS | FA_WRITE)
-          == FR_OK) {
+      FRESULT openStatus = f_open(&logFile, usdLogConfig.filename,
+                                  FA_CREATE_ALWAYS | FA_WRITE);
+      if (openStatus == FR_OK) {
 
         DEBUG_PRINT("Logging to: %s\n", usdLogConfig.filename);
 
@@ -1049,8 +1050,11 @@ static void usdWriteTask(void* prm)
 
         xSemaphoreGive(logFileMutex);
       } else {
+        // The writer task exits below and usd.logging stays 1, so this is the
+        // only sign that nothing is reaching the card.
+        usdRecordWriteError(openStatus);
         f_mount(NULL, "", 0);
-        DEBUG_PRINT("Failed to open file: %s\n", usdLogConfig.filename);
+        DEBUG_PRINT("Failed to open file: %s (%d)\n", usdLogConfig.filename, openStatus);
         break;
       }
     }
@@ -1156,10 +1160,12 @@ LOG_ADD(LOG_UINT32, eventsRequested, &usdLogStats.eventsRequested)
  */
 LOG_ADD(LOG_UINT32, eventsAccepted, &usdLogStats.eventsAccepted)
 /**
- * @brief FRESULT of the first failed SD write or file close of the current/last run, 0 if none
+ * @brief FRESULT of the first failed file open, SD write or file close of the current/last run, 0 if none
  *
- * Non-zero means the log is truncated. Only final once the writer has closed
- * the file, some time after usd.logging reads 0.
+ * Non-zero means the log is truncated or, after a failed open, missing. A
+ * failed open is set right away and usd.logging stays 1; otherwise the value
+ * is only final once the writer has closed the file, some time after
+ * usd.logging reads 0.
  */
 LOG_ADD(LOG_UINT8, writeError, &usdLogStats.writeError)
 LOG_GROUP_STOP(usd)
