@@ -26,11 +26,11 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
-Simmyflie launcher: launches one Simmyflie for each local unit of a swarm
+Simfield: launches one Simmyflie for each local unit of a swarm
 described in a yaml file, and stops them all when it is stopped.
 
 Usage:
-    uv run tools/sim/simmyflie-launcher.py <swarm.yaml> [--binary=<sim.elf>] [--console]
+    uv run tools/sim/simfield.py <swarm.yaml> [--binary=<sim.elf>] [--console]
 
 Swarm file format:
 
@@ -244,7 +244,7 @@ def describe_exit(returncode):
     return f"exited with code {returncode}"
 
 
-class Launcher:
+class Simfield:
     def __init__(self, binary, units, console):
         self.binary = binary
         self.units = units
@@ -263,7 +263,7 @@ class Launcher:
                 text=True,
                 errors="replace",
                 bufsize=1,
-                # Keep Ctrl+C away from the Simmyflies; the launcher stops them.
+                # Keep Ctrl+C away from the Simmyflies; Simfield stops them.
                 start_new_session=True,
             )
             self.processes[unit.port] = (unit, process)
@@ -328,10 +328,10 @@ def main():
         print(f"Error: Simmyflie binary {args.binary} not found", file=sys.stderr)
         return 1
 
-    launcher = Launcher(args.binary, units, args.console)
+    simfield = Simfield(args.binary, units, args.console)
 
     def request_stop(signum, frame):
-        launcher.stopping.set()
+        simfield.stopping.set()
 
     signal.signal(signal.SIGINT, request_stop)
     signal.signal(signal.SIGTERM, request_stop)
@@ -339,10 +339,10 @@ def main():
 
     print(f"Swarm '{name}': launching {len(units)} Simmyflie(s), Ctrl+C to stop")
     try:
-        launcher.start()
-        launcher.run()
+        simfield.start()
+        simfield.run()
     finally:
-        launcher.stop()
+        simfield.stop()
     return 0
 
 

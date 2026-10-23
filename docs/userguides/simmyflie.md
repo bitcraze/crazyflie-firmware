@@ -94,8 +94,8 @@ Options with a value can also be written as `--name=value`, for example
 The firmware's console output is printed in the terminal. Stop the Simmyflie
 with Ctrl+C.
 
-To run several Simmyflies, start one per port, or use the
-[Simmyflie launcher](#simmyflie-launcher).
+To run several Simmyflies, start one per port, or use
+[Simfield](#simfield).
 
 ## Connecting with cflib and cfclient
 
@@ -245,24 +245,24 @@ In the view:
 Several simviewers can run at the same time, and each one shows every
 Simmyflie.
 
-## Simmyflie launcher
+## Simfield
 
-The Simmyflie launcher starts a whole swarm of Simmyflies from one YAML file
+Simfield starts a whole swarm of Simmyflies from one YAML file
 and stops them all when you stop it.
 
 ```sh
-uv run tools/sim/simmyflie-launcher.py swarm.yaml
+uv run tools/sim/simfield.py swarm.yaml
 ```
 
 Options:
 
 * `--binary <path>`: the Simmyflie to run. Default `build/sim.elf` in the
-  firmware repository the launcher is in.
+  firmware repository Simfield is in.
 * `--console`: print the console output of every Simmyflie, each line
   prefixed with the unit's name, or its port if it has no name. Without it
   the console output is not shown.
 
-The launcher runs until you stop it with Ctrl+C. Then it stops every
+Simfield runs until you stop it with Ctrl+C. Then it stops every
 Simmyflie it started.
 
 ### Swarm file
@@ -300,7 +300,7 @@ units:                                  # required
 | `start_yaw`     | unit  | no       | Start yaw, in degrees                         |
 
 * A field that is left out gets the Simmyflie's default.
-* Fields the launcher does not know are ignored.
+* Fields Simfield does not know are ignored.
 * One Simmyflie is started for each unit with the URI
   `udp://localhost:<port>` or `udp://127.0.0.1:<port>`, on that port. Other
   units, for example `radio://` ones, are skipped with a warning. This means
@@ -324,13 +324,13 @@ uv run tools/sim/simviewer.py
 # udp://localhost:50000
 ```
 
-### A swarm, with the Simmyflie launcher
+### A swarm, with Simfield
 
 ```sh
 # Terminal 1: build and start two Simmyflies
 make cf21bl_defconfig
 make sim
-uv run tools/sim/simmyflie-launcher.py swarm.yaml --console
+uv run tools/sim/simfield.py swarm.yaml --console
 
 # Terminal 2: watch them
 uv run tools/sim/simviewer.py
