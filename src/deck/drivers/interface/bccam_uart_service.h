@@ -95,6 +95,20 @@ void bccam_uart_service_test_set_firmware_startup_result(
 void bccam_uart_service_test_set_firmware_control_probe_phase(
   bccam_uart_control_probe_phase_t phase);
 void bccam_uart_service_test_set_bootloader_enter_result(bool result);
+
+/**
+ * Model whether Console accepted the Camera Deck source for forwarding tests.
+ *
+ * @param registered Whether the Camera Deck Console source was registered.
+ */
+void bccam_uart_service_test_set_console_source_registered(bool registered);
+
+/**
+ * Advance the production Console forwarding state machine by one step.
+ *
+ * @return BCCAM_UART_OK on success (including no work), or a UART error code.
+ */
+int bccam_uart_service_test_forward_console(void);
 void bccam_uart_service_test_poll_once(void);
 void bccam_uart_service_test_handle_rx_event(
   const bccam_uart_rx_event_t *event);
@@ -103,6 +117,7 @@ void bccam_uart_service_test_handle_rx_events(
   uint8_t event_count);
 uint16_t bccam_uart_service_test_rx_post_drain_poll_count(void);
 uint16_t bccam_uart_service_test_incompatible_report_count(void);
+uint16_t bccam_uart_service_test_startup_stall_report_count(void);
 bool bccam_uart_service_test_flash_write_allowed(void);
 void bccam_uart_service_test_start_firmware_establishment(void);
 const char *bccam_uart_service_test_startup_phase_message(void);
