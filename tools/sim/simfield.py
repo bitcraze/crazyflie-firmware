@@ -36,15 +36,23 @@ Swarm file format:
 
     name: Sim swarm                     # required
     description: Two Simmyflies         # optional
-    ground_level: 0.0                   # optional, m
-    beacon: 239.255.50.0:49999          # optional, <multicast group>:<port>
     units:                              # required
     - uri: udp://localhost:50000        # required
       name: sim-01                      # optional
       description: The first one        # optional
-      start_x: 0.0                      # optional, m
-      start_y: 0.0                      # optional, m
-      start_yaw: 0                      # optional, degrees
+
+Unit settings, all optional, given for the swarm and/or for a unit. A unit
+uses its own value when it is given, and otherwise the swarm's value:
+
+    binary: ../build/sim.elf            # relative to the yaml file
+    ground_level: 0.0                   # m
+    beacon: 239.255.50.0:49999          # <multicast group>:<port>
+    start_x: 0.0                        # m
+    start_y: 0.0                        # m
+    start_yaw: 0                        # degrees
+
+--binary on the command line overrides 'binary' for every unit. Without
+either, build/sim.elf of the firmware repo Simfield is in is run.
 
 Unknown fields are ignored. Optional fields that are not given are left to
 the Simmyflie's default. Units whose URI is not udp://localhost:<port> or
@@ -52,6 +60,7 @@ udp://127.0.0.1:<port> are skipped with a warning.
 """
 
 import argparse
+import os
 import signal
 import subprocess
 import sys
@@ -69,13 +78,15 @@ LOCAL_HOSTS = ("localhost", "127.0.0.1")
 POLL_INTERVAL_S = 0.2
 STOP_TIMEOUT_S = 2.0
 
-# Swarm-level and unit-level optional fields, mapped to Simmyflie options.
-SWARM_NUMBER_OPTIONS = {"ground_level": "--ground-level"}
-UNIT_NUMBER_OPTIONS = {
+# Unit settings that are passed on as Simmyflie options. Each can be given
+# for the swarm and for a unit; the unit's value wins.
+NUMBER_OPTIONS = {
+    "ground_level": "--ground-level",
     "start_x": "--start-x",
     "start_y": "--start-y",
     "start_yaw": "--start-yaw",
 }
+BEACON_OPTION = "--beacon"
 TEXT_FIELDS = ("name", "description")
 
 
@@ -85,6 +96,7 @@ class Unit:
     uri: str
     name: str | None
     port: int
+    binary: Path
     options: list[str] = field(default_factory=list)
 
     @property
@@ -112,16 +124,28 @@ def check_number(container, key, where, problems):
         problems.append(f"{where}: '{key}' must be a number")
 
 
-def check_beacon(swarm, problems):
-    if "beacon" not in swarm:
+def check_beacon(container, where, problems):
+    if "beacon" not in container:
         return
-    beacon = swarm["beacon"]
+    beacon = container["beacon"]
     if not isinstance(beacon, str):
-        problems.append("swarm: 'beacon' must be a string <multicast group>:<port>")
+        problems.append(f"{where}: 'beacon' must be a string <multicast group>:<port>")
         return
     group, sep, port = beacon.rpartition(":")
     if not sep or not group or not port.isdigit() or not 0 < int(port) < 65536:
-        problems.append(f"swarm: 'beacon' must be <multicast group>:<port>, got '{beacon}'")
+        problems.append(f"{where}: 'beacon' must be <multicast group>:<port>, got '{beacon}'")
+
+
+def check_unit_settings(container, where, problems):
+    check_text(container, "binary", where, problems)
+    for key in NUMBER_OPTIONS:
+        check_number(container, key, where, problems)
+    check_beacon(container, where, problems)
+
+
+def unit_setting(raw, swarm, key):
+    """The unit's value of a unit setting, else the swarm's, else None."""
+    return raw[key] if key in raw else swarm.get(key)
 
 
 def parse_local_port(uri):
@@ -144,7 +168,9 @@ def unit_where(index, raw):
 
 def load_swarm(path):
     """Reads and validates a swarm file. Returns (name, units, warnings).
-    Raises SwarmError listing everything that is wrong."""
+    A unit's binary is the one from the file, resolved against the file's
+    directory, or DEFAULT_BINARY. Raises SwarmError listing everything that
+    is wrong."""
     try:
         with open(path) as f:
             swarm = yaml.safe_load(f)
@@ -163,16 +189,8 @@ def load_swarm(path):
         problems.append("swarm: 'name' is required")
     for key in TEXT_FIELDS:
         check_text(swarm, key, "swarm", problems)
-    for key in SWARM_NUMBER_OPTIONS:
-        check_number(swarm, key, "swarm", problems)
-    check_beacon(swarm, problems)
-
-    swarm_options = []
-    for key, option in SWARM_NUMBER_OPTIONS.items():
-        if is_number(swarm.get(key)):
-            swarm_options.append(f"{option}={swarm[key]}")
-    if isinstance(swarm.get("beacon"), str):
-        swarm_options.append(f"--beacon={swarm['beacon']}")
+    check_unit_settings(swarm, "swarm", problems)
+    base_dir = Path(path).resolve().parent
 
     raw_units = swarm.get("units")
     if "units" not in swarm:
@@ -196,8 +214,7 @@ def load_swarm(path):
         check_text(raw, "uri", where, unit_problems)
         for key in TEXT_FIELDS:
             check_text(raw, key, where, unit_problems)
-        for key in UNIT_NUMBER_OPTIONS:
-            check_number(raw, key, where, unit_problems)
+        check_unit_settings(raw, where, unit_problems)
         port = None
         if isinstance(raw.get("uri"), str):
             uri = raw["uri"]
@@ -211,14 +228,20 @@ def load_swarm(path):
                     continue
                 ports.setdefault(port, []).append(where)
         problems.extend(unit_problems)
-        if unit_problems:
+        if unit_problems or problems:
             continue
 
-        options = [f"--port={port}"] + swarm_options
-        for key, option in UNIT_NUMBER_OPTIONS.items():
-            if key in raw:
-                options.append(f"{option}={raw[key]}")
-        units.append(Unit(index, uri, raw.get("name"), port, options))
+        options = [f"--port={port}"]
+        for key, option in NUMBER_OPTIONS.items():
+            value = unit_setting(raw, swarm, key)
+            if value is not None:
+                options.append(f"{option}={value}")
+        beacon = unit_setting(raw, swarm, "beacon")
+        if beacon is not None:
+            options.append(f"{BEACON_OPTION}={beacon}")
+        binary = unit_setting(raw, swarm, "binary")
+        binary = Path(os.path.normpath(base_dir / binary)) if binary is not None else DEFAULT_BINARY
+        units.append(Unit(index, uri, raw.get("name"), port, binary, options))
 
     for port, clashing in sorted(ports.items()):
         if len(clashing) > 1:
@@ -244,9 +267,17 @@ def describe_exit(returncode):
     return f"exited with code {returncode}"
 
 
+def missing_binaries(units):
+    """Maps each binary that does not exist to the units that use it."""
+    missing = {}
+    for unit in units:
+        if not unit.binary.is_file():
+            missing.setdefault(unit.binary, []).append(unit.label)
+    return missing
+
+
 class Simfield:
-    def __init__(self, binary, units, console):
-        self.binary = binary
+    def __init__(self, units, console):
         self.units = units
         self.console = console
         self.processes = {}
@@ -256,7 +287,7 @@ class Simfield:
     def start(self):
         for unit in self.units:
             process = subprocess.Popen(
-                [str(self.binary)] + unit.options,
+                [str(unit.binary)] + unit.options,
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.PIPE if self.console else subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
@@ -267,7 +298,7 @@ class Simfield:
                 start_new_session=True,
             )
             self.processes[unit.port] = (unit, process)
-            print(f"Launched {unit.label} on {unit.uri}")
+            print(f"Launched {unit.label} on {unit.uri} ({unit.binary})")
 
             prefix = f"[{unit.label}] "
             streams = [process.stderr] + ([process.stdout] if self.console else [])
@@ -306,8 +337,9 @@ def main():
     parser = argparse.ArgumentParser(
         description="Launch one Simmyflie for each local unit of a swarm file.")
     parser.add_argument("swarm", type=Path, help="yaml file describing the swarm")
-    parser.add_argument("--binary", type=Path, default=DEFAULT_BINARY,
-                        help=f"Simmyflie binary to run (default {DEFAULT_BINARY})")
+    parser.add_argument("--binary", type=Path,
+                        help="Simmyflie binary to run for every unit, overriding 'binary' "
+                             f"in the swarm file (default {DEFAULT_BINARY})")
     parser.add_argument("--console", action="store_true",
                         help="print the console output of each Simmyflie")
     args = parser.parse_args()
@@ -324,11 +356,18 @@ def main():
     for warning in warnings:
         print(f"Warning: {warning}", file=sys.stderr)
 
-    if not args.binary.is_file():
-        print(f"Error: Simmyflie binary {args.binary} not found", file=sys.stderr)
+    if args.binary is not None:
+        for unit in units:
+            unit.binary = args.binary
+
+    missing = missing_binaries(units)
+    if missing:
+        print("Error: Simmyflie binary not found, no Simmyflie launched:", file=sys.stderr)
+        for binary, labels in missing.items():
+            print(f"  {binary}: {', '.join(labels)}", file=sys.stderr)
         return 1
 
-    simfield = Simfield(args.binary, units, args.console)
+    simfield = Simfield(units, args.console)
 
     def request_stop(signum, frame):
         simfield.stopping.set()

@@ -256,8 +256,8 @@ uv run tools/sim/simfield.py swarm.yaml
 
 Options:
 
-* `--binary <path>`: the Simmyflie to run. Default `build/sim.elf` in the
-  firmware repository Simfield is in.
+* `--binary <path>`: the Simmyflie to run for every unit. It overrides
+  `binary` in the swarm file.
 * `--console`: print the console output of every Simmyflie, each line
   prefixed with the unit's name, or its port if it has no name. Without it
   the console output is not shown.
@@ -267,38 +267,53 @@ Simmyflie it started.
 
 ### Swarm file
 
+This is an example of a swarm file, a .yaml file:
+
 ```yaml
 name: Sim swarm                         # required
-description: Two Simmyflies side by side
+description: Two Simmyflies side by side, the second running a different build
 ground_level: 0.0                       # m, for every unit
-beacon: 239.255.50.0:49999              # for every unit
+start_yaw: 0                            # degrees, for every unit
+binary: ../build/sim.elf                # for every unit
 units:                                  # required
 - uri: udp://localhost:50000            # required
   name: sim-01
   start_x: 0.0                          # m
   start_y: 0.0                          # m
-  start_yaw: 0                          # degrees
 - uri: udp://localhost:50001
   name: sim-02
   start_x: 1.0
   start_y: 0.0
-  start_yaw: 90
+  start_yaw: 90                         # overrides the swarm's start_yaw
+  binary: ../build-other/sim.elf        # overrides the swarm's binary
 ```
 
 | Field           | Level | Required | Description                                   |
 |-----------------|-------|----------|-----------------------------------------------|
 | `name`          | swarm | yes      | Name of the swarm                             |
 | `description`   | swarm | no       | Description of the swarm                      |
-| `ground_level`  | swarm | no       | Ground level of every Simmyflie, in m         |
-| `beacon`        | swarm | no       | Beacon address of every Simmyflie, `<multicast group>:<port>` |
 | `units`         | swarm | yes      | List of units                                 |
 | `uri`           | unit  | yes      | URI of the unit, e.g. `udp://localhost:50000` |
 | `name`          | unit  | no       | Name of the unit                              |
 | `description`   | unit  | no       | Description of the unit                       |
-| `start_x`       | unit  | no       | Start position x, in m                        |
-| `start_y`       | unit  | no       | Start position y, in m                        |
-| `start_yaw`     | unit  | no       | Start yaw, in degrees                         |
 
+Unit settings can be given for the swarm, for a unit, or both. A unit uses
+its own value when it has one, and otherwise the swarm's value. All are
+optional.
+
+| Unit setting    | Description                                   |
+|-----------------|-----------------------------------------------|
+| `binary`        | Path to the Simmyflie binary. A relative path is relative to the directory of the swarm file |
+| `ground_level`  | Ground level, in m                            |
+| `beacon`        | Beacon address, `<multicast group>:<port>`    |
+| `start_x`       | Start position x, in m                        |
+| `start_y`       | Start position y, in m                        |
+| `start_yaw`     | Start yaw, in degrees                         |
+
+* The binary of a unit is, in order: `--binary` from the command line,
+  `binary` from the swarm file, or else `build/sim.elf` in the firmware
+  repository Simfield is in. If the binary of any unit does not exist, no
+  Simmyflie is started, and Simfield prints which units are affected.
 * A field that is left out gets the Simmyflie's default.
 * Fields Simfield does not know are ignored.
 * One Simmyflie is started for each unit with the URI
