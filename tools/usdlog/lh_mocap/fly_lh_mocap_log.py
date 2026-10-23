@@ -20,7 +20,8 @@ One run is one flight pattern and one SD log file:
   3. Sync pulses: switches the markers off and on a few times. Motion capture loses the drone during
      each pulse and the SD log has an activeMarkerModeChanged event at each switch.
   4. Resets the Kalman estimator (kalmanReset event in the log) and waits at rest.
-  5. Takes off, flies the pattern, and sends sync pulses again while hovering.
+  5. Takes off, flies the pattern, flies back to the start point at --sync-height and sends sync pulses
+     again while hovering.
   6. Stops SD logging before landing, lands, and checks the uSD counters over the radio
      (dropped events, write errors).
 Each run is appended to <out-dir>/runs.jsonl. Leave the SD card in the drone for a whole session,
@@ -34,8 +35,9 @@ Every setpoint of a pattern is checked against the flight area (--x-min ... --z-
 Adding a pattern: subclass Pattern with its settings as dataclass fields, implement setpoints() and
 fly(), and add it to PATTERNS.
 
-The Crazyflie URI and the QTM computer are read from local_settings.json in this directory, which
-is not committed (copy local_settings.example.json), or given with --uri and --qtm-host.
+The Crazyflie URI, the QTM computer and the flight area of the local setup are read from
+local_settings.json in this directory, which is not committed (copy local_settings.example.json).
+The command line options override them.
 
 Run from this directory with uv, which installs the dependencies from the header:
     uv run fly_lh_mocap_log.py hover --dry-run
@@ -43,6 +45,7 @@ Run from this directory with uv, which installs the dependencies from the header
     uv run fly_lh_mocap_log.py figure8 --time-scales 1.0 0.7 0.5 --notes "first fast one"
     uv run fly_lh_mocap_log.py spin --peak-rates-deg 90 180 360
     uv run fly_lh_mocap_log.py wrong-heading --heading-deg 180
+    uv run fly_lh_mocap_log.py random --seed 1 --points 20 --max-speed 2.0
     uv run fly_lh_mocap_log.py fetch
     uv run fly_lh_mocap_log.py check lh_mocap_runs/20261022-153000_hover.bin
 """
@@ -53,6 +56,7 @@ import glob
 import json
 import math
 import os
+import random
 import shutil
 import struct
 import subprocess
@@ -83,7 +87,7 @@ def load_local_settings() -> dict:
         return {}
     with open(path) as f:
         settings = json.load(f)
-    unknown = set(settings) - {"uri", "qtm_host"}
+    unknown = set(settings) - {"uri", "qtm_host", "x_min", "x_max", "y_min", "y_max", "z_min", "z_max"}
     if unknown:
         print(f"!! Unknown keys in {path}, ignored: {sorted(unknown)}")
     return settings
@@ -142,13 +146,22 @@ class FlyOptions:
     """Start point x, where each pattern starts after take-off [m]"""
     y: float = 0.0
     """Start point y [m]"""
-    x_min: float = -1.5
-    """Flight area: every setpoint must lie inside it [m]"""
-    x_max: float = 1.5
-    y_min: float = -1.5
-    y_max: float = 1.5
-    z_min: float = 0.3
-    z_max: float = 2.0
+    x_min: float = LOCAL_SETTINGS.get("x_min", -1.5)
+    """Flight area: every setpoint must lie inside it, default from local_settings.json [m]"""
+    x_max: float = LOCAL_SETTINGS.get("x_max", 1.5)
+    y_min: float = LOCAL_SETTINGS.get("y_min", -1.5)
+    y_max: float = LOCAL_SETTINGS.get("y_max", 1.5)
+    z_min: float = LOCAL_SETTINGS.get("z_min", 0.3)
+    z_max: float = LOCAL_SETTINGS.get("z_max", 2.0)
+    max_speed: Optional[float] = None
+    """Raise the PID position controller's speed limit (posCtlPid.xVelMax/yVelMax, default 1.0) for
+    this run [m/s]. With position setpoints it caps the speed at 1.1 times this value. Restored after
+    the run"""
+    max_tilt: Optional[float] = None
+    """Raise the PID velocity controller's roll and pitch limit (posCtlPid.rLimit/pLimit, default 20)
+    for this run [deg]. Restored after the run"""
+    sync_height: float = 1.0
+    """Height to fly to before the end sync pulses, where motion capture is known to see the drone [m]"""
     move_speed: float = 0.5
     """Speed for moves between the parts of a pattern [m/s]"""
     rest_s: float = 3.0
@@ -206,7 +219,7 @@ class Hover(Pattern):
     name: ClassVar[str] = "hover"
     heights: list[float] = field(default_factory=lambda: [0.5, 1.0, 1.5])
     """Hover heights, in this order [m]"""
-    hover_s: float = 10.0
+    hover_s: float = 5.0
     """Hover time at each height [s]"""
 
     def first_height(self) -> float:
@@ -307,7 +320,7 @@ class WrongHeading(Pattern):
     """Heading to put the drone down at, counter-clockwise from the +x axis [deg]"""
     height: float = 1.0
     """Hover height [m]"""
-    hover_s: float = 10.0
+    hover_s: float = 5.0
     """Hover time [s]"""
     rest_s: float = 5.0
     """Time at rest after the estimator reset, before arming [s]"""
@@ -328,7 +341,65 @@ class WrongHeading(Pattern):
         await f.hold(self.hover_s)
 
 
-PATTERNS = (Hover, Figure8, Spin, WrongHeading)
+@dataclass
+class RandomWaypoints(Pattern):
+    """Fly through random waypoints with random yaws, at random speeds. The same seed gives the same flight."""
+
+    name: ClassVar[str] = "random"
+    seed: int = 0
+    """Seed of the random waypoints, durations and yaws"""
+    points: int = 20
+    """Number of waypoints"""
+    margin: float = 0.3
+    """Distance of the waypoints from the x and y edges of the flight area [m]"""
+    height: float = 1.0
+    """Height of the start point, where the drone goes after take-off [m]"""
+    speed_fraction: tuple[float, float] = (0.25, 0.75)
+    """The mean speed of each move is a uniform random fraction in this range of the speed limit
+    (posCtlPid.xVelMax, see --max-speed), or the mean yaw rate of --max-yaw-rate, whichever is reached
+    first. A go_to move peaks at about twice its mean, so the faster moves are capped by the controller"""
+    max_yaw_rate: float = 240.0
+    """Yaw rate taken as the limit, the highest measured in a spin [deg/s]"""
+
+    def first_height(self) -> float:
+        return self.height
+
+    def waypoints(self) -> list[dict]:
+        # random.Random gives the same sequence for the same seed on every Python version
+        rng = random.Random(self.seed)
+        result = []
+        for _ in range(self.points):
+            result.append({
+                "x": round(rng.uniform(self.x_min + self.margin, self.x_max - self.margin), 3),
+                "y": round(rng.uniform(self.y_min + self.margin, self.y_max - self.margin), 3),
+                "z": round(rng.uniform(self.z_min, self.z_max), 3),
+                "yaw_deg": round(rng.uniform(-180.0, 180.0), 1),
+                "fraction": round(rng.uniform(*self.speed_fraction), 3),
+            })
+        return result
+
+    def setpoints(self) -> list[Point]:
+        return [(w["x"], w["y"], w["z"]) for w in self.waypoints()]
+
+    async def prepare(self) -> dict:
+        await ask("\nPut the drone down anywhere in the flight area, at any heading, then press Enter: ")
+        return {"waypoints": self.waypoints()}
+
+    async def fly(self, f: "Flight") -> None:
+        max_speed = await f.cf.param().get("posCtlPid.xVelMax")
+        yaw = (await read_log_once(f.cf, ["stateEstimate.yaw"]))["stateEstimate.yaw"]
+        for i, w in enumerate(self.waypoints()):
+            distance = math.dist(f.position, (w["x"], w["y"], w["z"]))
+            turn = abs((w["yaw_deg"] - yaw + 180.0) % 360.0 - 180.0)
+            fastest = max(distance / max_speed, turn / self.max_yaw_rate)
+            duration = max(fastest / w["fraction"], 0.5)
+            print(f"{i + 1}/{self.points}: to ({w['x']:+.2f}, {w['y']:+.2f}, {w['z']:.2f}), yaw {w['yaw_deg']:+.0f} deg "
+                  f"in {duration:.1f} s")
+            await f.go_to_absolute(w["x"], w["y"], w["z"], math.radians(w["yaw_deg"]), duration)
+            yaw = w["yaw_deg"]
+
+
+PATTERNS = (Hover, Figure8, Spin, WrongHeading, RandomWaypoints)
 
 
 async def ask(prompt: str) -> str:
@@ -339,7 +410,8 @@ async def ask(prompt: str) -> str:
 def check_area(p: Pattern) -> None:
     """Raise if a setpoint of the pattern, or the start point, is outside the flight area"""
     start = (p.x, p.y, p.first_height())
-    for (x, y, z) in [start] + p.setpoints():
+    sync = (p.x, p.y, p.sync_height)
+    for (x, y, z) in [start, sync] + p.setpoints():
         if not (p.x_min <= x <= p.x_max and p.y_min <= y <= p.y_max and p.z_min <= z <= p.z_max):
             raise ValueError(f"setpoint ({x:+.2f}, {y:+.2f}, {z:.2f}) is outside the flight area "
                              f"x [{p.x_min}, {p.x_max}], y [{p.y_min}, {p.y_max}], z [{p.z_min}, {p.z_max}]")
@@ -369,6 +441,13 @@ class Flight:
         if distance > 0.01:
             await self.hlc.go_to(x - px, y - py, z - pz, 0.0, duration, True, False, None)
             await asyncio.sleep(duration)
+        self.position = (x, y, z)
+
+    async def go_to_absolute(self, x: float, y: float, z: float, yaw: float, duration: float) -> None:
+        """Move to an absolute position and yaw [rad]"""
+        self._check(x, y, z)
+        await self.hlc.go_to(x, y, z, yaw, duration, False, False, None)
+        await asyncio.sleep(duration)
         self.position = (x, y, z)
 
     async def turn(self, angle: float, duration: float) -> None:
@@ -462,7 +541,8 @@ class MocapRecorder:
         """Frame counts and the untracked intervals, where the sync pulses should show up"""
         t = np.array(self.timestamps[self.markers_on_frame:], dtype=np.int64)
         tracked = np.array(self.is_tracked[self.markers_on_frame:], dtype=bool)
-        dropouts = []
+        t_first = self.timestamps[0] if self.timestamps else 0
+        dropouts = []  # [start, duration] [s], start relative to the first frame of the recording
         i = 0
         while i < len(tracked):
             if not tracked[i]:
@@ -470,27 +550,66 @@ class MocapRecorder:
                 while j < len(tracked) and not tracked[j]:
                     j += 1
                 end = t[j] if j < len(t) else t[-1]
-                dropouts.append(round(float(end - t[i]) / 1e6, 3))
+                dropouts.append([round(float(t[i] - t_first) / 1e6, 3), round(float(end - t[i]) / 1e6, 3)])
                 i = j
             else:
                 i += 1
         rate = (len(t) - 1) / ((t[-1] - t[0]) / 1e6) if len(t) > 1 and t[-1] > t[0] else 0.0
         return {"file": self.path, "frames": int(self.frames), "tracked": int(self.tracked),
-                "rate_hz": round(rate, 1), "dropouts_s": dropouts}
+                "rate_hz": round(rate, 1), "markers_on_frame": self.markers_on_frame, "dropouts": dropouts}
+
+    @classmethod
+    def from_csv(cls, path: str, markers_on_frame: Optional[int] = None) -> "MocapRecorder":
+        """A finished recording read back from its CSV file, for checking it again later"""
+        recording = cls("", "", path)
+        with open(path, newline="") as f:
+            for row in csv.DictReader(f):
+                recording.timestamps.append(int(row["qtm_timestamp_us"]))
+                recording.is_tracked.append(row["x_mm"] != "nan")
+        recording.frames = len(recording.timestamps)
+        recording.tracked = sum(recording.is_tracked)
+        if markers_on_frame is None:
+            # Not recorded: assume the markers were solid from the first tracked frame
+            markers_on_frame = recording.is_tracked.index(True) if recording.tracked else 0
+        recording.markers_on_frame = markers_on_frame
+        return recording
 
 
-def report_mocap(stats: dict, expected_pulses: int, pulse_s: float) -> bool:
+def find_sync_groups(dropouts: list[list[float]], pulses: int, pulse_s: float) -> list[float]:
+    """Start times of the sync pulse groups among the tracking dropouts.
+
+    A group is `pulses` dropouts that each last about one pulse and start about two pulses apart
+    (off, then on). Radio latency makes the off phase a little longer than requested, so both are
+    matched with a tolerance. Other dropouts, such as the drone leaving the motion capture volume,
+    do not match this pattern.
+    """
+    candidates = [start for start, duration in dropouts if abs(duration - pulse_s) <= 0.3 * pulse_s]
+    groups = []
+    i = 0
+    while i + pulses <= len(candidates):
+        group = candidates[i:i + pulses]
+        if all(abs((b - a) - 2 * pulse_s) <= 0.25 * pulse_s * 2 for a, b in zip(group, group[1:])):
+            groups.append(group[0])
+            i += pulses
+        else:
+            i += 1
+    return groups
+
+
+def report_mocap(stats: dict, pulses: int, pulse_s: float, expected_groups: int = 2) -> bool:
     print(f"   {stats['frames']} frames at {stats['rate_hz']:.0f} Hz, {stats['tracked']} tracked")
-    pulses = [d for d in stats["dropouts_s"] if 0.5 * pulse_s <= d <= 3.0 * pulse_s]
-    other = [d for d in stats["dropouts_s"] if d not in pulses]
-    ok = True
-    if len(pulses) != expected_pulses:
-        print(f"!! Found {len(pulses)} sync pulses in the motion capture, expected {expected_pulses}: {pulses}")
-        ok = False
+    groups = find_sync_groups(stats["dropouts"], pulses, pulse_s)
+    ok = len(groups) == expected_groups
+    where = ", ".join(f"{g:.1f} s" for g in groups)
+    if ok:
+        print(f"OK: {len(groups)} groups of {pulses} sync pulses in the motion capture (at {where})")
     else:
-        print(f"OK: {len(pulses)} sync pulses in the motion capture")
-    if other:
-        print(f"   Other tracking dropouts [s]: {other}")
+        print(f"!! Found {len(groups)} groups of {pulses} sync pulses in the motion capture, expected "
+              f"{expected_groups}" + (f" (at {where})" if groups else ""))
+    long_ones = [d for d in stats["dropouts"] if d[1] > 0.1 and abs(d[1] - pulse_s) > 0.3 * pulse_s]
+    if long_ones:
+        print("   Other tracking dropouts over 0.1 s (start, duration) [s]: "
+              + ", ".join(f"({a:.1f}, {b:.2f})" for a, b in long_ones))
     return ok
 
 
@@ -674,6 +793,14 @@ def fetch_pending(args: Fetch) -> bool:
         r["file_ok"] = not r["file_problems"]
         all_ok &= r["file_ok"]
 
+    for r in pending:
+        # Check the motion capture again from its file, so every run is judged by the same rules
+        mocap_file = r.get("mocap", {}).get("file")
+        if mocap_file and os.path.exists(mocap_file):
+            print(f"\n{r['run']}: motion capture")
+            stats = MocapRecorder.from_csv(mocap_file, r["mocap"].get("markers_on_frame")).stats()
+            r["mocap_ok"] = report_mocap(stats, r["sync_pulses"], r["sync_pulse_s"])
+
     with open(runs_path, "w") as f:
         f.writelines(json.dumps(r) + "\n" for r in records)
 
@@ -793,6 +920,35 @@ async def setup_markers(cf, o: FlyOptions) -> None:
     await asyncio.sleep(1.5)
 
 
+CONTROLLER_LIMITS = {
+    "max_speed": ("posCtlPid.xVelMax", "posCtlPid.yVelMax"),
+    "max_tilt": ("posCtlPid.rLimit", "posCtlPid.pLimit"),
+}
+
+
+async def raise_controller_limits(cf, o: FlyOptions) -> dict:
+    """Set the requested controller limits. Returns the original values, to restore them afterwards."""
+    param = cf.param()
+    original = {}
+    for option, names in CONTROLLER_LIMITS.items():
+        value = getattr(o, option)
+        if value is None:
+            continue
+        for name in names:
+            original[name] = await param.get(name)
+            await param.set(name, value)
+        print(f"{', '.join(names)}: {original[names[0]]:g} -> {value:g} for this run")
+    return original
+
+
+async def restore_params(cf, original: dict) -> None:
+    for name, value in original.items():
+        try:
+            await cf.param().set(name, value)
+        except Exception as e:
+            print(f"!! Could not restore {name} to {value} ({type(e).__name__}: {e}), power-cycle the drone")
+
+
 async def sync_pulses(cf, o: FlyOptions) -> None:
     param = cf.param()
     print(f"Sync: {o.sync_pulses} marker pulses")
@@ -831,6 +987,7 @@ async def fly(p: Pattern, run_name: str) -> dict:
     record: dict = {"completed": False}
     mocap = MocapRecorder(p.qtm_host, p.qtm_body, os.path.join(p.out_dir, f"{run_name}_mocap.csv"))
     cf = None
+    original_params: dict = {}
     console_stop = asyncio.Event()
     console_task = None
     logging_started = False
@@ -849,6 +1006,7 @@ async def fly(p: Pattern, run_name: str) -> dict:
         supervisor = cf.supervisor()
         hlc = cf.high_level_commander()
 
+        original_params = await raise_controller_limits(cf, p)
         await setup_markers(cf, p)
         mocap.markers_on()
         record.update(await p.prepare())
@@ -900,6 +1058,10 @@ async def fly(p: Pattern, run_name: str) -> dict:
             await f.go_to(p.x, p.y, height)
             await f.hold(p.settle_s)
             await p.fly(f)
+            # Back to the start point: the middle of the area, where motion capture sees the end pulses
+            print(f"To the sync point ({p.x:+.2f}, {p.y:+.2f}, {p.sync_height:.2f})")
+            await f.go_to(p.x, p.y, p.sync_height)
+            await f.hold(1.0)
 
         await sync_pulses(cf, p)
 
@@ -952,6 +1114,7 @@ async def fly(p: Pattern, run_name: str) -> dict:
                 await cf.param().set("activeMarker.poll", 0)
             except Exception:
                 pass
+            await restore_params(cf, original_params)
             console_stop.set()
             if console_task is not None:
                 await console_task
@@ -964,7 +1127,10 @@ async def fly(p: Pattern, run_name: str) -> dict:
 
 
 def run_pattern(p: Pattern) -> None:
-    check_area(p)
+    try:
+        check_area(p)
+    except ValueError as e:
+        raise SystemExit(f"!! Not flying: {e}")
     os.makedirs(p.out_dir, exist_ok=True)
     lh_config = save_lh_config(p)
     run_name = f"{time.strftime('%Y%m%d-%H%M%S')}_{p.name}"
@@ -975,7 +1141,7 @@ def run_pattern(p: Pattern) -> None:
         print("\nuSD counters:")
         counters_ok = report_usd_stats(record["usd"])
     print("\nMotion capture:")
-    mocap_ok = report_mocap(record["mocap"], 2 * p.sync_pulses, p.sync_pulse_s)
+    mocap_ok = report_mocap(record["mocap"], p.sync_pulses, p.sync_pulse_s)
 
     record = {
         "run": run_name,
