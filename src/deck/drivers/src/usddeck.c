@@ -825,7 +825,8 @@ static void usdWriteData(const void *data, size_t size)
   if (status != FR_OK || bytesWritten < size) {
     DEBUG_PRINT("usd deck write failure %d (%u of %u B)\n",
                 status, (unsigned)bytesWritten, (unsigned)size);
-    // A short write with FR_OK means a full volume.
+    // A short write with FR_OK means a full volume or the 4 GiB FAT file size
+    // limit. Report it as FR_DENIED, which FatFS also uses for a full volume.
     usdRecordWriteError((status != FR_OK) ? status : FR_DENIED);
     enableLogging = false;
   } else {
@@ -1166,6 +1167,9 @@ LOG_ADD(LOG_UINT32, eventsAccepted, &usdLogStats.eventsAccepted)
  * failed open is set right away and usd.logging stays 1; otherwise the value
  * is only final once the writer has closed the file, some time after
  * usd.logging reads 0.
+ *
+ * 7 (FR_DENIED) means the card is full, or the file reached the 4 GiB FAT
+ * size limit. It is not a permissions problem.
  */
 LOG_ADD(LOG_UINT8, writeError, &usdLogStats.writeError)
 LOG_GROUP_STOP(usd)
