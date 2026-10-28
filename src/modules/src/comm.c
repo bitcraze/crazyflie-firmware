@@ -26,6 +26,7 @@
 
 #include <stdbool.h>
 
+#include "autoconf.h"
 #include "config.h"
 
 #include "crtp.h"
@@ -33,13 +34,17 @@
 #include "crtpservice.h"
 #include "param_task.h"
 #include "log.h"
+#include "platformservice.h"
+#ifdef CONFIG_PLATFORM_SIM
+#include "udplink_sim.h"
+#else
 #include "eskylink.h"
 #include "uart_syslink.h"
 #include "radiolink.h"
 #include "usblink.h"
-#include "platformservice.h"
 #include "syslink.h"
 #include "crtp_localization_service.h"
+#endif
 
 static bool isInit;
 
@@ -48,21 +53,33 @@ void commInit(void)
   if (isInit)
     return;
 
+#ifdef CONFIG_PLATFORM_SIM
+  /* Simmyflie: CRTP is carried over UDP in place of the radio. */
+  udplinkInit();
+#else
   uartslkInit();
   radiolinkInit();
+#endif
 
   /* These functions are moved to be initialized early so
    * that DEBUG_PRINT can be used early */
   // crtpInit();
   // consoleInit();
 
+#ifdef CONFIG_PLATFORM_SIM
+  crtpSetLink(udplinkGetLink());
+#else
   crtpSetLink(radiolinkGetLink());
+#endif
 
   crtpserviceInit();
   platformserviceInit();
   logInit();
   paramInit();
+#ifndef CONFIG_PLATFORM_SIM
+  /* Not built for the Simmyflie */
   locSrvInit();
+#endif
 
   //setup CRTP communication channel
   //TODO: check for USB first and prefer USB over radio
@@ -70,21 +87,23 @@ void commInit(void)
   //  crtpSetLink(usbGetLink);
   //else if(radiolinkTest())
   //  crtpSetLink(radiolinkGetLink());
-  
+
   isInit = true;
 }
 
 bool commTest(void)
 {
   bool pass=isInit;
-  
+
+#ifndef CONFIG_PLATFORM_SIM
   pass &= radiolinkTest();
+#endif
   pass &= crtpTest();
   pass &= crtpserviceTest();
   pass &= platformserviceTest();
   pass &= consoleTest();
   pass &= paramTest();
-  
+
   return pass;
 }
 

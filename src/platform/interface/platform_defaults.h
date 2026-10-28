@@ -46,6 +46,17 @@
 #ifdef CONFIG_PLATFORM_FLAPPER
     #include "platform_defaults_flapper.h"
 #endif
+#ifdef CONFIG_PLATFORM_SIM
+    /* Simmyflie: no CONFIG_PLATFORM_SIM branch exists among the real
+     * platform_defaults_*.h files (all real-hardware PCB variants), so
+     * without this, every PID gain and physical-constant macro below stays
+     * undefined and controller_pid.c/health.c fail to compile. CF21BL is
+     * the platform the built-in physics engine models (the Crazyflie 2.1
+     * Brushless), so its gains, mass and arm length are the sim's.
+     * CONFIG_ENABLE_THRUST_BAT_COMPENSATED is not defined for the sim, so
+     * the thrust constants are the generic fallbacks below. */
+    #include "platform_defaults_cf21bl.h"
+#endif
 
 // Drone physical constants
 // TODO provide those in each config. Those are values of cf2 platform
