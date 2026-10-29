@@ -152,6 +152,11 @@
     #define SUPERVISOR_TUMBLE_CHECK_ENABLE true
 #endif
 
+// Geofence settings
+#ifndef SUPERVISOR_GEOFENCE_CHECK_ENABLE
+    #define SUPERVISOR_GEOFENCE_CHECK_ENABLE false
+#endif
+
 // 60 degrees tilt (when stationary)
 #ifndef SUPERVISOR_TUMBLE_CHECK_ACCEPTED_TILT_ACCZ
     #define SUPERVISOR_TUMBLE_CHECK_ACCEPTED_TILT_ACCZ 0.5f
