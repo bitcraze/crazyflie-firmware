@@ -112,7 +112,7 @@ The Control Service is broken down into five units by responsibility.
 
 | Unit | Responsibility | Runs in |
 |---|---|---|
-| `bccam_control_service` | The only unit users see: `bccam_control_service_submit` and `bccam_control_service_is_ready`. The single entry point the service task steps. Holds the ready flag, observes ready and not ready from the runtime, and tells the other units what to do in a fixed order on each: opens and resets `bccam_control_channel`, aborts in `bccam_control_request_handling`, calls `on_ready`, and steps `bccam_control_request_handling`. Passes submitted requests on to `bccam_control_request_queue`. | Service task. `bccam_control_service_submit` and `bccam_control_service_is_ready` are also called from user tasks. |
+| `bccam_control_service` | The only unit users see: `bccam_control_service_submit` and `bccam_control_service_is_ready`. The single entry point the service task steps. Holds the ready flag, observes ready and not ready from the runtime, and tells the other units what to do in a fixed order on each: opens and resets `bccam_control_channel`, aborts in `bccam_control_request_handling`, and steps `bccam_control_request_handling`. Passes submitted requests on to `bccam_control_request_queue`. | Service task. `bccam_control_service_submit` and `bccam_control_service_is_ready` are also called from user tasks. |
 | `bccam_control_request_queue` | Hands submitted requests from user tasks to the service task. `bccam_control_request_queue_put` does not block and returns false when the queue is full. | User tasks, through `bccam_control_service`, and the service task |
 | `bccam_control_request_handling` | Handles one outstanding request: `request_id`, timer, waiting until it can send, decoding with `bccam_control_codec`, telling a match, a stale answer and a malformed frame apart, and calling `on_complete`. Sends requests only while ready. | Service task |
 | `bccam_control_codec` | Encodes `GET` and `SET`, and decodes and validates `OK`, `VALUE` and `ERROR`. Pure functions without state. | Service task |
@@ -141,7 +141,6 @@ classDiagram
     class bccam_control_user_t {
         <<user API>>
         +on_complete
-        +on_ready
     }
 
     class bccam_control_service {
@@ -194,7 +193,6 @@ classDiagram
     bccam_control_service --> bccam_uart_runtime : control_ready
     bccam_control_service --> bccam_control_channel : open, reset
     bccam_control_service --> bccam_control_request_handling : abort, step
-    bccam_control_service --> bccam_control_user_t : on_ready
     bccam_control_request_handling --> bccam_control_request_queue : take
     bccam_control_request_handling --> bccam_control_codec
     bccam_control_request_handling --> bccam_control_channel : can_send, send, receive
@@ -236,7 +234,6 @@ classDiagram
 
     class bccam_control_user_t {
         on_complete(const bccam_control_request_t *request, const bccam_control_result_t *result) void
-        on_ready() void
     }
 
     class bccam_control_result_t {
@@ -298,28 +295,25 @@ response fits in one frame:
 - `user` points to a static `bccam_control_user_t` that outlives every
   request. The path and value are copied, so the user can drop its request
   when `bccam_control_service_submit` returns.
-- `bccam_control_user_t` holds two function pointers, `on_complete` and
-  `on_ready`. There is no context pointer: each user has its own
-  `bccam_control_user_t` and its own callbacks, and `on_complete` gets the
-  request, whose `user` tells which user it belongs to.
+- `bccam_control_user_t` holds one function pointer, `on_complete`. There
+  is no context pointer: each user has its own `bccam_control_user_t` and
+  its own callback, and `on_complete` gets the request, whose `user` tells
+  which user it belongs to.
 
 ### User API
 
 Users see only the user API: `bccam_control_service_submit` and
 `bccam_control_service_is_ready`, see "bccam_control_service", and their
-own `on_complete` and `on_ready` in their `bccam_control_user_t`.
+own `on_complete` in their `bccam_control_user_t`.
 
 | Function | Called by | What it does |
 |---|---|---|
 | `on_complete(const bccam_control_request_t *request, const bccam_control_result_t *result) void` | `bccam_control_request_handling`, in the service task | Tells the user that a request has completed, with its result. |
-| `on_ready() void` | `bccam_control_service` on ready, in the service task | Tells the user that requests can be submitted. |
 
-- `on_complete` and `on_ready` are called in the service task. They must
-  not block.
+- `on_complete` is called in the service task. It must not block.
 - Every submitted request gets exactly one `on_complete`.
 - `on_complete` is called through the request's `user`, by
   `bccam_control_request_handling`, which owns the request lifecycle.
-  `on_ready` goes to every user and is called by `bccam_control_service`.
 
 ### Runtime interface
 
@@ -457,7 +451,7 @@ ready flag as an argument to its step.
 
 - Order on ready: `bccam_control_service` opens `bccam_control_channel`
   with `bccam_control_channel_open`, which grants receive credit, then
-  calls `on_ready` for each user.
+  sets the ready flag.
 - Order on not ready: `bccam_control_service` tells
   `bccam_control_request_handling` to abort with
   `bccam_control_request_handling_abort`, which completes the outstanding
@@ -488,7 +482,7 @@ ready flag as an argument to its step.
 stateDiagram-v2
     [*] --> NotReady
 
-    NotReady --> Ready : ready / open bccam_control_channel, call on_ready for each user
+    NotReady --> Ready : ready / open bccam_control_channel
     Ready --> NotReady : not ready / abort in bccam_control_request_handling (completes the outstanding request with BCCAM_CONTROL_OUTCOME_ABORTED), reset bccam_control_channel
 
     note right of NotReady
@@ -504,14 +498,13 @@ stateDiagram-v2
 The runtime establishes the link, enumerates the catalog and runs the
 probe. The flow starts when `bccam_control_service`, in its step, finds
 that the runtime reports `bccam_uart_runtime_control_ready()` as true. It
-opens `bccam_control_channel` and calls `on_ready` for each user. Users can
-then submit requests as in "Request with an answer". Frames between
+opens `bccam_control_channel` and sets the ready flag, which users read with
+`bccam_control_service_is_ready`. Users can then submit requests as in "Request with an answer". Frames between
 `bccam_control_channel` and the deck go through the runtime and the link.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant U as User<br/>(own task)
     participant CS as bccam_control_service
     participant Ch as bccam_control_channel
     participant R as bccam_uart_runtime
@@ -522,7 +515,6 @@ sequenceDiagram
     CS->>Ch: open()
     Ch->>D: CREDIT_UPDATE control, 1 (grant receive credit)
     CS->>CS: ready
-    CS->>U: on_ready()
 ```
 
 ## bccam_control_request_queue
