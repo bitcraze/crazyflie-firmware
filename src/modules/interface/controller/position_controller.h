@@ -37,5 +37,9 @@ void positionController(float* thrust, attitude_t *attitude, const setpoint_t *s
                                                              const state_t *state);
 void velocityController(float* thrust, attitude_t *attitude, const Axis3f *setpoint_velocity,
                                                              const state_t *state);
+void positionControllerChangePosPIDParams(float xKp, float xKi, float xKd, float xKff,
+                                         float yKp, float yKi, float yKd, float yKff,
+                                         float zKp, float zKi, float zKd, float zKff);
+void resetPosPIDParamsToPrevious();
 
 #endif /* POSITION_CONTROLLER_H_ */

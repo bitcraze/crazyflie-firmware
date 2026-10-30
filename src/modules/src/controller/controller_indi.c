@@ -133,6 +133,14 @@ void controllerINDIInit(void)
 	positionControllerINDIInit();
 }
 
+void controllerINDIEnterPreciseLand(void)
+{
+}
+
+void controllerINDIExitPreciseLand(void)
+{
+}
+
 bool controllerINDITest(void)
 {
 	bool pass = true;
