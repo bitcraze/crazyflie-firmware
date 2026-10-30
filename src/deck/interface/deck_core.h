@@ -103,6 +103,12 @@ typedef struct deck_driver {
   StateEstimatorType requiredEstimator;
   bool requiredLowInterferenceRadioMode;
   bool requiredKalmanEstimatorAttitudeReversionOff;
+  // The deck makes absolute yaw directly observable while stationary (e.g.
+  // Lighthouse). The Kalman estimator uses this to start with a wide initial
+  // yaw prior so it can converge from an arbitrary heading. Decks that only
+  // observe yaw indirectly through motion (e.g. UWB/TDoA) must leave this
+  // false and rely on the drone starting at a known yaw.
+  bool observesAbsoluteYawAtRest;
 
   // Deck memory access definitions
   const struct deckMemDef_s* memoryDef;
@@ -282,6 +288,7 @@ StateEstimatorType deckGetRequiredEstimator();
 
 bool deckGetRequiredLowInterferenceRadioMode();
 bool deckGetRequiredKalmanEstimatorAttitudeReversionOff();
+bool deckGetObservesAbsoluteYawAtRest();
 
 // Including deck-discovery.h here to avoid circular dependency
 #include "deck_discovery.h"
