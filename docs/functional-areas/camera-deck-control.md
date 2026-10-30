@@ -8,7 +8,7 @@ camera deck.
 
 The wire format is defined by the Control Service protocol in
 camera-deck-firmware (`docs/protocol/common/control-service.md`). This page
-summarizes the layout of the frames in scope, see "Frame layout". Where they
+summarizes the layout of the frames in scope, see [Frame layout](#frame-layout). Where they
 differ, the protocol document is the authority.
 
 ## Scope
@@ -22,7 +22,7 @@ In scope, matching `bitcraze.control` version 0.0 on the deck:
 
 Out of scope: `CMD`, `NOTIFY`, more than one request in flight, path handles,
 listing paths and chunking. The probe is also out of scope. The runtime runs
-it before the Control Service takes over, see "Ready".
+it before the Control Service takes over, see [Ready](#ready).
 
 ## Terms
 
@@ -46,10 +46,9 @@ from the Crazyflie.
   together.
 - **Bound**: the Control service is bound when the catalog advertises a
   compatible `bitcraze.control` and the Crazyflie has taken its handle. This
-  is Service Binding in the Common Link. It lasts until the deck resets, the
-  link faults or the handle changes.
+  is Service Binding in the Common Link.
 - **Ready**: the Control service is bound and the probe has been answered
-  with `VALUE`. User requests are only sent while ready.
+  with `VALUE`. User requests are only transmitted while ready.
 - **Probe**: the `GET 0 meta.schema_modules` request the runtime sends on
   the Control service before ready. The Control Service only observes the
   result.
@@ -110,28 +109,30 @@ user API above and the runtime interface below.
 The Control Service is broken down into five units by responsibility.
 `bccam_control_service` is above the other four and coordinates them.
 
-| Unit | Responsibility | Runs in |
-|---|---|---|
-| `bccam_control_service` | The only unit users see: `bccam_control_service_submit` and `bccam_control_service_is_ready`. The single entry point the service task steps. Holds the ready flag, observes ready and not ready from the runtime, and tells the other units what to do in a fixed order on each: opens and resets `bccam_control_channel`, aborts in `bccam_control_request_handling`, and steps `bccam_control_request_handling`. Passes submitted requests on to `bccam_control_request_queue`. | Service task. `bccam_control_service_submit` and `bccam_control_service_is_ready` are also called from user tasks. |
-| `bccam_control_request_queue` | Hands submitted requests from user tasks to the service task. `bccam_control_request_queue_put` does not block and returns false when the queue is full. | User tasks, through `bccam_control_service`, and the service task |
-| `bccam_control_request_handling` | Handles one outstanding request: `request_id`, timer, waiting until it can send, decoding with `bccam_control_codec`, telling a match, a stale answer and a malformed frame apart, and calling `on_complete`. Sends requests only while ready. | Service task |
-| `bccam_control_codec` | Encodes `GET` and `SET`, and decodes and validates `OK`, `VALUE` and `ERROR`. Pure functions without state. | Service task |
-| `bccam_control_channel` | The only unit aware of the receive slot and credit. Grants the first receive credit when opened, resets when told, tells whether a frame can be sent, sends raw frames, and copies a received frame out of the receive slot and grants receive credit at once. | Service task |
+| Unit | Responsibility |
+|---|---|
+| [`bccam_control_service`](#bccam_control_service) | The unit that holds all public functions of the control service. The single entry point the service task steps. Holds the ready flag. Tells the other units what to do in a fixed order. |
+| [`bccam_control_request_queue`](#bccam_control_request_queue) | Hands submitted requests from user tasks to the service task. |
+| [`bccam_control_request_handling`](#bccam_control_request_handling) | Handles one outstanding request. |
+| [`bccam_control_codec`](#bccam_control_codec) | Library of functions for encoding, decoding and validation. |
+| [`bccam_control_channel`](#bccam_control_channel) | Handles transmit and receive, and its allowance; the only unit aware of the receive slot and credit. |
 
-The sections from "Structure" to "Error handling" cover more
+`bccam_control_service` is stepped by the bcCam UART service task in
+`bccam_uart_service`. All units run in that task. The exceptions are
+`bccam_control_service_submit` and `bccam_control_service_is_ready`, which
+users call from their own task, and `bccam_control_request_queue`, the only
+unit shared between tasks.
+
+The sections from [Structure](#structure) to [Error handling](#error-handling) cover more
 than one unit. Each unit then has its own section.
 
 ## Structure
 
 The units, the user API above them and the runtime interface below them.
-The Control Service runs in the bcCam UART service task. Users submit
-requests from their own task.
 
-The diagrams show functions by their name without the unit prefix: `submit`
-in `bccam_control_service` is `bccam_control_service_submit`, and
-`control_ready` in `bccam_uart_runtime` is
-`bccam_uart_runtime_control_ready`. The diagram shows names only. The
-signatures and fields are in "User API", "Runtime interface" and each
+The diagrams show functions by their name without the unit prefix: for example, `submit`
+in `bccam_control_service` is `bccam_control_service_submit`. Functions are represented by
+their names only. The signatures and fields are in [User API](#user-api), [Runtime interface](#runtime-interface) and each
 unit's section.
 
 ```mermaid
@@ -275,8 +276,6 @@ the Link Maximum Transmission Unit (MTU) is 64.
   `payload_length`.
 - `BCCAM_CONTROL_FRAME_MAX_LEN` is the Link MTU of the UART profile. `len`
   fits in a `uint8_t` because the MTU is at most 255.
-- Where a diagram on this page says `frame`, it means a
-  `bccam_control_frame_t`.
 
 The other types hold their data inline, sized so that every request and
 response fits in one frame:
@@ -303,36 +302,30 @@ response fits in one frame:
 ### User API
 
 Users see only the user API: `bccam_control_service_submit` and
-`bccam_control_service_is_ready`, see "bccam_control_service", and their
+`bccam_control_service_is_ready`, see [bccam_control_service](#bccam_control_service), and their
 own `on_complete` in their `bccam_control_user_t`.
 
-| Function | Called by | What it does |
-|---|---|---|
-| `on_complete(const bccam_control_request_t *request, const bccam_control_result_t *result) void` | `bccam_control_request_handling`, in the service task | Tells the user that a request has completed, with its result. |
+| Function | What it does |
+|---|---|
+| `on_complete(const bccam_control_request_t *request, const bccam_control_result_t *result) void` | Tells the user that a request has completed, with its result. |
 
 - `on_complete` is called in the service task. It must not block.
 - Every submitted request gets exactly one `on_complete`.
-- `on_complete` is called through the request's `user`, by
-  `bccam_control_request_handling`, which owns the request lifecycle.
 
 ### Runtime interface
 
 The functions of the runtime that the Control Service uses. They belong to
-`bccam_uart_runtime`. Of these, only `bccam_uart_runtime_control_tx_credit`
-exists today. The runtime functions take the runtime instance,
+`bccam_uart_runtime`. The runtime functions take the runtime instance,
 `bccam_uart_runtime_t *runtime`, as their first argument. It is left out
 here.
 
-| Function | Called by | What it does |
-|---|---|---|
-| `bccam_uart_runtime_control_ready() bool` | `bccam_control_service` in its step | Returns true when the Control service is bound and the runtime's probe has been answered with `VALUE`. Turns false when the binding is lost. |
-| `bccam_uart_runtime_grant_control_rx_credit() void` | `bccam_control_channel` in `bccam_control_channel_open` and `bccam_control_channel_receive` | Grants one receive credit to the deck. Does not fail temporarily, see "Credit". |
-| `bccam_uart_runtime_control_tx_credit() uint8_t` | `bccam_control_channel` in `bccam_control_channel_can_send` | Returns the transmit credit. |
-| `bccam_uart_runtime_send_control(const bccam_control_frame_t *frame) void` | `bccam_control_channel` in `bccam_control_channel_send` | Sends a frame on the Control service, using one transmit credit. |
-| `bccam_uart_runtime_take_control_rx(bccam_control_frame_t *frame) bool` | `bccam_control_channel` in `bccam_control_channel_receive` | Copies a received frame out of the receive slot into `frame`. Returns true when a frame was taken. Returns false when the receive slot was empty, and `frame` must not be used. |
-
-- Only `bccam_control_channel` uses the credit and receive slot functions
-  of the runtime interface.
+| Function | What it does |
+|---|---|
+| `bccam_uart_runtime_control_ready() bool` | Returns true when the Control service is bound and the runtime's probe has been answered with `VALUE`. Turns false when the binding is lost. |
+| `bccam_uart_runtime_grant_control_rx_credit() void` | Grants one receive credit to the deck. Does not fail temporarily, see [Credit](#credit). |
+| `bccam_uart_runtime_get_control_tx_credit() uint8_t` | Returns the transmit credit. |
+| `bccam_uart_runtime_send_control(const bccam_control_frame_t *frame) void` | Sends a frame on the Control service, using one transmit credit. |
+| `bccam_uart_runtime_take_control_rx(bccam_control_frame_t *frame) bool` | Copies a received frame out of the receive slot into `frame`. Returns true when a frame was taken. Returns false when the receive slot was empty, and `frame` must not be used. |
 
 ## Request lifecycle
 
@@ -362,13 +355,6 @@ stateDiagram-v2
 
     Completed --> [*] : on_complete called
 ```
-
-- A request for which `bccam_control_service_submit` returns false never
-  enters the lifecycle.
-- A late answer to a request that timed out arrives while no request is
-  outstanding or while the next request is in WaitingToSend, never in
-  WaitingResponse. This follows from the ordering guarantee of
-  `bccam_control_channel`, see "bccam_control_channel".
 
 ### Sequence for request with an answer
 
@@ -423,7 +409,7 @@ user gets.
 | Late answer to a request that timed out | `bccam_control_request_handling`, no request in WaitingResponse | Counts it as stale and drops it. | Nothing more, the request already got `BCCAM_CONTROL_OUTCOME_TIMEOUT` |
 | Malformed answer in WaitingResponse | `bccam_control_codec` | Counts it as malformed and completes the request. The frame is the answer, so no other answer will follow. | `BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR` |
 | `request_id` mismatch in WaitingResponse | `bccam_control_request_handling` | Counts it as a mismatch, a deck defect, and completes the request. The frame is the answer, so no other answer will follow. | `BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR` |
-| Malformed frame in Idle or WaitingToSend | `bccam_control_codec` | Counts it as malformed and drops it. | Nothing, no request is waiting for an answer |
+| Malformed frame in Idle or WaitingToSend | `bccam_control_codec` | Counts it as malformed and drops it. | Nothing more, the request already got `BCCAM_CONTROL_OUTCOME_TIMEOUT` |
 | Ready lost with a request outstanding: deck reset, link fault or handle change | `bccam_control_service`, `bccam_uart_runtime_control_ready()` is false | Aborts in `bccam_control_request_handling`, then resets `bccam_control_channel`. | `BCCAM_CONTROL_OUTCOME_ABORTED` |
 | Request taken from the queue while not ready | `bccam_control_request_handling`, stepped with ready false | Completes the request without sending it. | `BCCAM_CONTROL_OUTCOME_NOT_READY` |
 | Queue full | `bccam_control_request_queue`, `bccam_control_request_queue_put` | `bccam_control_service_submit` returns false. | No `on_complete` |
@@ -433,7 +419,44 @@ lets the next request be sent only when the deck has given transmit credit
 again, and the deck does that only after its answer to the previous request
 has been accepted for transmission. The link delivers frames in order, so
 the late answer arrives before the next request is sent, while it is in
-WaitingToSend. See "Credit" under "bccam_control_channel".
+WaitingToSend. See [Credit](#credit) under [bccam_control_channel](#bccam_control_channel).
+
+### Sequence for ready lost
+
+A request is outstanding when the deck resets, the link faults or the
+handle changes. `bccam_control_service`, in its step, finds that the
+runtime reports `bccam_uart_runtime_control_ready()` as false. It aborts in
+`bccam_control_request_handling`, resets `bccam_control_channel` and goes
+to not ready, in the order in [bccam_control_service](#bccam_control_service).
+A request taken from the queue after that completes with
+`BCCAM_CONTROL_OUTCOME_NOT_READY`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as User<br/>(own task)
+    participant CS as bccam_control_service
+    participant Q as bccam_control_request_queue
+    participant H as bccam_control_request_handling
+    participant Ch as bccam_control_channel
+    participant R as bccam_uart_runtime
+    participant D as Camera deck<br/>Control Service
+
+    CS->>H: abort()
+    H->>U: on_complete(request, ABORTED)
+    H->>H: Idle
+    CS->>Ch: reset()
+    Ch->>Ch: clear receive buffer and credit state
+    CS->>CS: not ready
+    CS->>H: step(false)
+    H->>Q: take()
+    alt request queued
+        Q-->>H: request
+        H->>U: on_complete(request, NOT_READY)
+    else queue empty
+        Q-->>H: none
+    end
+```
 
 ## bccam_control_service
 
@@ -464,11 +487,11 @@ ready flag as an argument to its step.
 
 ### Functions
 
-| Function | Called by | What it does |
-|---|---|---|
-| `bccam_control_service_submit(const bccam_control_request_t *request) bool` | Users, from their own task | Passes the request on to `bccam_control_request_queue` with `bccam_control_request_queue_put`, without blocking. Returns false when the queue is full, and the request is not queued. |
-| `bccam_control_service_is_ready() bool` | Users, from their own task | Returns the ready flag. |
-| `bccam_control_service_step() void` | The service task, once per service step | Observes `bccam_uart_runtime_control_ready()`, acts on ready and not ready in the order above, and steps `bccam_control_request_handling` with the ready flag. |
+| Function | What it does |
+|---|---|
+| `bccam_control_service_submit(const bccam_control_request_t *request) bool` | Passes the request on to `bccam_control_request_queue` with `bccam_control_request_queue_put`, without blocking. Returns false when the queue is full, and the request is not queued. |
+| `bccam_control_service_is_ready() bool` | Returns the ready flag. |
+| `bccam_control_service_step() void` | Observes `bccam_uart_runtime_control_ready()`, acts on ready and not ready in the order above, and steps `bccam_control_request_handling` with the ready flag. |
 
 ### Data
 
@@ -499,7 +522,7 @@ The runtime establishes the link, enumerates the catalog and runs the
 probe. The flow starts when `bccam_control_service`, in its step, finds
 that the runtime reports `bccam_uart_runtime_control_ready()` as true. It
 opens `bccam_control_channel` and sets the ready flag, which users read with
-`bccam_control_service_is_ready`. Users can then submit requests as in "Request with an answer". Frames between
+`bccam_control_service_is_ready`. Users can then submit requests as in [Request with an answer](#sequence-for-request-with-an-answer). Frames between
 `bccam_control_channel` and the deck go through the runtime and the link.
 
 ```mermaid
@@ -545,11 +568,11 @@ the service task, by `bccam_control_request_handling`.
 
 ### Functions
 
-| Function | Called by | What it does |
-|---|---|---|
-| `bccam_control_request_queue_init() void` | Startup, before the first `bccam_control_request_queue_put` | Creates the queue. |
-| `bccam_control_request_queue_put(const bccam_control_request_t *request) bool` | `bccam_control_service` in `bccam_control_service_submit`, from user tasks | Copies the request into the queue without blocking. Returns false when the queue is full, and the request is not queued. |
-| `bccam_control_request_queue_take(bccam_control_request_t *request) bool` | `bccam_control_request_handling` in its step, in the service task | Copies the oldest request out of the queue without blocking. Returns false when the queue is empty. |
+| Function | What it does |
+|---|---|
+| `bccam_control_request_queue_init() void` | Creates the queue. |
+| `bccam_control_request_queue_put(const bccam_control_request_t *request) bool` | Copies the request into the queue without blocking. Returns false when the queue is full, and the request is not queued. |
+| `bccam_control_request_queue_take(bccam_control_request_t *request) bool` | Copies the oldest request out of the queue without blocking. Returns false when the queue is empty. |
 
 Requests are taken in the order they were put.
 
@@ -572,10 +595,10 @@ validate answers.
 
 ### Functions
 
-| Function | Called by | What it does |
-|---|---|---|
-| `bccam_control_request_handling_abort() void` | `bccam_control_service` on not ready | Completes the outstanding request with `BCCAM_CONTROL_OUTCOME_ABORTED` and goes to Idle. Does nothing in Idle. |
-| `bccam_control_request_handling_step(bool ready) void` | `bccam_control_service` in its step, once per service step | Does one step, see "One step". |
+| Function | What it does |
+|---|---|
+| `bccam_control_request_handling_abort() void` | Completes the outstanding request with `BCCAM_CONTROL_OUTCOME_ABORTED` and goes to Idle. Does nothing in Idle. |
+| `bccam_control_request_handling_step(bool ready) void` | Does one step, see [One step](#one-step). |
 
 ### Data
 
@@ -714,7 +737,7 @@ Assumptions:
 
 - `bccam_control_channel` grants one receive credit at a time.
 - `bccam_control_channel` lets a request be sent only after any answer to
-  the previous request has been delivered, see "Request lifecycle".
+  the previous request has been delivered, see [Request lifecycle](#request-lifecycle).
 - The deck sends exactly one answer per request.
 - Every frame from the deck is an answer. This no longer holds if `NOTIFY`
   is brought into scope.
@@ -748,8 +771,8 @@ validates their bodies. Pure functions without state.
 
 | Function | What it does |
 |---|---|
-| `bccam_control_codec_encode_get(uint8_t request_id, const char *path, uint8_t path_len) bccam_control_frame_t` | Builds a `GET` frame as in "Frame layout". |
-| `bccam_control_codec_encode_set(uint8_t request_id, const char *path, uint8_t path_len, const bccam_control_value_t *value) bccam_control_frame_t` | Builds a `SET` frame as in "Frame layout". |
+| `bccam_control_codec_encode_get(uint8_t request_id, const char *path, uint8_t path_len) bccam_control_frame_t` | Builds a `GET` frame as in [Frame layout](#frame-layout). |
+| `bccam_control_codec_encode_set(uint8_t request_id, const char *path, uint8_t path_len, const bccam_control_value_t *value) bccam_control_frame_t` | Builds a `SET` frame as in [Frame layout](#frame-layout). |
 | `bccam_control_codec_decode_response(const bccam_control_frame_t *frame, bccam_control_response_t *response) bool` | Validates the frame. Returns true and fills in `response` when the frame is valid. Returns false when it is malformed, and `response` must not be used. |
 
 A valid `response` holds `kind`, `request_id` and the body. A
@@ -757,7 +780,7 @@ frame is malformed when:
 
 - it is shorter than 2 bytes,
 - `kind` is not `OK`, `VALUE` or `ERROR`, which includes `NOTIFY`,
-- the body does not match "Frame layout" for the `kind`, or bytes remain
+- the body does not match [Frame layout](#frame-layout) for the `kind`, or bytes remain
   after it.
 
 ## bccam_control_channel
@@ -778,13 +801,13 @@ frames only and does not know the Control message format.
 
 ### Functions
 
-| Function | Called by | What it does |
-|---|---|---|
-| `bccam_control_channel_open() void` | `bccam_control_service` on ready | Grants the first receive credit. |
-| `bccam_control_channel_reset() void` | `bccam_control_service` on not ready | Clears the receive buffer and the credit state. |
-| `bccam_control_channel_can_send() bool` | `bccam_control_request_handling` in WaitingToSend | Returns true when a frame can be sent, that is when there is transmit credit. |
-| `bccam_control_channel_send(const bccam_control_frame_t *frame) void` | `bccam_control_request_handling` in WaitingToSend | Sends the raw frame. |
-| `bccam_control_channel_receive(bccam_control_frame_t *frame) bool` | `bccam_control_request_handling` at the start of each step | Copies a received frame out of the receive slot into `frame` and grants receive credit at once. Returns true when a frame was received. Returns false when there was none, and `frame` must not be used. |
+| Function | What it does |
+|---|---|
+| `bccam_control_channel_open() void` | Grants the first receive credit. |
+| `bccam_control_channel_reset() void` | Clears the receive buffer and the credit state. |
+| `bccam_control_channel_can_send() bool` | Returns true when a frame can be sent, that is when there is transmit credit. |
+| `bccam_control_channel_send(const bccam_control_frame_t *frame) void` | Sends the raw frame. |
+| `bccam_control_channel_receive(bccam_control_frame_t *frame) bool` | Copies a received frame out of the receive slot into `frame` and grants receive credit at once. Returns true when a frame was received. Returns false when there was none, and `frame` must not be used. |
 
 ### Data
 
