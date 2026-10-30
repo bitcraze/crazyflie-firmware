@@ -126,7 +126,8 @@ The Control Service runs in the bcCam UART service task. Users submit
 requests from their own task.
 
 Function names in the diagrams are descriptive and not decided as C
-identifiers.
+identifiers. The diagram shows names only. The signatures and fields are in
+"User API", "Runtime interface" and each unit's section.
 
 ```mermaid
 classDiagram
@@ -134,53 +135,48 @@ classDiagram
 
     class ControlUser {
         <<user API>>
-        +onComplete(request, result)
-        +onReady()
+        +onComplete
+        +onReady
     }
 
     class control_service {
-        +submit(request) bool
-        +isReady() bool
-        +step()
-        -ready
+        +submit
+        +isReady
+        +step
     }
 
     class request_queue {
-        +init()
-        +put(request) bool
-        +take(request) bool
+        +init
+        +put
+        +take
     }
 
     class request_handling {
-        +abort()
-        +step(ready)
-        -outstanding
-        -nextRequestId
-        -deadline
+        +abort
+        +step
     }
 
     class codec {
-        +encodeGet(requestId, path) frame
-        +encodeSet(requestId, path, value) frame
-        +decodeResponse(frame) response
+        +encodeGet
+        +encodeSet
+        +decodeResponse
     }
 
     class control_channel {
-        +open()
-        +reset()
-        +canSend() bool
-        +send(frame)
-        +receive() frame
-        -rxBuffer
+        +open
+        +reset
+        +canSend
+        +send
+        +receive
     }
 
     class Runtime {
         <<runtime interface>>
-        +controlServiceReady() bool
-        +grantControlRxCredit()
-        +controlTxCredit() count
-        +sendControl(frame)
-        +takeControlRx() frame
+        +controlServiceReady
+        +grantControlRxCredit
+        +controlTxCredit
+        +sendControl
+        +takeControlRx
     }
 
     class ServiceTask {
@@ -201,23 +197,47 @@ classDiagram
     control_channel --> Runtime : credit, send, take
 ```
 
-The data passed through the user API:
+The data passed through the user API, and the frame and response passed
+between the units:
 
 ```mermaid
 classDiagram
     direction LR
 
+    class controlFrame_t {
+        uint8_t data[CONTROL_FRAME_MAX_LEN]
+        uint8_t len
+    }
+    note for controlFrame_t "CONTROL_FRAME_MAX_LEN = 64"
+
+    class ControlResponse {
+        uint8_t kind OK, VALUE or ERROR
+        uint8_t requestId
+        ControlValue value
+        uint8_t errorCode
+        char detail[CONTROL_DETAIL_MAX_LEN]
+        uint8_t detailLen
+    }
+    note for ControlResponse "CONTROL_DETAIL_MAX_LEN = 60"
+
     class ControlRequest {
-        operation GET or SET
-        path
-        value
-        user
+        uint8_t operation GET or SET
+        char path[CONTROL_PATH_MAX_LEN]
+        uint8_t pathLen
+        ControlValue value
+        const ControlUser *user
+    }
+    note for ControlRequest "CONTROL_PATH_MAX_LEN = 55"
+
+    class ControlUser {
+        onComplete(const ControlRequest *request, const ControlResult *result) void
+        onReady() void
     }
 
     class ControlResult {
-        outcome
-        value
-        errorCode
+        Outcome outcome
+        ControlValue value
+        uint8_t errorCode
     }
 
     class Outcome {
@@ -232,27 +252,80 @@ classDiagram
     }
 
     class ControlValue {
-        type
-        len
-        data
+        uint8_t type
+        uint8_t len
+        uint8_t data[CONTROL_VALUE_MAX_LEN]
     }
+    note for ControlValue "CONTROL_VALUE_MAX_LEN = 4"
 
     ControlResult --> Outcome
     ControlRequest --> ControlValue
+    ControlRequest --> ControlUser
     ControlResult --> ControlValue
+    ControlResponse --> ControlValue
 ```
 
-- Users see only the user API: `submit` and `isReady` on
-  `control_service`, and their own `onComplete` and `onReady`.
-- `controlServiceReady()` is true when the Control service is bound and the
-  runtime's probe has been answered with `VALUE`. It turns false when the
-  binding is lost.
+`controlFrame_t` holds one frame, including its bytes. Assumption: the Link
+Maximum Transmission Unit (MTU) is 64.
+
+- `len` is the number of valid bytes in `data`, from 0 to
+  `CONTROL_FRAME_MAX_LEN`. It replaces the UART packet's `payload_length`.
+- `CONTROL_FRAME_MAX_LEN` is the Link MTU of the UART profile. `len` fits
+  in a `uint8_t` because the MTU is at most 255.
+- Where a diagram on this page says `frame`, it means a `controlFrame_t`.
+
+The other types hold their data inline, sized so that every request and
+response fits in one frame:
+
+- `CONTROL_VALUE_MAX_LEN` is 4, the size of the largest value type in
+  scope, `u32` and `i32`. `len` is the number of valid bytes in `data`.
+- `CONTROL_PATH_MAX_LEN` is 55: a `SET` frame has 2 header bytes,
+  `path_len`, the path and a value of at most 2 + 4 bytes. A request with a
+  longer path cannot be built. `path` is ASCII, `pathLen` bytes, not
+  NUL-terminated.
+- `CONTROL_DETAIL_MAX_LEN` is 60: an `ERROR` frame has 2 header bytes,
+  `error_code` and `detail_len` before the detail. `detail` is UTF-8 text,
+  `detailLen` bytes, not NUL-terminated.
+- `ControlResponse.value` is valid only when `kind` is `VALUE`, and
+  `errorCode` and `detail` only when `kind` is `ERROR`.
+- `user` points to a static `ControlUser` that outlives every request. The
+  path and value are copied, so the user can drop its request when `submit`
+  returns.
+- `ControlUser` holds two function pointers, `onComplete` and `onReady`.
+  There is no context pointer: each user has its own `ControlUser` and its
+  own callbacks, and `onComplete` gets the request, whose `user` tells which
+  user it belongs to.
+
+### User API
+
+Users see only the user API: `submit` and `isReady` on `control_service`,
+see "control_service", and their own `onComplete` and `onReady` in their
+`ControlUser`.
+
+| Function | Called by | What it does |
+|---|---|---|
+| `onComplete(const ControlRequest *request, const ControlResult *result) void` | `request_handling`, in the service task | Tells the user that a request has completed, with its result. |
+| `onReady() void` | `control_service` on ready, in the service task | Tells the user that requests can be submitted. |
+
 - `onComplete` and `onReady` are called in the service task. They must not
   block.
 - Every submitted request gets exactly one `onComplete`.
 - `onComplete` is called through the request's `user`, by
   `request_handling`, which owns the request lifecycle. `onReady` goes to
   every user and is called by `control_service`.
+
+### Runtime interface
+
+The functions of the runtime that the Control Service uses.
+
+| Function | Called by | What it does |
+|---|---|---|
+| `controlServiceReady() bool` | `control_service` in its step | Returns true when the Control service is bound and the runtime's probe has been answered with `VALUE`. Turns false when the binding is lost. |
+| `grantControlRxCredit() void` | `control_channel` in `open` and `receive` | Grants one receive credit to the deck. Does not fail temporarily, see "Credit". |
+| `controlTxCredit() uint8_t` | `control_channel` in `canSend` | Returns the transmit credit. |
+| `sendControl(const controlFrame_t *frame) void` | `control_channel` in `send` | Sends a frame on the Control service, using one transmit credit. |
+| `takeControlRx(controlFrame_t *frame) bool` | `control_channel` in `receive` | Copies a received frame out of the receive slot into `frame`. Returns true when a frame was taken. Returns false when the receive slot was empty, and `frame` must not be used. |
+
 - Only `control_channel` uses the credit and receive slot functions of the
   runtime interface.
 
@@ -324,8 +397,8 @@ sequenceDiagram
     else ERROR
         D->>Ch: ERROR request_id code detail
     end
-    H->>Ch: receive()
-    Ch-->>H: frame
+    H->>Ch: receive(frame)
+    Ch-->>H: frame filled in
     Ch->>D: CREDIT_UPDATE control, 1 (grant receive credit)
     H->>H: decode (codec), match request_id, stop timer
     H->>U: onComplete(request, OK, VALUE or ERROR)
@@ -375,6 +448,20 @@ to its step.
   taken from the queue after that complete with `NOT_READY`.
 - The ready flag is written only in the service task. Users read it with
   `isReady` from their own task.
+
+### Functions
+
+| Function | Called by | What it does |
+|---|---|---|
+| `submit(const ControlRequest *request) bool` | Users, from their own task | Passes the request on to `request_queue` with `put`, without blocking. Returns false when the queue is full, and the request is not queued. |
+| `isReady() bool` | Users, from their own task | Returns the ready flag. |
+| `step() void` | The service task, once per service step | Observes `controlServiceReady()`, acts on ready and not ready in the order above, and steps `request_handling` with the ready flag. |
+
+### Data
+
+| Field | Type | What it holds |
+|---|---|---|
+| `ready` | `bool` | The ready flag. Written only in the service task. |
 
 ### State machine
 
@@ -445,9 +532,9 @@ the service task, by `request_handling`.
 
 | Function | Called by | What it does |
 |---|---|---|
-| `init()` | Startup, before the first `put` | Creates the queue. |
-| `put(request) bool` | `control_service` in `submit`, from user tasks | Copies the request into the queue without blocking. Returns false when the queue is full, and the request is not queued. |
-| `take(request) bool` | `request_handling` in its step, in the service task | Copies the oldest request out of the queue without blocking. Returns false when the queue is empty. |
+| `init() void` | Startup, before the first `put` | Creates the queue. |
+| `put(const ControlRequest *request) bool` | `control_service` in `submit`, from user tasks | Copies the request into the queue without blocking. Returns false when the queue is full, and the request is not queued. |
+| `take(ControlRequest *request) bool` | `request_handling` in its step, in the service task | Copies the oldest request out of the queue without blocking. Returns false when the queue is empty. |
 
 Requests are taken in the order they were put.
 
@@ -467,6 +554,21 @@ answers.
   WaitingResponse it is a check: a mismatch means a deck defect, not a
   late answer. Starts at 1 (since one request is needed to make the 
   control service ready, part of runtime).
+
+### Functions
+
+| Function | Called by | What it does |
+|---|---|---|
+| `abort() void` | `control_service` on not ready | Completes the outstanding request with `ABORTED` and goes to Idle. Does nothing in Idle. |
+| `step(bool ready) void` | `control_service` in its step, once per service step | Does one step, see "One step". |
+
+### Data
+
+| Field | Type | What it holds |
+|---|---|---|
+| `outstanding` | `ControlRequest` | The copy of the outstanding request, taken from `request_queue`. Passed to `onComplete`. |
+| `nextRequestId` | `uint8_t` | The `request_id` for the next request. Starts at 1 and wraps at 255. |
+| `deadline` | Not decided | When the outstanding request times out. |
 
 ### State machine
 
@@ -630,9 +732,9 @@ validates their bodies. Pure functions without state.
 
 | Function | What it does |
 |---|---|
-| `encodeGet(requestId, path) frame` | Builds a `GET` frame as in "Frame layout". |
-| `encodeSet(requestId, path, value) frame` | Builds a `SET` frame as in "Frame layout". |
-| `decodeResponse(frame, len, response) bool` | Validates the frame. Returns true and fills in `response` when the frame is valid. Returns false when it is malformed, and `response` must not be used. |
+| `encodeGet(uint8_t requestId, const char *path, uint8_t pathLen) controlFrame_t` | Builds a `GET` frame as in "Frame layout". |
+| `encodeSet(uint8_t requestId, const char *path, uint8_t pathLen, const ControlValue *value) controlFrame_t` | Builds a `SET` frame as in "Frame layout". |
+| `decodeResponse(const controlFrame_t *frame, ControlResponse *response) bool` | Validates the frame. Returns true and fills in `response` when the frame is valid. Returns false when it is malformed, and `response` must not be used. |
 
 A valid `response` holds `kind`, `request_id` and the body. A
 frame is malformed when:
@@ -651,11 +753,27 @@ frames only and does not know the Control message format.
   leaves receive credit at 0 when it is done.
 - On `reset`, it clears the receive buffer and its credit state.
 - It tells whether a frame can be sent, which hides the transmit credit.
-- On receive, it copies the frame out of the receive slot and grants receive
-  credit at once.
+- On receive, it copies the frame out of the receive slot into the caller's
+  `controlFrame_t` and grants receive credit at once.
 - It guarantees that a frame can be sent only after any answer to the
   previous request has been delivered. `request_handling` relies on this to
   recognize stale answers.
+
+### Functions
+
+| Function | Called by | What it does |
+|---|---|---|
+| `open() void` | `control_service` on ready | Grants the first receive credit. |
+| `reset() void` | `control_service` on not ready | Clears the receive buffer and the credit state. |
+| `canSend() bool` | `request_handling` in WaitingToSend | Returns true when a frame can be sent, that is when there is transmit credit. |
+| `send(const controlFrame_t *frame) void` | `request_handling` in WaitingToSend | Sends the raw frame. |
+| `receive(controlFrame_t *frame) bool` | `request_handling` at the start of each step | Copies a received frame out of the receive slot into `frame` and grants receive credit at once. Returns true when a frame was received. Returns false when there was none, and `frame` must not be used. |
+
+### Data
+
+| Field | Type | What it holds |
+|---|---|---|
+| `rxBuffer` | `controlFrame_t` | The receive buffer. Cleared on `reset`. |
 
 ### Credit
 
@@ -722,3 +840,7 @@ sequenceDiagram
 ## Open questions
 
 Does this design support the full chain control service, from deck to cflib? Because it is created with the temporary param path in mind.
+
+TODO: Add public functions to all units
+
+TODO: Rename everything to C style naming, fulfilling naming conventions
