@@ -129,6 +129,9 @@ DECK_DRIVER(flapper_deck);
 
 PARAM_GROUP_START(deck)
 
+/**
+ * @brief Nonzero if the Flapper Nimble+ PCB is attached
+ */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcFlapperDeck, &isInit)
 PARAM_GROUP_STOP(deck)
 
@@ -139,10 +142,6 @@ LOG_ADD(LOG_FLOAT, current, &current)
 LOG_ADD(LOG_FLOAT, power, &power)
 LOG_GROUP_STOP(flapper)
 
-/**
- *
- * Current sensor parameters
- */
 PARAM_GROUP_START(flapper)
 /**
  * @brief Current sensor constant (A/V)
