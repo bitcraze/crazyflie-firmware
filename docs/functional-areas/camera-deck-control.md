@@ -118,7 +118,11 @@ The Control Service is broken down into five units by responsibility.
 | [`bccam_control_channel`](#bccam_control_channel) | Handles transmit and receive, and its allowance; the only unit aware of the receive slot and credit. The only unit that calls the runtime. |
 
 `bccam_control_service` is stepped by the bcCam UART service task in
-`bccam_uart_service`. All units run in that task. The exceptions are
+`bccam_uart_service`. `bccam_uart_service` is part of the runtime layer. It
+also owns the task and the runtime instance, and wires the Control Service
+in by calling `bccam_control_service_init` and `bccam_control_service_step`.
+This is the one place where the layer below calls the Control Service.
+All units run in that task. The exceptions are
 `bccam_control_service_submit` and `bccam_control_service_is_ready`, which
 users call from their own task, and `bccam_control_request_queue`, the only
 unit shared between tasks.
@@ -299,6 +303,58 @@ response fits in one frame:
   is no context pointer: each user has its own `bccam_control_user_t` and
   its own callback, and `on_complete` gets the request, whose `user` tells
   which user it belongs to.
+
+Which units include which. An arrow from one unit to another means that
+the first unit includes the header of the other. All the types above are in
+`bccam_control_types.h`, a header with no `.c` file. Standard headers such
+as `stdbool.h` and `stdint.h` are left out.
+
+```mermaid
+flowchart TB
+    user["user, for example camera settings"]
+    uart_service["bccam_uart_service"]
+
+    service["bccam_control_service"]
+    handling["bccam_control_request_handling"]
+    queue["bccam_control_request_queue"]
+    codec["bccam_control_codec"]
+    channel["bccam_control_channel"]
+
+    types["bccam_control_types"]
+    runtime["bccam_uart_runtime"]
+
+    user --> service
+    uart_service --> service
+
+    service --> queue
+    service --> handling
+    service --> channel
+
+    handling --> queue
+    handling --> codec
+    handling --> channel
+
+    service --> types
+    handling --> types
+    queue --> types
+    codec --> types
+    channel --> types
+
+    service --> runtime
+    channel --> runtime
+    runtime --> types
+```
+
+- `bccam_control_service` and `bccam_control_channel` include
+  `bccam_uart_runtime` for `bccam_uart_runtime_t`, which their init
+  functions take.
+- `bccam_uart_runtime` includes `bccam_control_types` for
+  `bccam_control_frame_t`, which `bccam_uart_runtime_send_control` and
+  `bccam_uart_runtime_take_control_rx` take, see
+  [Runtime interface](#runtime-interface).
+- Users and `bccam_uart_service` include only `bccam_control_service`.
+- There are no include cycles. `bccam_control_types` includes no other
+  project header.
 
 ### User API
 
@@ -928,6 +984,6 @@ sequenceDiagram
 
 Does this design support the full chain control service, from deck to cflib? Because it is created with the temporary param path in mind.
 
-TODO: Add public functions to all units - check that it is done
+Include diagram
 
 Does the design guarantuee that we cannot get stuck in off-by-one loops? Where the camera deck always sends a response to a request that came one request ago?
