@@ -157,7 +157,6 @@ classDiagram
     }
 
     class bccam_control_request_handling {
-        +abort
         +step
     }
 
@@ -193,7 +192,7 @@ classDiagram
     bccam_control_service --> bccam_control_request_queue : put
     bccam_control_service --> bccam_uart_runtime : control_ready
     bccam_control_service --> bccam_control_channel : open, reset
-    bccam_control_service --> bccam_control_request_handling : abort, step
+    bccam_control_service --> bccam_control_request_handling : step
     bccam_control_request_handling --> bccam_control_request_queue : take
     bccam_control_request_handling --> bccam_control_codec
     bccam_control_request_handling --> bccam_control_channel : can_send, send, receive
@@ -351,7 +350,7 @@ stateDiagram-v2
     Outstanding --> Completed : answered / BCCAM_CONTROL_OUTCOME_OK, _VALUE or _ERROR
     Outstanding --> Completed : malformed or mismatched answer / BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR
     Outstanding --> Completed : timer expired / BCCAM_CONTROL_OUTCOME_TIMEOUT
-    Outstanding --> Completed : aborted / BCCAM_CONTROL_OUTCOME_ABORTED
+    Outstanding --> Completed : stepped while not ready / BCCAM_CONTROL_OUTCOME_ABORTED
 
     Completed --> [*] : on_complete called
 ```
@@ -410,7 +409,7 @@ user gets.
 | Malformed answer in WaitingResponse | `bccam_control_codec` | Counts it as malformed and completes the request. The frame is the answer, so no other answer will follow. | `BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR` |
 | `request_id` mismatch in WaitingResponse | `bccam_control_request_handling` | Counts it as a mismatch, a deck defect, and completes the request. The frame is the answer, so no other answer will follow. | `BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR` |
 | Malformed frame in Idle or WaitingToSend | `bccam_control_codec` | Counts it as malformed and drops it. | Nothing more, the request already got `BCCAM_CONTROL_OUTCOME_TIMEOUT` |
-| Ready lost with a request outstanding: deck reset, link fault or handle change | `bccam_control_service`, `bccam_uart_runtime_control_ready()` is false | Aborts in `bccam_control_request_handling`, then resets `bccam_control_channel`. | `BCCAM_CONTROL_OUTCOME_ABORTED` |
+| Ready lost with a request outstanding: deck reset, link fault or handle change | `bccam_control_service`, `bccam_uart_runtime_control_ready()` is false | `bccam_control_service` resets `bccam_control_channel`. `bccam_control_request_handling`, stepped with ready false, completes the request. | `BCCAM_CONTROL_OUTCOME_ABORTED` |
 | Request taken from the queue while not ready | `bccam_control_request_handling`, stepped with ready false | Completes the request without sending it. | `BCCAM_CONTROL_OUTCOME_NOT_READY` |
 | Queue full | `bccam_control_request_queue`, `bccam_control_request_queue_put` | `bccam_control_service_submit` returns false. | No `on_complete` |
 
@@ -423,12 +422,15 @@ WaitingToSend. See [Credit](#credit) under [bccam_control_channel](#bccam_contro
 
 ### Sequence for ready lost
 
-A request is outstanding when the deck resets, the link faults or the
-handle changes. `bccam_control_service`, in its step, finds that the
-runtime reports `bccam_uart_runtime_control_ready()` as false. It aborts in
-`bccam_control_request_handling`, resets `bccam_control_channel` and goes
-to not ready, in the order in [bccam_control_service](#bccam_control_service).
-A request taken from the queue after that completes with
+The deck resets, the link faults or the handle changes, with or without a
+request outstanding. `bccam_control_service`, in its step, finds that the
+runtime reports `bccam_uart_runtime_control_ready()` as false. It resets
+`bccam_control_channel`, goes to not ready and steps
+`bccam_control_request_handling` with ready false, in the order in
+[bccam_control_service](#bccam_control_service). In WaitingToSend or
+WaitingResponse, `bccam_control_request_handling` completes the outstanding
+request with `BCCAM_CONTROL_OUTCOME_ABORTED` and goes to Idle. In Idle, a
+request taken from the queue completes with
 `BCCAM_CONTROL_OUTCOME_NOT_READY`.
 
 ```mermaid
@@ -442,21 +444,33 @@ sequenceDiagram
     participant R as bccam_uart_runtime
     participant D as Camera deck<br/>Control Service
 
-    CS->>H: abort()
-    H->>U: on_complete(request, ABORTED)
-    H->>H: Idle
     CS->>Ch: reset()
-    Ch->>Ch: clear receive buffer and credit state
+    Ch->>Ch: clear receive buffer
     CS->>CS: not ready
     CS->>H: step(false)
-    H->>Q: take()
-    alt request queued
-        Q-->>H: request
-        H->>U: on_complete(request, NOT_READY)
-    else queue empty
-        Q-->>H: none
+    alt WaitingToSend or WaitingResponse
+        H->>H: ready false, checked before receive
+        H->>U: on_complete(request, ABORTED)
+        H->>H: state Idle
+    else Idle
+        H->>Q: take()
+        alt request queued
+            Q-->>H: request
+            H->>U: on_complete(request, NOT_READY)
+        else queue empty
+            Q-->>H: none
+        end
     end
 ```
+
+Assumptions:
+
+- `bccam_uart_runtime_control_ready()` goes false only when the Link
+  session ends. Deck reset, link fault and handle change all end it. The
+  session reset clears the credit in both directions and drops pending
+  units, so an answer the deck still owes from the old session never
+  reaches a later request, and the next ready starts from
+  [Credit](#credit) again.
 
 ## bccam_control_service
 
@@ -469,19 +483,18 @@ The Control Service is ready when the runtime reports
 runtime's probe has been answered. User requests are only sent while it is
 ready. `bccam_control_service` observes ready and not ready and tells the
 other units what to do, in a fixed order on each. The other units do not
-know about ready and not ready. `bccam_control_request_handling` gets the
-ready flag as an argument to its step.
+observe ready and not ready themselves. `bccam_control_request_handling`
+gets the ready flag as an argument to its step.
 
 - Order on ready: `bccam_control_service` opens `bccam_control_channel`
   with `bccam_control_channel_open`, which grants receive credit, then
   sets the ready flag.
-- Order on not ready: `bccam_control_service` tells
-  `bccam_control_request_handling` to abort with
-  `bccam_control_request_handling_abort`, which completes the outstanding
-  request with `BCCAM_CONTROL_OUTCOME_ABORTED`, then resets
-  `bccam_control_channel` with `bccam_control_channel_reset`, and goes to
-  not ready. Requests taken from the queue after that complete with
-  `BCCAM_CONTROL_OUTCOME_NOT_READY`.
+- Order on not ready: `bccam_control_service` resets
+  `bccam_control_channel` with `bccam_control_channel_reset`, goes to not
+  ready, then steps `bccam_control_request_handling` with ready false,
+  which completes the outstanding request with
+  `BCCAM_CONTROL_OUTCOME_ABORTED`. Requests taken from the queue after that
+  complete with `BCCAM_CONTROL_OUTCOME_NOT_READY`.
 - The ready flag is written only in the service task. Users read it with
   `bccam_control_service_is_ready` from their own task.
 
@@ -506,7 +519,7 @@ stateDiagram-v2
     [*] --> NotReady
 
     NotReady --> Ready : ready / open bccam_control_channel
-    Ready --> NotReady : not ready / abort in bccam_control_request_handling (completes the outstanding request with BCCAM_CONTROL_OUTCOME_ABORTED), reset bccam_control_channel
+    Ready --> NotReady : not ready / reset bccam_control_channel, step bccam_control_request_handling with ready false (completes the outstanding request with BCCAM_CONTROL_OUTCOME_ABORTED)
 
     note right of NotReady
         Requests taken from the queue in
@@ -597,7 +610,6 @@ validate answers.
 
 | Function | What it does |
 |---|---|
-| `bccam_control_request_handling_abort() void` | Completes the outstanding request with `BCCAM_CONTROL_OUTCOME_ABORTED` and goes to Idle. Does nothing in Idle. |
 | `bccam_control_request_handling_step(bool ready) void` | Does one step, see [One step](#one-step). |
 
 ### Data
@@ -624,17 +636,19 @@ stateDiagram-v2
     WaitingResponse --> Idle : malformed or mismatched answer / stop timer, on_complete BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR
     WaitingResponse --> Idle : timer expired / on_complete BCCAM_CONTROL_OUTCOME_TIMEOUT
 
-    WaitingToSend --> Idle : abort / on_complete BCCAM_CONTROL_OUTCOME_ABORTED
-    WaitingResponse --> Idle : abort / on_complete BCCAM_CONTROL_OUTCOME_ABORTED
+    WaitingToSend --> Idle : stepped while not ready / on_complete BCCAM_CONTROL_OUTCOME_ABORTED
+    WaitingResponse --> Idle : stepped while not ready / on_complete BCCAM_CONTROL_OUTCOME_ABORTED
 ```
 
 ### One step
 
 What `bccam_control_request_handling` does in one call to
 `bccam_control_request_handling_step(ready)`, from start to return. Each
-state has its own swim lane. Each lane starts by decoding a received frame
-with `bccam_control_codec` - the receive mechanism depends on that all
-received frames are handled, even the unwanted ones. A lane ends either
+state has its own swim lane. WaitingToSend and WaitingResponse start by
+checking ready, and complete the request with
+`BCCAM_CONTROL_OUTCOME_ABORTED` when it is false. Each lane then decodes a
+received frame with `bccam_control_codec` - the receive mechanism depends
+on that all received frames are handled, even the unwanted ones. A lane ends either
 without changing the state or by setting a new state, which takes effect
 from the next step. `bccam_control_channel` has already granted receive
 credit for a received frame, so no branch has to.
@@ -669,6 +683,8 @@ flowchart TD
     end
 
     subgraph send ["WaitingToSend"]
+        wr{"ready?"}
+        wa["on_complete<br/>BCCAM_CONTROL_OUTCOME_ABORTED"]
         w0f{"frame?"}
         wd["decode (bccam_control_codec)"]
         w1{"valid response?"}
@@ -681,6 +697,8 @@ flowchart TD
         w8(["state Idle"])
         w9(["state WaitingResponse"])
         w0(["nothing"])
+        wr -- "no" --> wa --> w8
+        wr -- "yes" --> w0f
         w0f -- "yes" --> wd --> w1
         w0f -- "no" --> w4
         w1 -- "yes" --> ws
@@ -694,6 +712,8 @@ flowchart TD
     end
 
     subgraph resp ["WaitingResponse"]
+        pr{"ready?"}
+        pa["on_complete<br/>BCCAM_CONTROL_OUTCOME_ABORTED"]
         p0{"frame?"}
         pd["decode (bccam_control_codec)"]
         p1{"valid response?"}
@@ -706,6 +726,8 @@ flowchart TD
         p7["on_complete<br/>BCCAM_CONTROL_OUTCOME_TIMEOUT"]
         p8(["state Idle"])
         p9(["nothing"])
+        pr -- "no" --> pa --> p8
+        pr -- "yes" --> p0
         p0 -- "yes" --> pd --> p1
         p0 -- "no" --> p6
         p1 -- "yes" --> p4
@@ -722,8 +744,8 @@ flowchart TD
 
     s0 --> st
     st -- "Idle" --> i0
-    st -- "WaitingToSend" --> w0f
-    st -- "WaitingResponse" --> p0
+    st -- "WaitingToSend" --> wr
+    st -- "WaitingResponse" --> pr
     i8 --> e0
     i9 --> e0
     w8 --> e0
@@ -746,6 +768,10 @@ Consequences and design choices:
 
 - At most one frame is received per step, since there is never more than
   one frame to take.
+- The ready check comes before receiving, so a frame that is still
+  received when ready is lost cannot complete the request with another
+  outcome than `BCCAM_CONTROL_OUTCOME_ABORTED`. `bccam_control_channel` is
+  also reset before the step, so there is no such frame.
 - Receiving comes before the timeout check, so an answer that arrives in
   the same step as the deadline completes the request.
 - In WaitingResponse, any received frame is the answer to the outstanding
@@ -790,8 +816,9 @@ frames only and does not know the Control message format.
 
 - On `bccam_control_channel_open`, it grants the first receive credit. The
   runtime's probe leaves receive credit at 0 when it is done.
-- On `bccam_control_channel_reset`, it clears the receive buffer and its
-  credit state.
+- On `bccam_control_channel_reset`, it clears the receive buffer. The
+  credit is cleared by the Link session reset, see
+  [Sequence for ready lost](#sequence-for-ready-lost).
 - It tells whether a frame can be sent, which hides the transmit credit.
 - On receive, it copies the frame out of the receive slot into the caller's
   `bccam_control_frame_t` and grants receive credit at once.
@@ -804,7 +831,7 @@ frames only and does not know the Control message format.
 | Function | What it does |
 |---|---|
 | `bccam_control_channel_open() void` | Grants the first receive credit. |
-| `bccam_control_channel_reset() void` | Clears the receive buffer and the credit state. |
+| `bccam_control_channel_reset() void` | Clears the receive buffer. |
 | `bccam_control_channel_can_send() bool` | Returns true when a frame can be sent, that is when there is transmit credit. |
 | `bccam_control_channel_send(const bccam_control_frame_t *frame) void` | Sends the raw frame. |
 | `bccam_control_channel_receive(bccam_control_frame_t *frame) bool` | Copies a received frame out of the receive slot into `frame` and grants receive credit at once. Returns true when a frame was received. Returns false when there was none, and `frame` must not be used. |
@@ -882,4 +909,6 @@ sequenceDiagram
 
 Does this design support the full chain control service, from deck to cflib? Because it is created with the temporary param path in mind.
 
-TODO: Add public functions to all units
+TODO: Add public functions to all units - check that it is done
+
+Does the design guarantuee that we cannot get stuck in off-by-one loops? Where the camera deck always sends a response to a request that came one request ago?
