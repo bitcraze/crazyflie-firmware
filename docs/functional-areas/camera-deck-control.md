@@ -115,7 +115,7 @@ The Control Service is broken down into five units by responsibility.
 | [`bccam_control_request_queue`](#bccam_control_request_queue) | Hands submitted requests from user tasks to the service task. |
 | [`bccam_control_request_handling`](#bccam_control_request_handling) | Handles one outstanding request. |
 | [`bccam_control_codec`](#bccam_control_codec) | Library of functions for encoding, decoding and validation. |
-| [`bccam_control_channel`](#bccam_control_channel) | Handles transmit and receive, and its allowance; the only unit aware of the receive slot and credit. |
+| [`bccam_control_channel`](#bccam_control_channel) | Handles transmit and receive, and its allowance; the only unit aware of the receive slot and credit. The only unit that calls the runtime. |
 
 `bccam_control_service` is stepped by the bcCam UART service task in
 `bccam_uart_service`. All units run in that task. The exceptions are
@@ -145,6 +145,7 @@ classDiagram
     }
 
     class bccam_control_service {
+        +init
         +submit
         +is_ready
         +step
@@ -167,6 +168,8 @@ classDiagram
     }
 
     class bccam_control_channel {
+        +init
+        +runtime_ready
         +open
         +reset
         +can_send
@@ -188,16 +191,15 @@ classDiagram
     }
 
     bccam_control_user_t ..> bccam_control_service : submit, is_ready
-    ServiceTask --> bccam_control_service : step
-    bccam_control_service --> bccam_control_request_queue : put
-    bccam_control_service --> bccam_uart_runtime : control_ready
-    bccam_control_service --> bccam_control_channel : open, reset
+    ServiceTask --> bccam_control_service : init, step
+    bccam_control_service --> bccam_control_request_queue : init, put
+    bccam_control_service --> bccam_control_channel : init, runtime_ready, open, reset
     bccam_control_service --> bccam_control_request_handling : step
     bccam_control_request_handling --> bccam_control_request_queue : take
     bccam_control_request_handling --> bccam_control_codec
     bccam_control_request_handling --> bccam_control_channel : can_send, send, receive
     bccam_control_request_handling --> bccam_control_user_t : on_complete
-    bccam_control_channel --> bccam_uart_runtime : credit, send, take
+    bccam_control_channel --> bccam_uart_runtime : control_ready, credit, send, take
 ```
 
 The data passed through the user API, and the frame and response passed
@@ -314,9 +316,12 @@ own `on_complete` in their `bccam_control_user_t`.
 ### Runtime interface
 
 The functions of the runtime that the Control Service uses. They belong to
-`bccam_uart_runtime`. The runtime functions take the runtime instance,
-`bccam_uart_runtime_t *runtime`, as their first argument. It is left out
-here.
+`bccam_uart_runtime`. Only `bccam_control_channel` calls them. The runtime
+functions take the runtime instance, `bccam_uart_runtime_t *runtime`, as
+their first argument. It is left out here. `bccam_uart_service` owns the
+runtime instance and passes it to `bccam_control_service_init`, which
+passes it on to `bccam_control_channel_init`. `bccam_control_channel`
+stores it.
 
 | Function | What it does |
 |---|---|
@@ -409,7 +414,7 @@ user gets.
 | Malformed answer in WaitingResponse | `bccam_control_codec` | Counts it as malformed and completes the request. The frame is the answer, so no other answer will follow. | `BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR` |
 | `request_id` mismatch in WaitingResponse | `bccam_control_request_handling` | Counts it as a mismatch, a deck defect, and completes the request. The frame is the answer, so no other answer will follow. | `BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR` |
 | Malformed frame in Idle or WaitingToSend | `bccam_control_codec` | Counts it as malformed and drops it. | Nothing more, the request already got `BCCAM_CONTROL_OUTCOME_TIMEOUT` |
-| Ready lost with a request outstanding: deck reset, link fault or handle change | `bccam_control_service`, `bccam_uart_runtime_control_ready()` is false | `bccam_control_service` resets `bccam_control_channel`. `bccam_control_request_handling`, stepped with ready false, completes the request. | `BCCAM_CONTROL_OUTCOME_ABORTED` |
+| Ready lost with a request outstanding: deck reset, link fault or handle change | `bccam_control_service`, `bccam_control_channel_runtime_ready()` is false | `bccam_control_service` resets `bccam_control_channel`. `bccam_control_request_handling`, stepped with ready false, completes the request. | `BCCAM_CONTROL_OUTCOME_ABORTED` |
 | Request taken from the queue while not ready | `bccam_control_request_handling`, stepped with ready false | Completes the request without sending it. | `BCCAM_CONTROL_OUTCOME_NOT_READY` |
 | Queue full | `bccam_control_request_queue`, `bccam_control_request_queue_put` | `bccam_control_service_submit` returns false. | No `on_complete` |
 
@@ -423,8 +428,8 @@ WaitingToSend. See [Credit](#credit) under [bccam_control_channel](#bccam_contro
 ### Sequence for ready lost
 
 The deck resets, the link faults or the handle changes, with or without a
-request outstanding. `bccam_control_service`, in its step, finds that the
-runtime reports `bccam_uart_runtime_control_ready()` as false. It resets
+request outstanding. `bccam_control_service`, in its step, finds that
+`bccam_control_channel_runtime_ready()` is false. It resets
 `bccam_control_channel`, goes to not ready and steps
 `bccam_control_request_handling` with ready false, in the order in
 [bccam_control_service](#bccam_control_service). In WaitingToSend or
@@ -480,10 +485,12 @@ single entry point the service task steps. `bccam_control_service_submit`
 passes the request on to `bccam_control_request_queue` and does not block.
 The Control Service is ready when the runtime reports
 `bccam_uart_runtime_control_ready()`: the Control service is bound and the
-runtime's probe has been answered. User requests are only sent while it is
-ready. `bccam_control_service` observes ready and not ready and tells the
-other units what to do, in a fixed order on each. The other units do not
-observe ready and not ready themselves. `bccam_control_request_handling`
+runtime's probe has been answered. `bccam_control_service` reads it through
+`bccam_control_channel_runtime_ready()`. User requests are only sent while
+it is ready. `bccam_control_service` observes ready and not ready and tells
+the other units what to do, in a fixed order on each. The other units do
+not act on ready and not ready themselves. `bccam_control_channel` only
+reports it. `bccam_control_request_handling`
 gets the ready flag as an argument to its step.
 
 - Order on ready: `bccam_control_service` opens `bccam_control_channel`
@@ -504,7 +511,8 @@ gets the ready flag as an argument to its step.
 |---|---|
 | `bccam_control_service_submit(const bccam_control_request_t *request) bool` | Passes the request on to `bccam_control_request_queue` with `bccam_control_request_queue_put`, without blocking. Returns false when the queue is full, and the request is not queued. |
 | `bccam_control_service_is_ready() bool` | Returns the ready flag. |
-| `bccam_control_service_step() void` | Observes `bccam_uart_runtime_control_ready()`, acts on ready and not ready in the order above, and steps `bccam_control_request_handling` with the ready flag. |
+| `bccam_control_service_init(bccam_uart_runtime_t *runtime) void` | The public init functions of all control_service units. Initializes the control service unit and subunits. Passes `runtime` on to `bccam_control_channel_init`. |
+| `bccam_control_service_step() void` | Observes `bccam_control_channel_runtime_ready()`, acts on ready and not ready in the order above, and steps `bccam_control_request_handling` with the ready flag. |
 
 ### Data
 
@@ -533,7 +541,7 @@ stateDiagram-v2
 
 The runtime establishes the link, enumerates the catalog and runs the
 probe. The flow starts when `bccam_control_service`, in its step, finds
-that the runtime reports `bccam_uart_runtime_control_ready()` as true. It
+that `bccam_control_channel_runtime_ready()` is true. It
 opens `bccam_control_channel` and sets the ready flag, which users read with
 `bccam_control_service_is_ready`. Users can then submit requests as in [Request with an answer](#sequence-for-request-with-an-answer). Frames between
 `bccam_control_channel` and the deck go through the runtime and the link.
@@ -546,8 +554,10 @@ sequenceDiagram
     participant R as bccam_uart_runtime
     participant D as Camera deck<br/>Control Service
 
-    CS->>R: control_ready()
-    R-->>CS: true
+    CS->>Ch: runtime_ready()
+    Ch->>R: control_ready()
+    R-->>Ch: true
+    Ch-->>CS: true
     CS->>Ch: open()
     Ch->>D: CREDIT_UPDATE control, 1 (grant receive credit)
     CS->>CS: ready
@@ -811,8 +821,14 @@ frame is malformed when:
 
 ## bccam_control_channel
 
-The only unit aware of the receive slot and credit. It works with raw
-frames only and does not know the Control message format.
+The only unit aware of the receive slot and credit, and the only unit that
+calls the runtime. It works with raw frames only and does not know the
+Control message format.
+
+- On `bccam_control_channel_init`, it stores the runtime instance. All its
+  runtime calls use it.
+- `bccam_control_channel_runtime_ready` passes on
+  `bccam_uart_runtime_control_ready()` without acting on it.
 
 - On `bccam_control_channel_open`, it grants the first receive credit. The
   runtime's probe leaves receive credit at 0 when it is done.
@@ -830,6 +846,8 @@ frames only and does not know the Control message format.
 
 | Function | What it does |
 |---|---|
+| `bccam_control_channel_init(bccam_uart_runtime_t *runtime) void` | Stores `runtime` and clears the receive buffer. |
+| `bccam_control_channel_runtime_ready() bool` | Returns `bccam_uart_runtime_control_ready()`. |
 | `bccam_control_channel_open() void` | Grants the first receive credit. |
 | `bccam_control_channel_reset() void` | Clears the receive buffer. |
 | `bccam_control_channel_can_send() bool` | Returns true when a frame can be sent, that is when there is transmit credit. |
@@ -840,6 +858,7 @@ frames only and does not know the Control message format.
 
 | Field | Type | What it holds |
 |---|---|---|
+| `runtime` | `bccam_uart_runtime_t *` | The runtime instance, owned by `bccam_uart_service`. Set on `bccam_control_channel_init`. |
 | `rx_buffer` | `bccam_control_frame_t` | The receive buffer. Cleared on `bccam_control_channel_reset`. |
 
 ### Credit
