@@ -49,6 +49,14 @@ from the Crazyflie.
   is Service Binding in the Common Link.
 - **Ready**: the Control service is bound and the probe has been answered
   with `VALUE`. User requests are only transmitted while ready.
+- **Deck request ID**: the `request_id` on the wire between the Crazyflie
+  and the deck. Owned by the Control Service, which assigns it. Users never
+  see it.
+- **User request ID**: the request ID between a user and the Crazyflie.
+  Owned by the user, which assigns it. The Control Service does not read it
+  and returns it with the result. For example, a user submits user request
+  ID 2, the Control Service sends it to the deck as deck request ID 8, the
+  deck answers 8, and the user gets `on_complete` for user request ID 2.
 - **Probe**: the `GET 0 meta.schema_modules` request the runtime sends on
   the Control service before ready. The Control Service only observes the
   result.
@@ -69,7 +77,7 @@ depends on `kind`:
 | Byte | Field | Content |
 |---|---|---|
 | 0 | `kind` | `GET` 0x01, `SET` 0x02, `OK` 0x80, `VALUE` 0x81, `ERROR` 0x82. Bit 7 is set in frames from the deck. |
-| 1 | `request_id` | Set by the Crazyflie in the request, copied by the deck into the answer. |
+| 1 | `request_id` | The deck request ID. Set by the Crazyflie in the request, copied by the deck into the answer. |
 | 2.. | body | Depends on `kind`, see below. |
 
 Bodies:
@@ -231,6 +239,7 @@ classDiagram
 
     class bccam_control_request_t {
         uint8_t operation GET or SET
+        uint8_t user_request_id
         char path[BCCAM_CONTROL_PATH_MAX_LEN]
         uint8_t path_len
         bccam_control_value_t value
@@ -303,6 +312,11 @@ response fits in one frame:
   is no context pointer: each user has its own `bccam_control_user_t` and
   its own callback, and `on_complete` gets the request, whose `user` tells
   which user it belongs to.
+- `user_request_id` is the user request ID. The user sets it in
+  `bccam_control_request_t`, and the Control Service does not read it. It
+  reaches `on_complete` in the request copy, so `bccam_control_result_t`
+  does not repeat it. It is not the deck request ID, which only
+  `bccam_control_request_handling` knows.
 
 Which units include which. An arrow from one unit to another means that
 the first unit includes the header of the other. All the types above are in
@@ -368,6 +382,19 @@ own `on_complete` in their `bccam_control_user_t`.
 
 - `on_complete` is called in the service task. It must not block.
 - Every submitted request gets exactly one `on_complete`.
+- `on_complete` gets the copy of the whole request, including its user
+  request ID, for every outcome. This includes the outcomes the Crazyflie
+  produces itself: `BCCAM_CONTROL_OUTCOME_NOT_READY`, `_ABORTED`,
+  `_TIMEOUT` and `_PROTOCOL_ERROR`. A user that needs only the user request
+  ID, such as a future cflib proxy, can ignore the rest. A user that needs
+  the operation, path or value, such as the param adapter, does not have
+  to keep its own table of pending requests.
+  `bccam_control_request_handling` holds the copy while the request is
+  outstanding anyway.
+- User request IDs are separate per user. Two users can use the same user
+  request ID. The Control Service does not check them for uniqueness.
+- A user should not reuse a user request ID while a request with it is queued
+  or outstanding.
 
 ### Runtime interface
 
@@ -667,7 +694,8 @@ Handles one outstanding request at a time. It sends requests only while
 ready. It calls `bccam_control_codec` to encode requests and to decode and
 validate answers.
 
-- `request_id` is incremented for each request and wraps at 255. In
+- The deck request ID, `request_id`, is assigned here and is never shown
+  to users. It is incremented for each request and wraps at 255. In
   WaitingResponse it is a check: a mismatch means a deck defect, not a
   late answer. Starts at 1 (since one request is needed to make the 
   control service ready, part of runtime).
@@ -983,7 +1011,11 @@ sequenceDiagram
 ## Open questions
 
 Does this design support the full chain control service, from deck to cflib? Because it is created with the temporary param path in mind.
-
-Include diagram
+  - Decided: the Control Service owns the deck request ID and the user owns
+  the user request ID, see [Terms](#terms) and [User API](#user-api). The
+  value in the user API is already TLV.
+  - Decided: `on_complete` keeps getting the whole request, not only the
+  user request ID, see [User API](#user-api).
+  Should we prepare for Notify to be implemented?
 
 Does the design guarantuee that we cannot get stuck in off-by-one loops? Where the camera deck always sends a response to a request that came one request ago?
