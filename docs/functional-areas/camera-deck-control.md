@@ -600,7 +600,7 @@ Severity rates the effect on the user after mitigation:
   session reset clears the credit in both directions and drops pending
   units, so an answer the deck still owes from the old session never
   reaches a later request, and the next ready starts from [Credit](#credit)
-  again. See [Sequence for ready lost](#sequence-for-ready-lost).
+  again.
 - **Severity after mitigation**: Low.
 - **Outcome**: `BCCAM_CONTROL_OUTCOME_ABORTED`.
 
@@ -612,8 +612,7 @@ Severity rates the effect on the user after mitigation:
 - **Effect if unmitigated**: the request is sent to a deck that has no
   session.
 - **Mitigation**: `bccam_control_request_handling`, stepped with ready
-  false, completes the request without sending it. See
-  [Sequence for ready lost](#sequence-for-ready-lost).
+  false, completes the request without sending it.
 - **Severity after mitigation**: Low.
 - **Outcome**: `BCCAM_CONTROL_OUTCOME_NOT_READY`.
 
@@ -1026,9 +1025,7 @@ Control message format.
 
 - On `bccam_control_channel_open`, it grants the first receive credit. The
   runtime's probe leaves receive credit at 0 when it is done.
-- On `bccam_control_channel_reset`, it clears the receive buffer. The
-  credit is cleared by the Link session reset, see
-  [Sequence for ready lost](#sequence-for-ready-lost).
+- On `bccam_control_channel_reset`, it clears the receive buffer.
 - It tells whether a frame can be sent, which hides the transmit credit.
 - On receive, it copies the frame out of the receive slot into the caller's
   `bccam_control_frame_t` and grants receive credit at once.
