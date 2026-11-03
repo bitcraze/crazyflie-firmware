@@ -455,12 +455,11 @@ stateDiagram-v2
     state Outstanding {
         [*] --> WaitingToSend
         WaitingToSend --> WaitingResponse : bccam_control_channel can send / encode and send
+        WaitingResponse --> WaitingResponse : mismatched request_id / count stale, drop
         WaitingResponse --> [*] : matching OK, VALUE or ERROR
-        WaitingResponse --> [*] : mismatched answer
     }
 
     Outstanding --> Completed : answered / BCCAM_CONTROL_OUTCOME_OK, _VALUE or _ERROR
-    Outstanding --> Completed : mismatched answer / BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR
     Outstanding --> Completed : timer expired / BCCAM_CONTROL_OUTCOME_TIMEOUT
     Outstanding --> Completed : stepped while not ready / BCCAM_CONTROL_OUTCOME_ABORTED
 
@@ -521,10 +520,9 @@ user gets.
 | Case | Detected by | Handling | User gets |
 |---|---|---|---|
 | No answer before the timeout | `bccam_control_request_handling`, timer | Completes the request. Receive credit stays granted. | `BCCAM_CONTROL_OUTCOME_TIMEOUT` |
-| Late answer to a request that timed out | `bccam_control_request_handling`, no request in WaitingResponse | Counts it as stale and drops it. | Nothing more, the request already got `BCCAM_CONTROL_OUTCOME_TIMEOUT` |
+| Late answer to a request that timed out | `bccam_control_request_handling`, no request in WaitingResponse, or `request_id` mismatch in WaitingResponse | Counts it as stale and drops it. A request in WaitingResponse keeps waiting. | Nothing more, the request already got `BCCAM_CONTROL_OUTCOME_TIMEOUT` |
 | Malformed frame, in any state | `bccam_control_codec`, class malformed | `bccam_control_service` counts it as malformed and drops it. It never completes a request. If it was the answer, the outstanding request times out. | `BCCAM_CONTROL_OUTCOME_TIMEOUT` if it was the answer, otherwise nothing |
 | Unsolicited frame, such as `NOTIFY`, in any state | `bccam_control_codec`, class unsolicited | `bccam_control_service` counts it as unsolicited and drops it. It never completes a request. | Nothing |
-| `request_id` mismatch in WaitingResponse | `bccam_control_request_handling` | Counts it as a mismatch, a deck defect, and completes the request. The response is the answer, so no other answer will follow. | `BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR` |
 | Ready lost with a request outstanding: deck reset, link fault or handle change | `bccam_control_service`, `bccam_control_channel_runtime_ready()` is false | `bccam_control_service` resets `bccam_control_channel`. `bccam_control_request_handling`, stepped with ready false, completes the request. | `BCCAM_CONTROL_OUTCOME_ABORTED` |
 | Request taken from the queue while not ready | `bccam_control_request_handling`, stepped with ready false | Completes the request without sending it. | `BCCAM_CONTROL_OUTCOME_NOT_READY` |
 | Queue full | `bccam_control_request_queue`, `bccam_control_request_queue_put` | `bccam_control_service_submit` returns false. | No `on_complete` |
@@ -535,7 +533,9 @@ again, and the deck does that only after its answer to the previous request
 has been accepted for transmission. The link delivers frames in order, so
 the late answer arrives before the next request is sent, while it is in
 WaitingToSend. See [Credit](#credit) under [bccam_control_channel](#bccam_control_channel).
-This holds also when the answer is malformed and dropped.
+This holds also when the answer is malformed and dropped. If a late answer
+still reached the next request in WaitingResponse, its `request_id` would
+not match, and the answer is dropped.
 
 ### Sequence for ready lost
 
@@ -782,9 +782,7 @@ receive frames itself: `bccam_control_service` passes it the decoded
 responses, and only responses, see [Frame classes](#frame-classes).
 
 - The deck request ID, `request_id`, is assigned here and is never shown
-  to users. It is incremented for each request and wraps at 255. In
-  WaitingResponse it is a check: a mismatch means a deck defect, not a
-  late answer. Starts at 1 (since one request is needed to make the 
+  to users. It is incremented for each request and wraps at 255. Initiated to 1 (since one request is needed to make the 
   control service ready, part of runtime).
 
 ### Functions
@@ -813,8 +811,8 @@ stateDiagram-v2
     WaitingToSend --> WaitingResponse : bccam_control_channel can send / encode and send
     WaitingToSend --> Idle : timer expired / on_complete BCCAM_CONTROL_OUTCOME_TIMEOUT
 
+    WaitingResponse --> WaitingResponse : mismatched request_id / count stale, drop
     WaitingResponse --> Idle : matching answer / stop timer, on_complete BCCAM_CONTROL_OUTCOME_OK, _VALUE or _ERROR
-    WaitingResponse --> Idle : mismatched answer / stop timer, on_complete BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR
     WaitingResponse --> Idle : timer expired / on_complete BCCAM_CONTROL_OUTCOME_TIMEOUT
 
     WaitingToSend --> Idle : stepped while not ready / on_complete BCCAM_CONTROL_OUTCOME_ABORTED
@@ -881,8 +879,7 @@ flowchart TD
         pa["on_complete<br/>BCCAM_CONTROL_OUTCOME_ABORTED"]
         p0{"response?"}
         p4{"request_id<br/>matches?"}
-        px["count mismatch,<br/>deck defect"]
-        pe["stop timer,<br/>on_complete<br/>BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR"]
+        px["count stale, drop"]
         pc["stop timer, build result,<br/>on_complete<br/>BCCAM_CONTROL_OUTCOME_OK, _VALUE or _ERROR"]
         p6{"timer expired?"}
         p7["on_complete<br/>BCCAM_CONTROL_OUTCOME_TIMEOUT"]
@@ -895,7 +892,7 @@ flowchart TD
         pr -- "yes" --> p0
         p0 -- "yes" --> p4
         p0 -- "no" --> p6
-        p4 -- "no" --> px --> pe --> p8
+        p4 -- "no" --> px --> p6
         p4 -- "yes" --> pc --> p8
         p6 -- "yes" --> p7 --> p8
         p6 -- "no" --> p9
@@ -934,10 +931,13 @@ Consequences and design choices:
   complete with another outcome than `BCCAM_CONTROL_OUTCOME_ABORTED`.
 - The response is handled before the timeout check, so an answer that
   arrives in the same step as the deadline completes the request.
-- In WaitingResponse, any response is the answer to the outstanding
-  request. A `request_id` mismatch therefore completes the request at once
-  with `BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR` instead of waiting for the
-  timeout, since no other answer will follow.
+- In WaitingResponse, a response whose `request_id` does not match is
+  counted as stale and dropped, and the request keeps waiting for its
+  answer or its timeout. A late answer to an earlier request can therefore
+  never complete the outstanding request, even if the guarantee from
+  `bccam_control_channel` were broken, and no off-by-one loop can form. A
+  deck that answers with the wrong `request_id` gives
+  `BCCAM_CONTROL_OUTCOME_TIMEOUT`.
 - A malformed answer is dropped by `bccam_control_service` and does not
   complete the request. The request completes with
   `BCCAM_CONTROL_OUTCOME_TIMEOUT`.
@@ -1092,7 +1092,10 @@ sequenceDiagram
 
 ## Open questions
 
-Does this design support the full chain control service, from deck to cflib? Because it is created with the temporary param path in mind.
-  One step of control service - what does ready flag add?
-
 Does the design guarantuee that we cannot get stuck in off-by-one loops? Where the camera deck always sends a response to a request that came one request ago?
+
+Check mermaid diagrams for overlapping text
+
+Rework error cases section to have everything in the table (lightweight FMEA)
+
+When is request_id initiated/reset?
