@@ -514,80 +514,119 @@ sequenceDiagram
 
 ## Error handling
 
-The cases in which a request does not get a matching answer, and what the
-user gets.
+The failure modes in which a request does not get a matching answer, and
+what the user gets. Each failure mode is described as if it happens.
+Severity rates the effect on the user after mitigation:
 
-| Case | Detected by | Handling | User gets |
-|---|---|---|---|
-| No answer before the timeout | `bccam_control_request_handling`, timer | Completes the request. Receive credit stays granted. | `BCCAM_CONTROL_OUTCOME_TIMEOUT` |
-| Late answer to a request that timed out | `bccam_control_request_handling`, no request in WaitingResponse, or `request_id` mismatch in WaitingResponse | Counts it as stale and drops it. A request in WaitingResponse keeps waiting. | Nothing more, the request already got `BCCAM_CONTROL_OUTCOME_TIMEOUT` |
-| Malformed frame, in any state | `bccam_control_codec`, class malformed | `bccam_control_service` counts it as malformed and drops it. It never completes a request. If it was the answer, the outstanding request times out. | `BCCAM_CONTROL_OUTCOME_TIMEOUT` if it was the answer, otherwise nothing |
-| Unsolicited frame, such as `NOTIFY`, in any state | `bccam_control_codec`, class unsolicited | `bccam_control_service` counts it as unsolicited and drops it. It never completes a request. | Nothing |
-| Ready lost with a request outstanding: deck reset, link fault or handle change | `bccam_control_service`, `bccam_control_channel_runtime_ready()` is false | `bccam_control_service` resets `bccam_control_channel`. `bccam_control_request_handling`, stepped with ready false, completes the request. | `BCCAM_CONTROL_OUTCOME_ABORTED` |
-| Request taken from the queue while not ready | `bccam_control_request_handling`, stepped with ready false | Completes the request without sending it. | `BCCAM_CONTROL_OUTCOME_NOT_READY` |
-| Queue full | `bccam_control_request_queue`, `bccam_control_request_queue_put` | `bccam_control_service_submit` returns false. | No `on_complete` |
+- **None**: no request is affected. Diagnostics, such as counters, may
+  change.
+- **Low**: a request fails or is delayed, and the user is told.
+- **Medium**: the user gets a wrong result, or is not told about a failure.
+  The service carries on correctly afterwards.
+- **High**: the service is stuck, also when it recovers once the deck or
+  the link recovers, or the failure spreads beyond the Control Service, for
+  example by blocking the bcCam UART service task.
 
-A late answer can never complete the next request. `bccam_control_channel`
-lets the next request be sent only when the deck has given transmit credit
-again, and the deck does that only after its answer to the previous request
-has been accepted for transmission. The link delivers frames in order, so
-the late answer arrives before the next request is sent, while it is in
-WaitingToSend. See [Credit](#credit) under [bccam_control_channel](#bccam_control_channel).
-This holds also when the answer is malformed and dropped. If a late answer
-still reached the next request in WaitingResponse, its `request_id` would
-not match, and the answer is dropped.
+### No answer before the timeout
 
-### Sequence for ready lost
+- **Failure mode**: the deck does not answer an outstanding request before
+  the timeout.
+- **Cause**: not stated.
+- **Effect if unmitigated**: the request waits forever and no later request
+  is sent.
+- **Mitigation**: `bccam_control_request_handling` detects it with its timer
+  and completes the request. Receive credit stays granted.
+- **Severity after mitigation**: Low.
+- **Outcome**: `BCCAM_CONTROL_OUTCOME_TIMEOUT`.
 
-The deck resets, the link faults or the handle changes, with or without a
-request outstanding. `bccam_control_service`, in its step, finds that
-`bccam_control_channel_runtime_ready()` is false. It resets
-`bccam_control_channel`, goes to not ready and steps
-`bccam_control_request_handling` with ready false, in the order in
-[bccam_control_service](#bccam_control_service). In WaitingToSend or
-WaitingResponse, `bccam_control_request_handling` completes the outstanding
-request with `BCCAM_CONTROL_OUTCOME_ABORTED` and goes to Idle. In Idle, a
-request taken from the queue completes with
-`BCCAM_CONTROL_OUTCOME_NOT_READY`.
+### Late answer to a request that timed out
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant U as User<br/>(own task)
-    participant CS as bccam_control_service
-    participant Q as bccam_control_request_queue
-    participant H as bccam_control_request_handling
-    participant Ch as bccam_control_channel
-    participant R as bccam_uart_runtime
-    participant D as Camera deck<br/>Control Service
+- **Failure mode**: an answer arrives for a request that has timed out.
+- **Cause**: the deck answers after the timeout.
+- **Effect if unmitigated**: the late answer completes the next request.
+- **Mitigation**: `bccam_control_request_handling` detects it when no
+  request is in WaitingResponse, or by a `request_id` mismatch in
+  WaitingResponse. It counts the answer as stale and drops it. A request in
+  WaitingResponse keeps waiting. A late answer can never complete the next
+  request. `bccam_control_channel` lets the next request be sent only when
+  the deck has given transmit credit again, and the deck does that only
+  after its answer to the previous request has been accepted for
+  transmission. The link delivers frames in order, so the late answer
+  arrives before the next request is sent, while it is in WaitingToSend.
+  See [Credit](#credit) under [bccam_control_channel](#bccam_control_channel).
+  This holds also when the answer is malformed and dropped. If a late
+  answer still reached the next request in WaitingResponse, its
+  `request_id` would not match, and the answer is dropped.
+- **Severity after mitigation**: None.
+- **Outcome**: nothing more, the request already got
+  `BCCAM_CONTROL_OUTCOME_TIMEOUT`.
 
-    CS->>Ch: reset()
-    Ch->>Ch: clear receive buffer
-    CS->>CS: not ready, do not receive
-    CS->>H: step(false, none)
-    alt WaitingToSend or WaitingResponse
-        H->>H: ready false
-        H->>U: on_complete(request, ABORTED)
-        H->>H: state Idle
-    else Idle
-        H->>Q: take()
-        alt request queued
-            Q-->>H: request
-            H->>U: on_complete(request, NOT_READY)
-        else queue empty
-            Q-->>H: none
-        end
-    end
-```
+### Malformed frame
 
-Assumptions:
+- **Failure mode**: a malformed frame arrives, in any state.
+- **Cause**: not stated.
+- **Effect if unmitigated**: it completes a request with a wrong result.
+- **Mitigation**: `bccam_control_codec` classifies it as malformed, and
+  `bccam_control_service` counts it and drops it. It never completes a
+  request. If it was the answer, the outstanding request times out.
+- **Severity after mitigation**: Low if it was the answer, otherwise None.
+- **Outcome**: `BCCAM_CONTROL_OUTCOME_TIMEOUT` if it was the answer,
+  otherwise nothing.
 
-- `bccam_uart_runtime_control_ready()` goes false only when the Link
+### Unsolicited frame
+
+- **Failure mode**: an unsolicited frame, such as `NOTIFY`, arrives, in any
+  state.
+- **Cause**: not stated.
+- **Effect if unmitigated**: it is taken as the answer to a request.
+- **Mitigation**: `bccam_control_codec` classifies it as unsolicited, and
+  `bccam_control_service` counts it and drops it. It never completes a
+  request.
+- **Severity after mitigation**: None.
+- **Outcome**: nothing.
+
+### Ready lost with a request outstanding
+
+- **Failure mode**: ready is lost while a request is outstanding.
+- **Cause**: deck reset, link fault or handle change.
+- **Effect if unmitigated**: the request waits for an answer that never
+  comes.
+- **Mitigation**: `bccam_control_service` detects it when
+  `bccam_control_channel_runtime_ready()` is false. It resets
+  `bccam_control_channel`, and `bccam_control_request_handling`, stepped
+  with ready false, completes the request. This relies on
+  `bccam_uart_runtime_control_ready()` going false only when the Link
   session ends. Deck reset, link fault and handle change all end it. The
   session reset clears the credit in both directions and drops pending
   units, so an answer the deck still owes from the old session never
-  reaches a later request, and the next ready starts from
-  [Credit](#credit) again.
+  reaches a later request, and the next ready starts from [Credit](#credit)
+  again. See [Sequence for ready lost](#sequence-for-ready-lost).
+- **Severity after mitigation**: Low.
+- **Outcome**: `BCCAM_CONTROL_OUTCOME_ABORTED`.
+
+### Request taken from the queue while not ready
+
+- **Failure mode**: `bccam_control_request_handling` takes a request from
+  the queue while the service is not ready.
+- **Cause**: not stated.
+- **Effect if unmitigated**: the request is sent to a deck that has no
+  session.
+- **Mitigation**: `bccam_control_request_handling`, stepped with ready
+  false, completes the request without sending it. See
+  [Sequence for ready lost](#sequence-for-ready-lost).
+- **Severity after mitigation**: Low.
+- **Outcome**: `BCCAM_CONTROL_OUTCOME_NOT_READY`.
+
+### Queue full
+
+- **Failure mode**: the user submits a request while the queue is full.
+- **Cause**: not stated.
+- **Effect if unmitigated**: the request is lost and the user never learns
+  about it.
+- **Mitigation**: `bccam_control_request_queue_put` detects it, and
+  `bccam_control_service_submit` returns false.
+- **Severity after mitigation**: Low.
+- **Outcome**: no `on_complete`, only the false return.
 
 ## bccam_control_service
 
@@ -1097,5 +1136,6 @@ Does the design guarantuee that we cannot get stuck in off-by-one loops? Where t
 Check mermaid diagrams for overlapping text
 
 Rework error cases section to have everything in the table (lightweight FMEA)
+  Rework severity scale - high should be something that makes the service stop working
 
 When is request_id initiated/reset?
