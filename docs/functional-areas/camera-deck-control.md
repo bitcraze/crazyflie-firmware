@@ -820,8 +820,9 @@ receive frames itself: `bccam_control_service` passes it the decoded
 responses, and only responses, see [Frame classes](#frame-classes).
 
 - The deck request ID, `request_id`, is assigned here and is never shown
-  to users. It is incremented for each request and wraps at 255. Initiated to 1 (since one request is needed to make the 
-  control service ready, part of runtime).
+  to users. It is set to 1 on `bccam_control_service_init` and is never
+  reset, also not when ready is lost. It is incremented for each request
+  and wraps from 255 to 1, skipping 0. (0 is used by the ready probe.)
 
 ### Functions
 
@@ -834,7 +835,7 @@ responses, and only responses, see [Frame classes](#frame-classes).
 | Field | Type | What it holds |
 |---|---|---|
 | `outstanding` | `bccam_control_request_t` | The copy of the outstanding request, taken from `bccam_control_request_queue`. Passed to `on_complete`. |
-| `next_request_id` | `uint8_t` | The `request_id` for the next request. Starts at 1 and wraps at 255. |
+| `next_request_id` | `uint8_t` | The `request_id` for the next request. |
 | `deadline` | Not decided | When the outstanding request times out. |
 
 ### State machine
@@ -1128,11 +1129,4 @@ sequenceDiagram
 
 ## Open questions
 
-Does the design guarantuee that we cannot get stuck in off-by-one loops? Where the camera deck always sends a response to a request that came one request ago?
-
 Check mermaid diagrams for overlapping text
-
-Rework error cases section to have everything in the table (lightweight FMEA)
-  Rework severity scale - high should be something that makes the service stop working
-
-When is request_id initiated/reset?
