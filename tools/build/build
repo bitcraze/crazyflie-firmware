@@ -17,7 +17,6 @@ ${scriptDir}/test_python "${@}"
 
 if [ ${special_case_build} -eq 0 ]; then
   ${scriptDir}/make "${@}"
-  ${scriptDir}/check_elf
   exit 0
 elif [ ${tolerate_ccmram_overflow} -eq 1 ]; then
   # Only issue a warning for CCMRAM overflow
@@ -30,7 +29,6 @@ elif [ ${tolerate_ccmram_overflow} -eq 1 ]; then
   printf '%s\n' "${build_log}"
 
   if [ ${build_status} -eq 0 ]; then
-  ${scriptDir}/check_elf
   exit 0
   fi
 
@@ -51,7 +49,7 @@ elif [ ${tolerate_ccmram_overflow} -eq 1 ]; then
   fi
 
   overflow_bytes=$(sed -n "s/.*region \`CCMRAM' overflowed by \([0-9]*\) bytes.*/\1/p" <<< "${overflow_line}" | head -1)
-  echo "::warning::kbuild-targets (allyesconfig): CCMRAM overflow, by ${overflow_bytes} bytes — check_elf skipped, no .elf was produced."
+  echo "::warning::kbuild-targets (allyesconfig): CCMRAM overflow, by ${overflow_bytes} bytes — no .elf was produced."
 
   exit 0
 else

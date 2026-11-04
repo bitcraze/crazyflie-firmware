@@ -141,6 +141,7 @@ endif
 _all:
 
 all: $(PROG).hex $(PROG).bin
+	@$(PYTHON) $(srctree)/tools/verify/elf_sanity.py $(PROG).elf
 	@echo "Build for the $(PLATFORM) platform!"
 	@$(PYTHON) $(srctree)/tools/make/versionTemplate.py --crazyflie-base $(srctree) --print-version
 	@$(PYTHON) $(srctree)/tools/make/size.py $(SIZE) $(PROG).elf $(MEM_SIZE_FLASH_K) $(MEM_SIZE_RAM_K) $(MEM_SIZE_CCM_K)
