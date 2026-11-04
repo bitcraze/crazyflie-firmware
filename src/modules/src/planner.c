@@ -343,16 +343,21 @@ int plan_start_trajectory(struct planner *p, struct piecewise_traj* trajectory, 
 			traj_init = piecewise_eval(trajectory, trajectory->t_begin);
 		}
 
-		// translate trajectory to starting point
-		struct vec shift_pos = vsub(start_from, traj_init.pos);
-		trajectory->shift = shift_pos;
-		
 		if (relative_yaw) {
 			// compute the shortest possible rotation towards trajectory start yaw to current yaw 
 			float traj_yaw = normalize_radians(traj_init.yaw);
 			start_yaw = normalize_radians(start_yaw);
 			trajectory->shift_yaw = shortest_signed_angle_radians(traj_yaw, start_yaw);
 		}
+
+		// translate trajectory to starting point
+		// piecewise_eval rotates the position by shift_yaw before shifting it,
+		// so the starting point is rotated the same way (piecewise_eval_reversed does not rotate)
+		struct vec traj_start = traj_init.pos;
+		if (!reversed) {
+			traj_start = mvmul(mrotz(normalize_radians(trajectory->shift_yaw)), traj_start);
+		}
+		trajectory->shift = vsub(start_from, traj_start);
 	}
 	else {
 		trajectory->shift = vzero();
