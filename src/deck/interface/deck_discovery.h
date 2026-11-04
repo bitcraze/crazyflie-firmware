@@ -89,9 +89,15 @@ extern const DeckDriver dummyDriver;
  * DECK_DISCOVERY_BACKEND(myBackend);
  * @endcode
  */
+#ifndef UNIT_TEST_MODE
 #define DECK_DISCOVERY_BACKEND(NAME) \
     const DeckDiscoveryBackend_t * backend_##NAME \
     __attribute__((section(".deckBackend." #NAME), used)) = &(NAME)
+#else
+// Unit tests access the registration pointer directly and do not use the firmware linker section.
+#define DECK_DISCOVERY_BACKEND(NAME) \
+    const DeckDiscoveryBackend_t * backend_##NAME = &(NAME)
+#endif
 
 /**
  * @brief Access registered backends

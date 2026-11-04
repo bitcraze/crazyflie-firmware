@@ -29,6 +29,11 @@ with the docker builder image and the toolbelt
 
 Note that a bare `rake` run will fail even though `make unit` succeeds.
 
+The unit runner updates one progress line in a terminal. In CI logs, it prints
+one result line per test file and a total. Compiler and test output is
+printed in full if a test file fails. Use `UNIT_TEST_STYLE=verbose` to show the
+full output for passing files as well.
+
 ## Running one unit test
 
 When working with one specific file it is often convenient to run only one unit test
