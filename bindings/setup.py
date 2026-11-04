@@ -1,7 +1,7 @@
 """Compiles the cffirmware C extension."""
 
-import distutils.command.build
-from distutils.core import setup, Extension
+from setuptools import setup, Extension
+from setuptools.command.build import build
 import os
 
 include = [
@@ -52,6 +52,9 @@ fw_sources = [
     "src/modules/src/kalman_core/mm_tdoa.c",
     "src/modules/src/kalman_core/mm_pose.c",
     "src/modules/src/outlierfilter/outlierFilterTdoa.c",
+    "src/modules/src/kalman_core/mm_tof.c",
+    "src/modules/src/kalman_core/mm_flow.c",
+    "src/modules/src/kalman_core/mm_distance.c",
 ]
 
 cffirmware = Extension(
@@ -68,9 +71,9 @@ cffirmware = Extension(
 )
 
 # Override build command to specify custom "build" directory
-class BuildCommand(distutils.command.build.build):
+class BuildCommand(build):
     def initialize_options(self):
-        distutils.command.build.build.initialize_options(self)
+        build.initialize_options(self)
         self.build_base = "build"
 
 setup(

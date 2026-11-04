@@ -56,6 +56,7 @@
 #include "usblink.h"
 #include "mem.h"
 #include "crtp_mem.h"
+#include "crtp_supervisor.h"
 #include "proximity.h"
 #include "watchdog.h"
 #include "queuemonitor.h"
@@ -120,6 +121,7 @@ void systemInit(void)
   debugInit();
   crtpInit();
   consoleInit();
+  crtpSupervisorInit();
 
   DEBUG_PRINT("----------------------------\n");
   DEBUG_PRINT("%s is up and running!\n", platformConfigGetDeviceTypeName());
@@ -341,7 +343,7 @@ void systemTask(void *arg)
 void systemStart()
 {
   xSemaphoreGive(canStartMutex);
-#ifndef DEBUG
+#ifndef CONFIG_DEBUG
   watchdogInit();
 #endif
 }

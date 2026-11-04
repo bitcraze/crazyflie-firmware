@@ -740,13 +740,13 @@ static inline struct vec qvrot(struct quat q, struct vec v) {
 		vscl(2.0f * q.w, vcross(qv, v))
 	);
 }
-// multiply (compose) two quaternions
+// multiply (compose) two quaternions, returning the Hamilton product q*p,
 // such that qvrot(qqmul(q, p), v) == qvrot(q, qvrot(p, v)).
 static inline struct quat qqmul(struct quat q, struct quat p) {
-	float x =  q.w*p.x + q.z*p.y - q.y*p.z + q.x*p.w;
-	float y = -q.z*p.x + q.w*p.y + q.x*p.z + q.y*p.w;
-	float z =  q.y*p.x - q.x*p.y + q.w*p.z + q.z*p.w;
-	float w = -q.x*p.x - q.y*p.y - q.z*p.z + q.w*p.w;
+	float x = q.w*p.x + q.x*p.w + q.y*p.z - q.z*p.y;
+	float y = q.w*p.y + q.y*p.w + q.z*p.x - q.x*p.z;
+	float z = q.w*p.z + q.z*p.w + q.x*p.y - q.y*p.x;
+	float w = q.w*p.w - q.x*p.x - q.y*p.y - q.z*p.z;
 	return mkquat(x, y, z, w);
 }
 // invert a quaternion.

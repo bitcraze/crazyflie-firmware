@@ -114,6 +114,7 @@ its handling on the ground.
 |  5       | [Data logging](crtp_log.md)                  | Set up log blocks with variables that will be sent back to the Crazyflie at a specified period. Log variables are defined using a [macro in the Crazyflie source-code](/docs/userguides/logparam.md)
 |  6       | [Localization](crtp_localization.md)         | Packets related to localization|
 |  7       | [Generic Setpoint](crtp_generic_setpoint.md) | Generic instantaneous setpoints (ie. position control and more) |
+|  9       | [Supervisor](crtp_supervisor.md)             | Supervisor commands (arm, emergency stop) and state queries |
 |  13      | [Platform](crtp_platform.md)                 | Used for misc platform control, like debugging and power off |
 |  14      | Client-side debugging                        | Debugging the UI and exists only in the Crazyflie Python API and not in the Crazyflie itself.|
 |  15      | [Link layer](crtp_link.md)                   | Low level link-related service. For example *echo* to ping the Crazyflie |

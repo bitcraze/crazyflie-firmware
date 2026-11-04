@@ -102,10 +102,22 @@ static void uart2DmaInit(void)
 }
 #endif
 
+static void uart2ConfigureUsart(const uint32_t baudrate)
+{
+  USART_InitTypeDef USART_InitStructure;
+
+  USART_InitStructure.USART_BaudRate            = baudrate;
+  USART_InitStructure.USART_Mode                = USART_Mode_Rx | USART_Mode_Tx;
+  USART_InitStructure.USART_WordLength          = USART_WordLength_8b;
+  USART_InitStructure.USART_StopBits            = USART_StopBits_1;
+  USART_InitStructure.USART_Parity              = USART_Parity_No ;
+  USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+  USART_Init(UART2_TYPE, &USART_InitStructure);
+}
+
 void uart2Init(const uint32_t baudrate)
 {
 
-  USART_InitTypeDef USART_InitStructure;
   GPIO_InitTypeDef GPIO_InitStructure;
   NVIC_InitTypeDef NVIC_InitStructure;
 
@@ -135,13 +147,7 @@ void uart2Init(const uint32_t baudrate)
   GPIO_PinAFConfig(UART2_GPIO_PORT, UART2_GPIO_AF_TX_PIN, UART2_GPIO_AF_TX);
   GPIO_PinAFConfig(UART2_GPIO_PORT, UART2_GPIO_AF_RX_PIN, UART2_GPIO_AF_RX);
 
-  USART_InitStructure.USART_BaudRate            = baudrate;
-  USART_InitStructure.USART_Mode                = USART_Mode_Rx | USART_Mode_Tx;
-  USART_InitStructure.USART_WordLength          = USART_WordLength_8b;
-  USART_InitStructure.USART_StopBits            = USART_StopBits_1;
-  USART_InitStructure.USART_Parity              = USART_Parity_No ;
-  USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-  USART_Init(UART2_TYPE, &USART_InitStructure);
+  uart2ConfigureUsart(baudrate);
 
 // Only initialize DMA when NOT using DSHOT (DSHOT motors conflict with UART2 DMA)
 #ifndef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
@@ -168,6 +174,19 @@ void uart2Init(const uint32_t baudrate)
   ASSERT(rxStream);
 
   isInit = true;
+}
+
+void uart2SetBaudrate(const uint32_t baudrate)
+{
+  if (!isInit)
+    return;
+
+  // Wait for the last byte to leave the shift register before changing the rate
+  while (USART_GetFlagStatus(UART2_TYPE, USART_FLAG_TC) == RESET);
+
+  USART_Cmd(UART2_TYPE, DISABLE);
+  uart2ConfigureUsart(baudrate);
+  USART_Cmd(UART2_TYPE, ENABLE);
 }
 
 bool uart2Test(void)

@@ -288,15 +288,17 @@ static void sendTdoaToEstimatorCallback(tdoaMeasurement_t* tdoaMeasurement) {
   // Override the default standard deviation set by the TDoA engine.
   tdoaMeasurement->stdDev = stdDev;
 
-  estimatorEnqueueTDOA(tdoaMeasurement);
+  if (locoEnableEstimator) {
+    estimatorEnqueueTDOA(tdoaMeasurement);
 
-  #ifdef CONFIG_DECK_LOCO_2D_POSITION
-  heightMeasurement_t heightData;
-  heightData.timestamp = xTaskGetTickCount();
-  heightData.height = DECK_LOCO_2D_POSITION_HEIGHT;
-  heightData.stdDev = 0.0001;
-  estimatorEnqueueAbsoluteHeight(&heightData);
-  #endif
+    #ifdef CONFIG_DECK_LOCO_2D_POSITION
+    heightMeasurement_t heightData;
+    heightData.timestamp = xTaskGetTickCount();
+    heightData.height = DECK_LOCO_2D_POSITION_HEIGHT;
+    heightData.stdDev = 0.0001;
+    estimatorEnqueueAbsoluteHeight(&heightData);
+    #endif
+  }
 
   const uint8_t idA = tdoaMeasurement->anchorIds[0];
   const uint8_t idB = tdoaMeasurement->anchorIds[1];

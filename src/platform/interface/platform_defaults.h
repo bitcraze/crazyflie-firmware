@@ -181,6 +181,11 @@
     #define LANDING_TIMEOUT_MS 3000
 #endif
 
+// Motor spin-up wait timeout during arming
+#ifndef ARMING_SPINUP_TIMEOUT_MS
+    #define ARMING_SPINUP_TIMEOUT_MS 2000
+#endif
+
 
 // Health test parameters
 #ifndef HEALTH_BRUSHED_ON_PERIOD_MSEC
@@ -206,7 +211,7 @@
     #define HEALTH_BRUSHLESS_OFF_PERIOD_MSEC 1000
 #endif
 #ifndef HEALTH_BRUSHLESS_VARIANCE_START_MSEC
-    #define HEALTH_BRUSHLESS_VARIANCE_START_MSEC 1000
+    #define HEALTH_BRUSHLESS_VARIANCE_START_MSEC 1500
 #endif
 
 
@@ -214,6 +219,9 @@
 // variance of the accelerometer X+Y when the propeller is spinning.
 #ifndef HEALTH_PROPELLER_TEST_THRESHOLD
     #define HEALTH_PROPELLER_TEST_THRESHOLD  0.0f
+#endif
+#ifndef HEALTH_PROPELLER_TEST_THRESHOLD_LOW
+    #define HEALTH_PROPELLER_TEST_THRESHOLD_LOW  0.01f
 #endif
 
 // For safety, when the BigQuad deck is enabled, the user should

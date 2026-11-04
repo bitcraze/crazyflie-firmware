@@ -29,6 +29,7 @@
 #include "log.h"
 #include "param.h"
 #include "static_mem.h"
+#include "autoconf.h"
 
 NO_DMA_CCM_SAFE_ZERO_INIT tdoaEngineState_t tdoaEngineState;
 
@@ -59,6 +60,18 @@ STATS_CNT_RATE_LOG_ADD(stTime, &tdoaEngineState.stats.timeIsGood)
  * @brief Rate of packets that could be matched with an anchor to calculate a TDoA value [1/s]
  */
 STATS_CNT_RATE_LOG_ADD(stFound, &tdoaEngineState.stats.suitableDataFound)
+
+/**
+ * @brief TEST: rate of measurement anchor pair candidates that were rejected by the
+ * geometry filter (TDoA3/matchRandomAnchor only) [1/s]
+ */
+STATS_CNT_RATE_LOG_ADD(stGeometry, &tdoaEngineState.stats.geometryRejected)
+
+/**
+ * @brief Rate of measurement anchor pair candidates that were rejected because the remote
+ * anchor's packet is older than one 32 bit time stamp wrap (67 ms) [1/s]
+ */
+STATS_CNT_RATE_LOG_ADD(stRxWrap, &tdoaEngineState.stats.remoteRxWrapRejected)
 
 /**
  * @brief Rate of packets where the time stamp is used to update the clock correction factor for an anchor [1/s]
@@ -114,4 +127,12 @@ PARAM_ADD_CORE(PARAM_UINT8, logOthrId, &tdoaEngineState.stats.newRemoteAnchorId)
 // It only happens when the LPS system mode is changed to TDoA2 or TDoA3 though, and as this is
 // not a frequent action, we chose to expose it anyway.
 PARAM_ADD(PARAM_UINT8, matchAlgo, &tdoaEngineState.matchingAlgorithm)
+
+#ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
+/**
+ * @brief Max rate at which TDoA measurements are forwarded to the estimator, aggregated over all
+ * anchors [Hz]. 0 = unlimited.
+ */
+PARAM_ADD(PARAM_FLOAT, maxRateHz, &tdoaEngineState.maxRateHz)
+#endif
 PARAM_GROUP_STOP(tdoaEngine)

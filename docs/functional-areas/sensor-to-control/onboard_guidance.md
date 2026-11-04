@@ -30,8 +30,8 @@ See `src/modules/interface/crtp_commander_high_level.h` for the full API.
 
 The [python library](https://github.com/bitcraze/crazyflie-lib-python) provides two classes for interacting with the High-Level Commander:
 
-* **HighLevelCommander**: direct access to the High-Level Commander (example: `autonomous_sequence_high_level.py`).
-* **PositionHlCommander**: a simplified API that sends commands to the High-Level Commander (example: `position_commander_demo.py`).
+* **HighLevelCommander**: direct access to the High-Level Commander (example: [autonomous_sequence_high_level.py](https://github.com/bitcraze/crazyflie-demos/tree/main/demos/scripts/cflib/autonomy/autonomous_sequence_high_level)).
+* **PositionHlCommander**: a simplified API that sends commands to the High-Level Commander (example: [position_commander_demo.py](https://github.com/bitcraze/crazyflie-demos/tree/main/demos/scripts/cflib/autonomy/position_commander_demo)).
 
 For low level setpoint examples, see the [Commander Framework](commanders_setpoints.md) page.
 

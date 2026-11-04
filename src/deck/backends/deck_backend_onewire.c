@@ -229,6 +229,20 @@ static DeckInfo* owBackendGetNextDeck(void) {
     // Store backend reference
     deckBuffer.discoveryBackend = NULL; // Backend reference will be set after copying in enumeration code
 
+    // Register the memory handler for this OW device now, independently of whether
+    // the deck info below decodes successfully. A blank, never-flashed memory will
+    // always fail infoDecode(), but it must still be reachable over CRTP so that it
+    // can be written to for the first time.
+    ow_memory_handlers[currentDeck] = (MemoryHandlerDef_t) {
+        .type = MEM_TYPE_OW,
+        .getSize = owMemorySize,
+        .read = owMemoryRead,
+        .write = owMemoryWrite,
+        .getSerialNbr = owMemorySerialNbr,
+        .internal_id = currentDeck,
+    };
+    memoryRegisterHandler(&ow_memory_handlers[currentDeck]);
+
     // Decode and validate deck info using shared function
     if (infoDecode(&deckBuffer)) {
         // Extract product name and board revision from TLV and populate generic fields
@@ -249,25 +263,14 @@ static DeckInfo* owBackendGetNextDeck(void) {
 
     } else {
 #ifdef CONFIG_DEBUG
-        OW_BACKEND_DEBUG("OneWire deck %d has corrupt memory. Using dummy driver in DEBUG mode.\n", currentDeck);
+        OW_BACKEND_DEBUG("OneWire deck %d has corrupt or blank memory. Using dummy driver in DEBUG mode.\n", currentDeck);
         deckBuffer.driver = &dummyDriver;
 #else
-        OW_BACKEND_DEBUG("OneWire deck %d has corrupt memory. Skipping.\n", currentDeck);
+        OW_BACKEND_DEBUG("OneWire deck %d has corrupt or blank memory. Skipping.\n", currentDeck);
         currentDeck++;
         return NULL;
 #endif
     }
-
-    ow_memory_handlers[currentDeck] = (MemoryHandlerDef_t) {
-        .type = MEM_TYPE_OW,
-        .getSize = owMemorySize,
-        .read = owMemoryRead,
-        .write = owMemoryWrite,
-        .getSerialNbr = owMemorySerialNbr,
-        .internal_id = currentDeck,
-    };
-
-    memoryRegisterHandler(&ow_memory_handlers[currentDeck]);
 
     currentDeck++;
     return &deckBuffer;

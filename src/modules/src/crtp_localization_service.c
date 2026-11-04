@@ -31,6 +31,7 @@
 
 #include "crtp.h"
 #include "crtp_localization_service.h"
+#include "crtp_supervisor.h"
 #include "log.h"
 #include "param.h"
 
@@ -157,8 +158,6 @@ static void extPositionHandler(CRTPPacket* pk);
 static void genericLocHandle(CRTPPacket* pk);
 static void extPositionPackedHandler(CRTPPacket* pk);
 
-static bool isEmergencyStopRequested = false;
-static uint32_t emergencyStopWatchdogNotificationTick = 0;
 
 void locSrvInit()
 {
@@ -326,10 +325,12 @@ static void genericLocHandle(CRTPPacket* pk)
       lpsShortLppPacketHandler(pk);
       break;
     case EMERGENCY_STOP:
-      isEmergencyStopRequested = true;
+      // Deprecated: use CRTP_PORT_SUPERVISOR instead
+      crtpSupervisorSetEmergencyStop();
       break;
     case EMERGENCY_STOP_WATCHDOG:
-      emergencyStopWatchdogNotificationTick = xTaskGetTickCount();
+      // Deprecated: use CRTP_PORT_SUPERVISOR instead
+      crtpSupervisorNotifyEmergencyStopWatchdog();
       break;
     case EXT_POSE:
       extPoseHandler(pk);
@@ -502,17 +503,6 @@ void locSrvSendLighthouseAngle(int baseStation, pulseProcessorResult_t* angles, 
 }
 #endif
 
-bool locSrvIsEmergencyStopRequested() {
-  return isEmergencyStopRequested;
-}
-
-void locSrvResetEmergencyStopRequest() {
-  isEmergencyStopRequested = false;
-}
-
-uint32_t locSrvGetEmergencyStopWatchdogNotificationTick() {
-  return emergencyStopWatchdogNotificationTick;
-}
 
 // This logging group is deprecated (removed after August 2023)
 LOG_GROUP_START(ext_pos)

@@ -109,10 +109,9 @@ STATIC_MEM_QUEUE_ALLOC(magnetometerDataQueue, 1, sizeof(Axis3f));
 static xQueueHandle barometerDataQueue;
 STATIC_MEM_QUEUE_ALLOC(barometerDataQueue, 1, sizeof(baro_t));
 
-static xSemaphoreHandle sensorsDataReady;
-static StaticSemaphore_t sensorsDataReadyBuffer;
 static xSemaphoreHandle dataReady;
 static StaticSemaphore_t dataReadyBuffer;
+static TaskHandle_t sensorsTaskHandle;
 
 static bool isInit = false;
 static sensorData_t sensorData;
@@ -120,7 +119,7 @@ static volatile uint64_t imuIntTimestamp;
 
 static Axis3i16 gyroRaw;
 static Axis3i16 accelRaw;
-NO_DMA_CCM_SAFE_ZERO_INIT static BiasObj gyroBiasRunning;
+static BiasObj gyroBiasRunning;
 static Axis3f  gyroBias;
 #if defined(SENSORS_GYRO_BIAS_CALCULATE_STDDEV) && defined (GYRO_BIAS_LIGHT_WEIGHT)
 static Axis3f  gyroBiasStdDev;
@@ -223,7 +222,7 @@ static void sensorsTask(void *param)
 
   while (1)
   {
-    if (pdTRUE == xSemaphoreTake(sensorsDataReady, portMAX_DELAY))
+    if (ulTaskNotifyTake(pdTRUE, portMAX_DELAY))
     {
       sensorData.interruptTimestamp = imuIntTimestamp;
       // data is ready to be read
@@ -496,7 +495,7 @@ static void sensorsTaskInit(void)
   magnetometerDataQueue = STATIC_MEM_QUEUE_CREATE(magnetometerDataQueue);
   barometerDataQueue = STATIC_MEM_QUEUE_CREATE(barometerDataQueue);
 
-  STATIC_MEM_TASK_CREATE(sensorsTask, sensorsTask, SENSORS_TASK_NAME, NULL, SENSORS_TASK_PRI);
+  sensorsTaskHandle = STATIC_MEM_TASK_CREATE(sensorsTask, sensorsTask, SENSORS_TASK_NAME, NULL, SENSORS_TASK_PRI);
 }
 
 static void sensorsInterruptInit(void)
@@ -504,7 +503,6 @@ static void sensorsInterruptInit(void)
   GPIO_InitTypeDef GPIO_InitStructure;
   EXTI_InitTypeDef EXTI_InitStructure;
 
-  sensorsDataReady = xSemaphoreCreateBinaryStatic(&sensorsDataReadyBuffer);
   dataReady = xSemaphoreCreateBinaryStatic(&dataReadyBuffer);
 
   // FSYNC "shall not be floating, must be set high or low by the MCU"
@@ -855,7 +853,7 @@ void __attribute__((used)) EXTI13_Callback(void)
 {
   portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
   imuIntTimestamp = usecTimestamp();
-  xSemaphoreGiveFromISR(sensorsDataReady, &xHigherPriorityTaskWoken);
+  vTaskNotifyGiveFromISR(sensorsTaskHandle, &xHigherPriorityTaskWoken);
 
   if (xHigherPriorityTaskWoken)
   {

@@ -12,7 +12,7 @@ system must be armed again to be able to fly.
 
 ## Arming request
 
-Clients perform an arming request by sending a [CRTP arming message](/docs/functional-areas/crtp/crtp_platform.md#armdisarm-system)
+Clients perform an arming request by sending a [CRTP arming message](/docs/functional-areas/crtp/crtp_supervisor.md#armdisarm-system)
 to the Crazyflie.
 
 Apps running in the Crazyflie request arming by calling the `supervisorRequestArming()` function.

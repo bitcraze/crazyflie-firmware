@@ -39,31 +39,23 @@ bool deckctrl_gpio_set_direction(DeckInfo* info, DeckCtrlGPIOPin pin, uint32_t d
         return false;
     }
 
-    char buffer[2];
-    // Read current direction register (16-bit)
-    if (!i2cdevReadReg16(I2C1_DEV, i2c_address, DECKCTRL_GPIO_DIRECTION_REG, 2, buffer)) {
+    const uint16_t register_address = DECKCTRL_GPIO_DIRECTION_REG + (pin / 8);
+    const uint8_t bit = 1U << (pin % 8);
+    uint8_t register_value;
+
+    if (!i2cdevReadReg16(I2C1_DEV, i2c_address, register_address, 1, &register_value)) {
         return false;
     }
 
-    // Convert bytes to 16-bit value (little endian)
-    uint16_t direction_reg = buffer[0] | (buffer[1] << 8);
-
-    // Set or clear the bit for this pin
     if (direction != INPUT) {
-        direction_reg |= (1 << pin);
+        register_value |= bit;
     } else {
-        direction_reg &= ~(1 << pin);
+        register_value &= ~bit;
     }
 
-    DEBUG_PRINT("Setting GPIO pin %d direction to %s (reg=0x%04x)\n", pin, (direction!=INPUT) ? "output" : "input", direction_reg);
+    DEBUG_PRINT("Setting GPIO pin %d direction to %s (byte=0x%02x)\n", pin, (direction != INPUT) ? "output" : "input", register_value);
 
-    // Convert back to bytes and write
-    buffer[0] = direction_reg & 0xFF;
-    buffer[1] = (direction_reg >> 8) & 0xFF;
- 
-    bool result = i2cdevWriteReg16(I2C1_DEV, i2c_address, DECKCTRL_GPIO_DIRECTION_REG, 2, buffer);
-
-    return result;
+    return i2cdevWriteReg16(I2C1_DEV, i2c_address, register_address, 1, &register_value);
 }
 
 bool deckctrl_gpio_write(DeckInfo* info, DeckCtrlGPIOPin pin, uint32_t value) {
@@ -76,27 +68,21 @@ bool deckctrl_gpio_write(DeckInfo* info, DeckCtrlGPIOPin pin, uint32_t value) {
         return false;
     }
 
-    char buffer[2];
-    // Read current value register (16-bit)
-    if (!i2cdevReadReg16(I2C1_DEV, i2c_address, DECKCTRL_GPIO_VALUE_REG, 2, buffer)) {
+    const uint16_t register_address = DECKCTRL_GPIO_VALUE_REG + (pin / 8);
+    const uint8_t bit = 1U << (pin % 8);
+    uint8_t register_value;
+
+    if (!i2cdevReadReg16(I2C1_DEV, i2c_address, register_address, 1, &register_value)) {
         return false;
     }
 
-    // Convert bytes to 16-bit value (little endian)
-    uint16_t value_reg = buffer[0] | (buffer[1] << 8);
-
-    // Set or clear the bit for this pin
     if (value != LOW) {
-        value_reg |= (1 << pin);
+        register_value |= bit;
     } else {
-        value_reg &= ~(1 << pin);
+        register_value &= ~bit;
     }
 
-    // Convert back to bytes and write
-    buffer[0] = value_reg & 0xFF;
-    buffer[1] = (value_reg >> 8) & 0xFF;
-
-    return i2cdevWriteReg16(I2C1_DEV, i2c_address, DECKCTRL_GPIO_VALUE_REG, 2, buffer);
+    return i2cdevWriteReg16(I2C1_DEV, i2c_address, register_address, 1, &register_value);
 }
 
 bool deckctrl_gpio_read(DeckInfo* info, DeckCtrlGPIOPin pin, uint32_t * value) {
@@ -109,17 +95,15 @@ bool deckctrl_gpio_read(DeckInfo* info, DeckCtrlGPIOPin pin, uint32_t * value) {
         return false;
     }
 
-    char buffer[2];
-    // Read current value register (16-bit)
-    if (!i2cdevReadReg16(I2C1_DEV, i2c_address, DECKCTRL_GPIO_VALUE_REG, 2, buffer)) {
+    const uint16_t register_address = DECKCTRL_GPIO_VALUE_REG + (pin / 8);
+    const uint8_t bit = 1U << (pin % 8);
+    uint8_t register_value;
+
+    if (!i2cdevReadReg16(I2C1_DEV, i2c_address, register_address, 1, &register_value)) {
         return false;
     }
 
-    // Convert bytes to 16-bit value (little endian)
-    uint16_t value_reg = buffer[0] | (buffer[1] << 8);
-
-    // Extract the bit for this pin
-    *value = ((value_reg & (1 << pin)) != 0)?HIGH:LOW;
+    *value = ((register_value & bit) != 0) ? HIGH : LOW;
 
     return true;
 }

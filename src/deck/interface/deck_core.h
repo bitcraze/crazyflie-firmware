@@ -113,6 +113,23 @@ typedef struct deck_driver {
   /* Init and test functions */
   void (*init)(struct deckInfo_s *);
   bool (*test)(void);
+
+  /* Runtime hardware status probe. Return 0 if the deck is healthy, a non-zero
+   * error code otherwise. Set to NULL if the deck has no status probe (it is
+   * then never probed).
+   *
+   * The deck supervisor polls this from the system supervisor's safety path at
+   * the supervisor rate, so it must be cheap and non-blocking (no waits on
+   * mutexes, no slow bus transactions in the call itself - cache results from
+   * the deck task instead).
+   *
+   * IMPORTANT: when CONFIG_DECK_SUPERVISOR is enabled a non-zero return blocks
+   * arming and, while flying, immediately cuts the motors. The result must
+   * therefore be debounced in the driver - a single transient non-zero reading
+   * will trigger the cut, so do not report short, recoverable glitches as an
+   * error. Return non-zero if the deck failed to initialize, since its state
+   * cannot be trusted to be probed. */
+  uint8_t (*status)(void);
 } DeckDriver;
 
 #define DECK_DRIVER(NAME) const struct deck_driver * driver_##NAME __attribute__((section(".deckDriver." #NAME), used)) = &(NAME)

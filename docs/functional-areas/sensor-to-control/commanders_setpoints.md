@@ -69,9 +69,9 @@ platform and people around it, possibly ending up in a locked state.
 
 ## Support in the python lib (CFLib)
 
-There are two main ways to send low level setpoints from the [python library](https://github.com/bitcraze/crazyflie-lib-python):
+You can find examples of different ways to interact with the commander framework using the [python library](https://github.com/bitcraze/crazyflie-lib-python).
 
-* **autonomousSequence.py**: Send setpoints directly using the Commander class from the Crazyflie object.
-* **motion_commander_demo.py**: The MotionCommander class exposes a simplified API and sends velocity setpoints continuously based on the methods called.
+* **[autonomousSequence.py](https://github.com/bitcraze/crazyflie-demos/tree/main/demos/scripts/cflib/autonomy/autonomous_sequence)**: Send setpoints directly using the Commander class from the Crazyflie object.
+* **[motion_commander_demo.py](https://github.com/bitcraze/crazyflie-demos/tree/main/demos/scripts/cflib/autonomy/motion_commander_demo)**: The MotionCommander class exposes a simplified API and sends velocity set-points continuously based on the methods called.
 
 For examples that use onboard guidance (High-Level Commander), see the [Onboard Guidance](onboard_guidance.md) page.

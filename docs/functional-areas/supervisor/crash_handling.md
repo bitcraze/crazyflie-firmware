@@ -19,6 +19,8 @@ To verify that the Crazyflie is no longer tumbled it can be put upright and leve
 
 ## Crash recovery request
 
-The Crazyflie can get out of the crashed state through a crash recovery request, `supervisorRequestCrashRecovery(const bool doRecover);`, which is a message that is sent to the supervisor. 
+The Crazyflie can get out of the crashed state through a crash recovery request, `supervisorRequestCrashRecovery(const bool doRecover);`, which is a message that is sent to the supervisor.
 
-This request will only result in a recovery, i.e. get the Crazyflie out of the crashed state, if the Crazyflie is no longer in a tumbled state. 
+Clients can trigger crash recovery by sending a [CRTP recover system message](/docs/functional-areas/crtp/crtp_supervisor.md#recover-system) to the Crazyflie.
+
+This request will only result in a recovery, i.e. get the Crazyflie out of the crashed state, if the Crazyflie is no longer in a tumbled state.

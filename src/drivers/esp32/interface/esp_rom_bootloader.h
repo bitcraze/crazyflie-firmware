@@ -47,6 +47,17 @@
 bool espRomBootloaderSync(uint8_t *sendBuffer);
 
 /**
+* @brief Called to change the baud rate of the bootloader, also changes the baud rate of UART2 to match.
+*        Must be called after a successful sync.
+*
+* @param *sendBuffer Pointer to a buffer used to construct the change baud rate packet. Can be left empty.
+* @param baudrate The new baud rate
+*
+* @return true if the baud rate was changed, false otherwise.
+**/
+bool espRomBootloaderChangeBaudrate(uint8_t *sendBuffer, uint32_t baudrate);
+
+/**
 * @brief Called to initialize the flashing with the ESP.
 *
 * @param *sendBuffer Pointer to a buffer used to construct the flash begin packet. Can be left empty.

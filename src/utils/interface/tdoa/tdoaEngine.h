@@ -23,11 +23,17 @@ typedef struct {
   // State
   tdaoAnchorInfoArray_t anchorInfoArray;
   tdoaStats_t stats;
+#ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
+  uint64_t lastForwardedTime_us;
+#endif
 
   // Configuration
   tdoaEngineSendTdoaToEstimator sendTdoaToEstimator;
   double locodeckTsFreq;
   tdoaEngineMatchingAlgorithm_t matchingAlgorithm;
+#ifdef CONFIG_DECK_LOCO_TDOA_RATE_LIMIT
+  float maxRateHz;
+#endif
 
   // Matching algorithm data
   struct {
@@ -46,6 +52,12 @@ bool tdoaEngineProcessPacketFiltered(tdoaEngineState_t* engineState, tdoaAnchorC
 #define TDOA_ENGINE_TRUNCATE_TO_ANCHOR_TS_BITMAP 0x00FFFFFFFF
 static inline uint64_t tdoaEngineTruncateToAnchorTimeStamp(uint64_t fullTimeStamp) {
   return fullTimeStamp & TDOA_ENGINE_TRUNCATE_TO_ANCHOR_TS_BITMAP;
+}
+
+// The tag (DW1000) keeps 40 bit time stamps
+#define TDOA_ENGINE_TRUNCATE_TO_TAG_TS_BITMAP 0xFFFFFFFFFF
+static inline uint64_t tdoaEngineTruncateToTagTimeStamp(uint64_t fullTimeStamp) {
+  return fullTimeStamp & TDOA_ENGINE_TRUNCATE_TO_TAG_TS_BITMAP;
 }
 
 #endif // __TDOA_ENGINE_H__

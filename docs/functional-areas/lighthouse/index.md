@@ -11,6 +11,7 @@ deck to achieve high precision positioning.
 The basics:
  * [System overview](/docs/functional-areas/lighthouse/system_overview.md)
  * [Positioning methods](/docs/functional-areas/lighthouse/positioning_methods.md)
+ * [Troubleshooting](/docs/functional-areas/lighthouse/troubleshooting.md)
 
 Development related pages:
  * [Terminology and definitions](/docs/functional-areas/lighthouse/terminology_definitions.md)
