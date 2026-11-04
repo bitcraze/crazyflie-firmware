@@ -323,6 +323,9 @@ static void stabilizerTask(void* param)
 
     if (healthShallWeRunTest()) {
       healthRunTests(&sensorData);
+      #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
+        motorsBurstDshot();
+      #endif
     } else {
       updateStateEstimatorAndControllerTypes();
 
