@@ -17,9 +17,18 @@ config DEBUG
     help
         Enable debug symbols and extra output from firmware.
 
+config FREERTOS_USE_TRACE_FACILITY
+    bool "Enable sysload stats (FreeRTOS trace facility)"
+    default y
+    help
+        Enable FreeRTOS trace hooks and APIs such as uxTaskGetSystemState().
+        Disable to reduce CPU load if runtime task statistics are not
+        needed.
+
 config DEBUG_QUEUE_MONITOR
     bool "Enable debug queue monitoring"
-    depends on DEBUG
+    depends on DEBUG 
+    depends on FREERTOS_USE_TRACE_FACILITY
     default n
     help
         Enable the queue monitoring functionality.
