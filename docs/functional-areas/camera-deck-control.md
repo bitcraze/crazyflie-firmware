@@ -550,7 +550,7 @@ gets the ready flag as an argument to its step.
 | `bccam_control_service_submit(const bccam_control_request_t *request) bool` | Passes the request on to `bccam_control_request_queue` with `bccam_control_request_queue_put`, without blocking. Returns false when the queue is full, and the request is not queued. |
 | `bccam_control_service_is_ready() bool` | Returns the ready flag. |
 | `bccam_control_service_init(bccam_uart_runtime_t *runtime) void` | The public init functions of all control_service units. Initializes the control service unit and subunits. Passes `runtime` on to `bccam_control_channel_init`. |
-| `bccam_control_service_step() void` | Does one step, see [One step of bccam_control_service](#one-step-of-bccam_control_service). |
+| `bccam_control_service_step(uint32_t now_ticks) void` | Does one step, see [One step of bccam_control_service](#one-step-of-bccam_control_service). `now_ticks` is the current tick count. The service task reads it once per loop iteration with `xTaskGetTickCount()` and passes it in, as it does for `service_poll_once_at`. It is passed on to `bccam_control_request_handling_step`. |
 
 ### Data
 
@@ -561,11 +561,11 @@ gets the ready flag as an argument to its step.
 ### One step of bccam_control_service
 
 What `bccam_control_service` does in one call to
-`bccam_control_service_step()`, from start to return.
+`bccam_control_service_step(now_ticks)`, from start to return.
 
 ```mermaid
 flowchart TD
-    s0(["bccam_control_service_step()"])
+    s0(["bccam_control_service_step(now_ticks)"])
     r0{"bccam_control_channel<br/>runtime_ready()?"}
 
     r1{"ready flag set?"}
@@ -575,12 +575,12 @@ flowchart TD
     f2{"class?"}
     fu["count unsolicited, drop"]
     fm["count malformed, drop"]
-    h1["bccam_control_request_handling<br/>step(true, response)"]
-    h2["bccam_control_request_handling<br/>step(true, none)"]
+    h1["bccam_control_request_handling<br/>step(true, response, now_ticks)"]
+    h2["bccam_control_request_handling<br/>step(true, none, now_ticks)"]
 
     n1{"ready flag set?"}
     n2["bccam_control_channel reset,<br/>clear ready flag"]
-    h3["bccam_control_request_handling<br/>step(false, none)"]
+    h3["bccam_control_request_handling<br/>step(false, none, now_ticks)"]
 
     e0(["return"])
 
@@ -687,7 +687,7 @@ responses, and only responses, see [Frame classes](#frame-classes).
 
 | Function | What it does |
 |---|---|
-| `bccam_control_request_handling_step(bool ready, const bccam_control_response_t *response) void` | Does one step, see [One step](#one-step). `response` is the response received in this step, or NULL when there is none. |
+| `bccam_control_request_handling_step(bool ready, const bccam_control_response_t *response, uint32_t now_ticks) void` | Does one step, see [One step](#one-step). `response` is the response received in this step, or NULL when there is none. `now_ticks` is the tick count. |
 
 ### Data
 
@@ -695,7 +695,7 @@ responses, and only responses, see [Frame classes](#frame-classes).
 |---|---|---|
 | `outstanding` | `bccam_control_request_t` | The copy of the outstanding request, taken from `bccam_control_request_queue`. Passed to `on_complete`. |
 | `next_request_id` | `uint8_t` | The `request_id` for the next request. |
-| `deadline` | Not decided | When the outstanding request times out. |
+| `deadline` | `uint32_t` | The tick count when the outstanding request times out. Set on start timer. |
 
 ### State machine
 
@@ -718,7 +718,7 @@ stateDiagram-v2
 ### One step
 
 What `bccam_control_request_handling` does in one call to
-`bccam_control_request_handling_step(ready, response)`, from start to
+`bccam_control_request_handling_step(ready, response, now_ticks)`, from start to
 return. Each state has its own swim lane.  In Idle and WaitingToSend there is no request waiting
 for an answer, so a response is counted as stale and dropped before ready
 is checked. A lane ends either without changing the state
@@ -726,7 +726,7 @@ or by setting a new state, which takes effect from the next step.
 
 ```mermaid
 flowchart TD
-    s0(["bccam_control_request_handling_step(ready, response)"])
+    s0(["bccam_control_request_handling_step(ready, response, now_ticks)"])
     st{"state?"}
 
     subgraph idle ["Idle"]
@@ -1086,11 +1086,7 @@ Severity rates the effect on the user after mitigation:
 
 ## Open questions
 
-- Check mermaid diagrams for overlapping text.
-- Timeout: the value, the type of `deadline` and the time source are not
-  decided. `bccam_control_request_handling_step` takes no time argument, so
-  the unit would read the tick count itself, which makes host tests hard.
-  The existing service code passes the time in (`service_poll_once_at`).
+- Timeout: the value is not decided.
 - `BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR` is in the enum and the User API, but
   no transition produces it. For example, a response with a matching
   `request_id` but the wrong kind for the request, such as `OK` to a `GET`
