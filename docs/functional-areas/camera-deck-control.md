@@ -231,7 +231,7 @@ classDiagram
     bccam_control_request_handling --> bccam_control_codec : encode_get, encode_set
     bccam_control_request_handling --> bccam_control_channel : can_send, send
     bccam_control_request_handling --> bccam_control_user_t : on_complete
-    bccam_control_channel --> bccam_uart_runtime : control_ready, credit, send, take
+    bccam_control_channel --> bccam_uart_runtime : control_ready, grant_control_rx_credit, control_tx_credit, send_control, take_control_rx
 ```
 
 The data passed through the user API, and the frame and response passed
@@ -287,6 +287,7 @@ classDiagram
         BCCAM_CONTROL_OUTCOME_NOT_READY
         BCCAM_CONTROL_OUTCOME_ABORTED
         BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR
+        BCCAM_CONTROL_OUTCOME_SEND_FAILED
     }
 
     class bccam_control_submit_result_t {
@@ -309,6 +310,14 @@ classDiagram
         BCCAM_CONTROL_FRAME_CLASS_RESPONSE
         BCCAM_CONTROL_FRAME_CLASS_UNSOLICITED
         BCCAM_CONTROL_FRAME_CLASS_MALFORMED
+    }
+
+    class bccam_control_send_result_t {
+        <<enumeration>>
+        BCCAM_CONTROL_SEND_SENT
+        BCCAM_CONTROL_SEND_BUSY
+        BCCAM_CONTROL_SEND_CLOSED
+        BCCAM_CONTROL_SEND_REJECTED
     }
 
     bccam_control_result_t --> bccam_control_outcome_t
@@ -436,8 +445,8 @@ own `on_complete` in their `bccam_control_user_t`.
 - `on_complete` gets the copy of the whole request, including its user
   request ID, for every outcome. This includes the outcomes the Crazyflie
   produces itself: `BCCAM_CONTROL_OUTCOME_NOT_READY`, `_ABORTED`,
-  `_TIMEOUT` and `_PROTOCOL_ERROR`. A user that needs only the user request
-  ID, such as a future cflib proxy, can ignore the rest. A user that needs
+  `_TIMEOUT`, `_PROTOCOL_ERROR` and `_SEND_FAILED`. A user that needs only
+  the user request ID, such as a future cflib proxy, can ignore the rest. A user that needs
   the operation, path or value, such as the param adapter, does not have
   to keep its own table of pending requests.
   `bccam_control_request_handling` holds the copy while the request is
@@ -458,8 +467,10 @@ own `on_complete` in their `bccam_control_user_t`.
 The functions of the runtime that the Control Service uses. They belong to
 `bccam_uart_runtime`. Only `bccam_control_channel` calls them. The runtime
 functions take the runtime instance, `bccam_uart_runtime_t *runtime`, as
-their first argument. It is left out here. `bccam_uart_service` owns the
-runtime instance and passes it to `bccam_control_service_init`, which
+their first argument. It is left out here. The runtime instance is
+`firmware_client.runtime`, held by the `bccam_firmware_uart_client_t`
+`firmware_client` in `bccam_uart_service`. `bccam_uart_service` passes it
+to `bccam_control_service_init`, which
 passes it on to `bccam_control_channel_init`. `bccam_control_channel`
 stores it.
 
@@ -467,8 +478,8 @@ stores it.
 |---|---|
 | `bccam_uart_runtime_control_ready() bool` | Returns true when the Control service is bound and the runtime's probe has been answered with `VALUE`. Turns false when the binding is lost. |
 | `bccam_uart_runtime_grant_control_rx_credit() void` | Grants one receive credit to the deck. Does not fail temporarily, see [Credit](#credit). |
-| `bccam_uart_runtime_get_control_tx_credit() uint8_t` | Returns the transmit credit. |
-| `bccam_uart_runtime_send_control(const bccam_control_frame_t *frame) void` | Sends a frame on the Control service, using one transmit credit. |
+| `bccam_uart_runtime_control_tx_credit() uint8_t` | Returns the transmit credit. Returns 0 when the Control service is not bound. |
+| `bccam_uart_runtime_send_control(const bccam_control_frame_t *frame) int` | Sends a frame on the Control service, using one transmit credit. Returns the result of `bccam_uart_link_send_normal`, a `bccam_uart_result_t` value: `BCCAM_UART_OK` when the frame was queued, otherwise a `BCCAM_UART_ERR_*` code and no credit is used. |
 | `bccam_uart_runtime_take_control_rx(bccam_control_frame_t *frame) bool` | Copies a received frame out of the receive slot into `frame`. Returns true when a frame was taken. Returns false when the receive slot was empty, and `frame` must not be used. |
 
 ## Request lifecycle
@@ -487,11 +498,13 @@ stateDiagram-v2
 
     state Outstanding {
         [*] --> WaitingToSend
-        WaitingToSend --> WaitingResponse : bccam_control_channel<br/>can send
+        WaitingToSend --> WaitingResponse : frame sent
         WaitingResponse --> [*] : matching response received
     }
 
     Outstanding --> Completed : answered
+    Outstanding --> Completed : send failed
+    Outstanding --> Completed : send closed
     Outstanding --> Completed : timer expired
     Outstanding --> Completed : ready lost
 
@@ -529,6 +542,7 @@ sequenceDiagram
     H->>H: encode GET or SET (bccam_control_codec)
     H->>Ch: send(frame)
     Ch->>D: GET or SET request_id path [value]
+    Ch-->>H: BCCAM_CONTROL_SEND_SENT
     alt OK
         D->>Ch: OK request_id
     else VALUE
@@ -764,7 +778,9 @@ stateDiagram-v2
 
     Idle --> WaitingToSend : taken while ready
 
-    WaitingToSend --> WaitingResponse : bccam_control_channel can send
+    WaitingToSend --> WaitingResponse : frame sent
+    WaitingToSend --> Idle : send failed
+    WaitingToSend --> Idle : send closed
     WaitingToSend --> Idle : timer expired
 
     WaitingResponse --> Idle : matching answer
@@ -814,6 +830,8 @@ flowchart TD
         w5["on_complete<br/>BCCAM_CONTROL_OUTCOME_TIMEOUT"]
         w6{"bccam_control_channel<br/>can send?"}
         w7["encode and send"]
+        wf{"send result?"}
+        wx["on_complete<br/>BCCAM_CONTROL_OUTCOME_SEND_FAILED"]
         w8(["state Idle"])
         w9(["state WaitingResponse"])
         w0(["nothing"])
@@ -823,8 +841,12 @@ flowchart TD
         wr -- "yes" --> w4
         w4 -- "yes" --> w5 --> w8
         w4 -- "no" --> w6
+        w6 -- "yes" --> w7 --> wf
+        wf -- "SENT" --> w9
+        wf -- "BUSY" --> w0
+        wf -- "CLOSED" --> wa
+        wf -- "REJECTED" --> wx --> w8
         w6 -- "no" --> w0
-        w6 -- "yes" --> w7 --> w9
     end
 
     subgraph resp ["WaitingResponse"]
@@ -848,8 +870,8 @@ flowchart TD
         pa --> p8
         pr -- "yes" --> p0
         p0 -- "yes" --> p4
-        p0 -- "no" --> p6
         p4 -- "no" --> px --> p6
+        p0 -- "no" --> p6
         p4 -- "yes" --> pv
         pv -- "yes" --> pc --> p8
         pv -- "no" --> pp --> p8
@@ -992,6 +1014,17 @@ Control message format.
   runtime's probe leaves receive credit at 0 when it is done.
 - On `bccam_control_channel_reset`, it clears the receive buffer.
 - It tells whether a frame can be sent, which hides the transmit credit.
+- On send, it sorts the result of `bccam_uart_runtime_send_control` into a
+  `bccam_control_send_result_t`, so that the link's error codes stay hidden
+  from `bccam_control_request_handling`:
+
+  | Runtime result | Send result | Why |
+  |---|---|---|
+  | `BCCAM_UART_OK` | `BCCAM_CONTROL_SEND_SENT` | The frame was queued. |
+  | `BCCAM_UART_ERR_NO_CREDIT`, `BCCAM_UART_ERR_TRANSACTION_BUSY` | `BCCAM_CONTROL_SEND_BUSY` | The link cannot take the frame right now. Its single transmit slot is busy, or the credit is used up. |
+  | `BCCAM_UART_ERR_LINK_FAULT`, `BCCAM_UART_ERR_NOT_ACTIVE`, `BCCAM_UART_ERR_UNKNOWN_SERVICE` | `BCCAM_CONTROL_SEND_CLOSED` | The Control service is not available. The Link session or the binding has ended. |
+  | `BCCAM_UART_ERR_PAYLOAD_TOO_LONG`, `BCCAM_UART_ERR_BAD_ARGUMENT`, any other | `BCCAM_CONTROL_SEND_REJECTED` | The link will never take this frame. |
+
 - On receive, it copies the frame out of the receive slot into the caller's
   `bccam_control_frame_t` and grants receive credit at once.
 - It guarantees that a frame can be sent only after any answer to the
@@ -1007,14 +1040,14 @@ Control message format.
 | `bccam_control_channel_open() void` | Grants the first receive credit. |
 | `bccam_control_channel_reset() void` | Clears the receive buffer. |
 | `bccam_control_channel_can_send() bool` | Returns true when a frame can be sent, that is when there is transmit credit. |
-| `bccam_control_channel_send(const bccam_control_frame_t *frame) void` | Sends the raw frame. |
+| `bccam_control_channel_send(const bccam_control_frame_t *frame) bccam_control_send_result_t` | Sends the raw frame. Returns `BCCAM_CONTROL_SEND_SENT` when it was sent. Otherwise it was not sent, and it returns the corresponding error code. |
 | `bccam_control_channel_receive(bccam_control_frame_t *frame) bool` | Copies a received frame out of the receive slot into `frame` and grants receive credit at once. Returns true when a frame was received. Returns false when there was none, and `frame` must not be used. |
 
 ### Data
 
 | Field | Type | What it holds |
 |---|---|---|
-| `runtime` | `bccam_uart_runtime_t *` | The runtime instance, owned by `bccam_uart_service`. Set on `bccam_control_channel_init`. |
+| `runtime` | `bccam_uart_runtime_t *` | The runtime instance. Every runtime function takes it as its first argument, so the channel needs it for all its runtime calls. |
 | `rx_buffer` | `bccam_control_frame_t` | The receive buffer. Cleared on `bccam_control_channel_reset`. |
 
 ### Credit
@@ -1153,6 +1186,37 @@ Severity rates the effect on the user after mitigation:
 - **Severity after mitigation**: Low.
 - **Outcome**: `BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR`.
 
+### Send fails temporarily
+
+- **Failure mode**: `bccam_control_channel_can_send` returned true, but the
+  link does not take the frame.
+- **Cause**: the link's single transmit slot is busy, for example with a
+  credit update queued earlier in the same step.
+- **Effect if unmitigated**: the request waits for an answer to a frame
+  that was never sent, until it times out.
+- **Mitigation**: `bccam_control_channel_send` returns
+  `BCCAM_CONTROL_SEND_BUSY`, and `bccam_control_request_handling` stays in
+  WaitingToSend and sends again in a later step.
+- **Severity after mitigation**: None, as long as the slot frees up before
+  the timeout. Otherwise Low.
+- **Outcome**: the outcome of the request once it is sent, or
+  `BCCAM_CONTROL_OUTCOME_TIMEOUT`.
+
+### Send fails permanently
+
+- **Failure mode**: the link rejects the frame, and a retry cannot succeed,
+  while ready stays true.
+- **Cause**: the negotiated Link MTU is below `BCCAM_CONTROL_FRAME_MAX_LEN`,
+  or a bug in the Control Service gives the link a bad argument. A request
+  that failed the [Request checks](#request-checks) never gets this far.
+- **Effect if unmitigated**: the request waits for an answer to a frame
+  that was never sent, until it times out.
+- **Mitigation**: `bccam_control_channel_send` returns
+  `BCCAM_CONTROL_SEND_REJECTED`, and `bccam_control_request_handling`
+  completes the request at once.
+- **Severity after mitigation**: Low.
+- **Outcome**: `BCCAM_CONTROL_OUTCOME_SEND_FAILED`.
+
 ### Unsolicited frame
 
 - **Failure mode**: an unsolicited frame, such as `NOTIFY`, arrives, in any
@@ -1180,7 +1244,11 @@ Severity rates the effect on the user after mitigation:
   session reset clears the credit in both directions and drops pending
   units, so an answer the deck still owes from the old session never
   reaches a later request, and the next ready starts from [Credit](#credit)
-  again.
+  again. When the request is in WaitingToSend and the send in the same step
+  finds the session already ended, `bccam_control_channel_send` returns
+  `BCCAM_CONTROL_SEND_CLOSED`, and `bccam_control_request_handling`
+  completes the request at once, before `bccam_control_service` sees ready
+  go false.
 - **Severity after mitigation**: Low.
 - **Outcome**: `BCCAM_CONTROL_OUTCOME_ABORTED`.
 
@@ -1243,20 +1311,20 @@ Severity rates the effect on the user after mitigation:
 ## Open questions
 
 - Timeout: the value is not decided.
-- Runtime interface:
-  - None of the five functions exist in `bccam_uart_runtime.h` yet. Who
-    implements them is not stated.
-  - The names differ: `control_tx_credit` in the class diagram,
-    `get_control_tx_credit` in the table, and
-    `bccam_uart_runtime_control_tx_credit` in the existing code.
+- Runtime interface (these have to be implemented directly in code)
+  - Of the five functions, only `bccam_uart_runtime_control_tx_credit`
+    exists in `bccam_uart_runtime.h`. `bccam_uart_runtime_control_ready`
+    has no single function yet, but the runtime has
+    `bccam_uart_runtime_control_service_bound` and
+    `bccam_uart_runtime_control_probe_done`.
+    `bccam_uart_runtime_grant_control_rx_credit`,
+    `bccam_uart_runtime_send_control` and
+    `bccam_uart_runtime_take_control_rx` do not exist. Who implements the
+    missing functions is not stated.
   - `bccam_uart_runtime_grant_control_rx_credit` must not fail temporarily,
     but `bccam_uart_link_send_credit_update` returns
     `BCCAM_UART_ERR_NO_CREDIT` or `BCCAM_UART_ERR_TRANSACTION_BUSY`, and the
     runtime does not keep the grant pending today.
-  - `bccam_uart_runtime_send_control` and `bccam_control_channel_send` return
-    nothing, but `bccam_uart_link_send_normal` can fail, temporarily or with
-    a link fault. A failed send leaves the request in WaitingResponse until
-    it times out.
   - How a grant after a take maps to the link,
     `bccam_uart_link_release_rx_slot` with advertised credit + 1, is not
     described.
