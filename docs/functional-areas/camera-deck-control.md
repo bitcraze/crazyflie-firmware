@@ -95,6 +95,8 @@ Bodies:
 
 - `value` is `type:u8`, `len:u8`, `data[len]`. Multi-byte integers are
   little-endian.
+- The value types in scope and their type codes: `bool` 0x01, `u8` 0x10,
+  `i8` 0x11, `u16` 0x12, `i16` 0x13, `u32` 0x14 and `i32` 0x15.
 - `path` is ASCII, `path_len` bytes, not NUL-terminated.
 - A response shorter than 2 bytes has no `request_id` and is malformed.
 
@@ -247,6 +249,7 @@ classDiagram
         uint8_t kind OK, VALUE or ERROR
         uint8_t request_id
         bccam_control_value_t value
+        bool value_valid
         uint8_t error_code
         char detail[BCCAM_CONTROL_DETAIL_MAX_LEN]
         uint8_t detail_len
@@ -316,8 +319,11 @@ response fits in one frame:
 - `BCCAM_CONTROL_DETAIL_MAX_LEN` is 60: an `ERROR` frame has 2 header bytes,
   `error_code` and `detail_len` before the detail. `detail` is UTF-8 text,
   `detail_len` bytes, not NUL-terminated.
-- `bccam_control_response_t.value` is valid only when `kind` is `VALUE`,
-  and `error_code` and `detail` only when `kind` is `ERROR`.
+- `bccam_control_response_t.value` and `value_valid` are valid only when
+  `kind` is `VALUE`, and `error_code` and `detail` only when `kind` is
+  `ERROR`. `value_valid` is false when the value fails the value checks in
+  [bccam_control_codec](#bccam_control_codec). `value` must then not be
+  used.
 - `bccam_control_frame_class_t` is the class of a received frame, see
   [Frame classes](#frame-classes).
 - `user` points to a static `bccam_control_user_t` that outlives every
@@ -411,6 +417,12 @@ own `on_complete` in their `bccam_control_user_t`.
   request ID. The Control Service does not check them for uniqueness.
 - A user should not reuse a user request ID while a request with it is queued
   or outstanding.
+- The Control Service does not check that the type of a `VALUE` is the
+  type the user expects for the path. The deck is the authority on the
+  type of a path. A user that expects a type checks it itself. The param
+  adapter, for example, compares it with the type of the param. For `SET`,
+  the deck checks the type and answers `ERROR` when it does not match,
+  which gives `BCCAM_CONTROL_OUTCOME_ERROR`.
 
 ### Runtime interface
 
@@ -776,6 +788,8 @@ flowchart TD
         p0{"response?"}
         p4{"request_id<br/>matches?"}
         px["count stale, drop"]
+        pv{"kind fits operation,<br/>and value_valid<br/>if VALUE?"}
+        pp["stop timer,<br/>on_complete<br/>BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR"]
         pc["stop timer, build result,<br/>on_complete<br/>BCCAM_CONTROL_OUTCOME_OK, _VALUE or _ERROR"]
         p6{"timer expired?"}
         p7["on_complete<br/>BCCAM_CONTROL_OUTCOME_TIMEOUT"]
@@ -789,7 +803,9 @@ flowchart TD
         p0 -- "yes" --> p4
         p0 -- "no" --> p6
         p4 -- "no" --> px --> p6
-        p4 -- "yes" --> pc --> p8
+        p4 -- "yes" --> pv
+        pv -- "yes" --> pc --> p8
+        pv -- "no" --> pp --> p8
         p6 -- "yes" --> p7 --> p8
         p6 -- "no" --> p9
     end
@@ -837,6 +853,11 @@ Consequences and design choices:
 - A malformed answer is dropped by `bccam_control_service` and does not
   complete the request. The request completes with
   `BCCAM_CONTROL_OUTCOME_TIMEOUT`.
+- A matching answer completes the request with
+  `BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR` when its kind does not fit the
+  operation, or when it is a `VALUE` with `value_valid` false. A `GET` is
+  answered with `VALUE` or `ERROR`, and a `SET` with `OK` or `ERROR`. The
+  deck did answer, so the request completes at once instead of timing out.
 - At most one request is taken from the queue per step, also when it
   completes with `BCCAM_CONTROL_OUTCOME_NOT_READY`.
 - A request moves at most one state per step. A request taken in one step
@@ -869,6 +890,21 @@ A frame is malformed when:
 - `kind` is neither `OK`, `VALUE` or `ERROR`, nor in 0xc0..0xff,
 - `kind` is `OK`, `VALUE` or `ERROR` and the body does not match
   [Frame layout](#frame-layout), or bytes remain after it.
+
+For a `VALUE`, the value `len` is checked only against the frame: the
+`data` must end exactly at the end of the frame. The contents of the value
+do not make the frame malformed. Instead the codec checks the value and
+sets `value_valid`:
+
+- the type is in scope, see [Frame layout](#frame-layout),
+- `len` matches the type: 1 for `bool`, `u8` and `i8`, 2 for `u16` and
+  `i16`, 4 for `u32` and `i32`,
+- a `bool` is 0x00 or 0x01.
+
+When all checks pass, `value_valid` is true and the type, length and data
+are copied into `value`. Otherwise `value_valid` is false and `value` is
+not filled in. A type out of scope, such as `u64` or `string`, does not fit
+in `bccam_control_value_t`.
 
 ## bccam_control_channel
 
@@ -1030,6 +1066,22 @@ Severity rates the effect on the user after mitigation:
 - **Outcome**: `BCCAM_CONTROL_OUTCOME_TIMEOUT` if it was the answer,
   otherwise nothing.
 
+### Unexpected answer
+
+- **Failure mode**: the matching answer has a kind that does not fit the
+  operation, such as `OK` to a `GET` or `VALUE` to a `SET`, or it is a
+  `VALUE` whose value fails the value checks, such as a type out of scope
+  or a `bool` that is not 0x00 or 0x01.
+- **Cause**: the deck does not follow the protocol, or uses a value type
+  out of scope for the path.
+- **Effect if unmitigated**: the user gets a wrong result, or a value that
+  does not fit in `bccam_control_value_t`.
+- **Mitigation**: `bccam_control_codec` sets `value_valid` false for a bad
+  value. `bccam_control_request_handling` checks the kind against the
+  operation and checks `value_valid`, and completes the request.
+- **Severity after mitigation**: Low.
+- **Outcome**: `BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR`.
+
 ### Unsolicited frame
 
 - **Failure mode**: an unsolicited frame, such as `NOTIFY`, arrives, in any
@@ -1087,11 +1139,6 @@ Severity rates the effect on the user after mitigation:
 ## Open questions
 
 - Timeout: the value is not decided.
-- `BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR` is in the enum and the User API, but
-  no transition produces it. For example, a response with a matching
-  `request_id` but the wrong kind for the request, such as `OK` to a `GET`
-  or `VALUE` to a `SET`. Whether a `VALUE` with another type than expected
-  is checked is not decided.
 - `bccam_control_request_handling` has no init function, but
   `next_request_id` is set on `bccam_control_service_init`. Its state is
   not in its Data table.
@@ -1101,10 +1148,6 @@ Severity rates the effect on the user after mitigation:
   scope or a `value.len` that does not match the type, and whether
   `bccam_control_service_submit` returns false or the request completes
   with an outcome.
-- Value types: the type codes are not listed (`bool` 0x01, `u8` 0x10 to
-  `i32` 0x15). The checks the codec makes on a `VALUE` are not listed: the
-  length matches the type, a `bool` is 0x00 or 0x01, and a type out of
-  scope, such as `u64` or `bytes`, is malformed or not.
 - Runtime interface:
   - None of the five functions exist in `bccam_uart_runtime.h` yet. Who
     implements them is not stated.
