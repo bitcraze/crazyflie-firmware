@@ -197,7 +197,6 @@ classDiagram
         +init
         +runtime_ready
         +open
-        +reset
         +can_send
         +send
         +receive
@@ -224,7 +223,7 @@ classDiagram
     bccam_uart_service_init --> bccam_control_service : init
     ServiceTask --> bccam_control_service : step
     bccam_control_service --> bccam_control_request_queue : init, put
-    bccam_control_service --> bccam_control_channel : init, runtime_ready, open, reset, receive
+    bccam_control_service --> bccam_control_channel : init, runtime_ready, open, receive
     bccam_control_service --> bccam_control_codec : request_valid, decode
     bccam_control_service --> bccam_control_request_handling : init, step
     bccam_control_request_handling --> bccam_control_request_queue : take
@@ -579,9 +578,8 @@ gets the ready flag as an argument to its step.
 - Order on ready: `bccam_control_service` opens `bccam_control_channel`
   with `bccam_control_channel_open`, which grants receive credit, then
   sets the ready flag.
-- Order on not ready: `bccam_control_service` resets
-  `bccam_control_channel` with `bccam_control_channel_reset`, goes to not
-  ready, then steps `bccam_control_request_handling` with ready false,
+- Order on not ready: `bccam_control_service` goes to not ready, then
+  steps `bccam_control_request_handling` with ready false,
   which completes the outstanding request with
   `BCCAM_CONTROL_OUTCOME_ABORTED`. Requests taken from the queue after that
   complete with `BCCAM_CONTROL_OUTCOME_NOT_READY`.
@@ -592,7 +590,7 @@ gets the ready flag as an argument to its step.
 `bccam_control_request_handling` sees only responses:
 
 - It receives only while ready. While not ready, the receive slot belongs
-  to the runtime and its probe, and `bccam_control_channel` has been reset.
+  to the runtime and its probe.
 - It receives at most one frame per step, and before it steps
   `bccam_control_request_handling`.
 - It decodes the frame with `bccam_control_codec` and acts on its class,
@@ -650,7 +648,7 @@ flowchart TD
     h2["bccam_control_request_handling<br/>step(true, none, now_ticks)"]
 
     n1{"ready flag set?"}
-    n2["bccam_control_channel reset,<br/>clear ready flag"]
+    n2["clear ready flag"]
     h3["bccam_control_request_handling<br/>step(false, none, now_ticks)"]
 
     e0(["return"])
@@ -1012,7 +1010,6 @@ Control message format.
 
 - On `bccam_control_channel_open`, it grants the first receive credit. The
   runtime's probe leaves receive credit at 0 when it is done.
-- On `bccam_control_channel_reset`, it clears the receive buffer.
 - It tells whether a frame can be sent, which hides the transmit credit.
 - On send, it sorts the result of `bccam_uart_runtime_send_control` into a
   `bccam_control_send_result_t`, so that the link's error codes stay hidden
@@ -1035,10 +1032,9 @@ Control message format.
 
 | Function | What it does |
 |---|---|
-| `bccam_control_channel_init(bccam_uart_runtime_t *runtime) void` | Stores `runtime` and clears the receive buffer. |
+| `bccam_control_channel_init(bccam_uart_runtime_t *runtime) void` | Stores `runtime`. |
 | `bccam_control_channel_runtime_ready() bool` | Returns `bccam_uart_runtime_control_ready()`. |
 | `bccam_control_channel_open() void` | Grants the first receive credit. |
-| `bccam_control_channel_reset() void` | Clears the receive buffer. |
 | `bccam_control_channel_can_send() bool` | Returns true when a frame can be sent, that is when there is transmit credit. |
 | `bccam_control_channel_send(const bccam_control_frame_t *frame) bccam_control_send_result_t` | Sends the raw frame. Returns `BCCAM_CONTROL_SEND_SENT` when it was sent. Otherwise it was not sent, and it returns the corresponding error code. |
 | `bccam_control_channel_receive(bccam_control_frame_t *frame) bool` | Copies a received frame out of the receive slot into `frame` and grants receive credit at once. Returns true when a frame was received. Returns false when there was none, and `frame` must not be used. |
@@ -1048,7 +1044,6 @@ Control message format.
 | Field | Type | What it holds |
 |---|---|---|
 | `runtime` | `bccam_uart_runtime_t *` | The runtime instance. Every runtime function takes it as its first argument, so the channel needs it for all its runtime calls. |
-| `rx_buffer` | `bccam_control_frame_t` | The receive buffer. Cleared on `bccam_control_channel_reset`. |
 
 ### Credit
 
@@ -1236,9 +1231,9 @@ Severity rates the effect on the user after mitigation:
 - **Effect if unmitigated**: the request waits for an answer that never
   comes.
 - **Mitigation**: `bccam_control_service` detects it when
-  `bccam_control_channel_runtime_ready()` is false. It resets
-  `bccam_control_channel`, and `bccam_control_request_handling`, stepped
-  with ready false, completes the request. This relies on
+  `bccam_control_channel_runtime_ready()` is false.
+  `bccam_control_request_handling`, stepped with ready false, completes
+  the request. This relies on
   `bccam_uart_runtime_control_ready()` going false only when the Link
   session ends. Deck reset, link fault and handle change all end it. The
   session reset clears the credit in both directions and drops pending
@@ -1328,9 +1323,6 @@ Severity rates the effect on the user after mitigation:
   - How a grant after a take maps to the link,
     `bccam_uart_link_release_rx_slot` with advertised credit + 1, is not
     described.
-- `rx_buffer` in `bccam_control_channel`: `receive` copies straight into
-  the caller's frame, so what the buffer is for, and what
-  `bccam_control_channel_reset` clears, is unclear.
 - Counters: stale, unsolicited and malformed frames are counted, but no
   unit has fields for them, and it is not decided whether they are exposed
   as log variables or with `DEBUG_PRINT`.
