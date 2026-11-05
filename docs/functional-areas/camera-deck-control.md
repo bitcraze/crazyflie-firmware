@@ -177,6 +177,7 @@ classDiagram
     }
 
     class bccam_control_request_handling {
+        +init
         +step
     }
 
@@ -214,7 +215,7 @@ classDiagram
     bccam_control_service --> bccam_control_request_queue : init, put
     bccam_control_service --> bccam_control_channel : init, runtime_ready, open, reset, receive
     bccam_control_service --> bccam_control_codec : decode
-    bccam_control_service --> bccam_control_request_handling : step
+    bccam_control_service --> bccam_control_request_handling : init, step
     bccam_control_request_handling --> bccam_control_request_queue : take
     bccam_control_request_handling --> bccam_control_codec : encode_get, encode_set
     bccam_control_request_handling --> bccam_control_channel : can_send, send
@@ -691,7 +692,7 @@ receive frames itself: `bccam_control_service` passes it the decoded
 responses, and only responses, see [Frame classes](#frame-classes).
 
 - The deck request ID, `request_id`, is assigned here and is never shown
-  to users. It is set to 1 on `bccam_control_service_init` and is never
+  to users. It is set to 1 on `bccam_control_request_handling_init` and is never
   reset, also not when ready is lost. It is incremented for each request
   and wraps from 255 to 1, skipping 0. (0 is used by the ready probe.)
 
@@ -699,6 +700,7 @@ responses, and only responses, see [Frame classes](#frame-classes).
 
 | Function | What it does |
 |---|---|
+| `bccam_control_request_handling_init() void` | Initializes the unit, sets init values. |
 | `bccam_control_request_handling_step(bool ready, const bccam_control_response_t *response, uint32_t now_ticks) void` | Does one step, see [One step](#one-step). `response` is the response received in this step, or NULL when there is none. `now_ticks` is the tick count. |
 
 ### Data
@@ -1139,9 +1141,6 @@ Severity rates the effect on the user after mitigation:
 ## Open questions
 
 - Timeout: the value is not decided.
-- `bccam_control_request_handling` has no init function, but
-  `next_request_id` is set on `bccam_control_service_init`. Its state is
-  not in its Data table.
 - Invalid requests: `encode_get` and `encode_set` cannot fail. It is not
   decided who rejects a request with `path_len` over
   `BCCAM_CONTROL_PATH_MAX_LEN`, an unknown `operation`, a value type out of
