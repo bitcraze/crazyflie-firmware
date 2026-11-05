@@ -368,6 +368,10 @@ response fits in one frame:
   reaches `on_complete` in the request copy, so `bccam_control_result_t`
   does not repeat it. It is not the deck request ID, which only
   `bccam_control_request_handling` knows.
+- `operation` holds the wire `kind` from the protocol, `GET` 0x01 or `SET`
+  0x02, see [Frame layout](#frame-layout). In the same way,
+  `bccam_control_response_t.kind` holds `OK` 0x80, `VALUE` 0x81 or `ERROR`
+  0x82. The constants are defined in `bccam_control_types.h`.
 
 Which units include which. An arrow from one unit to another means that
 the first unit includes the header of the other. All the types above are in
@@ -1325,14 +1329,12 @@ Severity rates the effect on the user after mitigation:
     described.
 - Counters: stale, unsolicited and malformed frames are counted, but no
   unit has fields for them, and it is not decided whether they are exposed
-  as log variables or with `DEBUG_PRINT`.
+  as log variables or with `DEBUG_PRINT`. - Action: Expose as log variables.
 - The ready flag is written in the service task and read from user tasks.
   Whether `volatile` is enough is not stated.
 - Host test of `bccam_control_request_queue`: it uses a static FreeRTOS
   queue. The existing code removes FreeRTOS with `UNIT_TEST`. How the queue
   is tested on the host is not stated.
-- Constants for `bccam_control_request_t.operation` are not defined, for
-  example whether they are the wire kinds 0x01 and 0x02.
 - Version: the scope says `bitcraze.control` version 0.0, the protocol talks
   about v1 error codes and types.
 - Build integration of the new files is not mentioned.
