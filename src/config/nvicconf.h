@@ -87,7 +87,7 @@
 #define NVIC_SPI_PRI          7
 #define NVIC_I2C_PRI          7
 #define NVIC_MOTORS_PRI       10
-#define NVIC_UART1_PRI        10
+#define NVIC_UART1_PRI        6  // No RX DMA: at 1 Mbaud a byte must be read within 10 us
 #define NVIC_UART1_DMA_PRI    10
 #define NVIC_UART2_PRI        6
 #define NVIC_UART2_DMA_PRI    10
