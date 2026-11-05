@@ -933,11 +933,12 @@ Control message format.
 ### Credit
 
 How the Control service's transmit credit and receive credit change from
-link establishment, through the runtime's probe, until
+the state the runtime leaves when it reports ready, until
 `bccam_control_channel` is opened and both sides have credit again. This is
 why `bccam_control_channel` can guarantee that a frame can be sent only
 after any answer to the previous request has been delivered, also for the
-first request after the probe.
+first request after ready. How the runtime gets to ready, including its
+probe, is out of scope.
 
 There is no negotiation. Each receiver grants credit for its free receive
 slots with `CREDIT_UPDATE`, and each sender uses one credit per frame. The
@@ -952,25 +953,9 @@ sequenceDiagram
     participant C as Crazyflie<br/>bccam_uart_runtime and bccam_control_channel
     participant D as Camera deck<br/>Control Service
 
-    Note over C,D: Link established, all credit 0
+    Note over C,D: Runtime reports ready, the probe answer has been delivered
     Note left of C: transmit 0, receive 0
-    Note right of D: transmit 0, receive 0
-
-    D->>C: CREDIT_UPDATE control, 1
-    Note left of C: transmit 1
-    Note right of D: receive 1, its one RX slot is free
-
-    C->>D: CREDIT_UPDATE control, 1 (runtime grants receive credit for the probe)
-    Note left of C: receive 1, receive slot free
-    Note right of D: transmit 1
-
-    C->>D: GET 0 meta.schema_modules (runtime probe)
-    Note left of C: transmit 0, cannot send
-    Note right of D: receive 0, RX slot holds the request
-
-    D->>C: VALUE 0 table
-    Note right of D: transmit 0
-    Note left of C: receive 0, runtime takes the answer, probe done, ready
+    Note right of D: transmit 0, receive 0, RX slot busy until the probe response is accepted for TX
 
     D->>C: CREDIT_UPDATE control, 1
     Note right of D: receive 1, RX slot free after the response was accepted for TX
@@ -981,7 +966,7 @@ sequenceDiagram
     Note right of D: transmit 1
 ```
 
-- Steps 1 and 2 can come in either order, and so can steps 5 and 6.
+- Steps 1 and 2 can come in either order.
 - The runtime does not grant receive credit again after the probe answer.
   `bccam_control_channel` grants it on `bccam_control_channel_open`, after
   `bccam_control_service` has seen ready.
