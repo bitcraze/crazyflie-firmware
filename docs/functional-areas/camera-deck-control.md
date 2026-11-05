@@ -182,6 +182,7 @@ classDiagram
     }
 
     class bccam_control_codec {
+        +request_valid
         +encode_get
         +encode_set
         +decode
@@ -214,7 +215,7 @@ classDiagram
     ServiceTask --> bccam_control_service : init, step
     bccam_control_service --> bccam_control_request_queue : init, put
     bccam_control_service --> bccam_control_channel : init, runtime_ready, open, reset, receive
-    bccam_control_service --> bccam_control_codec : decode
+    bccam_control_service --> bccam_control_codec : request_valid, decode
     bccam_control_service --> bccam_control_request_handling : init, step
     bccam_control_request_handling --> bccam_control_request_queue : take
     bccam_control_request_handling --> bccam_control_codec : encode_get, encode_set
@@ -278,6 +279,13 @@ classDiagram
         BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR
     }
 
+    class bccam_control_submit_result_t {
+        <<enumeration>>
+        BCCAM_CONTROL_SUBMIT_ACCEPTED
+        BCCAM_CONTROL_SUBMIT_QUEUE_FULL
+        BCCAM_CONTROL_SUBMIT_INVALID
+    }
+
     class bccam_control_value_t {
         uint8_t type
         uint8_t len
@@ -327,6 +335,8 @@ response fits in one frame:
   used.
 - `bccam_control_frame_class_t` is the class of a received frame, see
   [Frame classes](#frame-classes).
+- `bccam_control_submit_result_t` is what `bccam_control_service_submit`
+  returns, see [bccam_control_service](#bccam_control_service).
 - `user` points to a static `bccam_control_user_t` that outlives every
   request. The path and value are copied, so the user can drop its request
   when `bccam_control_service_submit` returns.
@@ -404,7 +414,11 @@ own `on_complete` in their `bccam_control_user_t`.
 | `on_complete(const bccam_control_request_t *request, const bccam_control_result_t *result) void` | Tells the user that a request has completed, with its result. |
 
 - `on_complete` is called in the service task. It must not block.
-- Every submitted request gets exactly one `on_complete`.
+- Every request for which `bccam_control_service_submit` returns
+  `BCCAM_CONTROL_SUBMIT_ACCEPTED` gets exactly one `on_complete`. A request
+  for which it returns `BCCAM_CONTROL_SUBMIT_QUEUE_FULL` or
+  `BCCAM_CONTROL_SUBMIT_INVALID` gets none. `_QUEUE_FULL` may be retried
+  later. `_INVALID` is a bug in the user and must not be retried unchanged.
 - `on_complete` gets the copy of the whole request, including its user
   request ID, for every outcome. This includes the outcomes the Crazyflie
   produces itself: `BCCAM_CONTROL_OUTCOME_NOT_READY`, `_ABORTED`,
@@ -452,7 +466,7 @@ frame can be sent.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Queued : bccam_control_service_submit
+    [*] --> Queued : request accepted
 
     Queued --> Completed : control service not ready
     Queued --> Outstanding : control service ready
@@ -488,9 +502,10 @@ sequenceDiagram
     participant D as Camera deck<br/>Control Service
 
     U->>CS: submit(request), no wait
+    CS->>CS: request_valid (bccam_control_codec), true
     CS->>Q: put(request)
     Q-->>CS: true
-    CS-->>U: true
+    CS-->>U: BCCAM_CONTROL_SUBMIT_ACCEPTED
     CS->>H: step(true, none)
     H->>Q: take()
     Q-->>H: request
@@ -521,7 +536,8 @@ sequenceDiagram
 The unit above the other four. It is the only unit users see, through
 `bccam_control_service_submit` and `bccam_control_service_is_ready`, and the
 single entry point the service task steps. `bccam_control_service_submit`
-passes the request on to `bccam_control_request_queue` and does not block.
+validates the request and passes it on to `bccam_control_request_queue`. It
+does not block.
 The Control Service is ready when the runtime reports
 `bccam_uart_runtime_control_ready()`: the Control service is bound and the
 runtime's probe has been answered. `bccam_control_service` reads it through
@@ -560,7 +576,7 @@ gets the ready flag as an argument to its step.
 
 | Function | What it does |
 |---|---|
-| `bccam_control_service_submit(const bccam_control_request_t *request) bool` | Passes the request on to `bccam_control_request_queue` with `bccam_control_request_queue_put`, without blocking. Returns false when the queue is full, and the request is not queued. |
+| `bccam_control_service_submit(const bccam_control_request_t *request) bccam_control_submit_result_t` | Checks the request with `bccam_control_codec_request_valid`. Returns `BCCAM_CONTROL_SUBMIT_INVALID` when it is not valid, and the request is not queued. Otherwise passes it on to `bccam_control_request_queue` with `bccam_control_request_queue_put`, without blocking. Returns `BCCAM_CONTROL_SUBMIT_QUEUE_FULL` when the queue is full, and the request is not queued, and `BCCAM_CONTROL_SUBMIT_ACCEPTED` when it is queued. The request is validated before the queue is tried, so an invalid request gives `_INVALID` also when the queue is full. |
 | `bccam_control_service_is_ready() bool` | Returns the ready flag. |
 | `bccam_control_service_init(bccam_uart_runtime_t *runtime) void` | The public init functions of all control_service units. Initializes the control service unit and subunits. Passes `runtime` on to `bccam_control_channel_init`. |
 | `bccam_control_service_step(uint32_t now_ticks) void` | Does one step, see [One step of bccam_control_service](#one-step-of-bccam_control_service). `now_ticks` is the current tick count. The service task reads it once per loop iteration with `xTaskGetTickCount()` and passes it in, as it does for `service_poll_once_at`. It is passed on to `bccam_control_request_handling_step`. |
@@ -868,17 +884,37 @@ Consequences and design choices:
 
 ## bccam_control_codec
 
-Encodes `GET` and `SET`, sorts received frames into classes, and decodes
-`OK`, `VALUE` and `ERROR` and validates their bodies. Pure functions
-without state.
+Validates requests, encodes `GET` and `SET`, sorts received frames into
+classes, and decodes `OK`, `VALUE` and `ERROR` and validates their bodies.
+Pure functions without state.
 
 ### Functions
 
 | Function | What it does |
 |---|---|
-| `bccam_control_codec_encode_get(uint8_t request_id, const char *path, uint8_t path_len) bccam_control_frame_t` | Builds a `GET` frame as in [Frame layout](#frame-layout). |
-| `bccam_control_codec_encode_set(uint8_t request_id, const char *path, uint8_t path_len, const bccam_control_value_t *value) bccam_control_frame_t` | Builds a `SET` frame as in [Frame layout](#frame-layout). |
+| `bccam_control_codec_request_valid(const bccam_control_request_t *request) bool` | Returns true when the request passes the request checks below. |
+| `bccam_control_codec_encode_get(uint8_t request_id, const char *path, uint8_t path_len) bccam_control_frame_t` | Builds a `GET` frame as in [Frame layout](#frame-layout). Precondition: `path` and `path_len` are from a request that passed `bccam_control_codec_request_valid`. Cannot fail. |
+| `bccam_control_codec_encode_set(uint8_t request_id, const char *path, uint8_t path_len, const bccam_control_value_t *value) bccam_control_frame_t` | Builds a `SET` frame as in [Frame layout](#frame-layout). Precondition: `path`, `path_len` and `value` are from a request that passed `bccam_control_codec_request_valid`. Cannot fail. |
 | `bccam_control_codec_decode(const bccam_control_frame_t *frame, bccam_control_response_t *response) bccam_control_frame_class_t` | Returns the class of the frame, see [Frame classes](#frame-classes). Fills in `response` only when the class is response. Otherwise `response` must not be used. |
+
+### Request checks
+
+`bccam_control_codec_request_valid` returns true only when all of these
+hold:
+
+- `operation` is `GET` or `SET`.
+- `path_len` is from 1 to `BCCAM_CONTROL_PATH_MAX_LEN`.
+- Every byte of `path` is printable ASCII, 0x20..0x7e.
+- For `SET`, `value` passes the value checks below. For `GET`, `value` is
+  not read.
+- `user` and `user->on_complete` are not NULL.
+
+The checks protect the encoders: a `path_len` over
+`BCCAM_CONTROL_PATH_MAX_LEN` or a `value.len` over
+`BCCAM_CONTROL_VALUE_MAX_LEN` would make them read past the end of the
+array. Every check fails only because of a bug in the user.
+
+### Received frames
 
 A response holds `kind`, `request_id` and the body.
 
@@ -895,8 +931,12 @@ A frame is malformed when:
 
 For a `VALUE`, the value `len` is checked only against the frame: the
 `data` must end exactly at the end of the frame. The contents of the value
-do not make the frame malformed. Instead the codec checks the value and
-sets `value_valid`:
+do not make the frame malformed. Instead the codec checks the value with
+the value checks and sets `value_valid`.
+
+The value checks, used both for the value of a received `VALUE` and for the
+value of a `SET` request in [Request checks](#request-checks), in one
+internal function:
 
 - the type is in scope, see [Frame layout](#frame-layout),
 - `len` matches the type: 1 for `bool`, `u8` and `i8`, 2 for `u16` and
@@ -1127,26 +1167,38 @@ Severity rates the effect on the user after mitigation:
 - **Severity after mitigation**: Low.
 - **Outcome**: `BCCAM_CONTROL_OUTCOME_NOT_READY`.
 
+### Invalid request
+
+- **Failure mode**: the user submits a request that fails the
+  [Request checks](#request-checks), such as a `path_len` over
+  `BCCAM_CONTROL_PATH_MAX_LEN`, an unknown `operation`, or a `SET` value
+  with a type out of scope or a `len` that does not match the type.
+- **Cause**: a bug in the user.
+- **Effect if unmitigated**: the encoders read past the end of `path` or
+  `value.data`, or a frame the deck cannot parse is sent.
+- **Mitigation**: `bccam_control_service_submit` checks the request with
+  `bccam_control_codec_request_valid` before it is queued, and returns
+  `BCCAM_CONTROL_SUBMIT_INVALID`.
+- **Severity after mitigation**: Low.
+- **Outcome**: no `on_complete`, only the return
+  `BCCAM_CONTROL_SUBMIT_INVALID`.
+
 ### Queue full
 
-- **Failure mode**: the user submits a request while the queue is full.
+- **Failure mode**: the user submits a valid request while the queue is
+  full.
 - **Cause**: not stated.
 - **Effect if unmitigated**: the request is lost and the user never learns
   about it.
 - **Mitigation**: `bccam_control_request_queue_put` detects it, and
-  `bccam_control_service_submit` returns false.
+  `bccam_control_service_submit` returns `BCCAM_CONTROL_SUBMIT_QUEUE_FULL`.
 - **Severity after mitigation**: Low.
-- **Outcome**: no `on_complete`, only the false return.
+- **Outcome**: no `on_complete`, only the return
+  `BCCAM_CONTROL_SUBMIT_QUEUE_FULL`.
 
 ## Open questions
 
 - Timeout: the value is not decided.
-- Invalid requests: `encode_get` and `encode_set` cannot fail. It is not
-  decided who rejects a request with `path_len` over
-  `BCCAM_CONTROL_PATH_MAX_LEN`, an unknown `operation`, a value type out of
-  scope or a `value.len` that does not match the type, and whether
-  `bccam_control_service_submit` returns false or the request completes
-  with an outcome.
 - Runtime interface:
   - None of the five functions exist in `bccam_uart_runtime.h` yet. Who
     implements them is not stated.
