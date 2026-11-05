@@ -733,6 +733,17 @@ int bccam_uart_link_enter_fault(bccam_uart_link_endpoint_t *endpoint) {
   return BCCAM_UART_ERR_LINK_FAULT;
 }
 
+int bccam_uart_link_clear_fault(bccam_uart_link_endpoint_t *endpoint) {
+  if (endpoint == NULL) {
+    return BCCAM_UART_ERR_BAD_ARGUMENT;
+  }
+  if (endpoint->state == BCCAM_UART_LINK_FAULT) {
+    // Entering the fault already cleared the session.
+    endpoint->state = BCCAM_UART_LINK_INACTIVE;
+  }
+  return BCCAM_UART_OK;
+}
+
 int bccam_uart_link_note_tx_failure(bccam_uart_link_endpoint_t *endpoint) {
   if (endpoint == NULL) {
     return BCCAM_UART_ERR_BAD_ARGUMENT;

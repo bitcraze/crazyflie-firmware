@@ -172,14 +172,39 @@ void bccam_uart_runtime_init(bccam_uart_runtime_t *runtime) {
   runtime->last_error = BCCAM_UART_OK;
 }
 
+static int begin_new_session(bccam_uart_runtime_t *runtime) {
+  reset_runtime_session(runtime);
+  runtime->restart_requested = false;
+  const int result = bccam_uart_link_start_establishment(&runtime->link);
+  set_last_error(runtime, result);
+  return result;
+}
+
 int bccam_uart_runtime_on_firmware_boot(bccam_uart_runtime_t *runtime) {
   if (runtime == NULL) {
     return BCCAM_UART_ERR_BAD_ARGUMENT;
   }
   bccam_uart_link_init(&runtime->link);
-  reset_runtime_session(runtime);
-  runtime->restart_requested = false;
   runtime->last_error = BCCAM_UART_OK;
+  return begin_new_session(runtime);
+}
+
+int bccam_uart_runtime_reestablish(bccam_uart_runtime_t *runtime) {
+  if (runtime == NULL) {
+    return BCCAM_UART_ERR_BAD_ARGUMENT;
+  }
+  (void)bccam_uart_link_clear_fault(&runtime->link);
+  return begin_new_session(runtime);
+}
+
+int bccam_uart_runtime_retry_establishment(bccam_uart_runtime_t *runtime) {
+  if (runtime == NULL) {
+    return BCCAM_UART_ERR_BAD_ARGUMENT;
+  }
+  if (runtime->link.pending != BCCAM_UART_PENDING_ESTABLISH ||
+      runtime->link.tx_pending) {
+    return BCCAM_UART_OK;
+  }
   const int result = bccam_uart_link_start_establishment(&runtime->link);
   set_last_error(runtime, result);
   return result;

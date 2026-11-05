@@ -170,6 +170,14 @@ static uint16_t bcCamLogFaults(uint32_t timestamp, void *data) {
   return status.link_faults;
 }
 
+static uint16_t bcCamLogUartErrors(uint32_t timestamp, void *data) {
+  (void)timestamp;
+  (void)data;
+  bccam_uart_service_status_t status;
+  bccam_uart_service_get_status(&status);
+  return status.uart_errors;
+}
+
 static uint16_t bcCamLogTxFlushes(uint32_t timestamp, void *data) {
   (void)timestamp;
   (void)data;
@@ -234,6 +242,9 @@ static logByFunction_t rxCrcErrorsLogDef = {
 };
 static logByFunction_t linkFaultsLogDef = {
   .acquireUInt16 = bcCamLogFaults,
+};
+static logByFunction_t uartErrorsLogDef = {
+  .acquireUInt16 = bcCamLogUartErrors,
 };
 static logByFunction_t txFlushesLogDef = {
   .acquireUInt16 = bcCamLogTxFlushes,
@@ -395,6 +406,7 @@ LOG_ADD_BY_FUNCTION(LOG_UINT16, rxBytes, &rxBytesLogDef)
 LOG_ADD_BY_FUNCTION(LOG_UINT16, txBytes, &txBytesLogDef)
 LOG_ADD_BY_FUNCTION(LOG_UINT16, crcErrors, &rxCrcErrorsLogDef)
 LOG_ADD_BY_FUNCTION(LOG_UINT16, faults, &linkFaultsLogDef)
+LOG_ADD_BY_FUNCTION(LOG_UINT16, uartErrors, &uartErrorsLogDef)
 LOG_ADD_BY_FUNCTION(LOG_UINT8, txCredit, &txCreditLogDef)
 LOG_ADD_BY_FUNCTION(LOG_UINT8, rxSlots, &rxSlotsLogDef)
 LOG_ADD_BY_FUNCTION(LOG_UINT16, txFlushes, &txFlushesLogDef)

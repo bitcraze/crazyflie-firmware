@@ -25,6 +25,8 @@
 #endif
 
 #define BCCAM_FW_STARTUP_TIMEOUT_MS 3000
+/** ESTABLISH is sent again this often while a running deck has not replied. */
+#define BCCAM_LINK_REESTABLISH_RETRY_MS 500
 #define BCCAM_UART_REQUEST_QUEUE_LENGTH 4
 #define BCCAM_UART_RX_QUEUE_LENGTH 8
 #define BCCAM_UART_RX_DRAIN_BUDGET BCCAM_UART_RX_QUEUE_LENGTH
@@ -62,6 +64,12 @@ static uint32_t firmware_startup_reset_count;
 static uint32_t startup_stall_deadline_tick;
 /** True once the stall has been reported for the current link session. */
 static bool startup_stall_reported;
+/** True while re-establishing with a deck that was not reset. */
+static bool link_reestablishing;
+/** When ESTABLISH is next sent again, or 0 before the first check. */
+static uint32_t link_reestablish_retry_tick;
+/** UART receive errors (overrun, noise, framing, parity) since startup. */
+static uint16_t uart_error_count;
 
 #if defined(UNIT_TEST) || defined(UNIT_TEST_MODE)
 static bool test_firmware_startup_result_forced;
@@ -99,6 +107,10 @@ static bool console_frame_pending;
 static bool console_release_pending;
 /** True when completing console_frame must schedule a slot release. */
 static bool console_frame_needs_release;
+/** True when clients must be told that Console output may have been lost. */
+static bool console_loss_marker_pending;
+/** Same text as the marker the Camera Deck inserts when its spool overflows. */
+static const uint8_t console_loss_marker[] = "\r\n[console data lost]\r\n";
 
 #if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
 static xQueueHandle request_queue;
@@ -166,6 +178,7 @@ static void populate_status_from_live(bccam_uart_service_status_t *status) {
   status->tx_bytes = observation.tx_bytes;
   status->rx_crc_errors = observation.counters.rx_crc_errors;
   status->link_faults = observation.counters.link_faults;
+  status->uart_errors = uart_error_count;
   status->tx_flushes = observation.tx_flushes;
   status->last_error = observation.last_error;
   status->control_probe_done = observation.control_probe_done ? 1u : 0u;
@@ -586,18 +599,16 @@ static void reset_rx_queue_state(void) {
 #endif
 }
 
-static void enter_fw_resetting(void) {
-#if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
-  disable_firmware_rx_callbacks();
-#endif
-  service_state = BCCAM_UART_SERVICE_STATE_FW_RESETTING;
+/** Forget per-session state, keeping any Console bytes not yet forwarded. */
+static void reset_service_session_state(void) {
+  link_reestablishing = false;
+  link_reestablish_retry_tick = 0;
   firmware_startup_deadline_tick = 0;
   startup_stall_deadline_tick = 0;
   startup_stall_reported = false;
   reset_control_probe_logging();
-  reset_rx_queue_state();
   // Received Console bytes were dispatched out of the link session as they
-  // arrived, so a pending frame survives the reset and is forwarded later.
+  // arrived, so a pending frame survives and is forwarded in the next session.
   if (!console_frame_pending) {
     console_frame_length = 0u;
     console_frame_offset = 0u;
@@ -605,6 +616,49 @@ static void enter_fw_resetting(void) {
   // The retained bytes no longer own a receive slot in the next session.
   console_frame_needs_release = false;
   console_release_pending = false;
+}
+
+static void enter_fw_resetting(void) {
+#if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
+  disable_firmware_rx_callbacks();
+#endif
+  service_state = BCCAM_UART_SERVICE_STATE_FW_RESETTING;
+  reset_service_session_state();
+  reset_rx_queue_state();
+  update_service_status_cache();
+}
+
+/**
+ * Tell Console clients that the frame lost with the session may have been theirs.
+ *
+ * It may not have been a Console frame, so the marker can be a false alarm. It
+ * is not sent if the source is disabled at that point, so a frame credited just
+ * before a disable is lost without a marker.
+ */
+static void note_console_output_may_be_lost(void) {
+  if (console_source_registered && consoleSourceIsEnabled(&console_source)) {
+    console_loss_marker_pending = true;
+  }
+}
+
+/**
+ * Recover a Link Fault caused by lost or corrupted bytes.
+ *
+ * The link has no retransmission, so the session cannot continue, but the deck
+ * itself is healthy: a new session keeps it and its camera stream running. A
+ * reset would not help as the loss happens on the Crazyflie side, so this is not
+ * limited in number. The startup watchdog resets the deck if a session does not
+ * come up.
+ */
+static void reestablish_after_byte_loss(void) {
+  note_console_output_may_be_lost();
+  reset_service_session_state();
+  if (bccam_uart_runtime_reestablish(&firmware_client.runtime) != BCCAM_UART_OK) {
+    enter_fw_resetting();
+    return;
+  }
+  link_reestablishing = true;
+  service_state = BCCAM_UART_SERVICE_STATE_FW_ESTABLISHING;
   update_service_status_cache();
 }
 
@@ -995,6 +1049,30 @@ static void update_startup_stall_report(
 }
 
 /**
+ * Send ESTABLISH again while re-establishing with a running deck.
+ *
+ * The request or its reply can be lost like any other bytes. This is limited to
+ * a deck known to be running: after a reset, the UART must not be written until
+ * the deck's application is ready for it. A failure is left to the watchdog.
+ */
+static void retry_reestablishment(uint32_t now_ticks) {
+  if (!link_reestablishing) {
+    return;
+  }
+  if (link_reestablish_retry_tick == 0) {
+    link_reestablish_retry_tick =
+      now_ticks + M2T(BCCAM_LINK_REESTABLISH_RETRY_MS);
+    return;
+  }
+  if (tick_has_reached((TickType_t)now_ticks,
+                       (TickType_t)link_reestablish_retry_tick)) {
+    link_reestablish_retry_tick =
+      now_ticks + M2T(BCCAM_LINK_REESTABLISH_RETRY_MS);
+    (void)bccam_uart_runtime_retry_establishment(&firmware_client.runtime);
+  }
+}
+
+/**
  * Reset the deck when the UART link is not active within the startup timeout.
  *
  * The watchdog is a link-level construct: once the link is active it stays
@@ -1012,6 +1090,8 @@ static bool update_startup_recovery_watchdog(
 
   if (observation.link_state == BCCAM_UART_LINK_ACTIVE) {
     firmware_startup_deadline_tick = 0;
+    link_reestablishing = false;
+    link_reestablish_retry_tick = 0;
     update_startup_stall_report(now_ticks, &observation);
     return false;
   }
@@ -1022,11 +1102,13 @@ static bool update_startup_recovery_watchdog(
   if (firmware_startup_deadline_tick == 0) {
     firmware_startup_deadline_tick =
       now_ticks + M2T(BCCAM_FW_STARTUP_TIMEOUT_MS);
+    retry_reestablishment(now_ticks);
     return false;
   }
 
   if (!tick_has_reached((TickType_t)now_ticks,
                         (TickType_t)firmware_startup_deadline_tick)) {
+    retry_reestablishment(now_ticks);
     return false;
   }
 
@@ -1142,6 +1224,15 @@ static int forward_console(void)
     return BCCAM_UART_OK;
   }
 
+  // After any retained frame, which was received before the loss.
+  if (console_loss_marker_pending) {
+    if (consoleSourceSend(&console_source, console_loss_marker,
+                          sizeof(console_loss_marker) - 1u)) {
+      console_loss_marker_pending = false;
+    }
+    return BCCAM_UART_OK;
+  }
+
   if (console_release_pending) {
     bool published = false;
     const int result = publish_console_credit_if_enabled(true, &published);
@@ -1212,20 +1303,43 @@ static void dispatch_received_frames(void)
   }
 }
 
+/**
+ * Tell whether a fault means bytes were lost or corrupted on the wire.
+ *
+ * Anything else got through the frame checks intact, so it is a protocol
+ * violation by the peer, and only a reset can be expected to clear it.
+ */
+static bool rx_event_lost_bytes(const bccam_uart_rx_event_t *event, int result) {
+  return event->type == BCCAM_UART_RX_EVENT_FAULT ||
+         result == BCCAM_UART_ERR_BAD_CRC ||
+         result == BCCAM_UART_ERR_BAD_LENGTH ||
+         result == BCCAM_UART_ERR_BAD_VERSION;
+}
+
 static bool handle_rx_event(const bccam_uart_rx_event_t *event) {
   if (event == NULL || !is_rx_firmware_state(service_state)) {
     return false;
   }
 
+  if (event->type == BCCAM_UART_RX_EVENT_FAULT &&
+      event->fault == BCCAM_UART_RX_FAULT_UART_ERROR) {
+    uart_error_count++;
+  }
+
   const int result =
     bccam_firmware_uart_client_on_rx_event(&firmware_client, event);
-  if (result != BCCAM_UART_OK ||
-      bccam_uart_runtime_get_state(&firmware_client.runtime) ==
-        BCCAM_UART_LINK_FAULT) {
-    enter_fw_resetting();
+  if (bccam_uart_runtime_get_state(&firmware_client.runtime) ==
+      BCCAM_UART_LINK_FAULT) {
+    if (rx_event_lost_bytes(event, result)) {
+      reestablish_after_byte_loss();
+    } else {
+      enter_fw_resetting();
+    }
     return true;
   }
 
+  // Without a fault, a rejected frame needs no recovery: frames from the old
+  // session are expected before a new one is active.
   dispatch_received_frames();
   return true;
 }
@@ -1539,6 +1653,10 @@ void bccam_uart_service_test_reset(void) {
   test_startup_stall_report_count = 0;
   startup_stall_deadline_tick = 0;
   startup_stall_reported = false;
+  link_reestablishing = false;
+  link_reestablish_retry_tick = 0;
+  uart_error_count = 0u;
+  console_loss_marker_pending = false;
   console_source_registered = false;
   console_frame_length = 0u;
   console_frame_offset = 0u;

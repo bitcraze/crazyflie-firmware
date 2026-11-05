@@ -366,6 +366,22 @@ void testEstablishmentRejectionStopsInactiveWithoutFault(void) {
   TEST_ASSERT_EQUAL_UINT16(0, link.counters.link_faults);
 }
 
+void testClearFaultReturnsToInactiveAndKeepsCounters(void) {
+  bccam_uart_link_endpoint_t link;
+  bccam_uart_link_init(&link);
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_ERR_LINK_FAULT,
+    bccam_uart_link_enter_fault(&link));
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_ERR_LINK_FAULT,
+    bccam_uart_link_start_establishment(&link));
+
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_link_clear_fault(&link));
+
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_LINK_INACTIVE, link.state);
+  TEST_ASSERT_EQUAL_UINT16(1, link.counters.link_faults);
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_link_start_establishment(&link));
+}
+
 static uint8_t begin_descriptor_request(bccam_uart_link_endpoint_t *link,
                                         uint8_t count,
                                         uint8_t ordinal) {

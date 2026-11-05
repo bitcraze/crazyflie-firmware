@@ -194,6 +194,17 @@ int bccam_uart_link_take_rx_for_service(
   uint16_t *out_len,
   bool *unit_present);
 int bccam_uart_link_enter_fault(bccam_uart_link_endpoint_t *endpoint);
+
+/**
+ * Return a faulted endpoint to Inactive, keeping its counters.
+ *
+ * This is the local part of Link Fault recovery. The caller then establishes a
+ * new session.
+ *
+ * @param endpoint Endpoint to recover.
+ * @return BCCAM_UART_OK, or BCCAM_UART_ERR_BAD_ARGUMENT for NULL.
+ */
+int bccam_uart_link_clear_fault(bccam_uart_link_endpoint_t *endpoint);
 int bccam_uart_link_note_tx_failure(bccam_uart_link_endpoint_t *endpoint);
 
 bool bccam_uart_link_catalog_complete(const bccam_uart_link_endpoint_t *endpoint);

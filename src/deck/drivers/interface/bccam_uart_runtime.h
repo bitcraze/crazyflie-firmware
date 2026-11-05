@@ -66,6 +66,32 @@ void bccam_uart_runtime_init(bccam_uart_runtime_t *runtime);
 
 int bccam_uart_runtime_on_firmware_boot(bccam_uart_runtime_t *runtime);
 
+/**
+ * Start a new Link session with a peer that was not rebooted.
+ *
+ * Clears a Link Fault and the session state, and keeps the link counters and
+ * the last error for diagnostics. A valid ESTABLISH replaces any session the
+ * peer still considers Active.
+ *
+ * @param runtime Runtime to recover.
+ * @return BCCAM_UART_OK when ESTABLISH was queued, otherwise a UART error code.
+ */
+int bccam_uart_runtime_reestablish(bccam_uart_runtime_t *runtime);
+
+/**
+ * Send ESTABLISH again if the previous one is still unanswered.
+ *
+ * It carries a new transaction ID, so a late reply to the previous one is
+ * rejected without affecting the establishment. Does nothing when no
+ * ESTABLISH is outstanding, such as after a rejection, or before the previous
+ * one was sent.
+ *
+ * @param runtime Runtime that is establishing.
+ * @return BCCAM_UART_OK when there was nothing to do or ESTABLISH was queued,
+ *         otherwise a UART error code.
+ */
+int bccam_uart_runtime_retry_establishment(bccam_uart_runtime_t *runtime);
+
 void bccam_uart_runtime_on_bootloader_enter(bccam_uart_runtime_t *runtime);
 
 int bccam_uart_runtime_receive_byte(bccam_uart_runtime_t *runtime, uint8_t byte);
