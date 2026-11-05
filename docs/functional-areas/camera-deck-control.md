@@ -361,16 +361,16 @@ flowchart TB
     service --> channel
 
     handling --> queue
+    handling --> types
     handling --> codec
     handling --> channel
 
-    service --> types
-    handling --> types
     queue --> types
     codec --> types
     channel --> types
 
     service --> runtime
+    service --> types
     channel --> runtime
     runtime --> types
 ```
@@ -439,21 +439,20 @@ frame can be sent.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Queued : bccam_control_service_submit returns true
+    [*] --> Queued : bccam_control_service_submit
 
-    Queued --> Completed : taken while not ready /<br/>BCCAM_CONTROL_OUTCOME_NOT_READY
-    Queued --> Outstanding : taken while ready /<br/>assign request_id, start timer
+    Queued --> Completed : control service not ready
+    Queued --> Outstanding : control service ready
 
     state Outstanding {
         [*] --> WaitingToSend
-        WaitingToSend --> WaitingResponse : bccam_control_channel<br/>can send /<br/>encode and send
-        WaitingResponse --> WaitingResponse : mismatched request_id /<br/>count stale, drop
-        WaitingResponse --> [*] : matching OK,<br/>VALUE or ERROR
+        WaitingToSend --> WaitingResponse : bccam_control_channel<br/>can send
+        WaitingResponse --> [*] : matching response received
     }
 
-    Outstanding --> Completed : answered /<br/>BCCAM_CONTROL_OUTCOME_OK,<br/>_VALUE or _ERROR
-    Outstanding --> Completed : timer expired /<br/>BCCAM_CONTROL_OUTCOME_TIMEOUT
-    Outstanding --> Completed : stepped while not ready /<br/>BCCAM_CONTROL_OUTCOME_ABORTED
+    Outstanding --> Completed : answered
+    Outstanding --> Completed : timer expired
+    Outstanding --> Completed : ready lost
 
     Completed --> [*] : on_complete called
 ```
@@ -558,23 +557,6 @@ gets the ready flag as an argument to its step.
 | Field | Type | What it holds |
 |---|---|---|
 | `ready` | `bool` | The ready flag. Written only in the service task. |
-
-### State machine
-
-```mermaid
-stateDiagram-v2
-    [*] --> NotReady
-
-    NotReady --> Ready : ready / open bccam_control_channel
-    Ready --> NotReady : not ready / reset bccam_control_channel, step bccam_control_request_handling with ready false (completes the outstanding request with BCCAM_CONTROL_OUTCOME_ABORTED)
-
-    note right of NotReady
-        Requests taken from the queue in
-        NotReady complete with
-        BCCAM_CONTROL_OUTCOME_NOT_READY
-        without being sent.
-    end note
-```
 
 ### One step of bccam_control_service
 
@@ -721,18 +703,16 @@ responses, and only responses, see [Frame classes](#frame-classes).
 stateDiagram-v2
     [*] --> Idle
 
-    Idle --> Idle : taken while not ready / on_complete BCCAM_CONTROL_OUTCOME_NOT_READY
-    Idle --> WaitingToSend : taken while ready / assign request_id, start timer
+    Idle --> WaitingToSend : taken while ready
 
-    WaitingToSend --> WaitingResponse : bccam_control_channel can send / encode and send
-    WaitingToSend --> Idle : timer expired / on_complete BCCAM_CONTROL_OUTCOME_TIMEOUT
+    WaitingToSend --> WaitingResponse : bccam_control_channel can send
+    WaitingToSend --> Idle : timer expired
 
-    WaitingResponse --> WaitingResponse : mismatched request_id / count stale, drop
-    WaitingResponse --> Idle : matching answer / stop timer, on_complete BCCAM_CONTROL_OUTCOME_OK, _VALUE or _ERROR
-    WaitingResponse --> Idle : timer expired / on_complete BCCAM_CONTROL_OUTCOME_TIMEOUT
+    WaitingResponse --> Idle : matching answer
+    WaitingResponse --> Idle : timer expired
 
-    WaitingToSend --> Idle : stepped while not ready / on_complete BCCAM_CONTROL_OUTCOME_ABORTED
-    WaitingResponse --> Idle : stepped while not ready / on_complete BCCAM_CONTROL_OUTCOME_ABORTED
+    WaitingToSend --> Idle : ready lost
+    WaitingResponse --> Idle : ready lost
 ```
 
 ### One step
@@ -1106,6 +1086,71 @@ Severity rates the effect on the user after mitigation:
 
 ## Open questions
 
-Check mermaid diagrams for overlapping text
-
-Credit diagram should not cover probe
+- Check mermaid diagrams for overlapping text.
+- Timeout: the value, the type of `deadline` and the time source are not
+  decided. `bccam_control_request_handling_step` takes no time argument, so
+  the unit would read the tick count itself, which makes host tests hard.
+  The existing service code passes the time in (`service_poll_once_at`).
+- `BCCAM_CONTROL_OUTCOME_PROTOCOL_ERROR` is in the enum and the User API, but
+  no transition produces it. For example, a response with a matching
+  `request_id` but the wrong kind for the request, such as `OK` to a `GET`
+  or `VALUE` to a `SET`. Whether a `VALUE` with another type than expected
+  is checked is not decided.
+- `bccam_control_request_handling` has no init function, but
+  `next_request_id` is set on `bccam_control_service_init`. Its state is
+  not in its Data table.
+- Invalid requests: `encode_get` and `encode_set` cannot fail. It is not
+  decided who rejects a request with `path_len` over
+  `BCCAM_CONTROL_PATH_MAX_LEN`, an unknown `operation`, a value type out of
+  scope or a `value.len` that does not match the type, and whether
+  `bccam_control_service_submit` returns false or the request completes
+  with an outcome.
+- Value types: the type codes are not listed (`bool` 0x01, `u8` 0x10 to
+  `i32` 0x15). The checks the codec makes on a `VALUE` are not listed: the
+  length matches the type, a `bool` is 0x00 or 0x01, and a type out of
+  scope, such as `u64` or `bytes`, is malformed or not.
+- Runtime interface:
+  - None of the five functions exist in `bccam_uart_runtime.h` yet. Who
+    implements them is not stated.
+  - The names differ: `control_tx_credit` in the class diagram,
+    `get_control_tx_credit` in the table, and
+    `bccam_uart_runtime_control_tx_credit` in the existing code.
+  - `bccam_uart_runtime_grant_control_rx_credit` must not fail temporarily,
+    but `bccam_uart_link_send_credit_update` returns
+    `BCCAM_UART_ERR_NO_CREDIT` or `BCCAM_UART_ERR_TRANSACTION_BUSY`, and the
+    runtime does not keep the grant pending today.
+  - `bccam_uart_runtime_send_control` and `bccam_control_channel_send` return
+    nothing, but `bccam_uart_link_send_normal` can fail, temporarily or with
+    a link fault. A failed send leaves the request in WaitingResponse until
+    it times out.
+  - How a grant after a take maps to the link,
+    `bccam_uart_link_release_rx_slot` with advertised credit + 1, is not
+    described.
+- Stepping:
+  - The page says both that the runtime layer steps the Control Service and
+    that the service task does. Where in `bcCamUartTask` or
+    `service_poll_once_at` `bccam_control_service_step` is called is not
+    stated.
+  - In which service states it is stepped is not stated. If it is stepped
+    only in the firmware states, a request queued while in the bootloader
+    never gets `on_complete`.
+  - How it fits with the 10 ms idle wait in the service task, since
+    `bccam_control_service_submit` does not notify the task.
+  - Where `bccam_control_service_init` is called, and what happens if
+    `bccam_control_service_submit` is called before it.
+- `rx_buffer` in `bccam_control_channel`: `receive` copies straight into
+  the caller's frame, so what the buffer is for, and what
+  `bccam_control_channel_reset` clears, is unclear.
+- Counters: stale, unsolicited and malformed frames are counted, but no
+  unit has fields for them, and it is not decided whether they are exposed
+  as log variables or with `DEBUG_PRINT`.
+- The ready flag is written in the service task and read from user tasks.
+  Whether `volatile` is enough is not stated.
+- Host test of `bccam_control_request_queue`: it uses a static FreeRTOS
+  queue. The existing code removes FreeRTOS with `UNIT_TEST`. How the queue
+  is tested on the host is not stated.
+- Constants for `bccam_control_request_t.operation` are not defined, for
+  example whether they are the wire kinds 0x01 and 0x02.
+- Version: the scope says `bitcraze.control` version 0.0, the protocol talks
+  about v1 error codes and types.
+- Build integration of the new files is not mentioned.
