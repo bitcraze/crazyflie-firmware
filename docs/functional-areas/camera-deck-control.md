@@ -127,7 +127,12 @@ interface.
 This page describes the Control Service layer and its two interfaces: the
 user API above and the runtime interface below.
 
-Note that the control service is stepped by the runtime layer.
+Note that the service task (`bcCamUartTask` in `bccam_uart_service`), which
+is part of the runtime layer, steps the Control Service.
+`bccam_control_service_init` is called from `bccam_uart_service_init`,
+before the service task is created. `bccam_control_service_step` must be
+called only from the service task. The service task steps the Control
+Service once per loop iteration, in every service state.
 
 ## Units
 
@@ -211,8 +216,13 @@ classDiagram
         <<bccam_uart_service task>>
     }
 
+    class bccam_uart_service_init {
+        <<deck init>>
+    }
+
     bccam_control_user_t ..> bccam_control_service : submit, is_ready
-    ServiceTask --> bccam_control_service : init, step
+    bccam_uart_service_init --> bccam_control_service : init
+    ServiceTask --> bccam_control_service : step
     bccam_control_service --> bccam_control_request_queue : init, put
     bccam_control_service --> bccam_control_channel : init, runtime_ready, open, reset, receive
     bccam_control_service --> bccam_control_codec : request_valid, decode
@@ -284,6 +294,7 @@ classDiagram
         BCCAM_CONTROL_SUBMIT_ACCEPTED
         BCCAM_CONTROL_SUBMIT_QUEUE_FULL
         BCCAM_CONTROL_SUBMIT_INVALID
+        BCCAM_CONTROL_SUBMIT_NOT_INITIALIZED
     }
 
     class bccam_control_value_t {
@@ -416,9 +427,12 @@ own `on_complete` in their `bccam_control_user_t`.
 - `on_complete` is called in the service task. It must not block.
 - Every request for which `bccam_control_service_submit` returns
   `BCCAM_CONTROL_SUBMIT_ACCEPTED` gets exactly one `on_complete`. A request
-  for which it returns `BCCAM_CONTROL_SUBMIT_QUEUE_FULL` or
-  `BCCAM_CONTROL_SUBMIT_INVALID` gets none. `_QUEUE_FULL` may be retried
-  later. `_INVALID` is a bug in the user and must not be retried unchanged.
+  for which it returns `BCCAM_CONTROL_SUBMIT_QUEUE_FULL`,
+  `BCCAM_CONTROL_SUBMIT_INVALID` or `BCCAM_CONTROL_SUBMIT_NOT_INITIALIZED`
+  gets none. `_QUEUE_FULL` may be retried later. `_INVALID` is a bug in the
+  user and must not be retried unchanged. `_NOT_INITIALIZED` means that
+  `bccam_control_service_init` has not been called, for example because no
+  camera deck is attached. A retry does not help until it has been called.
 - `on_complete` gets the copy of the whole request, including its user
   request ID, for every outcome. This includes the outcomes the Crazyflie
   produces itself: `BCCAM_CONTROL_OUTCOME_NOT_READY`, `_ABORTED`,
@@ -576,7 +590,7 @@ gets the ready flag as an argument to its step.
 
 | Function | What it does |
 |---|---|
-| `bccam_control_service_submit(const bccam_control_request_t *request) bccam_control_submit_result_t` | Checks the request with `bccam_control_codec_request_valid`. Returns `BCCAM_CONTROL_SUBMIT_INVALID` when it is not valid, and the request is not queued. Otherwise passes it on to `bccam_control_request_queue` with `bccam_control_request_queue_put`, without blocking. Returns `BCCAM_CONTROL_SUBMIT_QUEUE_FULL` when the queue is full, and the request is not queued, and `BCCAM_CONTROL_SUBMIT_ACCEPTED` when it is queued. The request is validated before the queue is tried, so an invalid request gives `_INVALID` also when the queue is full. |
+| `bccam_control_service_submit(const bccam_control_request_t *request) bccam_control_submit_result_t` | Takes a request for submission, and returns if it has been submitted successfully or not. |
 | `bccam_control_service_is_ready() bool` | Returns the ready flag. |
 | `bccam_control_service_init(bccam_uart_runtime_t *runtime) void` | The public init functions of all control_service units. Initializes the control service unit and subunits. Passes `runtime` on to `bccam_control_channel_init`. |
 | `bccam_control_service_step(uint32_t now_ticks) void` | Does one step, see [One step of bccam_control_service](#one-step-of-bccam_control_service). `now_ticks` is the current tick count. The service task reads it once per loop iteration with `xTaskGetTickCount()` and passes it in, as it does for `service_poll_once_at`. It is passed on to `bccam_control_request_handling_step`. |
@@ -587,7 +601,21 @@ gets the ready flag as an argument to its step.
 |---|---|---|
 | `ready` | `bool` | The ready flag. Written only in the service task. |
 
-### One step of bccam_control_service
+### bccam_control_service_submit
+
+Returns `BCCAM_CONTROL_SUBMIT_NOT_INITIALIZED` when
+`bccam_control_service_init` has not been called, and the request is not
+queued. Otherwise checks the request with `bccam_control_codec_request_valid`.
+Returns `BCCAM_CONTROL_SUBMIT_INVALID` when it is not valid, and the request is
+not queued. Otherwise passes it on to `bccam_control_request_queue` with
+`bccam_control_request_queue_put`, without blocking. Returns
+`BCCAM_CONTROL_SUBMIT_QUEUE_FULL` when the queue is full, and the request is
+not queued, and `BCCAM_CONTROL_SUBMIT_ACCEPTED` when it is queued. The checks
+are made in that order: init, validity, queue full. So a request gives
+`_NOT_INITIALIZED` also when it is invalid, and an invalid request gives
+`_INVALID` also when the queue is full. 
+
+### bccam_control_service_step
 
 What `bccam_control_service` does in one call to
 `bccam_control_service_step(now_ticks)`, from start to return.
@@ -680,8 +708,9 @@ the service task, by `bccam_control_request_handling`.
 - The FreeRTOS queue makes `bccam_control_request_queue_put` and
   `bccam_control_request_queue_take` safe between tasks.
   `bccam_control_request_queue` has no lock of its own.
-- The service task is not notified when a request is put. It finds the
-  request the next time it polls the queue, within its idle wait.
+- The service task is not notified when a request is put. The request is
+  taken in a later step, within one loop iteration of the service task.
+  When the service task is idle, that is within its 10 ms idle wait.
 - The queue is not cleared when ready is lost.
 
 ### Functions
@@ -1196,6 +1225,21 @@ Severity rates the effect on the user after mitigation:
 - **Outcome**: no `on_complete`, only the return
   `BCCAM_CONTROL_SUBMIT_QUEUE_FULL`.
 
+### Submit before init
+
+- **Failure mode**: the user submits a request before
+  `bccam_control_service_init` has been called.
+- **Cause**: no camera deck is attached, so `bccam_uart_service_init` never
+  runs, or the user submits before deck init.
+- **Effect if unmitigated**: `bccam_control_request_queue_put` uses a queue
+  that was never created.
+- **Mitigation**: `bccam_control_service_submit` detects that
+  `bccam_control_service_init` has not been called and returns
+  `BCCAM_CONTROL_SUBMIT_NOT_INITIALIZED`. The request is not queued.
+- **Severity after mitigation**: Low.
+- **Outcome**: no `on_complete`, only the return
+  `BCCAM_CONTROL_SUBMIT_NOT_INITIALIZED`.
+
 ## Open questions
 
 - Timeout: the value is not decided.
@@ -1216,18 +1260,6 @@ Severity rates the effect on the user after mitigation:
   - How a grant after a take maps to the link,
     `bccam_uart_link_release_rx_slot` with advertised credit + 1, is not
     described.
-- Stepping:
-  - The page says both that the runtime layer steps the Control Service and
-    that the service task does. Where in `bcCamUartTask` or
-    `service_poll_once_at` `bccam_control_service_step` is called is not
-    stated.
-  - In which service states it is stepped is not stated. If it is stepped
-    only in the firmware states, a request queued while in the bootloader
-    never gets `on_complete`.
-  - How it fits with the 10 ms idle wait in the service task, since
-    `bccam_control_service_submit` does not notify the task.
-  - Where `bccam_control_service_init` is called, and what happens if
-    `bccam_control_service_submit` is called before it.
 - `rx_buffer` in `bccam_control_channel`: `receive` copies straight into
   the caller's frame, so what the buffer is for, and what
   `bccam_control_channel_reset` clears, is unclear.
