@@ -213,6 +213,24 @@ ROTOR_RADIUS = 0.022
 ROTOR_SEGMENTS = 24
 LABEL_OFFSET_Z = 0.08
 
+# Back LEDs: two blue LEDs at the back, as on the real Crazyflie, so that
+# front and back can be told apart. Placed at the rearmost point of each back
+# rotor disc, further apart than on the real Crazyflie (3 cm), so that the two
+# can be told apart from further away. Drawn as dots of a fixed size on
+# screen, so that they are seen from a distance, as real LEDs are. Blue
+# whatever the status, so that they are not taken for a status.
+_LED_X = -(ARM_LENGTH * math.cos(math.radians(45)) + ROTOR_RADIUS)
+_LED_Y = ARM_LENGTH * math.sin(math.radians(45))
+_LED_Z = ARM_THICKNESS + 0.002  # Just above the rotor discs
+LED_POSITIONS = np.array([[_LED_X, _LED_Y, _LED_Z],
+                          [_LED_X, -_LED_Y, _LED_Z]], dtype=np.float32)
+LED_SIZE = 5  # Pixels
+LED_COLOR = (0.0, 0.0, 1.0)
+# A white rim, so that the dots stand out against the black background and
+# against the body whatever its status colour.
+LED_EDGE_WIDTH = 0.5  # Pixels
+LED_EDGE_COLOR = (1.0, 1.0, 1.0)
+
 # Shadow: the body flattened onto z = 0. Lighter than the black background,
 # so that it can be seen. Raised a little to stay above the ground grid.
 SHADOW_COLOR = (0.35, 0.35, 0.35, 1.0)
@@ -238,7 +256,13 @@ HUMAN_COLOR = (0.8, 0.8, 1.0, 0.2)
 
 
 def status_color(status, lost):
-    r, g, b = STATUS_COLORS.get(status, STATUS_COLORS[STATUS_UNKNOWN])
+    return faded_color(
+        STATUS_COLORS.get(status, STATUS_COLORS[STATUS_UNKNOWN]), lost)
+
+
+def faded_color(rgb, lost):
+    """rgb as RGBA, faded and semi-transparent when lost."""
+    r, g, b = rgb
     if lost:
         r, g, b = (c + (1.0 - c) * LOST_FADE for c in (r, g, b))
         return (r, g, b, LOST_ALPHA)
@@ -282,7 +306,7 @@ def _merge(parts):
 
 
 def build_body_mesh():
-    """An X-frame with four rotor discs and a marker at the front."""
+    """An X-frame with four rotor discs and a centre plate."""
     parts = []
     arm_span = 2 * ARM_LENGTH + ARM_WIDTH
     for angle in (45, -45):
@@ -297,8 +321,6 @@ def build_body_mesh():
         center = (ARM_LENGTH * math.cos(a), ARM_LENGTH * math.sin(a),
                   ARM_THICKNESS)
         parts.append(_disc(center, ROTOR_RADIUS, ROTOR_SEGMENTS))
-    # Front marker: a small block on the +x side of the centre
-    parts.append(_box((0.014, 0, ARM_THICKNESS), (0.016, 0.006, 0.006)))
     # Centre plate
     parts.append(_box((0, 0, 0), (0.024, 0.016, 0.006)))
     return _merge(parts)
@@ -396,6 +418,8 @@ def main():
                 vertices=body_vertices, faces=body_faces, shading=None,
                 parent=parent)
             self.body.transform = scene.transforms.MatrixTransform()
+            self.leds = scene.visuals.Markers(parent=parent)
+            self.leds.transform = scene.transforms.MatrixTransform()
             self.label = scene.visuals.Text(
                 label, font_size=14, anchor_x="left", anchor_y="bottom",
                 parent=parent)
@@ -406,16 +430,23 @@ def main():
             pose = pose_matrix(b.position, b.quaternion)
             self.body.transform.matrix = pose
             self.shadow.transform.matrix = shadow_matrix(pose)
+            self.leds.transform.matrix = pose
             color = status_color(b.status, lost)
             if color != self._color:
                 self._color = color
                 self.body.color = color
                 self.label.color = color
+                self.leds.set_data(
+                    LED_POSITIONS, size=LED_SIZE, edge_width=LED_EDGE_WIDTH,
+                    face_color=faded_color(LED_COLOR, lost),
+                    edge_color=faded_color(LED_EDGE_COLOR, lost))
                 gl_state = "translucent" if lost else "opaque"
                 self.body.set_gl_state(gl_state, depth_test=True)
                 self.shadow.color = SHADOW_LOST_COLOR if lost else SHADOW_COLOR
                 self.shadow.set_gl_state(gl_state, depth_test=True)
                 self.shadow.order = 1 if lost else 0
+                self.leds.set_gl_state(gl_state, depth_test=True)
+                self.leds.order = 1 if lost else 0
                 self.label.order = 1 if lost else 0
             x, y, z = b.position
             self.label.pos = (x, y, z + LABEL_OFFSET_Z)
@@ -423,6 +454,7 @@ def main():
         def remove(self):
             self.shadow.parent = None
             self.body.parent = None
+            self.leds.parent = None
             self.label.parent = None
 
     class SimViewerCanvas(scene.SceneCanvas):
