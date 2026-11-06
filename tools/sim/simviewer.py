@@ -233,7 +233,7 @@ AXIS_NAME_OFFSET = 0.5  # Beyond the positive end of the axis
 X_AXIS_COLOR = (0.9, 0.3, 0.3, 1.0)
 Y_AXIS_COLOR = (0.3, 0.9, 0.3, 1.0)
 HUMAN_SPACING = 5
-HUMAN_HEIGHT = 1.8
+HUMAN_HEIGHT = 1.7
 HUMAN_COLOR = (0.8, 0.8, 1.0, 0.2)
 
 
