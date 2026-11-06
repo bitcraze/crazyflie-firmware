@@ -27,7 +27,10 @@ module RakefileHelpers
   def get_unit_test_files
     path = $cfg['compiler']['unit_tests_path'] + 'test_*' + C_EXTENSION
     path.gsub!(/\\/, '/')
-    FileList.new(path)
+    files = FileList.new(path)
+    excludes = $cfg['compiler']['unit_tests_exclude']
+    files.exclude(*excludes) unless excludes.nil?
+    files
   end
 
   def get_local_include_dirs

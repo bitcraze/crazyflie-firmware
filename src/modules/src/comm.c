@@ -36,7 +36,7 @@
 #include "log.h"
 #include "platformservice.h"
 #ifdef CONFIG_PLATFORM_SIM
-#include "udplink_sim.h"
+#include "udplink.h"
 #else
 #include "eskylink.h"
 #include "uart_syslink.h"

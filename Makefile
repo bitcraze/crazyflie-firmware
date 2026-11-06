@@ -130,23 +130,8 @@ image_LDFLAGS += -pthread
 image_LDFLAGS += -Wl,-Map=$(PROG).map,--cref,--gc-sections
 image_LDFLAGS += -T $(srctree)/tools/make/sim/linker/sim_toc_sections.ld
 
-INCLUDES += -I$(srctree)/src/config/sim
+INCLUDES += -I$(srctree)/src/sim/shadow
 INCLUDES += -I$(PORT)/utils
-# instance_sim.h (Phase 2) lives alongside main_sim.c in src/init/, not a
-# dedicated interface/ dir like the other INCLUDES below -- Communication
-# (Phase 3, src/hal/src/udplink_sim.c) needs instanceGetSocketFd() from it.
-INCLUDES += -I$(srctree)/src/init
-# Phase 4.8: shadows motors.h/pm.h/platform.h (see that directory's own
-# header comments, and design-specification.md's "Header-shadow-avoidance"
-# section) for stabilizer.c/health.c, which #include them unconditionally.
-# Must come before the src/drivers/interface -I$(srctree)/src/hal/interface
-# -I$(srctree)/src/platform/interface entries below so these win.
-INCLUDES += -I$(srctree)/src/config/sim/hw_shims
-# The sim-only components' interfaces
-INCLUDES += -I$(srctree)/src/sim/interface
-
-# src/config/sim must come before the common -I$(srctree)/src/config below
-# so our FreeRTOSConfig.h wins over the mainline one.
 
 else
 
@@ -190,6 +175,10 @@ INCLUDES += -I$(LIB)/STM32_USB_OTG_Driver/inc
 INCLUDES += -I$(LIB)/STM32F4xx_StdPeriph_Driver/inc
 INCLUDES += -I$(LIB)/vl53l1 -I$(LIB)/vl53l1/core/inc
 INCLUDES += -I$(KBUILD_OUTPUT)/include/generated
+
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+INCLUDES += -I$(srctree)/src/sim/interface
+endif
 
 #
 # Special hack to handle float define. Kconfig has no float values
@@ -275,16 +264,32 @@ include tools/make/targets.mk
 # for the same reason: on a brand new build/sim/, skipping straight to the
 # build would have it generate include/config/auto.conf itself mid-parse,
 # restart, and re-export CC from the pre-restart (still unconfigured) pass.
-.PHONY: sim
-sim:
+.PHONY: sim unit_sim unit_sim_run
+define sim_config
 	@test -f .config || { echo "No configuration in $(CURDIR) -- run 'make cf2_defconfig' (or another *_defconfig) first."; exit 1; }
 	@mkdir -p sim
 	@cat .config $(srctree)/configs/sim_defconfig > sim/.config.seed
 	env -i PATH=$$PATH HOME=$$HOME KBUILD_OUTPUT=$(CURDIR)/sim KCONFIG_ALLCONFIG=$(CURDIR)/sim/.config.seed $(MAKE) -C $(srctree) alldefconfig
 	env -i PATH=$$PATH HOME=$$HOME KBUILD_OUTPUT=$(CURDIR)/sim $(MAKE) -C $(srctree) silentoldconfig
+endef
+
+sim:
+	$(sim_config)
 	env -i PATH=$$PATH HOME=$$HOME KBUILD_OUTPUT=$(CURDIR)/sim $(MAKE) -C $(srctree)
 	cp sim/sim.elf sim.elf
 	@echo "Simmyflie built: $(CURDIR)/sim.elf"
+
+# Unit tests of the Simmyflie (test/sim/), compiled against the sim build's
+# configuration in build/sim/ and include order (tools/test/gcc_sim.yml).
+# Takes FILES= like 'make unit'. unit_sim_run is the second half, run with
+# KBUILD_OUTPUT=build/sim so that ARCH_CFLAGS are the sim build's.
+unit_sim:
+	$(sim_config)
+	env -i PATH=$$PATH HOME=$$HOME KBUILD_OUTPUT=$(CURDIR)/sim $(MAKE) -C $(srctree) unit_sim_run "FILES=$(FILES)" "UNIT_TEST_STYLE=$(UNIT_TEST_STYLE)"
+
+unit_sim_run:
+	@mkdir -p $(srctree)/generated/test_sim/build $(srctree)/generated/test_sim/mocks
+	rake "config[./tools/test/gcc_sim.yml]" unit "DEFINES=$(ARCH_CFLAGS) -DUNITY_INCLUDE_DOUBLE" "FILES=$(FILES)" "UNIT_TEST_STYLE=$(UNIT_TEST_STYLE)"
 
 size:
 	@$(PYTHON) $(srctree)/tools/make/size.py $(SIZE) $(PROG).elf $(MEM_SIZE_FLASH_K) $(MEM_SIZE_RAM_K) $(MEM_SIZE_CCM_K)
@@ -381,4 +386,4 @@ python_wheel: build/cffirmware.py
 	$(PYTHON) bindings/setup.py bdist_wheel
 endif
 
-.PHONY: all sim clean build compile unit prep erase flash check_submodules trace openocd gdb halt reset flash_dfu flash_dfu_manual flash_verify cload size print_version clean_version bindings_python test_python python_wheel
+.PHONY: all sim unit_sim clean build compile unit prep erase flash check_submodules trace openocd gdb halt reset flash_dfu flash_dfu_manual flash_verify cload size print_version clean_version bindings_python test_python python_wheel

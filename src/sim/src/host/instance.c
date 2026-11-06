@@ -38,7 +38,7 @@
  * looped back so receivers on this host get them, and non-blocking.
  */
 
-#include "instance_sim.h"
+#include "instance.h"
 
 #include <errno.h>
 #include <fcntl.h>

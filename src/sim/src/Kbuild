@@ -1,3 +1,9 @@
-obj-$(CONFIG_SIM_PHYSICS_ENGINE_BUILTIN) += physics_engine_builtin.o
-obj-y += beacon_sender.o
-obj-y += physics_engine_manager.o
+obj-y += deck/
+obj-y += drivers/
+obj-y += hal/
+obj-y += host/
+obj-y += init/
+obj-y += modules/
+obj-y += physics/
+obj-y += platform/
+obj-y += utils/

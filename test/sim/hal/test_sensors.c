@@ -27,7 +27,6 @@
 
 // File under test. Named by its path under src/: src/hal/src is not in
 // gcc.yml's include paths.
-// @MODULE "hal/src/sensors_sim.c"
 #include "sensors.h"
 
 #include <math.h>

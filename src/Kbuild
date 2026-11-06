@@ -17,13 +17,8 @@ EXTRA_LDFLAGS += -Wl,--unique=.log.* -Wl,--unique=.param.*
 # Phase 4.9: deck/ recurses into core/sim/ only (see src/deck/Kbuild's own
 # PLATFORM_SIM split) -- estimator_kalman.c's one deck.h dependency,
 # deckGetRequiredKalmanEstimatorAttitudeReversionOff().
-obj-y += deck/
-obj-y += drivers/
 obj-y += hal/
-obj-y += init/
 obj-y += modules/
-obj-y += platform/
-# The sim-only components (Physics engine)
 obj-y += sim/src/
 obj-y += utils/
 else

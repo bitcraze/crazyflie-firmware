@@ -1,0 +1,3 @@
+obj-y += cfassert.o
+obj-y += configblock.o
+obj-y += version.o

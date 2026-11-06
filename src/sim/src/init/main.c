@@ -41,12 +41,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "instance_sim.h"
+#include "instance.h"
 #include "system.h"
 
 /* Not "platform.h": it pulls in the STM32 hardware chain. See
  * platform_sim.h. */
-#include "platform_sim.h"
+#include "platform.h"
 
 int main(int argc, char **argv)
 {

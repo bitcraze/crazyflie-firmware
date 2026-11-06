@@ -35,7 +35,7 @@
 #include <stddef.h>
 
 #include "config.h"
-#include "platform_sim.h"
+#include "platform.h"
 
 /* What config.h's MCU_ID_ADDRESS/MCU_FLASH_SIZE_ADDRESS point at in the sim.
  * system.c prints both at boot and exposes them as the cpu.id0-2 and

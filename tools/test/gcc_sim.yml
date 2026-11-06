@@ -1,0 +1,139 @@
+---
+# Unit tests of the Simmyflie files in test/sim/. Run with 'make unit_sim'.
+#
+# The include list follows the sim build's order (see the Makefile): Shadow
+# headers first, then the mainline headers, then the Sim-only headers last.
+# The test harness also looks up the .c for each included header in this
+# list, so the sim sources come before the mainline sources: a test of
+# "motors.h" builds src/sim/src/drivers/motors.c, not the mainline driver.
+kconfig:
+  config_file: 'build/sim/.config'
+compiler:
+  path: gcc
+  source_path:     'src/'
+  unit_tests_path: 'test/sim/**/'
+  mocks_path:      'generated/test_sim/mocks/'
+  build_path:      'generated/test_sim/build/'
+  options:
+    - '-c'
+    - '-Wall'
+    - '-Wextra'
+    - '-Wunused-parameter'
+    - '-Wmissing-braces'
+    - '-Wno-address'
+    - '-std=c11'
+    - '-pedantic'
+    - '-O0'
+    - '-g3'
+    - '-fsanitize=address'
+    - '-fno-omit-frame-pointer'
+  includes:
+    prefix: '-I'
+    items:
+      - 'src/sim/shadow/'
+      - 'src/sim/src/deck/'
+      - 'src/sim/src/drivers/'
+      - 'src/sim/src/hal/'
+      - 'src/sim/src/host/'
+      - 'src/sim/src/init/'
+      - 'src/sim/src/modules/'
+      - 'src/sim/src/physics/'
+      - 'src/sim/src/platform/'
+      - 'src/sim/src/utils/'
+      - 'generated/test_sim/mocks/'
+      - 'test/testSupport/'
+      - 'vendor/unity/src/'
+      - 'vendor/cmock/src/'
+      - 'vendor/FreeRTOS/portable/ThirdParty/GCC/Posix/utils/'
+      - 'vendor/CMSIS/CMSIS/Core/Include/'
+      - 'vendor/CMSIS/CMSIS/DSP/Include/'
+      - 'vendor/libdw1000/inc/'
+      - 'vendor/FreeRTOS/include/'
+      - 'vendor/FreeRTOS/portable/ThirdParty/GCC/Posix/'
+      - 'src/config/'
+      - 'src/platform/interface/'
+      - 'src/deck/interface/'
+      - 'src/deck/drivers/interface/'
+      - 'src/drivers/interface/'
+      - 'src/drivers/bosch/interface/'
+      - 'src/drivers/esp32/interface/'
+      - 'src/hal/interface/'
+      - 'src/modules/interface/'
+      - 'src/modules/interface/kalman_core/'
+      - 'src/modules/interface/lighthouse/'
+      - 'src/modules/interface/outlierfilter/'
+      - 'src/modules/interface/cpx/'
+      - 'src/modules/interface/p2pDTR/'
+      - 'src/modules/interface/controller/'
+      - 'src/modules/interface/estimator/'
+      - 'src/utils/interface/'
+      - 'src/utils/interface/kve/'
+      - 'src/utils/interface/lighthouse/'
+      - 'src/utils/interface/tdoa/'
+      - 'src/lib/FatFS/'
+      - 'src/lib/CMSIS/STM32F4xx/Include/'
+      - 'src/lib/STM32_USB_Device_Library/Core/inc/'
+      - 'src/lib/STM32_USB_OTG_Driver/inc/'
+      - 'src/lib/STM32F4xx_StdPeriph_Driver/inc/'
+      - 'src/lib/vl53l1/'
+      - 'src/lib/vl53l1/core/inc/'
+      - 'build/sim/include/generated/'
+      - 'src/drivers/src/'
+      - 'src/hal/src/'
+      - 'src/modules/src/'
+      - 'src/modules/src/kalman_core/'
+      - 'src/modules/src/estimator/'
+      - 'src/modules/src/controller/'
+      - 'src/modules/src/outlierfilter/'
+      - 'src/utils/src/'
+      - 'src/sim/interface/'
+  defines:
+    prefix: '-D'
+    items:
+      - CMOCK
+      - 'UNIT_TEST_MODE'
+      - 'UNITY_SUPPORT_64'
+  object_files:
+    prefix: '-o'
+    extension: '.o'
+    destination: 'generated/test_sim/build/'
+  libs:
+    TEST_SUPPORT:
+      files:
+        - 'test/testSupport/cfassert_in_test.c'
+
+linker:
+  path: gcc
+  options:
+    - '-lm'
+    - '-fsanitize=address'
+    - '-fno-omit-frame-pointer'
+  includes:
+    prefix: '-I'
+  object_files:
+    path: 'generated/test_sim/build/'
+    extension: '.o'
+  bin_files:
+    prefix: '-o'
+    extension: '.exe'
+    destination: 'generated/test_sim/build/'
+
+unsupported:
+  - out_of_memory
+  - unity_64bit_support
+  - callingconv
+
+colour: true
+
+env:
+  # LeakSanitizer crashes on some platforms. Turn it off, as gcc.yml does.
+  'LSAN_OPTIONS' : 'detect_leaks=0'
+
+:cmock:
+  :plugins:
+    - :ignore_arg
+    - :ignore
+    - :array
+    - :callback
+  :mock_path: 'generated/test_sim/mocks/'
+  :mock_prefix: mock_

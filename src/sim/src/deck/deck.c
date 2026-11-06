@@ -48,7 +48,7 @@
  * dependency and is included as is. With no deck there is never a fault.
  */
 
-#include "sim/deck.h"
+#include "deck.h"
 #include "deck_supervisor.h"
 #include "param.h"
 

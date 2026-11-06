@@ -48,7 +48,7 @@
 #include <stdint.h>
 
 #include "log.h"
-#include "motors_sim.h"
+#include "motors.h"
 #include "physics_engine_manager.h"
 
 const uint16_t testsound[NBR_OF_MOTORS] = {A4, A5, F5, D5};

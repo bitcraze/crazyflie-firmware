@@ -44,7 +44,7 @@
 #include <stdint.h>
 
 #include "log.h"
-#include "pm_sim.h"
+#include "pm.h"
 
 static float batteryVoltage = 4.2f;
 /* PMStates value 0 (battery); pm.h's enum is out of reach (see above).

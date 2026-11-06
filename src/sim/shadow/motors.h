@@ -68,6 +68,10 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
+#include "config.h"
 
 #define NBR_OF_MOTORS 4
 #define MOTOR_M1  0

@@ -20,7 +20,6 @@ obj-y += collision_avoidance.o
 obj-y += comm.o
 obj-y += commander.o
 obj-y += console.o
-obj-$(CONFIG_ENABLE_CPX) += cpxlink_sim.o
 obj-y += crtp.o
 obj-y += crtp_commander.o
 obj-y += crtp_commander_generic.o
@@ -51,7 +50,6 @@ obj-y += supervisor.o
 obj-y += supervisor_state_machine.o
 obj-y += sysload.o
 obj-y += system.o
-obj-y += vcp_esc_passthrough_sim.o
 obj-y += worker.o
 
 obj-y += controller/

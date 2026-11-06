@@ -28,8 +28,7 @@
 // File under test. Named by its path under src/: src/drivers/src has no
 // trailing slash in gcc.yml, so the test build does not find it from the
 // header name.
-// @MODULE "drivers/src/motors_sim.c"
-#include "motors_sim.h"
+#include "motors.h"
 
 #include "unity.h"
 #include "mock_physics_engine_manager.h"

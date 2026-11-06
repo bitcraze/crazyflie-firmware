@@ -24,7 +24,7 @@
  * udplink_sim.c - see udplink_sim.h.
  */
 
-#include "udplink_sim.h"
+#include "udplink.h"
 
 #include <errno.h>
 #include <stdbool.h>
@@ -39,7 +39,7 @@
 #include "queue.h"
 
 #include "crtp.h"
-#include "instance_sim.h"
+#include "instance.h"
 
 #define UDPLINK_RX_QUEUE_LENGTH 16
 #define UDPLINK_RX_TASK_STACKSIZE (2 * configMINIMAL_STACK_SIZE)

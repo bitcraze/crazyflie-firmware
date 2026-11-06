@@ -46,7 +46,7 @@
  * platformConfigGetDeviceTypeName()'s signature, shared with main_sim.c --
  * platform_sim.c supplies it directly rather than through
  * platformConfig_t/active_config. */
-#include "platform_sim.h"
+#include "platform.h"
 #else
 #include "platform.h"
 #endif
