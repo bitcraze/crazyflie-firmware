@@ -1,0 +1,3 @@
+obj-y += beacon_sender.o
+obj-y += instance.o
+obj-y += udplink.o

@@ -1,1 +1,7 @@
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+# See the --unique comment in src/modules/src/Kbuild: this partial link is
+# one more merge of the same sections.
+EXTRA_LDFLAGS += -Wl,--unique=.log.* -Wl,--unique=.param.*
+endif
+
 obj-y += src/

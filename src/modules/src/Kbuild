@@ -1,6 +1,16 @@
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+# Some log and param groups are declared in more than one file. On a 64-bit
+# host, a partial link pads between same-named sections and corrupts the log
+# and param tables. --unique keeps them apart until the final link; see the
+# -malign-data=abi comment in the Makefile.
+EXTRA_LDFLAGS += -Wl,--unique=.log.* -Wl,--unique=.param.*
+endif
+
 obj-y += app_channel.o
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-$(CONFIG_APP_ENABLE) += app_handler.o
 obj-y += bootloader.o
+endif
 obj-y += collision_avoidance.o
 obj-y += commander.o
 obj-y += comm.o
@@ -10,34 +20,50 @@ obj-y += crtp_commander_generic.o
 obj-y += crtp_commander_high_level.o
 obj-y += crtp_commander.o
 obj-y += crtp_commander_rpyt.o
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += crtp_localization_service.o
+endif
 obj-y += crtp.o
 obj-y += crtpservice.o
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += esp_deck_flasher.o
+endif
 obj-y += eventtrigger.o
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += extrx.o
+endif
 obj-y += health.o
 obj-$(CONFIG_ESTIMATOR_KALMAN_ENABLE) += kalman_supervisor.o
 obj-y += axis3fSubSampler.o
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += led_deck_controller.o
+endif
 obj-y += log.o
 obj-y += mem.o
 obj-y += crtp_mem.o
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += msp.o
+endif
 obj-y += param_logic.o
 obj-y += param_task.o
 obj-y += peer_localization.o
 obj-y += planner.o
 obj-y += platformservice.o
 obj-$(CONFIG_POWER_DISTRIBUTION_QUADROTOR) += power_distribution_quadrotor.o
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-$(CONFIG_POWER_DISTRIBUTION_FLAPPER) += power_distribution_flapper.o
+endif
 obj-y += pptraj_compressed.o
 obj-y += pptraj.o
 obj-y += queuemonitor.o
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += range.o
+endif
 obj-y += sensfusion6.o
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += serial_4way_avrootloader.o
 obj-y += serial_4way.o
+endif
 obj-y += sound_cf2.o
 obj-y += stabilizer.o
 obj-y += static_mem.o
@@ -45,16 +71,24 @@ obj-y += supervisor.o
 obj-y += supervisor_state_machine.o
 obj-y += sysload.o
 obj-y += system.o
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-$(CONFIG_DECK_LOCO) += tdoaEngineInstance.o
 obj-y += vcp_esc_passthrough.o
+endif
 obj-y += worker.o
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += i2c_dfu.o
+endif
 
 # Sub folders
 obj-$(CONFIG_ESTIMATOR_KALMAN_ENABLE) += kalman_core/
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += lighthouse/
+endif
 obj-y += controller/
 obj-y += estimator/
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += cpx/
 obj-y += p2pDTR/
+endif
 obj-y += outlierfilter/
