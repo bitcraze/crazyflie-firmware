@@ -21,14 +21,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * watchdog.h (sim shim) - shadows src/drivers/interface/watchdog.h for
- * CONFIG_PLATFORM_SIM (Simmyflie), which includes stm32fxxx.h and maps
- * watchdogReset() straight onto the IWDG register. Same include-path
- * shadowing as motors.h/pm.h/platform.h in this directory. The functions are
- * in watchdog_sim.c.
+ * watchdog.h - Shadow header for the Simmyflie.
+ *
+ * The mainline watchdog.h defines watchdogReset() as a write to the IWDG
+ * register. Here it is a function, in src/sim/src/drivers/watchdog.c, like
+ * watchdogInit() and watchdogNormalStartTest().
+ *
+ * See docs/development/simmyflie/index.md for the Shadow header rules.
  */
-#ifndef __WATCHDOG_HW_SHIM_H__
-#define __WATCHDOG_HW_SHIM_H__
+#ifndef WATCHDOG_H_
+#define WATCHDOG_H_
 
 #include <stdbool.h>
 
@@ -38,4 +40,4 @@ void watchdogInit(void);
 bool watchdogNormalStartTest(void);
 void watchdogReset(void);
 
-#endif // __WATCHDOG_HW_SHIM_H__
+#endif // WATCHDOG_H_

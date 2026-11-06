@@ -21,22 +21,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * pm_sim.h - declares pm_sim.c's public surface for CONFIG_PLATFORM_SIM
- * (Simmyflie).
+ * pm.h - Shadow header for the Simmyflie.
  *
- * Not "pm.h": that header pulls in the STM32 hardware chain via deck.h (see
- * pm_sim.c's own header comment). Single source of truth for this
- * signature -- both pm_sim.c (the definition) and every consumer
- * (main_sim.c; and, via src/config/sim/hw_shims/pm.h, stabilizer.c/
- * health.c -- see Phase 4.8) include this header instead of hand-typing a
- * matching forward declaration.
+ * The mainline pm.h includes deck.h and syslink.h, and through them the STM32
+ * device headers. This header keeps the part of its contract that the
+ * compiled files use, implemented by src/sim/src/hal/pm.c. It includes adc.h
+ * as mainline does; system.c gets adcInit() that way.
  *
- * Phase 4.8 adds pmGetBatteryVoltage(): the one other pm.h entry point
- * stabilizer.c/health.c reference, returning the same fixed 4.2V the
- * pm.vbat log variable already reports.
+ * See docs/development/simmyflie/index.md for the Shadow header rules.
  */
-#ifndef __PM_SIM_H__
-#define __PM_SIM_H__
+#ifndef PM_H_
+#define PM_H_
 
 #include <stdbool.h>
 
@@ -47,4 +42,4 @@ void pmInit(void);
 bool pmTest(void);
 float pmGetBatteryVoltage(void);
 
-#endif // __PM_SIM_H__
+#endif // PM_H_

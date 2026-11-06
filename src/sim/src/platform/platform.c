@@ -21,15 +21,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * platform_sim.c - platformInit() for CONFIG_PLATFORM_SIM (Simmyflie).
+ * platform.c - Replacement of platform.h for the Simmyflie.
  *
- * Deliberately does not use the shared src/platform/src/platform.c
- * dispatcher (platformConfig_t / platformGetListOfConfigurations() /
- * platformInitHardware()): that mechanism pulls in src/platform/interface
- * /platform.h -> src/drivers/interface/motors.h -> src/config/stm32fxxx.h,
- * an STM32 hardware header chain with no meaning off-target. Real
- * sensor/motor plumbing is Phase 5's job (see dev/implementation-plan.md in
- * the simulation_model project); Phase 1 just needs platformInit() to exist.
+ * The mainline platform.c chooses a hardware configuration from the device
+ * type in the OTP memory. The sim has one configuration, so each function
+ * returns its value directly.
  */
 
 #include <stddef.h>
@@ -48,19 +44,13 @@ int platformInit(void)
   return 0;
 }
 
-/* Phase 4.2 (Platform): the one platform.h query platformservice.c's real
- * versionCommandProcess() needs (CRTP Platform port 13, ch.1
- * getDeviceTypeName) -- a fixed string here rather than routing through
- * the shared platform.c dispatcher's active_config, which this file
- * deliberately bypasses (see file header comment above). */
+/* Returned by the CRTP platform service as the device type name. */
 const char* platformConfigGetDeviceTypeName(void)
 {
   return "Simmyflie";
 }
 
-/* Phase 4.8: stabilizer.c's motorsInit(platformConfigGetMotorMapping())
- * call site -- motors_sim.c's motorsInit() ignores its argument entirely,
- * so there's no real motor map to return. */
+/* stabilizer.c passes this to motorsInit(), which does not use it. */
 const void** platformConfigGetMotorMapping(void)
 {
   return NULL;

@@ -21,16 +21,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * usec_time_sim.c - usec_time.h backend for CONFIG_PLATFORM_SIM
- * (Simmyflie), Phase 4.0.
+ * usec_time.c - Replacement of usec_time.h for the Simmyflie.
  *
- * Unlike this chunk's other stubs, this is a REAL implementation, not a
- * placeholder: later chunks (4.8's estimator/controller/stabilizer loop
- * especially) depend on usecTimestamp() returning genuine elapsed time, not
- * a constant or no-op. The real usec_time.c free-runs a 16-bit hardware
- * timer (TIM7) and software-extends it to 64 bits via an IRQ-incremented
- * high word; this uses CLOCK_MONOTONIC via clock_gettime() instead, which
- * is already the timebase Phase 0's drift spike validated for this port.
+ * The mainline usec_time.c extends a 16-bit hardware timer to 64 bits. Here
+ * usecTimestamp() reads the host's CLOCK_MONOTONIC, so it returns the real
+ * time elapsed since usecTimerInit() or usecTimerReset(), which the estimator
+ * and the stabilizer
+ * loop depend on.
  */
 
 #include "usec_time.h"

@@ -21,12 +21,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * instance_sim.h - Simmyflie instance/process management (CONFIG_PLATFORM_SIM):
- * command-line arguments, bind-before-scheduler-start UDP socket setup, the
- * beacon socket, and the start of the Physics engine manager.
+ * instance.h - Instance management of the Simmyflie.
+ *
+ * One running process is one instance, identified by the UDP port it listens
+ * on. This parses the command line, binds the UDP socket before the scheduler
+ * starts, creates the beacon socket and starts the Physics engine manager.
  */
-#ifndef INSTANCE_SIM_H_
-#define INSTANCE_SIM_H_
+#ifndef INSTANCE_H_
+#define INSTANCE_H_
 
 #include <stdint.h>
 
@@ -50,7 +52,7 @@ void instanceInit(int argc, char **argv);
 /* The UDP port instanceInit() bound. */
 uint16_t instanceGetPort(void);
 
-/* The UDP socket instanceInit() bound, for Communication (Phase 3) to use. */
+/* The UDP socket instanceInit() bound, used by the UDP link. */
 int instanceGetSocketFd(void);
 
-#endif // INSTANCE_SIM_H_
+#endif // INSTANCE_H_

@@ -21,13 +21,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * i2cdev_sim.c - i2cdevInit() backend for CONFIG_PLATFORM_SIM (Simmyflie).
+ * i2cdev.c - Stub of i2cdev.h for the Simmyflie.
  *
- * The sim has no I2C bus for sensors or decks, so this is a no-op. The
- * declaration is in src/config/sim/hw_shims/i2cdev.h, which shadows the real
- * i2cdev.h (that one pulls in i2c_drv.h -> stm32fxxx.h). The real
- * i2cdevInit() takes an I2C_Dev*, a struct of hardware registers; the shim
- * takes void* and defines I2C1_DEV/I2C3_DEV as NULL.
+ * The sim has no I2C bus for sensors or decks, so i2cdevInit() does nothing.
  */
 
 #include "i2cdev.h"

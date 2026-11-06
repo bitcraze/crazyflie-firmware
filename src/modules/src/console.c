@@ -24,7 +24,10 @@
  * console.c - Used to send console data to client
  */
 
+#include <stdio.h>
 #include <string.h>
+
+#include "autoconf.h"
 
 /*FreeRtos includes*/
 #include "FreeRTOS.h"
@@ -32,15 +35,9 @@
 #include "console.h"
 
 #include "crtp.h"
-#include "autoconf.h"
 
 #ifdef STM32F40_41xxx
 #include "stm32f4xx.h"
-#elif defined(CONFIG_PLATFORM_SIM)
-/* Simmyflie: no SCB register to probe interrupt context from (see
- * consolePutchar() below) -- same gate CrazySim's console.c uses for its
- * CONFIG_PLATFORM_SITL. */
-#include <stdio.h>
 #else
 #include "stm32f10x.h"
 #ifndef SCB_ICSR_VECTACTIVE_Msk
@@ -97,18 +94,11 @@ bool consoleTest(void)
 
 int consolePutchar(int ch)
 {
-#ifdef CONFIG_PLATFORM_SIM
-  /* No hardware interrupt vector table to inspect -- consolePutcharFromISR()
-   * is never reached, so treat every call as task context. */
-  bool isInInterrupt = false;
-#else
   bool isInInterrupt = (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) != 0;
-#endif
 
 #ifdef CONFIG_PLATFORM_SIM
-  /* Mirror all console output to the terminal, including output produced
-   * before consoleInit() or before a client has connected (which never
-   * reaches CRTP). */
+  // The Simmyflie also writes all console output to its terminal, including
+  // output from before consoleInit() or before a client has connected.
   putchar(ch);
   if (ch == '\n') {
     fflush(stdout);

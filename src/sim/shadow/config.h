@@ -21,20 +21,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * config.h for CONFIG_PLATFORM_SIM (Simmyflie) -- a copy of the mainline
- * src/config/config.h's portable content (task names/priorities/stack
- * sizes -- crtp.c and friends reference these directly), picked up via
- * include-path precedence instead of the mainline file (see the Makefile's
- * PLATFORM_SIM INCLUDES comment, same trick as src/config/sim/FreeRTOSConfig.h).
+ * config.h - Shadow header for the Simmyflie.
  *
- * Deliberately dropped from the mainline version:
- * - #include "nrf24l01.h"/"trace.h": hardware drivers, not built under
- *   PLATFORM_SIM.
- * - configGENERATE_RUN_TIME_STATS / portCONFIGURE_TIMER_FOR_RUN_TIME_STATS /
- *   portGET_RUN_TIME_COUNTER_VALUE: the FreeRTOS POSIX port's own
- *   portmacro.h already defines these (no-op / ulPortGetRunTime()) --
- *   redefining them here was a real conflict, same class of issue as the
- *   FreeRTOSConfig.h one noted in Phase 1's writeup.
+ * The mainline config.h with these differences:
+ * - Left out: the nrf24l01.h and trace.h includes, the radio and
+ *   startup-sound settings and the debug defines.
+ * - MCU_ID_ADDRESS and MCU_FLASH_SIZE_ADDRESS point at variables in
+ *   src/sim/src/platform/platform.c instead of STM32 system memory.
+ * - The FreeRTOS run-time statistics settings are left out: the FreeRTOS
+ *   Posix port defines them itself.
+ *
+ * See docs/development/simmyflie/index.md for the Shadow header rules.
  */
 
 #ifndef CONFIG_H_
@@ -46,7 +43,8 @@
 
 #define CONFIG_BLOCK_ADDRESS    (2048 * (64-1))
 // On the STM32 these are fixed addresses in system memory. system.c reads
-// through them, so in the sim they point at variables in platform_sim.c.
+// through them, so in the sim they point at variables in
+// src/sim/src/platform/platform.c.
 // MCU_ID_ADDRESS is a byte pointer since system.c adds byte offsets to it.
 extern const uint32_t simMcuId[3];
 extern const uint16_t simMcuFlashSize;
@@ -102,7 +100,6 @@ extern const uint16_t simMcuFlashSize;
 #define COLORLED_TASK_PRIO        1
 #define WORKER_TASK_PRI           1
 #define SUPERVISOR_TASK_PRI       1
-#define BEACON_TASK_PRI           1
 
 // Task names
 #define SYSTEM_TASK_NAME          "SYSTEM"
@@ -158,7 +155,6 @@ extern const uint16_t simMcuFlashSize;
 #define COLORLED_TASK_NAME        "COLORLED-DECK"
 #define WORKER_TASK_NAME          "WORKER"
 #define SUPERVISOR_TASK_NAME      "SUPERVISOR"
-#define BEACON_TASK_NAME          "BEACON"
 
 //Task stack sizes
 #define SYSTEM_TASK_STACKSIZE           (2* configMINIMAL_STACK_SIZE)
@@ -208,7 +204,6 @@ extern const uint16_t simMcuFlashSize;
 #define COLORLED_TASK_STACKSIZE         configMINIMAL_STACK_SIZE
 #define WORKER_TASK_STACKSIZE           (2 * configMINIMAL_STACK_SIZE)
 #define SUPERVISOR_TASK_STACKSIZE       (2 * configMINIMAL_STACK_SIZE)
-#define BEACON_TASK_STACKSIZE           (2 * configMINIMAL_STACK_SIZE)
 
 #define BAT_LOADING_SAG_THRESHOLD  0.70f
 

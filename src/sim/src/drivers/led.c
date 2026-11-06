@@ -21,12 +21,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * led_sim.c - led.h backend for CONFIG_PLATFORM_SIM (Simmyflie), Phase 4.0.
+ * led.c - Stub of led.h for the Simmyflie.
  *
- * The real led.c drives GPIO registers directly. There's no simulated
- * meaning for individual LED state yet (no client-visible behavior in this
- * chunk), so this just no-ops the whole surface -- enough for ledseq_sim.c
- * and system.c's own ledSet(CHG_LED, 1) call to link and run.
+ * The sim has no LEDs. The LED state is not shown anywhere, so every function
+ * does nothing.
  */
 
 #include "led.h"

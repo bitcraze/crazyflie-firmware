@@ -25,11 +25,8 @@ CLOAD_ARGS        ?=
 ARCH := stm32f4
 SRCARCH := stm32f4
 
-# NOTE: CONFIG_PLATFORM_SIM is not known yet at this point in the file --
-# CONFIG_* variables only become available after the auto.conf include
-# below -- so the ARCH_CFLAGS/FREERTOS/PORT/LDFLAGS/INCLUDES platform branch
-# lives further down, right after that include (matching where the existing
-# CONFIG_PLATFORM_* -> PLATFORM name conditionals already do the same).
+# The Simmyflie (CONFIG_PLATFORM_SIM) branch of the compiler and linker
+# settings is below the auto.conf include, where CONFIG_* is known.
 
 # Here we tell Kbuild where to look for Kbuild files which will tell the
 # buildsystem which sources to build
@@ -66,29 +63,14 @@ endif
 
 ifeq ($(CONFIG_PLATFORM_SIM),y)
 
-# Simmyflie: native Linux build on the vendored FreeRTOS POSIX port. No
-# cross-compiler and no embedded link flags (see CONFIG_CROSS_COMPILE in
-# configs/sim_defconfig, which blanks the arm-none-eabi- default).
-# -Wno-unused-variable: the vendored FreeRTOS POSIX port (ThirdParty, not
-# ours to fix) has a couple of genuinely-unused locals.
-# -malign-data=abi: x86-64 gcc's default ("compat") heuristically bumps the
-# alignment of const arrays at or above certain size thresholds up to 16/32
-# bytes for cache-line friendliness, regardless of the array's own true
-# (ABI-mandated) alignment requirement -- arm-none-eabi-gcc never does this.
-# log.c's/param_logic.c's LOG_GROUP_START(...)/PARAM_GROUP_START(...) arrays
-# (struct log_s/param_s, 8-byte pointer-aligned) get caught by this: Phase
-# 4.6 first hit it as a gap corrupting logInit()'s element count once enough
-# groups landed at once, "fixed" with SUBALIGN(4)/(8) in
-# tools/make/sim/linker/sim_toc_sections.ld -- but that only governs the
-# *final* link. Phase 4.8 found a second instance one merge stage earlier:
-# Kbuild's own intermediate `ld -r` partial-links (e.g. src/drivers/built-in.o
-# + src/modules/built-in.o -> src/built-in.o) also concatenate same-named
-# input sections (motors_sim.c and stabilizer.c both legitimately declare
-# LOG_GROUP_START(motor), same group name, same as real hardware) and pad
-# between them per the compiler's over-alignment request -- outside
-# sim_toc_sections.ld's SECTIONS block entirely, so that script cannot fix
-# it. -malign-data=abi removes the over-alignment at its source instead of
-# compensating for it at every merge stage downstream.
+# Simmyflie: a host build on the FreeRTOS Posix port. CONFIG_CROSS_COMPILE
+# is blanked in configs/sim_defconfig, so the host gcc is used.
+# -Wno-unused-variable: the FreeRTOS Posix port has unused locals.
+# -malign-data=abi: x86-64 gcc otherwise aligns large arrays beyond what the
+# ABI requires, which arm-none-eabi-gcc does not. The log and param tables
+# are arrays from many files gathered in one section and counted as
+# (end - start) / element size, so extra alignment padding between them
+# breaks the count.
 ARCH_CFLAGS += -g3 -pthread -D_GNU_SOURCE -Wno-unused-variable -malign-data=abi
 
 FREERTOS = $(srctree)/vendor/FreeRTOS
@@ -97,35 +79,12 @@ LIB = $(srctree)/src/lib
 
 LDFLAGS =
 
-# Note: --unique='.log.*'/'.param.*' is injected per-directory via
-# EXTRA_LDFLAGS in src/Kbuild and src/modules/src/Kbuild, not here -- see
-# those files' comments. Several LOG_GROUP_START(...)/PARAM_GROUP_START(...)
-# group names are legitimately declared in more than one file (e.g. both
-# stabilizer.c and motors_sim.c/controller_pid.c declare
-# LOG_GROUP_START(motor)/LOG_GROUP_START(controller) -- true on real
-# hardware too, log.c doesn't require group names to be unique). Kbuild's
-# intermediate per-directory `ld -r` partial links (cmd_link_multi-y) have
-# no SECTIONS script of their own, so ld's default same-named-section
-# merging concatenates two such files' contributions early, using each
-# array's compiler-requested alignment (16, from -malign-data=abi above) to
-# decide inter-file padding -- and since sizeof(struct log_s) (24, a 64-bit
-# host) isn't a multiple of 16, that padding corrupts logInit()'s
-# (stop-start)/sizeof(struct) element count, the same corruption class
-# Phase 4.6 first found, recurring one merge stage earlier than
-# sim_toc_sections.ld's SUBALIGN can reach.
-#
-# EXTRA_LDFLAGS (Kbuild's own per-directory hook, reset at the top of every
-# scripts/Makefile.build inclusion), not LDFLAGS here: LDFLAGS is exported
-# globally (see tools/kbuild/Makefile.kbuild) and reaches the *final* image
-# link too (cmd_firmware), where sim_toc_sections.ld's own explicit
-# `.log { KEEP(*(.log.*)) ... }` rule already claims these same input
-# sections -- --unique there instead forces each into its own separate,
-# never-merged output section, leaving _log_start/_log_stop bounding
-# nothing real (confirmed empirically). Scoping --unique to just the
-# specific directories where a collision is known to first occur keeps it
-# out of that final link while still reaching every affected intermediate
-# merge; a future new same-named group pair (e.g. Phase 4.9) may need the
-# same EXTRA_LDFLAGS line added to whichever Kbuild file first merges it.
+# The log and param sections also need -Wl,--unique in the partial links
+# where same-named groups from different files meet. That is set with
+# EXTRA_LDFLAGS in those Kbuild files (src/Kbuild, src/modules/Kbuild,
+# src/modules/src/Kbuild), not here: LDFLAGS also reaches the final link,
+# where sim_toc_sections.ld gathers the sections and --unique would leave
+# the tables empty.
 image_LDFLAGS += -pthread
 image_LDFLAGS += -Wl,-Map=$(PROG).map,--cref,--gc-sections
 image_LDFLAGS += -T $(srctree)/tools/make/sim/linker/sim_toc_sections.ld
@@ -239,31 +198,18 @@ endif
 
 include tools/make/targets.mk
 
-# Simmyflie: build the sim platform into build/sim/ using the same
-# configuration as the normal build (build/.config, e.g. after
-# 'make cf2_defconfig' and optionally 'make menuconfig'), with just the
-# sim-specific overrides from configs/sim_defconfig layered on top. Anything
-# that only makes sense for real hardware (decks, sensors, ... -- gated by
-# 'depends on PLATFORM_CF2' and friends in Kconfig) necessarily falls away
-# once the platform choice flips to PLATFORM_SIM; everything else (e.g.
-# controller/estimator selection) carries through unchanged.
+# Simmyflie: build the sim into build/sim/ from the normal configuration
+# (build/.config, e.g. after 'make cf21bl_defconfig') with
+# configs/sim_defconfig on top. Options that depend on a hardware platform
+# fall away when the platform becomes PLATFORM_SIM; the rest, such as the
+# controller, carries over.
 #
-# Kbuild's own generic goal-redirect (see tools/kbuild/Makefile.kbuild)
-# means this recipe actually runs with cwd == $(KBUILD_OUTPUT) (e.g. build/),
-# not the source tree root -- hence $(CURDIR) (this dir) for sim's own
-# output and $(srctree) (source root) for configs/sim_defconfig. The nested
-# builds below run in a scrubbed environment (env -i, PATH/HOME only), not
-# just with KBUILD_SRC/MAKEFLAGS cleared: this recipe is itself already
-# running inside one redirect for build/'s own (hardware) config, which by
-# this point has 'export'ed CC/CROSS_COMPILE/AS/LD/... (see
-# tools/kbuild/Makefile.kbuild) into THIS process's environment. Left in
-# place, those beat build/sim/'s own CONFIG_CROSS_COMPILE="" (Kbuild's
-# CROSS_COMPILE ?= ... only takes the Kconfig value when nothing already
-# set it) and silently link sim against the ARM cross compiler. The
-# explicit silentoldconfig between alldefconfig and the real build matters
-# for the same reason: on a brand new build/sim/, skipping straight to the
-# build would have it generate include/config/auto.conf itself mid-parse,
-# restart, and re-export CC from the pre-restart (still unconfigured) pass.
+# Kbuild redirects this recipe into $(KBUILD_OUTPUT) (e.g. build/), so
+# $(CURDIR) is the output directory and $(srctree) the source tree. The
+# nested makes run under 'env -i': this make has already exported the ARM
+# CC/CROSS_COMPILE/... for build/, and they would win over build/sim/'s
+# CONFIG_CROSS_COMPILE="". silentoldconfig runs before the build so that a
+# new build/sim/ is fully configured before the build reads auto.conf.
 .PHONY: sim unit_sim unit_sim_run
 define sim_config
 	@test -f .config || { echo "No configuration in $(CURDIR) -- run 'make cf2_defconfig' (or another *_defconfig) first."; exit 1; }

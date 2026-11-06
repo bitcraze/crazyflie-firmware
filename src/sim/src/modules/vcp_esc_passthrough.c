@@ -21,11 +21,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * vcp_esc_passthrough_sim.c - passthroughInit() stub for
- * CONFIG_PLATFORM_SIM (Simmyflie).
+ * vcp_esc_passthrough.c - Stub of vcp_esc_passthrough.h for the Simmyflie.
  *
- * The sim has no ESCs to configure over USB. system.c's systemTask() calls
- * passthroughInit() unconditionally, so it has to exist.
+ * The sim has no ESCs to configure over USB. passthroughInit(), which
+ * systemTask() calls, does nothing.
  */
 
 #include "vcp_esc_passthrough.h"

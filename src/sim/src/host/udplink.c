@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * udplink_sim.c - see udplink_sim.h.
+ * udplink.c - see udplink.h.
  */
 
 #include "udplink.h"
@@ -43,14 +43,10 @@
 
 #define UDPLINK_RX_QUEUE_LENGTH 16
 #define UDPLINK_RX_TASK_STACKSIZE (2 * configMINIMAL_STACK_SIZE)
-/* tskIDLE_PRIORITY, not CRTP_RX_TASK_PRI: recvfrom() is a raw POSIX blocking
- * syscall, not a FreeRTOS-aware wait -- this port's scheduler has no way to
- * know this task is "blocked" while parked in it, so it looks perpetually
- * ready and would starve every strictly-lower-priority task forever (found
- * by hand: a lower priority task silently stopped running once this task existed at
- * priority 2). Phase 0's drift spike hit the same class of task and sidesteps
- * it the same way -- see its main.c comment on taskBusy/taskBlockingIO
- * sharing the lowest priority so time-slicing still gives everyone a turn. */
+/* The lowest priority, not CRTP_RX_TASK_PRI: recvfrom() blocks in the host,
+ * not in FreeRTOS, so the Posix port sees this task as always ready. At a
+ * higher priority it would starve every task below it; at the lowest,
+ * time-slicing still gives the other tasks at that priority their turn. */
 #define UDPLINK_RX_TASK_PRI 0
 
 static int fd = -1;
@@ -114,9 +110,8 @@ static void udplinkRxTask(void *param)
 
     int n = recvfrom(fd, p.raw, sizeof(p.raw), 0, (struct sockaddr *)&from, &fromLen);
     if (n < 0) {
-      /* EINTR from the POSIX port's SIGALRM tick -- retry, per Phase 0's
-       * drift-spike findings. Any other error: nothing useful to do but
-       * keep listening. */
+      /* EINTR from the Posix port's SIGALRM tick: retry. Any other error:
+       * nothing useful to do but keep listening. */
       continue;
     }
     if (n < 1) {

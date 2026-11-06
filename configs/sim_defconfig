@@ -1,34 +1,18 @@
+# Simmyflie: applied on top of the normal configuration by 'make sim'.
 CONFIG_PLATFORM_SIM=y
 CONFIG_CROSS_COMPILE=""
 
-# Phase 4.9: CONFIG_ESTIMATOR_KALMAN_ENABLE now reverts to mainline's own
-# default (y), matching real hardware -- see
-# dev/implementation-plan-phase-4.md's 4.9 section for the dependency sweep
-# showing the EKF's only hardware coupling (estimator_kalman.c's #include
-# "deck.h", used solely for deckGetRequiredKalmanEstimatorAttitudeReversionOff())
-# is solved the same way 4.8 solved motors.h/pm.h/platform.h: include-path
-# shadowing (src/config/sim/hw_shims/deck.h).
-#
-# Default estimator is forced to Kalman. With ESTIMATOR_AUTO_SELECT and no
-# decks present (always the case in sim), estimator.c falls back to
-# DEFAULT_ESTIMATOR (Complementary), same as real hardware out of the box.
-# Forcing Kalman makes the sim boot with the EKF instead. It also disables
-# runtime switching via the stabilizer.estimator param: with a forced
-# estimator, stateEstimatorSwitchTo() keeps the forced one and stabilizer.c
-# writes it back to the param. To run another estimator, build with e.g.
-# CONFIG_ESTIMATOR_COMPLEMENTARY=y instead.
+# The Kalman estimator is forced. With automatic selection and no decks,
+# which is always the case in the sim, the firmware would choose the
+# complementary estimator, as a Crazyflie without decks does. A forced
+# estimator can not be switched with the stabilizer.estimator param; to run
+# another one, change this line.
 CONFIG_ESTIMATOR_KALMAN=y
-#
-# DECK_FLOW/DECK_LIGHTHOUSE/DECK_LOCO stay disabled below regardless (no deck
-# bus in sim -- i2cdevInit() is a no-op stub, see i2cdev_sim.c/Phase 4.0);
-# each also `select`s ESTIMATOR_KALMAN_ENABLE, but that's moot now that the
-# flag defaults to y anyway.
+
+# The sim has no deck bus. These decks are enabled by default in some
+# configurations and must be turned off; the uSD deck is also called from
+# stabilizer.c.
 CONFIG_DECK_FLOW=n
 CONFIG_DECK_LIGHTHOUSE=n
 CONFIG_DECK_LOCO=n
-
-# Phase 4.8: no uSD card in sim -- stabilizer.c's #ifdef CONFIG_DECK_USD
-# block calls usddeck.c's logging functions, another deck driver not built
-# under PLATFORM_SIM (usddeck.c itself is real-hardware SPI/FS code, out of
-# scope here). Default y on real hardware, so needs an explicit override.
 CONFIG_DECK_USD=n

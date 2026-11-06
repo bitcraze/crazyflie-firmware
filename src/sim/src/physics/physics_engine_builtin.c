@@ -39,12 +39,6 @@
 #include "autoconf.h"
 #include "physics_engine.h"
 
-// The host unit test build has no sim configuration, the Kconfig default is
-// used there unless the value is given on its command line.
-#if defined(UNIT_TEST_MODE) && !defined(CONFIG_SIM_BUILTIN_MASS_MG)
-#define CONFIG_SIM_BUILTIN_MASS_MG 40000
-#endif
-
 // Mass and inertia (Table II), with or without propeller guards
 #ifdef CONFIG_SIM_BUILTIN_PROPELLER_GUARDS
 #define PROPELLER_GUARDS_MASS_MG 4000

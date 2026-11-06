@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * test_motors_sim.c - unit tests of the Actuator shim of the Simmyflie,
+ * test_motors.c - unit tests of the Actuator shim of the Simmyflie,
  * against a mocked Physics engine manager.
  */
 
@@ -174,16 +174,20 @@ void testThatGetRatioCallsNoManagerFunction(void)
   // Verified by the mock
 }
 
-void testThatGetRpmIsTheConstantWhateverTheRatio(void)
+void testThatGetRpmPassesTheSupervisorChecksWhateverTheRatio(void)
 {
   // Fixture
   physicsEngineManagerSetMotorRatio_Ignore();
   motorsSetRatio(MOTOR_M1, 0);
   motorsSetRatio(MOTOR_M2, 65535);
+  const uint16_t expected = motorsGetRPM(MOTOR_M3);
 
   // Test and assert
+  TEST_ASSERT_GREATER_OR_EQUAL_UINT16(CONFIG_MOTORS_ARMING_RPM_MIN, expected);
+  TEST_ASSERT_LESS_OR_EQUAL_UINT16(CONFIG_MOTORS_ARMING_RPM_MAX, expected);
+  TEST_ASSERT_GREATER_OR_EQUAL_UINT16(CONFIG_MOTORS_RPM_NOT_RESPONDING_THRESHOLD, expected);
   for (uint32_t id = 0; id < NBR_OF_MOTORS; id++) {
-    TEST_ASSERT_EQUAL_UINT16(MOTORS_SIM_RPM, motorsGetRPM(id));
+    TEST_ASSERT_EQUAL_UINT16(expected, motorsGetRPM(id));
   }
   TEST_ASSERT_EQUAL_UINT16(MOTORS_RPM_INVALID, motorsGetRPM(NBR_OF_MOTORS));
 }

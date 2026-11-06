@@ -21,25 +21,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * deck.h (sim) - declares src/deck/core/sim/deck.c's public surface for
- * CONFIG_PLATFORM_SIM (Simmyflie), Phase 4.9.
+ * deck.h - Shadow header for the Simmyflie.
  *
- * Not the real src/deck/interface/deck.h: that header pulls in the STM32
- * hardware chain via deck_constants.h/deck_digital.h/deck_analog.h (all
- * -> stm32fxxx.h). estimator_kalman.c is the only sim-built translation
- * unit that #includes "deck.h" (a single call,
- * deckGetRequiredKalmanEstimatorAttitudeReversionOff(), to ask whether a
- * deck wants the EKF to skip attitude-reversion at startup -- meaningless
- * with no decks in sim), and src/config/sim/hw_shims/deck.h shadows that
- * #include onto this file instead -- same include-path-shadowing mechanism
- * Phase 4.8 used for motors.h/pm.h/platform.h.
+ * The mainline deck.h includes the deck pin and bus headers, and through them
+ * the STM32 device headers. The sim has no decks. This header keeps the part
+ * of its contract that the compiled files use (system.c and
+ * estimator_kalman.c), implemented by src/sim/src/deck/deck.c.
  *
- * Single source of truth for this signature -- both deck.c (the
- * definition) and every consumer include this header instead of hand-typing
- * a matching forward declaration.
+ * See docs/development/simmyflie/index.md for the Shadow header rules.
  */
-#ifndef __DECK_SIM_H__
-#define __DECK_SIM_H__
+#ifndef __DECK_H__
+#define __DECK_H__
 
 #include <stdbool.h>
 /* system.c uses memcpy() without including string.h and gets it through
@@ -54,4 +46,4 @@ StateEstimatorType deckGetRequiredEstimator(void);
 bool deckGetRequiredLowInterferenceRadioMode(void);
 bool deckGetRequiredKalmanEstimatorAttitudeReversionOff(void);
 
-#endif // __DECK_SIM_H__
+#endif // __DECK_H__

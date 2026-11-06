@@ -24,13 +24,9 @@
  * test_physics_engine_builtin.c - unit tests of the built-in physics engine
  * of the Simmyflie: the physics model and the ground and crash contract.
  *
- * The mass and inertia follow CONFIG_SIM_BUILTIN_MASS_MG and
- * CONFIG_SIM_BUILTIN_PROPELLER_GUARDS, which this build takes from its
- * command line. To cover them, run the file three times:
- *
- *   make unit FILES=test/sim/src/test_physics_engine_builtin.c
- *   make unit FILES=test/sim/src/test_physics_engine_builtin.c ARCH_CFLAGS=-DCONFIG_SIM_BUILTIN_MASS_MG=50000
- *   make unit FILES=test/sim/src/test_physics_engine_builtin.c ARCH_CFLAGS=-DCONFIG_SIM_BUILTIN_PROPELLER_GUARDS=1
+ * The expected mass and inertia follow CONFIG_SIM_BUILTIN_MASS_MG and
+ * CONFIG_SIM_BUILTIN_PROPELLER_GUARDS from the sim build's configuration
+ * (make unit_sim).
  */
 
 // File under test
@@ -45,9 +41,6 @@
 #define NBR_OF_ROTORS TRUE_STATE_NBR_OF_ROTORS
 
 // Expected values are computed here from the paper, not taken from the engine
-#ifndef CONFIG_SIM_BUILTIN_MASS_MG
-#define CONFIG_SIM_BUILTIN_MASS_MG 40000
-#endif
 #ifdef CONFIG_SIM_BUILTIN_PROPELLER_GUARDS
 #define MASS ((CONFIG_SIM_BUILTIN_MASS_MG + 4000) * 1e-6)
 #define INERTIA_X 3.3e-5

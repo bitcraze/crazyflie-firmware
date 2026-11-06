@@ -21,18 +21,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * version_sim.c - version.h backend for CONFIG_PLATFORM_SIM (Simmyflie),
- * Phase 4.2.
+ * version.c - Replacement of version.h for the Simmyflie.
  *
- * The real version.c is generated at build time from version.vtpl via
- * tools/make/versionTemplate.py (git describe/rev-parse), and the template
- * itself includes "param.h" to expose firmware.revision0/1/modified as
- * real params -- the real param system isn't built until Phase 4.4. Fixed
- * placeholder strings here instead: platformservice.c's real
- * versionCommandProcess() (Phase 4.2, port 13 ch.1 getFirmwareVersion) is
- * the only current sim caller of V_STAG. Swap this file out for the real
- * generated version_gen.c once Phase 4.4 lands and PARAM_ADD_CORE() has a
- * real param system to register against.
+ * The mainline version.c is generated from version.vtpl with the git
+ * revision, and registers the firmware.* params. The sim reports fixed
+ * values, with "simmyflie" as the tag, and has no firmware.* params.
  */
 
 #include <stdbool.h>

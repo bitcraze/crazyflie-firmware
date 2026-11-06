@@ -21,10 +21,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * usblink_sim.c - usblinkInit() stub for CONFIG_PLATFORM_SIM (Simmyflie).
+ * usblink.c - Stub of usblink.h for the Simmyflie.
  *
- * The sim has no USB port. system.c's systemInit() calls usblinkInit()
- * unconditionally, so it has to exist.
+ * The sim has no USB port. usblinkInit(), which systemInit() calls, does
+ * nothing.
  */
 
 #include "usblink.h"

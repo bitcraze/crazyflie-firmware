@@ -21,31 +21,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * deck.c (sim) - deck.h backend for CONFIG_PLATFORM_SIM (Simmyflie),
- * Phase 4.9.
+ * deck.c - Replacement of deck.h for the Simmyflie.
  *
- * The real deck_info.c tracks requiredKalmanEstimatorAttitudeReversionOff
- * as a flag ORed in from every discovered deck's memory-defined
- * requiredEstimator/estimation-hint fields -- deck discovery itself
- * (deck_discovery.c/deck_drivers.c) isn't built under sim (no deck bus
- * exists -- i2cdevInit() is a no-op stub, see i2cdev_sim.c/Phase 4.0), so
- * there is no deck that could ever request this. Fixed false forever: no
- * deck ever overrides attitude-reversion in sim.
+ * The sim has no deck bus and so no decks: nothing to initialize, no deck
+ * requests an estimator, a radio mode or a change to the Kalman filter, and
+ * deckSupervisorHasFault() never finds a fault.
  *
- * Also registers the "deck" param group. On real hardware every compiled-in
- * deck driver adds its own read-only bc<Deck> "is attached" param to this
- * group, and they exist (reading 0) even with no deck attached -- cfclient
- * relies on that (FlightTab, lighthouse_tab, LEDRingTab, ColorLEDTab index
- * param.values["deck"][...] unguarded). Since no driver is built under sim,
- * every bc* param declared by any driver in src/deck/drivers/src/ is
- * mirrored here, all backed by one constant 0 (no deck is ever attached).
- * CORE/non-CORE flags match each driver's own declaration. bcLoadcell is
- * declared by both loadcell.c and loadcell_nau7802.c and appears once.
- * Keep in sync when a driver adds or removes a bc* param.
- *
- * Phase 4.10 adds deckSupervisorHasFault(), which the real supervisor.c
- * polls under CONFIG_DECK_SUPERVISOR. deck_supervisor.h has no hardware
- * dependency and is included as is. With no deck there is never a fault.
+ * It also registers the "deck" param group. On a Crazyflie every deck driver
+ * that is built adds its read-only bc<Deck> param to this group, which reads
+ * 0 when that deck is not attached. cfclient reads several of them without
+ * checking that they exist. No deck driver is built for the sim, so every
+ * bc* param declared in src/deck/drivers/src/ is declared here, all reading
+ * 0. The CORE flags follow each driver's declaration. bcLoadcell is declared
+ * by both loadcell.c and loadcell_nau7802.c and appears once. Keep the list
+ * in step with the drivers.
  */
 
 #include "deck.h"

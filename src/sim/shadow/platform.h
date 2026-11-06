@@ -21,28 +21,18 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * platform_sim.h - declares platform_sim.c's public surface for
- * CONFIG_PLATFORM_SIM (Simmyflie).
+ * platform.h - Shadow header for the Simmyflie.
  *
- * Not "platform.h": that header pulls in motors.h -> stm32fxxx.h, the STM32
- * hardware chain, which has no meaning off-target (see platform_sim.c's own
- * header comment). This is the single source of truth for these two
- * signatures -- both platform_sim.c (the definitions) and every consumer
- * (main_sim.c, platformservice.c; and, via src/config/sim/hw_shims/
- * platform.h, stabilizer.c -- see Phase 4.8) include this header instead of
- * each hand-typing a matching forward declaration, so a signature change is
- * a compile error at the definition site instead of a silent cross-TU
- * mismatch the linker won't catch.
+ * The mainline platform.h includes motors.h and describes the hardware
+ * configurations. This header keeps the part of its contract that the
+ * compiled files use, implemented by src/sim/src/platform/platform.c.
+ * platformConfigGetMotorMapping() returns `const void **` instead of
+ * `const MotorPerifDef **`, matching motorsInit() in the shadow motors.h.
  *
- * Phase 4.8 adds platformConfigGetMotorMapping(): stabilizer.c's
- * motorsInit(platformConfigGetMotorMapping()) call site. Returns
- * `const void**` (not real platform.h's `const MotorPerifDef**`), matching
- * motors_sim.h's own narrowed motorsInit() signature -- the sim
- * motorsInit() ignores its argument entirely (see motors_sim.c), so a
- * fixed NULL is enough.
+ * See docs/development/simmyflie/index.md for the Shadow header rules.
  */
-#ifndef __PLATFORM_SIM_H__
-#define __PLATFORM_SIM_H__
+#ifndef PLATFORM_H_
+#define PLATFORM_H_
 
 #include <stdbool.h>
 
@@ -52,4 +42,4 @@ const void** platformConfigGetMotorMapping(void);
 bool platformConfigPhysicalLayoutAntennasAreClose(void);
 void platformSetLowInterferenceRadioMode(void);
 
-#endif // __PLATFORM_SIM_H__
+#endif // PLATFORM_H_

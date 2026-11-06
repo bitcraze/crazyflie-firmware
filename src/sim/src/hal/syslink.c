@@ -21,25 +21,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * syslink_sim.c - syslink stubs for CONFIG_PLATFORM_SIM (Simmyflie).
+ * syslink.c - Stub of syslink.h for the Simmyflie.
  *
- * Syslink is the UART protocol to the NRF51 radio chip, which the sim does
- * not have. Packets sent to it are dropped: system.c's NRF version request
+ * Syslink is the UART protocol to the nRF51 radio chip, which the sim does
+ * not have. Packets sent to it are dropped: system.c's nRF version request
  * and radio-ready notification, and platformservice.c's setContinuousWave.
- * Nothing ever arrives from it, so enabling incoming packets does nothing.
  */
 
 #include <stdint.h>
 
 #include "syslink.h"
-#include "uart_syslink.h"
 
 int syslinkSendPacket(SyslinkPacket *slp)
 {
   (void)slp;
   return 0;
-}
-
-void uartslkEnableIncoming()
-{
 }

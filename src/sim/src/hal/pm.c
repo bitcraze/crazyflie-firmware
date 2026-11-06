@@ -21,24 +21,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * pm_sim.c - pm.h backend for CONFIG_PLATFORM_SIM (Simmyflie), Phase 4.6.
+ * pm.c - Replacement of pm.h for the Simmyflie.
  *
- * The real pm_stm32f4.c drives a battery state machine off syslink messages
- * from the NRF companion chip (charge state, low-battery shutdown, LED/sound
- * feedback) and pulls in led.h/ledseq.h/commander.h/sound.h/deck.h to do it
- * -- deck.h alone drops into the STM32 hardware header chain via
- * deck_constants.h -> stm32fxxx.h, so pm.h can't be #include'd here any more
- * than platform.h could in platform_sim.c (see that file's header comment
- * for the same reasoning). None of that state machine has meaning under the
- * MVP's constant-voltage, infinite-battery requirement, so this is a full
- * HAL swap, not a narrowed real pm.c: just pmInit() and the pm.vbat and
- * pm.state log variables real hardware exposes, fixed at 4.2 V and 0
- * (battery) forever, no drain, no charge/low/shutdown states. Nothing in
- * the sim build calls any other pm.h entry point yet (deck drivers/motors.c/stabilizer.c/health.c/info.c
- * all reference pmGetBatteryVoltage() and friends, but none of those
- * translation units are built under PLATFORM_SIM until Phase 5+) -- add the
- * rest of pm.h's surface here if and when a real sim caller needs it,
- * rather than guessing at it now.
+ * The sim has an ideal battery: the voltage is a constant 4.2 V and it never
+ * charges, runs low or shuts down. The mainline power management state
+ * machine, driven by syslink messages from the nRF51, has nothing to do. The
+ * pm.vbat and pm.state log variables are kept, with the values a Crazyflie
+ * running on a full battery reports.
  */
 
 #include <stdint.h>
@@ -47,7 +36,7 @@
 #include "pm.h"
 
 static float batteryVoltage = 4.2f;
-/* PMStates value 0 (battery); pm.h's enum is out of reach (see above).
+/* PMStates value 0 (battery); the shadow pm.h does not declare the enum.
  * int8_t rather than an enum: the real pmState is 1 byte on ARM
  * (-fshort-enums), a host enum would be 4. */
 static int8_t pmState = 0;

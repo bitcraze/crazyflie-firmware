@@ -21,12 +21,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * cpxlink_sim.c - cpxlinkInit() stub for CONFIG_PLATFORM_SIM (Simmyflie).
+ * cpxlink.c - Stub of cpxlink.h for the Simmyflie.
  *
- * CPX is the link to the AI deck and other co-processors, none of which
- * exist in the sim. system.c's systemInit() calls cpxlinkInit() when
- * CONFIG_ENABLE_CPX is set, which a base config such as cf21bl carries into
- * the sim build (DECK_AI selects it), so it has to exist.
+ * CPX is the link to the AI deck and other co-processors, none of which exist
+ * in the sim. systemInit() calls cpxlinkInit() when CONFIG_ENABLE_CPX is set,
+ * which the hardware configuration carries into the sim build; it does
+ * nothing.
  */
 
 #include "cpxlink.h"

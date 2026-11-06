@@ -21,18 +21,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * udplink_sim.h - CRTP link over UDP for Simmyflie (CONFIG_PLATFORM_SIM).
+ * udplink.h - CRTP link over UDP of the Simmyflie.
  *
- * Same shape as radiolinkGetLink()/usblinkGetLink() (see crtp.h), and the
- * same idea as CrazySim's socketlink.c, but Simmyflie plays the server role:
- * a client (cfclient/cflib/cfcli) connects to us, so the peer address is
- * learned from the first inbound packet rather than fixed at startup.
+ * Used in place of the radio link, with the same shape as
+ * radiolinkGetLink() (see crtp.h). The Simmyflie is the server: a client
+ * (cfclient, cflib) connects to it, so the peer address is learned from the
+ * first packet that arrives.
  *
- * Uses the UDP socket already bound by instanceInit() (instance_sim.h) --
- * no separate bind here.
+ * Uses the UDP socket bound by instanceInit() (instance.h).
  */
-#ifndef UDPLINK_SIM_H_
-#define UDPLINK_SIM_H_
+#ifndef UDPLINK_H_
+#define UDPLINK_H_
 
 #include "crtp.h"
 
@@ -45,4 +44,4 @@ void udplinkInit(void);
 /* Get the CRTP link operations for the UDP link (only link used in sim). */
 struct crtpLinkOperations *udplinkGetLink(void);
 
-#endif // UDPLINK_SIM_H_
+#endif // UDPLINK_H_

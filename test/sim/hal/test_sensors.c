@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * test_sensors_sim.c - unit tests of the Sensor shim of the Simmyflie,
+ * test_sensors.c - unit tests of the Sensor shim of the Simmyflie,
  * against a mocked Physics engine manager and estimator.
  */
 

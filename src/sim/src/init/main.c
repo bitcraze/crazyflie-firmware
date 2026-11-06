@@ -21,14 +21,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * main_sim.c - entry point for CONFIG_PLATFORM_SIM (Simmyflie), following
- * main.c: platformInit(), then the real system.c:systemLaunch(), then the
- * scheduler.
+ * main.c - Replacement of main.c for the Simmyflie: the process entry point.
  *
- * instanceInit() (see instance_sim.h) comes first: it parses the command
- * line, binds the UDP socket and starts the Physics engine manager before
- * the scheduler starts, so a port that is already in use fails the process
- * at once. comm.c:commInit() picks the socket up through udplinkInit().
+ * As the mainline main(): platformInit(), then systemLaunch(), then the
+ * scheduler. Before that, instanceInit() (instance.h) parses the command
+ * line, binds the UDP socket and starts the Physics engine manager, so a port
+ * that is already in use fails the process at once. commInit() picks the
+ * socket up through udplinkInit().
  */
 
 #include "autoconf.h"
@@ -44,8 +43,6 @@
 #include "instance.h"
 #include "system.h"
 
-/* Not "platform.h": it pulls in the STM32 hardware chain. See
- * platform_sim.h. */
 #include "platform.h"
 
 int main(int argc, char **argv)

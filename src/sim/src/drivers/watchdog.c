@@ -21,12 +21,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * watchdog_sim.c - watchdog.h backend for CONFIG_PLATFORM_SIM (Simmyflie).
+ * watchdog.c - Stub of watchdog.h for the Simmyflie.
  *
- * There is no hardware watchdog in the sim: the start is always a normal
- * one, and watchdogInit()/watchdogReset() do nothing. The declarations are
- * in src/config/sim/hw_shims/watchdog.h, which shadows the real watchdog.h
- * (that one includes stm32fxxx.h).
+ * There is no hardware watchdog in the sim: the start is always a normal one,
+ * and watchdogInit() and watchdogReset() do nothing.
  */
 
 #include "watchdog.h"

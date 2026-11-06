@@ -21,12 +21,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * cfassert_sim.c - ASSERT()/assertFail() backend for CONFIG_PLATFORM_SIM.
+ * cfassert.c - Replacement of cfassert.h for the Simmyflie.
  *
- * The real cfassert.c (led.h/motors.h-driven blink-and-halt) is hardware
- * code. This is what crtp.c's ASSERT() macro links against instead, so
- * Communication (Phase 3) doesn't have to pull in the LED/motor HAL just to
- * satisfy the assert macro.
+ * The mainline cfassert.c stores the failed assertion for the next boot and
+ * blinks the LEDs. Here assertFail() prints the failed expression and its
+ * place to stderr and aborts the process. The snapshot functions do nothing.
  */
 
 #include "cfassert.h"

@@ -21,16 +21,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * i2cdev.h (sim shim) - shadows src/drivers/interface/i2cdev.h for
- * CONFIG_PLATFORM_SIM (Simmyflie), which pulls in i2c_drv.h -> stm32fxxx.h.
- * Same include-path shadowing as motors.h/pm.h/platform.h in this directory.
+ * i2cdev.h - Shadow header for the Simmyflie.
  *
- * The sim has no I2C bus. system.c's i2cdevInit(I2C3_DEV)/
- * i2cdevInit(I2C1_DEV) calls compile against these two macros and reach
- * i2cdev_sim.c's no-op.
+ * The mainline i2cdev.h includes i2c_drv.h and through it the STM32 device
+ * headers. The sim has no I2C bus: the bus handles are NULL and i2cdevInit(),
+ * in src/sim/src/drivers/i2cdev.c, does nothing. i2cdevInit() takes
+ * `void *` instead of `I2C_Dev *`, which is link-compatible.
+ *
+ * See docs/development/simmyflie/index.md for the Shadow header rules.
  */
-#ifndef __I2CDEV_HW_SHIM_H__
-#define __I2CDEV_HW_SHIM_H__
+#ifndef __I2CDEV_H__
+#define __I2CDEV_H__
 
 #include <stddef.h>
 
@@ -39,4 +40,4 @@
 
 int i2cdevInit(void *dev);
 
-#endif // __I2CDEV_HW_SHIM_H__
+#endif // __I2CDEV_H__

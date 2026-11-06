@@ -25,10 +25,7 @@
  * estimator_complementary.c - a complementary estimator
  */
 
-#include "autoconf.h"
-#ifndef CONFIG_PLATFORM_SIM
 #include "stm32f4xx.h"
-#endif
 
 #include "FreeRTOS.h"
 #include "queue.h"

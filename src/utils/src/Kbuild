@@ -1,58 +1,45 @@
-ifeq ($(CONFIG_PLATFORM_SIM),y)
-# Simmyflie Phase 3 (Communication): the ASSERT()/DEBUG_PRINT backend
-# crtp.c/queuemonitor.c need (see cfassert_sim.c). Phase 4.0 (Foundation
-# HAL stubs) adds configblock_sim.o. Phase 4.1 (Console) adds debug.o/
-# eprintf.o -- both already fully hardware-free, so DEBUG_PRINT can route
-# through the new real console.c's consolePrintf() unmodified. Phase 4.2
-# (Platform) adds version_sim.o -- a placeholder for the real generated
-# version_gen.c, whose template pulls in param.h (not built until 4.4); see
-# version_sim.c. Phase 4.4 (Parameters) adds crc32.o -- param_logic.c hashes
-# its TOC with crc32CalculateBuffer(), already fully hardware-free. Phase 4.5
-# (Logging) adds num.o -- log.c's logRunBlock() uses single2half() for
-# LOG_FP16 values, already fully hardware-free. Phase 4.8 adds pid.o --
-# controller_pid.c's PID loops (attitude_pid_controller.c/
-# position_controller_pid.c) -- plus its own link-time dependents filter.o
-# (pid.c's low-pass filter), rateSupervisor.o (stabilizer.c's loop-rate
-# check) and statsCnt.o (STATS_CNT_RATE_DEFINE's log handler) -- all fully
-# hardware-free.
-obj-y += crc32.o
-obj-y += debug.o
-obj-y += eprintf.o
-obj-y += filter.o
-obj-y += num.o
-obj-y += pid.o
-obj-y += rateSupervisor.o
-obj-y += statsCnt.o
-else
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += cfassert.o
 obj-y += clockCorrectionEngine.o
 obj-y += configblockeeprom.o
 obj-y += cpuid.o
+endif
 obj-y += crc32.o
 obj-y += debug.o
 obj-y += eprintf.o
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += buf2buf.o
+endif
 
 obj-y += filter.o
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += FreeRTOS-openocd.o
+endif
 
 obj-y += num.o
 obj-y += rateSupervisor.o
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += sleepus.o
+endif
 obj-y += statsCnt.o
 
 ### Sub directories
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += kve/
 obj-y += lighthouse/
 obj-y += tdoa/
+endif
 
 
 ### Implementations for abort(), malloc() and free(), needed to interact with apps written in C++
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += abort.o
 obj-y += malloc.o
+endif
 obj-y += pid.o
 
 ### Rules for handling generated version.c
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += version.o
 version-objs := version_gen.o
 src/utils/src/version_gen.c: src/utils/src/version.vtpl FORCE

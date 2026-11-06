@@ -21,8 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * motors_sim.c - the Actuator shim of the Simmyflie (CONFIG_PLATFORM_SIM):
- * the motors.h backend.
+ * motors.c - Replacement of motors.h for the Simmyflie: the Actuator shim.
  *
  * motorsSetRatio() stores the ratio the firmware writes and passes it on,
  * unchanged, to the Physics engine manager with
@@ -31,17 +30,16 @@
  * steps the physics once per tick. The shim holds no physical knowledge of
  * motors and never calls the physics engine.
  *
- * Not "motors.h": see motors_sim.h for why (STM32 hardware chain) and for
- * the signature-narrowing rationale (motorsInit()'s motor-map argument).
+ * The "motor" log group has the m1-m4 ratios of the mainline motors.c, but not
+ * the RPM entries: there is no ESC to report them. motorsGetRPM() returns a
+ * constant that passes the supervisor's RPM checks.
  *
- * The "motor" LOG_GROUP (m1-m4 PWM ratios) matches real motors.c's own,
- * narrower only in that it skips the DSHOT-bidirectional RPM telemetry
- * entries (m1_rpm.. -- CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL has no
- * meaning in sim, there's no real ESC to report RPM from).
- *
- * motorsResetESCs/motorsCompensateBatteryVoltage/motorsBeep/
- * motorsGetHealthTestSettings/testsound: see motors_sim.h's header comment
- * for why each is a narrower-than-mainline stub.
+ * The rest of the motors.h functions that mainline code calls have no
+ * hardware to act on: motorsCompensateBatteryVoltage() passes the thrust
+ * through (the sim battery voltage is constant), motorsBeep(),
+ * motorsResetESCs() and motorsBurstDshot() do nothing, and
+ * motorsGetHealthTestSettings() returns one fixed set of values for health.c's
+ * propeller and battery tests.
  */
 
 #include <stdbool.h>
@@ -50,6 +48,11 @@
 #include "log.h"
 #include "motors.h"
 #include "physics_engine_manager.h"
+
+// Constant RPM reported by motorsGetRPM(). Must lie inside the supervisor's
+// arming window (CONFIG_MOTORS_ARMING_RPM_MIN..MAX, default 1000..3500) and
+// at or above CONFIG_MOTORS_RPM_NOT_RESPONDING_THRESHOLD (default 500).
+#define MOTORS_RPM 2000
 
 const uint16_t testsound[NBR_OF_MOTORS] = {A4, A5, F5, D5};
 
@@ -103,7 +106,7 @@ uint16_t motorsGetRPM(uint32_t motorId)
   if (motorId >= NBR_OF_MOTORS) {
     return MOTORS_RPM_INVALID;
   }
-  return MOTORS_SIM_RPM;
+  return MOTORS_RPM;
 }
 
 void motorsStop(void)
@@ -142,7 +145,7 @@ const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id)
 
 float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVoltage)
 {
-  /* No battery-voltage model in sim (see pm_sim.c) -- pass through. */
+  /* The sim battery voltage is constant (see pm.c): pass through. */
   (void)id;
   (void)supplyVoltage;
   return iThrust;

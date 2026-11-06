@@ -1,8 +1,8 @@
-ifeq ($(CONFIG_PLATFORM_SIM),y)
-obj-y += buzzer.o
-else
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += amg8833.o
+endif
 obj-y += buzzer.o
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += freeRTOSdebug.o
 obj-y += ledseq.o
 obj-y += ow_syslink.o

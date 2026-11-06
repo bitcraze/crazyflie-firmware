@@ -41,7 +41,6 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "config.h"
 #include "physics_engine.h"
 #include "physics_engine_manager.h"
 #include "static_mem.h"
@@ -52,6 +51,10 @@ static bool isInit = false;
 static int beaconFd = -1;
 static struct sockaddr_in beaconDest;
 static uint16_t beaconUdpPort;
+
+#define BEACON_TASK_PRI       1
+#define BEACON_TASK_NAME      "BEACON"
+#define BEACON_TASK_STACKSIZE (2 * configMINIMAL_STACK_SIZE)
 
 STATIC_MEM_TASK_ALLOC(beaconTask, BEACON_TASK_STACKSIZE);
 

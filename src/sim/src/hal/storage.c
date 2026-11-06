@@ -21,14 +21,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * storage_sim.c - storage.h backend for CONFIG_PLATFORM_SIM (Simmyflie),
- * Phase 4.0.
+ * storage.c - Stub of storage.h for the Simmyflie.
  *
- * The real storage.c is a key/buffer store backed by an I2C EEPROM
- * (kve/kve.h over eeprom.h/i2cdev.h). Per the MVP's "no persistent params"
- * scope, this is a stateless stand-in: reports itself healthy, stores
- * nothing, and never finds a key. Nothing in Phase 4 relies on values
- * surviving a restart.
+ * The mainline storage.c keeps key/value pairs, such as persistent
+ * parameters, in the I2C EEPROM. The sim has no EEPROM: storage reports
+ * itself healthy, stores nothing and never finds a key, so nothing survives a
+ * restart.
  */
 
 #include "storage.h"

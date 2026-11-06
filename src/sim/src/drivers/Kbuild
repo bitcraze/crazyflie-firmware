@@ -2,4 +2,5 @@ obj-y += adc.o
 obj-y += i2cdev.o
 obj-y += led.o
 obj-y += motors.o
+obj-y += uart_syslink.o
 obj-y += watchdog.o

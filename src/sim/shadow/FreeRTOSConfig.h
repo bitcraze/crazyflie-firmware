@@ -1,11 +1,13 @@
-/* FreeRTOSConfig.h for CONFIG_PLATFORM_SIM (Simmyflie).
+/* FreeRTOSConfig.h - Shadow header for the Simmyflie.
  *
- * Deliberately standalone -- does not include the mainline src/config/config.h
- * chain (interrupt priorities, NVIC-oriented run-time-stats macros, etc. that
- * only make sense on the real hardware). Settings below match the Phase 0
- * drift-spike prototype (dev/phase0-drift-spike/ in the simulation_model
- * project), which validated the FreeRTOS POSIX port's SIGALRM/setitimer tick
- * against the <=0.1 ms/s real-time drift requirement.
+ * FreeRTOS configuration for the Posix port, which the sim build uses
+ * instead of the ARM_CM4F port. The tick rate and the M2T()/T2M() macros
+ * match the mainline FreeRTOSConfig.h, so timing in mainline code is
+ * unchanged. Interrupt priorities and the run-time statistics hooks of the
+ * mainline file are left out; the Posix port defines what it needs. The
+ * heap is the host's malloc() (heap_3).
+ *
+ * See docs/development/simmyflie/index.md for the Shadow header rules.
  */
 #ifndef FREERTOS_CONFIG_H
 #define FREERTOS_CONFIG_H
@@ -22,16 +24,7 @@
 #define configUSE_16_BIT_TICKS                 0
 #define configIDLE_SHOULD_YIELD                1
 #define configUSE_MUTEXES                      1
-/* configUSE_TIMERS was off through Phase 4.4 (no FreeRTOS software timers
- * used yet -- 4.0's ledseq_sim.c no-op'd the whole LED-sequence surface
- * rather than turn these on for no client-visible benefit). Phase 4.5
- * (Logging) is the first genuine need: log.c's periodic log blocks are
- * built on xTimerCreateStatic()/xTimerChangePeriod()/xTimerStart() et al.,
- * with no sim-friendly alternative to swap in (unlike ledseq, there's no
- * "narrower stub" that still streams periodic values as Use case 3 needs).
- * static_mem.c's vApplicationGetTimerTaskMemory() already referenced
- * configTIMER_TASK_STACK_DEPTH unconditionally at compile time regardless
- * of this setting, so no new define was needed for that part. */
+/* log.c builds its periodic log blocks on FreeRTOS software timers. */
 #define configUSE_TIMERS                       1
 #define configTIMER_TASK_PRIORITY              1
 #define configTIMER_QUEUE_LENGTH               20
@@ -71,20 +64,15 @@
 #define configKERNEL_INTERRUPT_PRIORITY        255
 #define configMAX_SYSCALL_INTERRUPT_PRIORITY   191
 
-#include <stdio.h>
-#include <stdlib.h>
-/* Mainline FreeRTOSConfig.h includes cfassert.h, and some mainline sources
- * (crtp_commander_generic.c, crtp_commander_rpyt.c) rely on getting ASSERT()
- * that way, through FreeRTOS.h. Mirrored here so they build unmodified. */
+/* As in mainline: some sources (crtp_commander_generic.c,
+ * crtp_commander_rpyt.c) get ASSERT() through FreeRTOS.h. */
 #include "cfassert.h"
-/* Likewise config.h: crtpservice.c takes its task name, priority and stack
- * size from it without including it. This is the sim config.h next to this
- * file, not the mainline one. */
+/* As in mainline: crtpservice.c gets its task settings from config.h this
+ * way. */
 #include "config.h"
-#define configASSERT( x ) if( ( x ) == 0 ) { fprintf(stderr, "ASSERT FAILED %s:%d\n", __FILE__, __LINE__); abort(); }
+#define configASSERT( x )  if( ( x ) == 0 ) assertFail(#x, __FILE__, __LINE__ )
 
-/* Milliseconds to OS ticks, matching mainline src/config/FreeRTOSConfig.h --
- * configTICK_RATE_HZ above is 1000, so these are 1:1. */
+/* Milliseconds to OS ticks, as in mainline. */
 #define M2T(X) ((unsigned int)(X))
 #define F2T(X) ((unsigned int)((configTICK_RATE_HZ/(X))))
 #define T2M(X) ((unsigned int)(X))

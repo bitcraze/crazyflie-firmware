@@ -34,16 +34,15 @@
 #include "crtpservice.h"
 #include "param_task.h"
 #include "log.h"
-#include "platformservice.h"
-#ifdef CONFIG_PLATFORM_SIM
-#include "udplink.h"
-#else
 #include "eskylink.h"
 #include "uart_syslink.h"
 #include "radiolink.h"
 #include "usblink.h"
+#include "platformservice.h"
 #include "syslink.h"
 #include "crtp_localization_service.h"
+#ifdef CONFIG_PLATFORM_SIM
+#include "udplink.h"
 #endif
 
 static bool isInit;
@@ -77,7 +76,7 @@ void commInit(void)
   logInit();
   paramInit();
 #ifndef CONFIG_PLATFORM_SIM
-  /* Not built for the Simmyflie */
+  /* The localization service is not built for the Simmyflie */
   locSrvInit();
 #endif
 
@@ -87,14 +86,14 @@ void commInit(void)
   //  crtpSetLink(usbGetLink);
   //else if(radiolinkTest())
   //  crtpSetLink(radiolinkGetLink());
-
+  
   isInit = true;
 }
 
 bool commTest(void)
 {
   bool pass=isInit;
-
+  
 #ifndef CONFIG_PLATFORM_SIM
   pass &= radiolinkTest();
 #endif
@@ -103,7 +102,7 @@ bool commTest(void)
   pass &= platformserviceTest();
   pass &= consoleTest();
   pass &= paramTest();
-
+  
   return pass;
 }
 

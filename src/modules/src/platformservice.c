@@ -37,19 +37,7 @@
 #include "platformservice.h"
 #include "syslink.h"
 #include "version.h"
-#include "autoconf.h"
-#ifdef CONFIG_PLATFORM_SIM
-/* Simmyflie: platform.h pulls in motors.h -> stm32fxxx.h, an STM32
- * register chain with no meaning off-target (same reasoning platform_sim.c
- * uses to bypass the shared platform.c dispatcher entirely). Include
- * platform_sim.h instead -- the single source of truth for
- * platformConfigGetDeviceTypeName()'s signature, shared with main_sim.c --
- * platform_sim.c supplies it directly rather than through
- * platformConfig_t/active_config. */
 #include "platform.h"
-#else
-#include "platform.h"
-#endif
 #include "app_channel.h"
 #include "static_mem.h"
 #include "ledseq.h"

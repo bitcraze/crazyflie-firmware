@@ -21,8 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * sensors_sim.c - the Sensor shim of the Simmyflie (CONFIG_PLATFORM_SIM):
- * the sensors.h backend.
+ * sensors.c - Replacement of sensors.h for the Simmyflie: the Sensor shim.
  *
  * Once per tick, in sensorsWaitDataReady(), the shim steps the physics
  * through the Physics engine manager, reads the true state and turns it into
@@ -44,10 +43,6 @@
  * While the sensors are suspended (sensorsSuspend()) the physics is still
  * stepped and the readings updated; only the enqueues are skipped, so the
  * physics never stops.
- *
- * sensors.h itself (unlike motors.h/pm.h/platform.h) only pulls in
- * stabilizer_types.h -- no STM32 hardware chain -- so it's included
- * normally here, no forward-declare workaround needed.
  */
 
 #include "sensors.h"

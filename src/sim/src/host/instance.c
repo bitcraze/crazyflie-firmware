@@ -21,12 +21,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * instance_sim.c - see instance_sim.h.
+ * instance.c - see instance.h.
  *
- * The socket is bound here, before vTaskStartScheduler(), and kept open
- * (not close()d after a probe) so the port stays reserved for this
- * instance with no rebind race -- Communication (Phase 3) picks up the
- * same fd via instanceGetSocketFd() instead of binding its own.
+ * The socket is bound here, before vTaskStartScheduler(), and kept open (not
+ * closed after a probe) so the port stays reserved for this instance with no
+ * rebind race. The UDP link picks up the same socket with
+ * instanceGetSocketFd() instead of binding its own.
  *
  * The command line also gives the per-instance part of the physics engine
  * configuration (start pose, ground level). The rest comes from Kconfig, and

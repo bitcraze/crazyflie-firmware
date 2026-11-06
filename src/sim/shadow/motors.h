@@ -21,57 +21,26 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * motors_sim.h - declares the public surface of motors_sim.c, the Actuator
- * shim of the Simmyflie (CONFIG_PLATFORM_SIM).
+ * motors.h - Shadow header for the Simmyflie.
  *
- * Not "motors.h": that header pulls in the STM32 hardware chain directly
- * (stm32fxxx.h) plus MotorPerifDef's ST peripheral-register fields (see
- * motors_sim.c's own header comment). motorsInit()'s motor-map argument is
- * narrowed from motors.h's real `const MotorPerifDef**` to `const void**`,
- * same precedent as i2cdev_sim.c's i2cdevInit(void*) -- link-compatible with
- * real callers since C linking matches symbol names only, not per-TU
- * parameter types. Every other signature matches current mainline motors.h
- * exactly (verified against stabilizer.c's setMotorRatios()), so
- * stabilizer.c calls the shim unmodified.
+ * The mainline motors.h includes the STM32 device headers and describes the
+ * motor timers and pins. This header keeps the part of its contract that the
+ * compiled files use, implemented by src/sim/src/drivers/motors.c:
+ * - motorsInit() takes `const void **` instead of `const MotorPerifDef **`.
+ *   No compiled file looks inside the motor map, and C links by symbol name,
+ *   so this is link-compatible.
+ * - MOTORS_TIM_BEEP_CLK_FREQ is a literal: mainline's TIM_CLOCK_HZ / 5.
  *
- * Single source of truth for these signatures -- both motors_sim.c (the
- * definitions) and every consumer (main_sim.c; and, via
- * src/config/sim/hw_shims/motors.h, stabilizer.c/health.c)
- * include this header instead of hand-typing matching forward declarations.
- *
- * motorsResetESCs/motorsCompensateBatteryVoltage/motorsBeep/
- * motorsGetHealthTestSettings/testsound/NBR_OF_MOTORS/MOTOR_M1..M4/
- * MotorHealthTestDef: the rest of real motors.h's surface that
- * stabilizer.c/health.c reference. All narrower-than-mainline stubs --
- * motorsCompensateBatteryVoltage() is a pass-through (no battery-voltage
- * model exists in sim, matching pm_sim.c's constant-voltage scope),
- * motorsBeep()/motorsResetESCs() are no-ops (no speaker/ESC-reset pin in
- * sim), motorsGetHealthTestSettings() returns one fixed timing/ratio set
- * (health.c's propeller/battery self-test is dead code in sim by default --
- * startPropTest/startBatTest params are 0 unless a client sets them -- so
- * the values are cosmetic, not modeled).
- *
- * motorsBurstDshot() (added once cf21bl_defconfig -- CF2.1 brushless, this
- * project's requirements.md target -- became the base .config for `make
- * sim`, pulling in CONFIG_MOTORS_ESC_PROTOCOL_DSHOT and stabilizer.c's
- * #ifdef'd call): also a no-op, same reasoning as motorsResetESCs() --
- * motorsSetRatio() already applies the ratio directly, so there's no
- * separate hardware burst step to model.
- *
- * motorsGetRPM()/MOTORS_RPM_INVALID: the real supervisor.c
- * reads motor RPM under CONFIG_MOTORS_ESC_PROTOCOL_DSHOT_BIDIRECTIONAL
- * (set by cf21bl_defconfig). There is no ESC telemetry in sim, so every
- * motor reports the constant MOTORS_SIM_RPM. See motors_sim.c.
+ * See docs/development/simmyflie/index.md for the Shadow header rules.
  */
-#ifndef __MOTORS_SIM_H__
-#define __MOTORS_SIM_H__
+#ifndef __MOTORS_H__
+#define __MOTORS_H__
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "FreeRTOS.h"
-#include "task.h"
-#include "semphr.h"
+
 #include "config.h"
+#include "autoconf.h"
 
 #define NBR_OF_MOTORS 4
 #define MOTOR_M1  0
@@ -80,11 +49,6 @@
 #define MOTOR_M4  3
 
 #define MOTORS_RPM_INVALID (UINT16_MAX)
-
-/* Constant RPM reported by motorsGetRPM(). Must lie inside the supervisor's
- * arming window (CONFIG_MOTORS_ARMING_RPM_MIN..MAX, default 1000..3500) and
- * at or above CONFIG_MOTORS_RPM_NOT_RESPONDING_THRESHOLD (default 500). */
-#define MOTORS_SIM_RPM 2000
 
 /* Test defines -- just the two health.c's propeller-test failure path
  * references (dead code by default, see above). */
@@ -121,4 +85,4 @@ void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio);
 const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id);
 float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVoltage);
 
-#endif // __MOTORS_SIM_H__
+#endif // __MOTORS_H__

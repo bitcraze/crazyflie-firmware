@@ -1,5 +1,2 @@
-ifeq ($(CONFIG_PLATFORM_SIM),y)
-else
 obj-y += main.o
 obj-y += startup_stm32f40xx.o
-endif

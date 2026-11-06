@@ -21,18 +21,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * ledseq_sim.c - ledseq.h backend for CONFIG_PLATFORM_SIM (Simmyflie),
- * Phase 4.0.
+ * ledseq.c - Stub of ledseq.h for the Simmyflie.
  *
- * The real ledseq.c is a timed LED sequence engine built on FreeRTOS
- * software timers (xTimerCreateStatic() et al.), which this build doesn't
- * enable (configUSE_TIMERS is 0 -- see src/config/sim/FreeRTOSConfig.h).
- * There's no client-visible meaning for LED sequences yet anyway (no
- * physical LEDs, no CRTP-visible behavior in this chunk), so rather than
- * pull in the timer machinery just to drive LEDs nobody can see, this
- * no-ops the whole surface. The seq_* contexts are defined here (not just
- * declared) because system.c calls e.g. ledseqRun(&seq_alive) by pointer --
- * content is irrelevant since ledseqRun() ignores its argument.
+ * The mainline ledseq.c plays timed sequences on the LEDs. The sim has no LEDs
+ * and shows no LED state, so every function does nothing. The seq_* contexts
+ * are defined because mainline code passes their addresses, as in
+ * ledseqRun(&seq_alive).
  */
 
 #include "ledseq.h"
