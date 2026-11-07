@@ -138,6 +138,8 @@ static lighthouseBaseStationType_t systemType = lighthouseBsTypeV2;
 static lighthouseBaseStationType_t previousSystemType = lighthouseBsTypeV2;
 static pulseProcessorProcessPulse_t pulseProcessorProcessPulse = pulseProcessorV2ProcessPulse;
 
+static uint8_t maxBaseStations = CONFIG_DECK_LIGHTHOUSE_MAX_N_BS;
+
 #define UART_FRAME_LENGTH 12
 
 
@@ -954,6 +956,10 @@ LOG_GROUP_STOP(lighthouse)
  */
 PARAM_GROUP_START(lighthouse)
 /**
+ * @brief Maximum number of base stations supported by the Crazyflie
+ */
+PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, maxBS, &maxBaseStations)
+/**
  * @brief Estimation Method: 0:CrossingBeam,  1:Sweep in EKF (default: 1)
  */
 PARAM_ADD_CORE(PARAM_UINT8, method, &estimationMethod)
@@ -966,12 +972,5 @@ PARAM_ADD_CORE(PARAM_UINT8, bsCalibReset, &calibStatusReset)
  *  (default: 2)
  */
 PARAM_ADD_CORE(PARAM_UINT8, systemType, &systemType)
-
-/**
- * @brief Bit field that indicates which base stations that are supported by the system - deprecated (removed after August 2023)
- *
- * The lowest bit maps to base station channel 1 and the highest to channel 16.
- */
-PARAM_ADD_CORE(PARAM_UINT16 | PARAM_RONLY, bsAvailable, &baseStationAvailabledMap)
 
 PARAM_GROUP_STOP(lighthouse)
