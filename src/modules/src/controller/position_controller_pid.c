@@ -83,6 +83,46 @@ static float velZFiltCutoff = PID_VEL_Z_FILT_CUTOFF_BARO_Z_HOLD;
 static float velZFiltCutoff = PID_VEL_Z_FILT_CUTOFF;
 #endif
 
+struct pidKiState_s {
+  float pidVX;
+  float pidVY;
+  float pidVZ;
+  float pidX;
+  float pidY;
+  float pidZ;
+};
+
+struct posPidParams_s {
+  float xKp;
+  float xKi;
+  float xKd;
+  float xKff;
+  float yKp;
+  float yKi;
+  float yKd;
+  float yKff;
+  float zKp;
+  float zKi;
+  float zKd;
+  float zKff;
+};
+
+static struct pidKiState_s previousKi = {0};
+static struct posPidParams_s previousPosPidParams = {
+  .xKp = PID_POS_X_KP,
+  .xKi = PID_POS_X_KI,
+  .xKd = PID_POS_X_KD,
+  .xKff = PID_POS_X_KFF,
+  .yKp = PID_POS_Y_KP,
+  .yKi = PID_POS_Y_KI,
+  .yKd = PID_POS_Y_KD,
+  .yKff = PID_POS_Y_KFF,
+  .zKp = PID_POS_Z_KP,
+  .zKi = PID_POS_Z_KI,
+  .zKd = PID_POS_Z_KD,
+  .zKff = PID_POS_Z_KFF,
+};
+
 #ifndef UNIT_TEST
 static struct this_s this = {
   .pidVX = {
@@ -178,6 +218,34 @@ void positionControllerInit()
       this.pidVY.pid.kff, this.pidVY.pid.dt, POSITION_RATE, velFiltCutoff, velFiltEnable);
   pidInit(&this.pidVZ.pid, this.pidVZ.setpoint, this.pidVZ.pid.kp, this.pidVZ.pid.ki, this.pidVZ.pid.kd,
       this.pidVZ.pid.kff, this.pidVZ.pid.dt, POSITION_RATE, velZFiltCutoff, velZFiltEnable);
+  
+  previousKi.pidVX = this.pidVX.pid.ki;
+  previousKi.pidVY = this.pidVY.pid.ki;
+  previousKi.pidVZ = this.pidVZ.pid.ki;
+  previousKi.pidX = this.pidX.pid.ki;
+  previousKi.pidY = this.pidY.pid.ki;
+  previousKi.pidZ = this.pidZ.pid.ki;
+}
+
+static void rescaleIntegralIfKiChanged(struct pidAxis_s *axis, float *oldKi) {
+  const float currentKi = axis->pid.ki;
+
+  if (currentKi != *oldKi) {
+    axis->pid.integ = axis->pid.integ * (*oldKi) / (currentKi + 1e-6f);
+    *oldKi = currentKi;
+  }
+}
+
+static void handleKiUpdatesForPositionPids(void) {
+  rescaleIntegralIfKiChanged(&this.pidX, &previousKi.pidX);
+  rescaleIntegralIfKiChanged(&this.pidY, &previousKi.pidY);
+  rescaleIntegralIfKiChanged(&this.pidZ, &previousKi.pidZ);
+}
+
+static void handleKiUpdatesForVelocityPids(void) {
+  rescaleIntegralIfKiChanged(&this.pidVX, &previousKi.pidVX);
+  rescaleIntegralIfKiChanged(&this.pidVY, &previousKi.pidVY);
+  rescaleIntegralIfKiChanged(&this.pidVZ, &previousKi.pidVZ);
 }
 
 static float runPid(float input, struct pidAxis_s *axis, float setpoint, float dt) {
@@ -193,6 +261,8 @@ float state_body_x, state_body_y, state_body_vx, state_body_vy;
 void positionController(float* thrust, attitude_t *attitude, const setpoint_t *setpoint,
                                                              const state_t *state)
 {
+  handleKiUpdatesForPositionPids();
+  
   this.pidX.pid.outputLimit = xVelMax * velMaxOverhead;
   this.pidY.pid.outputLimit = yVelMax * velMaxOverhead;
   // The ROS landing detector will prematurely trip if
@@ -236,6 +306,7 @@ void positionController(float* thrust, attitude_t *attitude, const setpoint_t *s
 void velocityController(float* thrust, attitude_t *attitude, const Axis3f* setpoint_velocity,
                                                              const state_t *state)
 {
+  handleKiUpdatesForVelocityPids();
   this.pidVX.pid.outputLimit = pLimit * rpLimitOverhead;
   this.pidVY.pid.outputLimit = rLimit * rpLimitOverhead;
   // Set the output limit to the maximum thrust range
@@ -283,6 +354,60 @@ void positionControllerResetAllfilters() {
   filterReset(&this.pidVX.pid, POSITION_RATE, velFiltCutoff, velFiltEnable);
   filterReset(&this.pidVY.pid, POSITION_RATE, velFiltCutoff, velFiltEnable);
   filterReset(&this.pidVZ.pid, POSITION_RATE, velZFiltCutoff, velZFiltEnable);
+}
+
+
+void positionControllerChangePosPIDParams(float xKp, float xKi, float xKd, float xKff,
+                    float yKp, float yKi, float yKd, float yKff,
+                    float zKp, float zKi, float zKd, float zKff)
+{
+  previousPosPidParams.xKp = this.pidX.pid.kp;
+  previousPosPidParams.xKi = this.pidX.pid.ki;
+  previousPosPidParams.xKd = this.pidX.pid.kd;
+  previousPosPidParams.xKff = this.pidX.pid.kff;
+
+  previousPosPidParams.yKp = this.pidY.pid.kp;
+  previousPosPidParams.yKi = this.pidY.pid.ki;
+  previousPosPidParams.yKd = this.pidY.pid.kd;
+  previousPosPidParams.yKff = this.pidY.pid.kff;
+
+  previousPosPidParams.zKp = this.pidZ.pid.kp;
+  previousPosPidParams.zKi = this.pidZ.pid.ki;
+  previousPosPidParams.zKd = this.pidZ.pid.kd;
+  previousPosPidParams.zKff = this.pidZ.pid.kff;
+
+  if (!isnan(xKp) && !isinf(xKp)) this.pidX.pid.kp = xKp;
+  if (!isnan(xKi) && !isinf(xKi)) this.pidX.pid.ki = xKi;
+  if (!isnan(xKd) && !isinf(xKd)) this.pidX.pid.kd = xKd;
+  if (!isnan(xKff) && !isinf(xKff)) this.pidX.pid.kff = xKff;
+
+  if (!isnan(yKp) && !isinf(yKp)) this.pidY.pid.kp = yKp;
+  if (!isnan(yKi) && !isinf(yKi)) this.pidY.pid.ki = yKi;
+  if (!isnan(yKd) && !isinf(yKd)) this.pidY.pid.kd = yKd;
+  if (!isnan(yKff) && !isinf(yKff)) this.pidY.pid.kff = yKff;
+
+  if (!isnan(zKp) && !isinf(zKp)) this.pidZ.pid.kp = zKp;
+  if (!isnan(zKi) && !isinf(zKi)) this.pidZ.pid.ki = zKi;
+  if (!isnan(zKd) && !isinf(zKd)) this.pidZ.pid.kd = zKd;
+  if (!isnan(zKff) && !isinf(zKff)) this.pidZ.pid.kff = zKff;
+}
+
+void resetPosPIDParamsToPrevious()
+{
+  this.pidX.pid.kp = previousPosPidParams.xKp;
+  this.pidX.pid.ki = previousPosPidParams.xKi;
+  this.pidX.pid.kd = previousPosPidParams.xKd;
+  this.pidX.pid.kff = previousPosPidParams.xKff;
+
+  this.pidY.pid.kp = previousPosPidParams.yKp;
+  this.pidY.pid.ki = previousPosPidParams.yKi;
+  this.pidY.pid.kd = previousPosPidParams.yKd;
+  this.pidY.pid.kff = previousPosPidParams.yKff;
+
+  this.pidZ.pid.kp = previousPosPidParams.zKp;
+  this.pidZ.pid.ki = previousPosPidParams.zKi;
+  this.pidZ.pid.kd = previousPosPidParams.zKd;
+  this.pidZ.pid.kff = previousPosPidParams.zKff;
 }
 
 /**
