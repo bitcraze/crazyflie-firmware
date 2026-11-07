@@ -39,6 +39,7 @@ typedef struct controllerLee_s {
     float Kpos_D_limit;
     struct vec Kpos_I; // not in paper
     float Kpos_I_limit;
+    float c_pos_multiplier;
     struct vec i_error_pos;
     struct vec p_error;
     struct vec v_error;
@@ -46,6 +47,7 @@ typedef struct controllerLee_s {
     struct vec KR;
     struct vec Komega;
     struct vec KI;
+    float c_att_multiplier;
     struct vec i_error_att;
     // Logging variables
     struct vec rpy;
@@ -53,7 +55,7 @@ typedef struct controllerLee_s {
     struct mat33 R_des;
     struct vec omega;
     struct vec omega_r;
-    struct vec u;
+    struct vec torqueSi;
 } controllerLee_t;
 
 
