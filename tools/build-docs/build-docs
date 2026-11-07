@@ -2,22 +2,7 @@
 set -e
 
 scriptDir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-doxDir=$scriptDir/../../generated/dox
-xmlDir=$doxDir/xml
-apiDocsDir=$scriptDir/../../docs/api
+rootDir=$scriptDir/../..
 
-# submodules required for rendering documentation
-git submodule update --init --recursive
-
-# config required to generate documentation
-make cf2_defconfig
-
-# Generate xml from the source code
-mkdir -p $doxDir
-[ -d "$xmlDir" ] && rm -r $xmlDir
-doxygen tools/gen-dox/Doxyfile
-
-# Generate markdown from the xml
-[ -d "$apiDir" ] && rm -r $apiDocsDir
-mkdir -p $apiDocsDir
-python3 $scriptDir/../gen-dox/xml_to_markdown_logparam_doc.py $xmlDir $apiDocsDir logs.md_raw params.md_raw
+# Generate the log and parameter documentation from the source code
+python3 $rootDir/tools/logparam-doc/logparam_doc.py --root $rootDir src $rootDir/docs/api

@@ -101,6 +101,9 @@ There are some limitations on the naming of the groups and variables:
 - Log variable length: The total log variable length may not exceed 26 (group + name + 1)
 - Characters: Group name and variable name may not contain . (full stop)
 
+All log and parameter variables are listed in the [log](/docs/api/logs.md) and
+[parameter](/docs/api/params.md) documentation.
+
 ## Parameters
 
 Using the parameter framework it's possible to both read and write

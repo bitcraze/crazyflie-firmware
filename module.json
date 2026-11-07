@@ -2,6 +2,6 @@
   "version": "2.0",
   "environmentReqs": {
     "build": ["arm-none-eabi"],
-    "build-docs": ["doxygen"]
+    "build-docs": ["python3"]
   }
 }
