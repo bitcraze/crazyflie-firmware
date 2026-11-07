@@ -374,8 +374,11 @@ void estimatorKalmanInit(void)
   #else
   if (deckGetRequiredKalmanEstimatorAttitudeReversionOff())
   {
+    if (coreParams.attitudeReversion != 0.0f)
+    {
+      DEBUG_PRINT("Attitude reversion deactivated by deck\n");
+    }
     coreParams.attitudeReversion = 0.0f;
-    DEBUG_PRINT("Attitude reversion deactivated by deck\n");
   }
   #endif
 
