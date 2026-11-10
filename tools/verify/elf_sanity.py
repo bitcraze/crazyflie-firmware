@@ -1,4 +1,5 @@
 import argparse
+import os
 import struct
 import sys
 
@@ -168,20 +169,42 @@ class ElfFile:
         return symbols
 
 
-def process_file(filename, list_params: bool, list_logs: bool, core: bool):
+def param_lines(parameters: dict) -> list:
+    return ['{:25}\t{}'.format(key, param_type_to_str(parameters[key])) for key in sorted(parameters.keys())]
+
+
+def log_lines(logs: dict) -> list:
+    return ['{:25}\t{}'.format(key, log_type_to_str(logs[key])) for key in sorted(logs.keys())]
+
+
+def write_output(output, parameters: dict, logs: dict):
+    """
+    Write all params and logs to the output file. Called only after all checks
+    have passed. The file is written to a temporary name and then renamed, so
+    that a complete output file exists only if the checks passed.
+    """
+    tmp = output + '.tmp'
+    with open(tmp, 'w') as f:
+        for line in param_lines(parameters) + log_lines(logs):
+            f.write(line + '\n')
+    os.replace(tmp, output)
+
+
+def process_file(filename, list_params: bool, list_logs: bool, core: bool, output=None):
     with open(filename, 'rb') as f:
         elf = ElfFile(f)
         parameters = check_structs(elf, 'param', core)
         if list_params:
-            for key in sorted(parameters.keys()):
-                t = parameters[key]
-                print('{:25}\t{}'.format(key, param_type_to_str(t)))
+            for line in param_lines(parameters):
+                print(line)
 
         logs = check_structs(elf, 'log', core)
         if list_logs:
-            for key in sorted(logs.keys()):
-                t = logs[key]
-                print('{:25}\t{}'.format(key, log_type_to_str(t)))
+            for line in log_lines(logs):
+                print(line)
+
+        if output:
+            write_output(output, parameters, logs)
 
         n_logs = Colors.GREEN + str(len(logs.keys())) + Colors.END
         n_params = Colors.BLUE + str(len(parameters.keys())) + Colors.END
@@ -291,6 +314,8 @@ if __name__ == '__main__':
     parser.add_argument('--list-params', action='store_true')
     parser.add_argument('--list-logs', action='store_true')
     parser.add_argument('--core', action='store_true')
+    parser.add_argument('--output', metavar='FILE',
+                        help='write all params and logs to FILE, only if all checks pass')
     parser.add_argument('filename', nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
@@ -299,7 +324,7 @@ if __name__ == '__main__':
 
     filename = args.filename[0]
     try:
-        process_file(filename, args.list_params, args.list_logs, args.core)
+        process_file(filename, args.list_params, args.list_logs, args.core, args.output)
     except (OSError, ElfError) as e:
         print('{}ELF check failed!{} {}: {}'.format(Colors.RED, Colors.END, filename, e), file=sys.stderr)
         sys.exit(1)
