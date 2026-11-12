@@ -223,16 +223,6 @@ int crtpSendPacketBlock(CRTPPacket *p)
   return xQueueSend(txQueue, p, portMAX_DELAY);
 }
 
-int crtpReset(void)
-{
-  xQueueReset(txQueue);
-  if (link->reset) {
-    link->reset();
-  }
-
-  return 0;
-}
-
 bool crtpIsConnected(void)
 {
   if (link->isConnected)
