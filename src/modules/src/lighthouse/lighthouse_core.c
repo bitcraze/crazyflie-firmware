@@ -365,8 +365,8 @@ bool findOtherBaseStation(const pulseProcessorResult_t* angles, const int baseSt
 // 0 = Position calculated outside the estimator using intersection point of beams.
 //     Yaw error calculated outside the estimator. Position and yaw error is pushed to the
 //     estimator as pre-calculated.
-// 1 = Sweep angles pushed into the estimator. Yaw error calculated outside the estimator
-//     and pushed to the estimator as a pre-calculated value.
+// 1 = Sweep angles pushed into the estimator. Full orientation (roll, pitch, yaw) is
+//     estimated inside the estimator from the sweep angles; no external yaw error is used.
 #ifdef CONFIG_DECK_LIGHTHOUSE_AS_GROUNDTRUTH
 static uint8_t estimationMethod = 0;
 #else
@@ -612,7 +612,7 @@ void lighthouseCoreTask(void *param) {
       // Now we are receiving items
       else if(!frame.isSyncFrame) {
         STATS_CNT_RATE_EVENT_DEBUG(&frameRate);
-	lighthouseTransmitProcessFrame(&frame);
+	      lighthouseTransmitProcessFrame(&frame);
 
         deckHealthCheck(&lighthouseCoreState, &frame, now_ms);
         lighthouseUpdateSystemType();
