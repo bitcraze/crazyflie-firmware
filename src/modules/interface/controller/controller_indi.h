@@ -114,4 +114,8 @@ void controllerINDI(control_t *control, const setpoint_t *setpoint,
                                          const state_t *state,
                                          const stabilizerStep_t stabilizerStep);
 
+// INDI does not currently support precise landing; these are no-ops.
+void controllerINDIEnterPreciseLand(void);
+void controllerINDIExitPreciseLand(void);
+
 #endif //__CONTROLLER_INDI_H__
