@@ -1,0 +1,2 @@
+obj-$(CONFIG_ENABLE_CPX) += cpxlink.o
+obj-y += vcp_esc_passthrough.o

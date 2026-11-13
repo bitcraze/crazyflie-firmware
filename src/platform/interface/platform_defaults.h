@@ -46,6 +46,12 @@
 #ifdef CONFIG_PLATFORM_FLAPPER
     #include "platform_defaults_flapper.h"
 #endif
+#ifdef CONFIG_PLATFORM_SIM
+    /* The Simmyflie's built-in physics engine models a Crazyflie 2.1
+     * Brushless, so it uses that platform's controller gains and physical
+     * constants. */
+    #include "platform_defaults_cf21bl.h"
+#endif
 
 // Drone physical constants
 // TODO provide those in each config. Those are values of cf2 platform

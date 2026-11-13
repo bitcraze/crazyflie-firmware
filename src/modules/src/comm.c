@@ -26,6 +26,7 @@
 
 #include <stdbool.h>
 
+#include "autoconf.h"
 #include "config.h"
 
 #include "crtp.h"
@@ -40,6 +41,9 @@
 #include "platformservice.h"
 #include "syslink.h"
 #include "crtp_localization_service.h"
+#ifdef CONFIG_PLATFORM_SIM
+#include "udplink.h"
+#endif
 
 static bool isInit;
 
@@ -48,21 +52,33 @@ void commInit(void)
   if (isInit)
     return;
 
+#ifdef CONFIG_PLATFORM_SIM
+  /* Simmyflie: CRTP is carried over UDP in place of the radio. */
+  udplinkInit();
+#else
   uartslkInit();
   radiolinkInit();
+#endif
 
   /* These functions are moved to be initialized early so
    * that DEBUG_PRINT can be used early */
   // crtpInit();
   // consoleInit();
 
+#ifdef CONFIG_PLATFORM_SIM
+  crtpSetLink(udplinkGetLink());
+#else
   crtpSetLink(radiolinkGetLink());
+#endif
 
   crtpserviceInit();
   platformserviceInit();
   logInit();
   paramInit();
+#ifndef CONFIG_PLATFORM_SIM
+  /* The localization service is not built for the Simmyflie */
   locSrvInit();
+#endif
 
   //setup CRTP communication channel
   //TODO: check for USB first and prefer USB over radio
@@ -78,7 +94,9 @@ bool commTest(void)
 {
   bool pass=isInit;
   
+#ifndef CONFIG_PLATFORM_SIM
   pass &= radiolinkTest();
+#endif
   pass &= crtpTest();
   pass &= crtpserviceTest();
   pass &= platformserviceTest();

@@ -30,6 +30,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "config.h"
 #include "queuemonitor.h"
 #include "static_mem.h"
 

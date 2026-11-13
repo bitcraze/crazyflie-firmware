@@ -1,0 +1,18 @@
+# Simmyflie: applied on top of the normal configuration by 'make sim'.
+CONFIG_PLATFORM_SIM=y
+CONFIG_CROSS_COMPILE=""
+
+# The Kalman estimator is forced. With automatic selection and no decks,
+# which is always the case in the sim, the firmware would choose the
+# complementary estimator, as a Crazyflie without decks does. A forced
+# estimator can not be switched with the stabilizer.estimator param; to run
+# another one, change this line.
+CONFIG_ESTIMATOR_KALMAN=y
+
+# The sim has no deck bus. These decks are enabled by default in some
+# configurations and must be turned off; the uSD deck is also called from
+# stabilizer.c.
+CONFIG_DECK_FLOW=n
+CONFIG_DECK_LIGHTHOUSE=n
+CONFIG_DECK_LOCO=n
+CONFIG_DECK_USD=n

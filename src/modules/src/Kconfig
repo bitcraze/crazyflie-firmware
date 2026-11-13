@@ -266,7 +266,7 @@ choice
 
 config POWER_DISTRIBUTION_QUADROTOR
     bool "Quadrotor power distribution"
-    depends on PLATFORM_CF2 || PLATFORM_CF21BL|| PLATFORM_BOLT || PLATFORM_TAG
+    depends on PLATFORM_CF2 || PLATFORM_CF21BL|| PLATFORM_BOLT || PLATFORM_TAG || PLATFORM_SIM
     help
         Power distribution function for quadrotors
 config POWER_DISTRIBUTION_FLAPPER

@@ -5,6 +5,9 @@ compiler:
   path: gcc
   source_path:     'src/'
   unit_tests_path: 'test/**/'
+  # Run by 'make unit_sim' with tools/test/gcc_sim.yml
+  unit_tests_exclude:
+    - 'test/sim/**/*'
   mocks_path:      'generated/test/mocks/'
   build_path:      'generated/test/build/'
   options:
