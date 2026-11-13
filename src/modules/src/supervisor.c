@@ -47,8 +47,10 @@
 #define DEBUG_MODULE "SUP"
 #include "debug.h"
 
+#ifdef CONFIG_ONBOARD_GUIDANCE_HLC_ENABLE
 #include "planner.h"
 #include "crtp_commander_high_level.h"
+#endif
 
 #define DEFAULT_EMERGENCY_STOP_WATCHDOG_TIMEOUT (M2T(1000))
 
@@ -567,6 +569,10 @@ static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t
   if (this->isCrashed) {
     this->infoBitfield |= 0x0080;
   }
+
+// HLC planner state bits (0x0100-0x0400). These are HLC-specific and will
+// be zero when using an out-of-tree onboard guidance implementation.
+#ifdef CONFIG_ONBOARD_GUIDANCE_HLC_ENABLE
   enum trajectory_state traj_state =  crtpCommanderHighLevelGetPlannerState();
 
   if ((traj_state & TRAJECTORY_STATE_FLYING) == TRAJECTORY_STATE_FLYING) {
@@ -578,6 +584,7 @@ static void updateLogData(SupervisorMem_t* this, const supervisorConditionBits_t
   if (traj_state == TRAJECTORY_STATE_DISABLED) {
       this->infoBitfield |= 0x0400;  // high level control is not producing setpoints
   }
+#endif
 
   if (conditions & SUPERVISOR_CB_DECK_FAULT) {
       this->infoBitfield |= 0x0800;  // a deck has reported a hardware fault

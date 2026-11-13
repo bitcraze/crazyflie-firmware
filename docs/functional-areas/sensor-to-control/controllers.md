@@ -26,6 +26,24 @@ Here is an overview of the types of controllers there are per level:
 
 We will now explain per controller how exactly they are being implemented in the [crazyflie-firmware](https://github.com/bitcraze/crazyflie-firmware/).
 
+## Configuring the controller
+
+The available controllers are defined in the `ControllerType` enum in `src/modules/interface/controller.h`.
+
+### Setting in runtime
+
+To activate a specific controller, set the `stabilizer.controller` parameter to the appropriate value based on the `ControllerType`.
+
+The parameter can be set from the python client, the python lib or from an app in the Crazyflie.
+
+### Default controller
+
+The PID controller is the default controller.
+
+### Setting at compile time
+
+It is possible to force the use of a specific controller at compile time by selecting it in [kbuild](/docs/development/kbuild.md), for example `CONFIG_CONTROLLER_MELLINGER`.
+
 ## Cascaded PID controller
 
 By default, the Crazyflie firmware utilizes [proportional integral derivative (PID)](https://en.wikipedia.org/wiki/PID_controller) control to manage the drone's state. The firmware employs distinct PID controllers for each control level: position, velocity, attitude, and attitude rate. The output of each controller feeds into the input of the next, lower level controller, forming a cascaded PID structure. Depending on the [control mode](/docs/functional-areas/sensor-to-control/commanders_setpoints/#setpoint-structure), different setpoints can be fed into the system, influencing which PID controllers are activated. For instance, when using attitude rate setpoints, only the attitude rate PID controller is active; for attitude setpoints, both the attitude and attitude rate PID controllers are used; and so on for velocity and position setpoints. Ultimately, regardless of the control mode, the angle rate controller translates the desired angle rates into PWM commands for the motors.
