@@ -37,7 +37,7 @@ Swarm file format:
     name: Sim swarm                     # required
     description: Two Simmyflies         # optional
     units:                              # required
-    - uri: udp://localhost:50000        # required
+    - uri: udp://localhost:26501        # required
       name: sim-01                      # optional
       description: The first one        # optional
 
@@ -46,7 +46,7 @@ uses its own value when it is given, and otherwise the swarm's value:
 
     binary: ../build/sim.elf            # relative to the yaml file
     ground_level: 0.0                   # m
-    beacon: 239.255.50.0:49999          # <multicast group>:<port>
+    beacon: 239.255.50.0:26500          # <multicast group>:<port>
     start_x: 0.0                        # m
     start_y: 0.0                        # m
     start_yaw: 0                        # degrees

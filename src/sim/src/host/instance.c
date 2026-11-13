@@ -57,10 +57,10 @@
 #include "beacon_sender.h"
 #include "physics_engine_manager.h"
 
-#define INSTANCE_DEFAULT_PORT 50000
+#define INSTANCE_DEFAULT_PORT 26501
 #define DEFAULT_GROUND_LEVEL 0.0f  // m
 #define DEFAULT_BEACON_GROUP "239.255.50.0"
-#define DEFAULT_BEACON_PORT 49999
+#define DEFAULT_BEACON_PORT 26500
 
 #define STRINGIFY_(x) #x
 #define STRINGIFY(x) STRINGIFY_(x)

@@ -16,7 +16,7 @@ its own UDP port.
 ## Concepts
 
 * **Instance**: a running Simmyflie. Each instance is identified by the UDP
-  port it listens on, by default 50000. You connect to it with the URI
+  port it listens on, by default 26501. You connect to it with the URI
   `udp://localhost:<port>`.
 * **World**: the single frame shared by all Simmyflies on the computer. Two
   Simmyflies with the same start pose stand in the same spot. Simmyflies do
@@ -72,20 +72,20 @@ Settings for the simulation itself are in `make menuconfig` under
 ## Running a Simmyflie
 
 ```sh
-./build/sim.elf                  # listens on UDP port 50000
-./build/sim.elf --port 50001     # pick another port
+./build/sim.elf                  # listens on UDP port 26501
+./build/sim.elf --port 26502     # pick another port
 ```
 
 Options:
 
 | Option                   | Description                                                   | Default             |
 |--------------------------|---------------------------------------------------------------|---------------------|
-| `--port <n>`, `-p <n>`   | UDP port to listen on                                         | 50000               |
+| `--port <n>`, `-p <n>`   | UDP port to listen on                                         | 26501               |
 | `--start-x <m>`          | Start position x, in m                                        | from `menuconfig`   |
 | `--start-y <m>`          | Start position y, in m                                        | from `menuconfig`   |
 | `--start-yaw <deg>`      | Start yaw, in degrees                                         | from `menuconfig`   |
 | `--ground-level <m>`     | Ground level, in m                                            | 0                   |
-| `--beacon <group:port>`  | Where to send beacons: an IPv4 multicast group and a UDP port | `239.255.50.0:49999`|
+| `--beacon <group:port>`  | Where to send beacons: an IPv4 multicast group and a UDP port | `239.255.50.0:26500`|
 | `--help`                 | Print the options and exit                                    |                     |
 
 Options with a value can also be written as `--name=value`, for example
@@ -99,7 +99,7 @@ To run several Simmyflies, start one per port, or use
 
 ## Connecting with cflib and cfclient
 
-Use the URI `udp://localhost:<port>`, for example `udp://localhost:50000`,
+Use the URI `udp://localhost:<port>`, for example `udp://localhost:26501`,
 anywhere you would use a `radio://` URI. For example, a
 [cflib](https://www.bitcraze.io/documentation/repository/crazyflie-lib-python/master/)
 script:
@@ -110,12 +110,13 @@ from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 
 cflib.crtp.init_drivers()
-with SyncCrazyflie('udp://localhost:50000', cf=Crazyflie()) as scf:
+with SyncCrazyflie('udp://localhost:26501', cf=Crazyflie()) as scf:
     print('Connected to', scf.cf.link_uri)
 ```
 
-In cfclient, press **Scan**. Simmyflies listening on ports 50000 to 50500
-show up as `udp://127.0.0.1:<port>`.
+In cfclient, press **Scan**. A Simmyflie found by the scan shows up as
+`udp://127.0.0.1:<port>`. It is recommended to use a port in the range 26501-26999,
+since it is an unassigned range and the cflib scans it.
 
 ### Simulation parameters and logs
 
@@ -181,7 +182,7 @@ connection. Nobody answers a beacon, and a Simmyflie doesn't know if anyone
 is listening.
 
 Beacons are UDP datagrams sent to an IPv4 multicast group, by default
-`239.255.50.0:49999`. Change it with the Simmyflie's `--beacon` option. They
+`239.255.50.0:26500`. Change it with the Simmyflie's `--beacon` option. They
 are sent on the loopback interface with a TTL of 0, so they never leave the
 computer. Any number of programs can listen at the same time. Each one joins
 the multicast group on `127.0.0.1`, with `SO_REUSEADDR` set so they can share
@@ -229,7 +230,7 @@ uv run tools/sim/simviewer.py
 Option:
 
 * `--beacon <group:port>`: the beacon address to listen to. Default
-  `239.255.50.0:49999`. It must match the Simmyflies' `--beacon` to pick up their beacons.
+  `239.255.50.0:26500`. It must match the Simmyflies' `--beacon` to pick up their beacons.
 
 In the view:
 
@@ -276,11 +277,11 @@ ground_level: 0.0                       # m, for every unit
 start_yaw: 0                            # degrees, for every unit
 binary: ../build/sim.elf                # for every unit
 units:                                  # required
-- uri: udp://localhost:50000            # required
+- uri: udp://localhost:26501            # required
   name: sim-01
   start_x: 0.0                          # m
   start_y: 0.0                          # m
-- uri: udp://localhost:50001
+- uri: udp://localhost:26502
   name: sim-02
   start_x: 1.0
   start_y: 0.0
@@ -293,7 +294,7 @@ units:                                  # required
 | `name`          | swarm | yes      | Name of the swarm                             |
 | `description`   | swarm | no       | Description of the swarm                      |
 | `units`         | swarm | yes      | List of units                                 |
-| `uri`           | unit  | yes      | URI of the unit, e.g. `udp://localhost:50000` |
+| `uri`           | unit  | yes      | URI of the unit, e.g. `udp://localhost:26501` |
 | `name`          | unit  | no       | Name of the unit                              |
 | `description`   | unit  | no       | Description of the unit                       |
 
@@ -327,7 +328,7 @@ optional.
 ### One Simmyflie
 
 ```sh
-# Terminal 1: build and start a Simmyflie on port 50000
+# Terminal 1: build and start a Simmyflie on port 26501
 make cf21bl_defconfig
 make sim
 ./build/sim.elf
@@ -336,7 +337,7 @@ make sim
 uv run tools/sim/simviewer.py
 
 # Terminal 3: fly it with cfclient or a cflib script, using
-# udp://localhost:50000
+# udp://localhost:26501
 ```
 
 ### A swarm, with Simfield

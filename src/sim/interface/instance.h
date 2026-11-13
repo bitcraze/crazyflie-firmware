@@ -35,9 +35,9 @@
 /**
  * Parses argv (see --help: --port/-p, --start-x, --start-y, --start-yaw,
  * --ground-level, --beacon, each as "--name value" or "--name=value"),
- * creates and binds a UDP socket to the port (default 50000), creates the
+ * creates and binds a UDP socket to the port (default 26501), creates the
  * beacon socket and starts the Beacon sender with the beacon address
- * (default 239.255.50.0:49999), then fills the physics
+ * (default 239.255.50.0:26500), then fills the physics
  * engine configuration from the arguments and the Kconfig defaults and
  * starts the Physics engine manager with it. Must be called before
  * vTaskStartScheduler().

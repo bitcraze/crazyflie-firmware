@@ -46,7 +46,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-DEFAULT_BEACON = "239.255.50.0:49999"
+DEFAULT_BEACON = "239.255.50.0:26500"
 
 LOST_TIMEOUT_S = 1.0
 REMOVE_TIMEOUT_S = 10.0
