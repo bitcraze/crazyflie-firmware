@@ -14,6 +14,7 @@
 #include "ff.h"
 #include "diskio.h"
 #include "fatfs_sd.h"
+#include "usec_time.h"
 
 /* MMC card type flags (MMC_GET_TYPE) */
 #define CT_MMC 0x01              /* MMC ver 3 */
@@ -50,10 +51,33 @@ static const int INT_READY = 1;
 
 static uint8_t powerFlag;
 
+// How long a busy card is polled before the wait goes to sleep
+#define READY_POLL_US 100
+
 static int waitForCardReady(sdSpiContext_t *context, UINT timeoutMs) {
   BYTE d;
   uint32_t timeout = timeoutMs;
 
+  if (context->xchgSpi(0xFF) == 0xFF) {
+    return INT_READY;
+  }
+
+  // A card is busy for a few microseconds after each block of a multi-block
+  // write. Sleeping lasts until the next tick, which would limit the writes to
+  // one block per tick, so poll for a short while first. The bus is released
+  // between the polls, as other decks share it: a deck waiting for it gets it
+  // as soon as it is released.
+  const uint64_t pollEnd = usecTimestamp() + READY_POLL_US;
+  while (usecTimestamp() < pollEnd) {
+    context->csHigh(0);
+    context->csLow();
+    if (context->xchgSpi(0xFF) == 0xFF) {
+      return INT_READY;
+    }
+  }
+
+  // Still busy: a longer wait, such as the end of a write or the card doing
+  // its own housekeeping
   while ((d = context->xchgSpi(0xFF)) != 0xFF && timeout)
   {
     // Waiting can take a while so release the SPI bus in between
