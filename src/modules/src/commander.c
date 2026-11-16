@@ -29,9 +29,10 @@
 #include "task.h"
 #include "queue.h"
 
+#include "autoconf.h"
 #include "commander.h"
 #include "crtp_commander.h"
-#include "crtp_commander_high_level.h"
+#include "onboard_guidance.h"
 
 #include "cf_math.h"
 #include "param.h"
@@ -65,7 +66,8 @@ void commanderInit(void)
   xQueueSend(priorityQueue, &priorityDisable, 0);
 
   crtpCommanderInit();
-  crtpCommanderHighLevelInit();
+  onboardGuidanceInit(OnboardGuidanceTypeAutoSelect);
+  ASSERT(onboardGuidanceTest());
   lastUpdate = xTaskGetTickCount();
 
   isInit = true;
@@ -83,16 +85,15 @@ void commanderSetSetpoint(setpoint_t *setpoint, int priority)
     // This is a potential race but without effect on functionality
     xQueueOverwrite(setpointQueue, setpoint);
     xQueueOverwrite(priorityQueue, &priority);
-    if (priority > COMMANDER_PRIORITY_HIGHLEVEL) {
-      // Stop the high-level planner so it will forget its current state
-      crtpCommanderHighLevelStop();
+    if (priority > COMMANDER_PRIORITY_ONBOARD_GUIDANCE) {
+      onboardGuidanceStop();
     }
   }
 }
 
 void commanderRelaxPriority()
 {
-  crtpCommanderHighLevelTellState(&lastState);
+  onboardGuidanceTellState(&lastState);
   int priority = COMMANDER_PRIORITY_LOWEST;
   xQueueOverwrite(priorityQueue, &priority);
 }

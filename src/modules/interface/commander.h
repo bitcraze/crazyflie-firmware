@@ -34,9 +34,9 @@
 
 #define COMMANDER_PRIORITY_DISABLE   0
 // Keep a macro for lowest non-disabled priority, regardless of source, in case
-// some day there is a priority lower than the high-level commander.
-#define COMMANDER_PRIORITY_LOWEST    1
-#define COMMANDER_PRIORITY_HIGHLEVEL 1
+// some day there is a priority lower than onboard guidance.
+#define COMMANDER_PRIORITY_LOWEST          1
+#define COMMANDER_PRIORITY_ONBOARD_GUIDANCE 1
 #define COMMANDER_PRIORITY_CRTP      2
 #define COMMANDER_PRIORITY_EXTRX     3
 

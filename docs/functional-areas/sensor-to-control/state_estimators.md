@@ -67,6 +67,26 @@ The time-of-flight measurements of the flow-deck are also subject to a simple ou
 
 
 
+## Configuring the estimator
+
+The available estimators are defined in the `StateEstimatorType` enum in `src/modules/interface/estimator.h`.
+
+### Setting in runtime
+
+To activate a specific estimator, set the `stabilizer.estimator` parameter to the appropriate value based on the `StateEstimatorType`.
+
+The parameter can be set from the [python client](https://www.bitcraze.io/documentation/repository/crazyflie-clients-python/master/), the [python lib](https://www.bitcraze.io/documentation/repository/crazyflie-lib-python/master/) or from [an app on-board the Crazyflie](/docs/userguides/app_layer.md).
+
+### Default estimator
+
+The complementary estimator is the default estimator.
+
+Some decks require the Kalman estimator and it is automatically activated when one of these decks are detected. The activated estimator is based on the `.requiredEstimator` member of [the DeckDriver API](/docs/userguides/deck.md).
+
+### Setting default estimator at compile time
+
+It is possible to force the use of a specific estimator at compile time by selecting it in [kbuild](/docs/development/kbuild.md), for example `CONFIG_ESTIMATOR_KALMAN`.
+
 ## References
 [1] Mueller, Mark W., Michael Hamer, and Raffaello D'Andrea. "Fusing ultra-wideband range measurements with accelerometers and rate gyroscopes for quadrocopter state estimation." 2015 IEEE International Conference on Robotics and Automation (ICRA). IEEE, 2015.
 

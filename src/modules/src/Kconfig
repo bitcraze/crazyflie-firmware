@@ -1,9 +1,8 @@
-menu "Controllers and Estimators"
-
 choice
-    prompt "Default controller"
+    prompt "Controller"
     default CONFIG_CONTROLLER_AUTO_SELECT
-    depends on !CONTROLLER_OOT
+    help
+        Controller used at startup. Can be switched at runtime via parameters.
 
 config CONTROLLER_AUTO_SELECT
     bool "Auto select Controller"
@@ -47,11 +46,12 @@ config CONTROLLER_LEE
     help
         Use the Lee controller as default
 
-endchoice
-
 config CONTROLLER_OOT
     bool "Out-of-tree controller"
-    default n
+
+endchoice
+
+menu "State estimator"
 
 config ESTIMATOR_KALMAN_ENABLE
     bool "Enable Kalman Estimator"
@@ -97,9 +97,10 @@ config ESTIMATOR_OUTLIER_FILTERS
         Include outlier filters for estimators
 
 choice
-    prompt "Default estimator"
+    prompt "Estimator"
     default CONFIG_ESTIMATOR_AUTO_SELECT
-    depends on !ESTIMATOR_OOT
+    help
+        State estimator used at startup. Can be switched at runtime via parameters.
 
 config ESTIMATOR_AUTO_SELECT
     bool "Auto select Estimator"
@@ -123,11 +124,36 @@ config ESTIMATOR_COMPLEMENTARY
     help
         Use the lightweight complementary estimator as default
 
-endchoice
-
 config ESTIMATOR_OOT
     bool "Out-of-tree estimator"
-    default n
+
+endchoice
+
+endmenu
+
+menu "Onboard guidance"
+
+choice
+    prompt "Default onboard guidance"
+    default ONBOARD_GUIDANCE_AUTO_SELECT
+
+config ONBOARD_GUIDANCE_AUTO_SELECT
+    bool "Auto select"
+
+config ONBOARD_GUIDANCE_HIGHLEVEL_COMMANDER
+    bool "High-Level Commander"
+
+config ONBOARD_GUIDANCE_OOT
+    bool "Out-of-tree onboard guidance"
+
+endchoice
+
+config ONBOARD_GUIDANCE_HLC_ENABLE
+    bool "Compile High-Level Commander" if ONBOARD_GUIDANCE_OOT
+    default y
+    help
+        Include the built-in High-Level Commander in the firmware.
+        Can only be disabled when using out-of-tree onboard guidance.
 
 endmenu
 
