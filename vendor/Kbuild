@@ -1,3 +1,28 @@
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+
+# The Simmyflie builds only the CMSIS DSP functions that the Kalman filter
+# uses: arm_cos_f32() and arm_sin_f32() (with their tables) for its initial
+# quaternion, and the matrix functions behind cf_math.h. All are plain C.
+obj-y += CMSIS/CMSIS/DSP/Source/CommonTables/arm_common_tables.o
+obj-y += CMSIS/CMSIS/DSP/Source/FastMathFunctions/arm_cos_f32.o
+obj-y += CMSIS/CMSIS/DSP/Source/FastMathFunctions/arm_sin_f32.o
+obj-y += CMSIS/CMSIS/DSP/Source/MatrixFunctions/arm_mat_mult_f32.o
+obj-y += CMSIS/CMSIS/DSP/Source/MatrixFunctions/arm_mat_trans_f32.o
+obj-y += CMSIS/CMSIS/DSP/Source/MatrixFunctions/arm_mat_scale_f32.o
+obj-y += CMSIS/CMSIS/DSP/Source/MatrixFunctions/arm_mat_inverse_f32.o
+
+# FreeRTOS with the Posix port, and the host's malloc() as the heap
+# (heap_3). Software timers are used by log.c.
+obj-y += FreeRTOS/list.o
+obj-y += FreeRTOS/queue.o
+obj-y += FreeRTOS/tasks.o
+obj-y += FreeRTOS/timers.o
+obj-y += FreeRTOS/portable/ThirdParty/GCC/Posix/port.o
+obj-y += FreeRTOS/portable/ThirdParty/GCC/Posix/utils/wait_for_event.o
+obj-y += FreeRTOS/portable/MemMang/heap_3.o
+
+else
+
 obj-y += CMSIS/CMSIS/DSP/Source/BasicMathFunctions/arm_abs_f32.o
 obj-y += CMSIS/CMSIS/DSP/Source/BasicMathFunctions/arm_abs_q15.o
 obj-y += CMSIS/CMSIS/DSP/Source/BasicMathFunctions/arm_abs_q31.o
@@ -284,3 +309,5 @@ obj-y += FreeRTOS/stream_buffer.o
 # libdw1000
 obj-y += libdw1000/src/libdw1000.o
 obj-y += libdw1000/src/libdw1000Spi.o
+
+endif

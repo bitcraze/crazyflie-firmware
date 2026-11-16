@@ -167,7 +167,7 @@ static void platformCommandProcess(CRTPPacket *p)
       // 1 - success
       const uint8_t notificationType = data[0];
 
-      workerSchedule(runUserNotification, (void*)(uint32_t)notificationType);
+      workerSchedule(runUserNotification, (void*)(uintptr_t)notificationType);
       p->size = 0;
       break;
     }
@@ -218,7 +218,7 @@ static void versionCommandProcess(CRTPPacket *p)
 
 static void runUserNotification(void* arg)
 {
-  uint8_t notificationType = (uint32_t)arg;
+  uint8_t notificationType = (uintptr_t)arg;
   if (notificationType) {
     ledseqRun(&seq_user_notification_success);
   } else {

@@ -24,9 +24,12 @@
  * console.c - Used to send console data to client
  */
 
+#include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <stdatomic.h>
+
+#include "autoconf.h"
 
 /*FreeRtos includes*/
 #include "FreeRTOS.h"
@@ -445,6 +448,15 @@ bool consoleTest(void)
 int consolePutchar(int ch)
 {
   bool isInInterrupt = (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) != 0;
+
+#ifdef CONFIG_PLATFORM_SIM
+  // The Simmyflie also writes all console output to its terminal, including
+  // output from before consoleInit() or before a client has connected.
+  putchar(ch);
+  if (ch == '\n') {
+    fflush(stdout);
+  }
+#endif
 
   if (!isInit) {
     return 0;

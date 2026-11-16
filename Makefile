@@ -25,54 +25,8 @@ CLOAD_ARGS        ?=
 ARCH := stm32f4
 SRCARCH := stm32f4
 
-ARCH_CFLAGS += -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -g3
-ARCH_CFLAGS += -fno-math-errno -DARM_MATH_CM4 -D__FPU_PRESENT=1 -mfp16-format=ieee
-ARCH_CFLAGS += -Wno-array-bounds -Wno-stringop-overread
-ARCH_CFLAGS += -Wno-stringop-overflow
-ARCH_CFLAGS += -DSTM32F4XX -DSTM32F40_41xxx -DHSE_VALUE=8000000 -DUSE_STDPERIPH_DRIVER
-
-FREERTOS = $(srctree)/vendor/FreeRTOS
-PORT = $(FREERTOS)/portable/GCC/ARM_CM4F
-LIB = $(srctree)/src/lib
-PROCESSOR = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
-LINKER_DIR = $(srctree)/tools/make/F405/linker
-
-LDFLAGS = $(PROCESSOR)
-image_LDFLAGS += --specs=nosys.specs --specs=nano.specs -nostdlib
-image_LDFLAGS += -z noexecstack
-image_LDFLAGS += -Wl,-Map=$(PROG).map,--cref,--gc-sections,--undefined=uxTopUsedPriority
-image_LDFLAGS += -L$(srctree)/tools/make/F405/linker
-image_LDFLAGS += -T $(LINKER_DIR)/FLASH_CLOAD.ld
-
-#
-# Let an out-of-tree app shadow in-tree interface headers (e.g. a custom
-# platform_defaults.h) by putting them in an "overrides" subfolder, which
-# gets first priority in the include search path, ahead of every other
-# INCLUDES entry below.
-#
-ifneq ($(OOT),)
-INCLUDES += -I$(OOT)/overrides
-endif
-
-INCLUDES += -I$(srctree)/vendor/CMSIS/CMSIS/Core/Include -I$(srctree)/vendor/CMSIS/CMSIS/DSP/Include
-INCLUDES += -I$(srctree)/vendor/libdw1000/inc
-INCLUDES += -I$(FREERTOS)/include -I$(PORT)
-INCLUDES += -I$(srctree)/src/config
-INCLUDES += -I$(srctree)/src/platform/interface
-INCLUDES += -I$(srctree)/src/deck/interface -I$(srctree)/src/deck/drivers/interface
-INCLUDES += -I$(srctree)/src/drivers/interface -I$(srctree)/src/drivers/bosch/interface
-INCLUDES += -I$(srctree)/src/drivers/esp32/interface
-INCLUDES += -I$(srctree)/src/hal/interface
-INCLUDES += -I$(srctree)/src/modules/interface -I$(srctree)/src/modules/interface/kalman_core -I$(srctree)/src/modules/interface/lighthouse  -I$(srctree)/src/modules/interface/outlierfilter
-INCLUDES += -I$(srctree)/src/modules/interface/cpx -I$(srctree)/src/modules/interface/p2pDTR -I$(srctree)/src/modules/interface/controller  -I$(srctree)/src/modules/interface/estimator
-INCLUDES += -I$(srctree)/src/utils/interface -I$(srctree)/src/utils/interface/kve -I$(srctree)/src/utils/interface/lighthouse -I$(srctree)/src/utils/interface/tdoa
-INCLUDES += -I$(LIB)/FatFS
-INCLUDES += -I$(LIB)/CMSIS/STM32F4xx/Include
-INCLUDES += -I$(LIB)/STM32_USB_Device_Library/Core/inc
-INCLUDES += -I$(LIB)/STM32_USB_OTG_Driver/inc
-INCLUDES += -I$(LIB)/STM32F4xx_StdPeriph_Driver/inc
-INCLUDES += -I$(LIB)/vl53l1 -I$(LIB)/vl53l1/core/inc
-INCLUDES += -I$(KBUILD_OUTPUT)/include/generated
+# The Simmyflie (CONFIG_PLATFORM_SIM) branch of the compiler and linker
+# settings is below the auto.conf include, where CONFIG_* is known.
 
 # Here we tell Kbuild where to look for Kbuild files which will tell the
 # buildsystem which sources to build
@@ -96,6 +50,94 @@ export KCONFIG_ALLCONFIG ?= configs/all.config
 KBUILD_OUTPUT ?= build
 
 -include $(KBUILD_OUTPUT)/include/config/auto.conf
+
+#
+# Let an out-of-tree app shadow in-tree interface headers (e.g. a custom
+# platform_defaults.h) by putting them in an "overrides" subfolder, which
+# gets first priority in the include search path, ahead of every other
+# INCLUDES entry below.
+#
+ifneq ($(OOT),)
+INCLUDES += -I$(OOT)/overrides
+endif
+
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+
+# Simmyflie: a host build on the FreeRTOS Posix port. CONFIG_CROSS_COMPILE
+# is blanked in configs/sim_defconfig, so the host gcc is used.
+# -Wno-unused-variable: the FreeRTOS Posix port has unused locals.
+# -malign-data=abi: x86-64 gcc otherwise aligns large arrays beyond what the
+# ABI requires, which arm-none-eabi-gcc does not. The log and param tables
+# are arrays from many files gathered in one section and counted as
+# (end - start) / element size, so extra alignment padding between them
+# breaks the count.
+ARCH_CFLAGS += -g3 -pthread -D_GNU_SOURCE -Wno-unused-variable -malign-data=abi
+
+FREERTOS = $(srctree)/vendor/FreeRTOS
+PORT = $(FREERTOS)/portable/ThirdParty/GCC/Posix
+LIB = $(srctree)/src/lib
+
+LDFLAGS =
+
+# The log and param sections also need -Wl,--unique in the partial links
+# where same-named groups from different files meet. That is set with
+# EXTRA_LDFLAGS in those Kbuild files (src/Kbuild, src/modules/Kbuild,
+# src/modules/src/Kbuild), not here: LDFLAGS also reaches the final link,
+# where sim_toc_sections.ld gathers the sections and --unique would leave
+# the tables empty.
+image_LDFLAGS += -pthread
+image_LDFLAGS += -Wl,-Map=$(PROG).map,--cref,--gc-sections
+image_LDFLAGS += -T $(srctree)/tools/make/sim/linker/sim_toc_sections.ld
+
+INCLUDES += -I$(srctree)/src/sim/shadow
+INCLUDES += -I$(PORT)/utils
+
+else
+
+ARCH_CFLAGS += -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -g3
+ARCH_CFLAGS += -fno-math-errno -DARM_MATH_CM4 -D__FPU_PRESENT=1 -mfp16-format=ieee
+ARCH_CFLAGS += -Wno-array-bounds -Wno-stringop-overread
+ARCH_CFLAGS += -Wno-stringop-overflow
+ARCH_CFLAGS += -DSTM32F4XX -DSTM32F40_41xxx -DHSE_VALUE=8000000 -DUSE_STDPERIPH_DRIVER
+
+FREERTOS = $(srctree)/vendor/FreeRTOS
+PORT = $(FREERTOS)/portable/GCC/ARM_CM4F
+LIB = $(srctree)/src/lib
+PROCESSOR = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
+LINKER_DIR = $(srctree)/tools/make/F405/linker
+
+LDFLAGS = $(PROCESSOR)
+image_LDFLAGS += --specs=nosys.specs --specs=nano.specs -nostdlib
+image_LDFLAGS += -z noexecstack
+image_LDFLAGS += -Wl,-Map=$(PROG).map,--cref,--gc-sections,--undefined=uxTopUsedPriority
+image_LDFLAGS += -L$(srctree)/tools/make/F405/linker
+image_LDFLAGS += -T $(LINKER_DIR)/FLASH_CLOAD.ld
+
+endif
+
+INCLUDES += -I$(srctree)/vendor/CMSIS/CMSIS/Core/Include -I$(srctree)/vendor/CMSIS/CMSIS/DSP/Include
+INCLUDES += -I$(srctree)/vendor/libdw1000/inc
+INCLUDES += -I$(FREERTOS)/include -I$(PORT)
+INCLUDES += -I$(srctree)/src/config
+INCLUDES += -I$(srctree)/src/platform/interface
+INCLUDES += -I$(srctree)/src/deck/interface -I$(srctree)/src/deck/drivers/interface
+INCLUDES += -I$(srctree)/src/drivers/interface -I$(srctree)/src/drivers/bosch/interface
+INCLUDES += -I$(srctree)/src/drivers/esp32/interface
+INCLUDES += -I$(srctree)/src/hal/interface
+INCLUDES += -I$(srctree)/src/modules/interface -I$(srctree)/src/modules/interface/kalman_core -I$(srctree)/src/modules/interface/lighthouse  -I$(srctree)/src/modules/interface/outlierfilter
+INCLUDES += -I$(srctree)/src/modules/interface/cpx -I$(srctree)/src/modules/interface/p2pDTR -I$(srctree)/src/modules/interface/controller  -I$(srctree)/src/modules/interface/estimator
+INCLUDES += -I$(srctree)/src/utils/interface -I$(srctree)/src/utils/interface/kve -I$(srctree)/src/utils/interface/lighthouse -I$(srctree)/src/utils/interface/tdoa
+INCLUDES += -I$(LIB)/FatFS
+INCLUDES += -I$(LIB)/CMSIS/STM32F4xx/Include
+INCLUDES += -I$(LIB)/STM32_USB_Device_Library/Core/inc
+INCLUDES += -I$(LIB)/STM32_USB_OTG_Driver/inc
+INCLUDES += -I$(LIB)/STM32F4xx_StdPeriph_Driver/inc
+INCLUDES += -I$(LIB)/vl53l1 -I$(LIB)/vl53l1/core/inc
+INCLUDES += -I$(KBUILD_OUTPUT)/include/generated
+
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+INCLUDES += -I$(srctree)/src/sim/interface
+endif
 
 #
 # Special hack to handle float define. Kconfig has no float values
@@ -128,6 +170,10 @@ ifeq ($(CONFIG_PLATFORM_FLAPPER),y)
 PLATFORM = flapper
 endif
 
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+PLATFORM = sim
+endif
+
 
 PLATFORM  ?= cf2
 PROG ?= $(PLATFORM)
@@ -140,12 +186,56 @@ endif
 
 _all:
 
+ifeq ($(CONFIG_PLATFORM_SIM),y)
+all: $(PROG).elf
+	@echo "Build for the sim platform!"
+else
 all: $(PROG).hex $(PROG).bin
 	@echo "Build for the $(PLATFORM) platform!"
 	@$(PYTHON) $(srctree)/tools/make/versionTemplate.py --crazyflie-base $(srctree) --print-version
 	@$(PYTHON) $(srctree)/tools/make/size.py $(SIZE) $(PROG).elf $(MEM_SIZE_FLASH_K) $(MEM_SIZE_RAM_K) $(MEM_SIZE_CCM_K)
+endif
 
 include tools/make/targets.mk
+
+# Simmyflie: build the sim into build/sim/ from the normal configuration
+# (build/.config, e.g. after 'make cf21bl_defconfig') with
+# configs/sim_defconfig on top. Options that depend on a hardware platform
+# fall away when the platform becomes PLATFORM_SIM; the rest, such as the
+# controller, carries over.
+#
+# Kbuild redirects this recipe into $(KBUILD_OUTPUT) (e.g. build/), so
+# $(CURDIR) is the output directory and $(srctree) the source tree. The
+# nested makes run under 'env -i': this make has already exported the ARM
+# CC/CROSS_COMPILE/... for build/, and they would win over build/sim/'s
+# CONFIG_CROSS_COMPILE="". silentoldconfig runs before the build so that a
+# new build/sim/ is fully configured before the build reads auto.conf.
+.PHONY: sim unit_sim unit_sim_run
+define sim_config
+	@test -f .config || { echo "No configuration in $(CURDIR) -- run 'make cf2_defconfig' (or another *_defconfig) first."; exit 1; }
+	@mkdir -p sim
+	@cat .config $(srctree)/configs/sim_defconfig > sim/.config.seed
+	env -i PATH=$$PATH HOME=$$HOME KBUILD_OUTPUT=$(CURDIR)/sim KCONFIG_ALLCONFIG=$(CURDIR)/sim/.config.seed $(MAKE) -C $(srctree) alldefconfig
+	env -i PATH=$$PATH HOME=$$HOME KBUILD_OUTPUT=$(CURDIR)/sim $(MAKE) -C $(srctree) silentoldconfig
+endef
+
+sim:
+	$(sim_config)
+	env -i PATH=$$PATH HOME=$$HOME KBUILD_OUTPUT=$(CURDIR)/sim $(MAKE) -C $(srctree)
+	cp sim/sim.elf sim.elf
+	@echo "Simmyflie built: $(CURDIR)/sim.elf"
+
+# Unit tests of the Simmyflie (test/sim/), compiled against the sim build's
+# configuration in build/sim/ and include order (tools/test/gcc_sim.yml).
+# Takes FILES= like 'make unit'. unit_sim_run is the second half, run with
+# KBUILD_OUTPUT=build/sim so that ARCH_CFLAGS are the sim build's.
+unit_sim:
+	$(sim_config)
+	env -i PATH=$$PATH HOME=$$HOME KBUILD_OUTPUT=$(CURDIR)/sim $(MAKE) -C $(srctree) unit_sim_run "FILES=$(FILES)" "UNIT_TEST_STYLE=$(UNIT_TEST_STYLE)"
+
+unit_sim_run:
+	@mkdir -p $(srctree)/generated/test_sim/build $(srctree)/generated/test_sim/mocks
+	rake "config[./tools/test/gcc_sim.yml]" unit "DEFINES=$(ARCH_CFLAGS) -DUNITY_INCLUDE_DOUBLE" "FILES=$(FILES)" "UNIT_TEST_STYLE=$(UNIT_TEST_STYLE)"
 
 size:
 	@$(PYTHON) $(srctree)/tools/make/size.py $(SIZE) $(PROG).elf $(MEM_SIZE_FLASH_K) $(MEM_SIZE_RAM_K) $(MEM_SIZE_CCM_K)
@@ -252,4 +342,4 @@ python_wheel: build/cffirmware.py
 	$(PYTHON) bindings/setup.py bdist_wheel
 endif
 
-.PHONY: all clean build compile unit prep erase flash check_submodules trace openocd gdb halt reset flash_dfu flash_dfu_manual flash_verify cload size print_version clean_version bindings_python test_python python_wheel
+.PHONY: all sim unit_sim clean build compile unit prep erase flash check_submodules trace openocd gdb halt reset flash_dfu flash_dfu_manual flash_verify cload size print_version clean_version bindings_python test_python python_wheel

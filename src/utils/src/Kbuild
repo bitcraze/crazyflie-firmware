@@ -1,33 +1,47 @@
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += cfassert.o
 obj-y += clockCorrectionEngine.o
 obj-y += configblockeeprom.o
 obj-y += cpuid.o
+endif
 obj-y += crc32.o
 obj-y += debug.o
 obj-y += eprintf.o
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += buf2buf.o
+endif
 
 obj-y += filter.o
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += FreeRTOS-openocd.o
+endif
 
 obj-y += num.o
 obj-y += rateSupervisor.o
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += sleepus.o
+endif
 obj-y += statsCnt.o
 
 ### Sub directories
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += kve/
 obj-y += lighthouse/
 obj-y += tdoa/
+endif
 
 
 ### Implementations for abort(), malloc() and free(), needed to interact with apps written in C++
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += abort.o
 obj-y += malloc.o
+endif
 obj-y += pid.o
 
 ### Rules for handling generated version.c
+ifneq ($(CONFIG_PLATFORM_SIM),y)
 obj-y += version.o
 version-objs := version_gen.o
 src/utils/src/version_gen.c: src/utils/src/version.vtpl FORCE
 	 $(PYTHON) $(srctree)/tools/make/versionTemplate.py --crazyflie-base $(srctree) $< $@
+endif
