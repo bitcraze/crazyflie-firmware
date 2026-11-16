@@ -35,6 +35,7 @@ typedef enum {
     supervisorStateFlying,
     supervisorStateLanded,
     supervisorStateReset,
+    supervisorStateWarningReturnToGeofence,
     supervisorStateWarningLevelOut,
     supervisorStateExceptFreeFall,
     supervisorStateLocked,
@@ -57,6 +58,8 @@ typedef enum {
   supervisorConditionRPMatArmingValid,
   supervisorConditionSpinupTimeout,
   supervisorConditionMotorsNotResponding,
+  supervisorConditionGeofenceWarning,
+  supervisorConditionGeofenceStop,
   supervisorCondition_NrOfConditions,
 } supervisorConditions_t;
 
@@ -77,6 +80,8 @@ typedef uint32_t supervisorConditionBits_t;
 #define SUPERVISOR_CB_RPM_AT_ARMING_VALID (1 << supervisorConditionRPMatArmingValid)
 #define SUPERVISOR_CB_SPINUP_TIMEOUT (1 << supervisorConditionSpinupTimeout)
 #define SUPERVISOR_CB_MOTORS_NOT_RESPONDING (1 << supervisorConditionMotorsNotResponding)
+#define SUPERVISOR_CB_GEOFENCE_WARNING (1 << supervisorConditionGeofenceWarning)
+#define SUPERVISOR_CB_GEOFENCE_STOP (1 << supervisorConditionGeofenceStop)
 
 
 // Enum that is used to describe how to combine the bits in the required field
