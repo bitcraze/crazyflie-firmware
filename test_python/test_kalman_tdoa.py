@@ -14,14 +14,14 @@ def test_kalman_core_with_tdoa3():
     fixture_base = 'test_python/fixtures/kalman_core'
     anchor_positions = read_loco_anchor_positions(fixture_base + '/anchor_positions.yaml')
     runner = SdCardFileRunner(fixture_base + '/log05')
-    emulator = EstimatorKalmanEmulator(anchor_positions)
+    emulator = EstimatorKalmanEmulator(anchor_positions=anchor_positions)
 
     # Test
     actual = runner.run_estimator_loop(emulator)
 
     # Assert
     # Verify that the final position is close-ish to (0, 0, 0)
-    actual_final_pos = np.array(actual[-1][1])
+    actual_final_pos = np.array(actual[-1][1][:3])  # run_estimator_loop returns (x, y, z, roll, pitch, yaw)
     assert np.linalg.norm(actual_final_pos - TRUE_FINAL_POSITION) < FINAL_POSITION_TOLERANCE
 
 def test_kalman_core_with_tdoa3_dead_reckoning():
@@ -40,5 +40,5 @@ def test_kalman_core_with_tdoa3_dead_reckoning():
 
     # Assert
     # Verify that the final position is close-ish to (0, 0, 0)
-    actual_final_pos = np.array(actual[-1][1])
+    actual_final_pos = np.array(actual[-1][1][:3])  # run_estimator_loop returns (x, y, z, roll, pitch, yaw)
     assert np.linalg.norm(actual_final_pos - TRUE_FINAL_POSITION) < FINAL_POSITION_TOLERANCE

@@ -205,6 +205,7 @@ static const DeckDriver deck_info = {
   .pid = 0x11,
   .name = "bcActiveM",
   .requiredKalmanEstimatorAttitudeReversionOff = true,
+  .observesAbsoluteYawAtRest = true,
 
   .init = activeMarkerDeckInit,
   .test = activeMarkerDeckTest,

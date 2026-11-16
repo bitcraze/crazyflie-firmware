@@ -31,6 +31,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifdef UNIT_TEST_MODE
+// The x86 host toolchain used to build the Python bindings has no ARM __fp16
+// (half-precision) type. uint16_t has the same 2-byte size, so the calibration
+// struct layout is preserved for the bindings; firmware builds keep native __fp16.
+#define __fp16 uint16_t
+#endif
 
 #define OOTX_MAX_FRAME_LENGTH 43
 

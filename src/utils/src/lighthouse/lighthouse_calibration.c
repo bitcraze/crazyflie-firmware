@@ -148,3 +148,91 @@ float lighthouseCalibrationMeasurementModelLh2(const float x, const float y, con
 
   return base - (calib->phase + compGib);
 }
+
+// Gradient of the ideal light plane angle atan2(y, x) + asin(z * k / r) with respect to (x, y, z), the sensor
+// position in the rotor reference frame, with r = sqrt(x^2 + y^2) and k the tangent of the light plane tilt.
+// This is equations (4)-(8) in Taffanel et al. (2021), "Lighthouse positioning system: Dataset, accuracy, and
+// precision for UAV research", arXiv:2104.11523, with the calibrated tilt in k. The two terms are returned
+// separately, so that the models can add their calibration terms:
+//   gradAtan: gradient of atan2(y, x)
+//   gradAsin: gradient of asin(z * k / r)
+static bool lightPlaneGradient(const float x, const float y, const float z, const float k, float gradAtan[3], float gradAsin[3]) {
+  const float r2 = x * x + y * y;
+  const float zk = z * k;
+  const float qDen = r2 - zk * zk;
+  // Avoid the singularity. This also guarantees |z * k / r| < 1, so clip1() in the models is not active.
+  if (qDen <= 0.0001f) {
+    return false;
+  }
+
+  const float q = k / arm_sqrt(qDen);
+
+  gradAtan[0] = -y / r2;
+  gradAtan[1] = x / r2;
+  gradAtan[2] = 0.0f;
+
+  gradAsin[0] = -x * z * q / r2;
+  gradAsin[1] = -y * z * q / r2;
+  gradAsin[2] = q;
+
+  return true;
+}
+
+bool lighthouseCalibrationMeasurementModelGradientLh1(const float x, const float y, const float z, const float t, const lighthouseCalibrationSweep_t* calib, float gradient[3]) {
+  float gradAtan[3];
+  float gradAsin[3];
+  if (!lightPlaneGradient(x, y, z, tanf(calib->tilt), gradAtan, gradAsin)) {
+    return false;
+  }
+
+  // The curve term is a function of ay = atan2(z, x), which has no gradient where x = z = 0
+  const float xz2 = x * x + z * z;
+  if (xz2 <= 0.0001f) {
+    return false;
+  }
+
+  // The model is
+  //   ax - asin(z * k / r) - phase + gibmag * sin(ax + gibphase) - curve * ay^2
+  // with ax = atan2(y, x), ay = atan2(z, x) and k = tan(tilt). Its gradient with respect to (x, y, z), term by term:
+  //   ax:    gradAtan
+  //   asin:  -gradAsin
+  //   phase: 0 (constant)
+  //   gib:   gibmag * cos(ax + gibphase) * gradAtan (chain rule, gradAtan is the gradient of ax)
+  //   curve: -gradCurve, with gradCurve the gradient of curve * ay^2:
+  //          2 * curve * ay * (-z, 0, x) / (x^2 + z^2)
+  // The ax and gib terms are combined as gibScale * gradAtan.
+  const float ax = atan2f(y, x);
+  const float ay = atan2f(z, x);
+  const float gibScale = 1.0f + calib->gibmag * arm_cos_f32(ax + calib->gibphase);
+  const float curveScale = 2.0f * calib->curve * ay / xz2;
+  const float gradCurve[3] = {-z * curveScale, 0.0f, x * curveScale};
+
+  for (int i = 0; i < 3; i++) {
+    gradient[i] = gibScale * gradAtan[i] - gradAsin[i] - gradCurve[i];
+  }
+  return true;
+}
+
+bool lighthouseCalibrationMeasurementModelGradientLh2(const float x, const float y, const float z, const float t, const lighthouseCalibrationSweep_t* calib, float gradient[3]) {
+  float gradAtan[3];
+  float gradAsin[3];
+  if (!lightPlaneGradient(x, y, z, tanf(t - calib->tilt), gradAtan, gradAsin)) {
+    return false;
+  }
+
+  // The model is
+  //   ax + asin(z * k / r) - phase + gibmag * cos(ax + gibphase)
+  // with ax = atan2(y, x) and k = tan(t - tilt). Its gradient with respect to (x, y, z), term by term:
+  //   ax:    gradAtan
+  //   asin:  gradAsin
+  //   phase: 0 (constant)
+  //   gib:   -gibmag * sin(ax + gibphase) * gradAtan (chain rule, gradAtan is the gradient of ax)
+  // The ax and gib terms are combined as gibScale * gradAtan.
+  const float ax = atan2f(y, x);
+  const float gibScale = 1.0f - calib->gibmag * arm_sin_f32(ax + calib->gibphase);
+
+  for (int i = 0; i < 3; i++) {
+    gradient[i] = gibScale * gradAtan[i] + gradAsin[i];
+  }
+  return true;
+}

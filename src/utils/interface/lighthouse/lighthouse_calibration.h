@@ -58,3 +58,17 @@ float lighthouseCalibrationMeasurementModelLh1(const float x, const float y, con
  * @return float The predicted uncompensated sweep angle of the rotor
  */
 float lighthouseCalibrationMeasurementModelLh2(const float x, const float y, const float z, const float t, const lighthouseCalibrationSweep_t* calib);
+
+/**
+ * @brief Gradient of lighthouseCalibrationMeasurementModelLh1() with respect to the position in the rotor reference frame.
+ *        Exact for the model, including the tilt, gib and curve calibration (phase is a constant offset).
+ * @return bool false if the gradient is not defined at this position, true otherwise
+ */
+bool lighthouseCalibrationMeasurementModelGradientLh1(const float x, const float y, const float z, const float t, const lighthouseCalibrationSweep_t* calib, float gradient[3]);
+
+/**
+ * @brief Gradient of lighthouseCalibrationMeasurementModelLh2() with respect to the position in the rotor reference frame.
+ *        Exact for the model, including the tilt and gib calibration (phase is a constant offset).
+ * @return bool false if the gradient is not defined at this position, true otherwise
+ */
+bool lighthouseCalibrationMeasurementModelGradientLh2(const float x, const float y, const float z, const float t, const lighthouseCalibrationSweep_t* calib, float gradient[3]);

@@ -65,6 +65,7 @@ static StateEstimatorType requiredEstimator = StateEstimatorTypeAutoSelect;
 static bool registerRequiredEstimator(StateEstimatorType estimator);
 static bool requiredLowInterferenceRadioMode = false;
 static bool requiredKalmanEstimatorAttitudeReversionOff = false;
+static bool observesAbsoluteYawAtRest = false;
 
 void deckInfoInit()
 {
@@ -233,6 +234,7 @@ static void scanRequiredSystemProperties(void)
     isError = isError || registerRequiredEstimator(deckInfos[i].driver->requiredEstimator);
     requiredLowInterferenceRadioMode |= deckInfos[i].driver->requiredLowInterferenceRadioMode;
     requiredKalmanEstimatorAttitudeReversionOff |= deckInfos[i].driver->requiredKalmanEstimatorAttitudeReversionOff;
+    observesAbsoluteYawAtRest |= deckInfos[i].driver->observesAbsoluteYawAtRest;
   }
 
   if (isError) {
@@ -275,4 +277,9 @@ bool deckGetRequiredLowInterferenceRadioMode()
 bool deckGetRequiredKalmanEstimatorAttitudeReversionOff()
 {
   return requiredKalmanEstimatorAttitudeReversionOff;
+}
+
+bool deckGetObservesAbsoluteYawAtRest()
+{
+  return observesAbsoluteYawAtRest;
 }
