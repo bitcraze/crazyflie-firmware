@@ -706,12 +706,11 @@ void logRunBlock(void * arg)
 
   xSemaphoreGive(logLock);
 
-  // Check if the connection is still up, oherwise disable
-  // all the logging and flush all the CRTP queues.
+  // Stop logging after the radio activity timeout. Other CRTP services may
+  // have queued packets that must remain available when radio traffic resumes.
   if (!crtpIsConnected())
   {
     logReset();
-    crtpReset();
   }
   else
   {

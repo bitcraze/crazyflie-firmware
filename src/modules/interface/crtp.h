@@ -30,7 +30,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define CRTP_PROTOCOL_VERSION 12
+/** Current version of the CRTP subsystem protocols. */
+#define CRTP_PROTOCOL_VERSION 13
 
 #define CRTP_MAX_DATA_SIZE 30
 
@@ -169,7 +170,6 @@ struct crtpLinkOperations
   int (*sendPacket)(CRTPPacket *pk);
   int (*receivePacket)(CRTPPacket *pk);
   bool (*isConnected)(void);
-  int (*reset)(void);
 };
 
 void crtpSetLink(struct crtpLinkOperations * lk);
@@ -181,13 +181,5 @@ void crtpSetLink(struct crtpLinkOperations * lk);
  * @return true if conencted, otherwise false
  */
 bool crtpIsConnected(void);
-
-/**
- * Reset the CRTP communication by flushing all the queues that
- * contain packages.
- *
- * @return 0 for success
- */
-int crtpReset(void);
 
 #endif /*CRTP_H_*/

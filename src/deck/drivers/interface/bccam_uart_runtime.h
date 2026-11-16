@@ -66,6 +66,32 @@ void bccam_uart_runtime_init(bccam_uart_runtime_t *runtime);
 
 int bccam_uart_runtime_on_firmware_boot(bccam_uart_runtime_t *runtime);
 
+/**
+ * Start a new Link session with a peer that was not rebooted.
+ *
+ * Clears a Link Fault and the session state, and keeps the link counters and
+ * the last error for diagnostics. A valid ESTABLISH replaces any session the
+ * peer still considers Active.
+ *
+ * @param runtime Runtime to recover.
+ * @return BCCAM_UART_OK when ESTABLISH was queued, otherwise a UART error code.
+ */
+int bccam_uart_runtime_reestablish(bccam_uart_runtime_t *runtime);
+
+/**
+ * Send ESTABLISH again if the previous one is still unanswered.
+ *
+ * It carries a new transaction ID, so a late reply to the previous one is
+ * rejected without affecting the establishment. Does nothing when no
+ * ESTABLISH is outstanding, such as after a rejection, or before the previous
+ * one was sent.
+ *
+ * @param runtime Runtime that is establishing.
+ * @return BCCAM_UART_OK when there was nothing to do or ESTABLISH was queued,
+ *         otherwise a UART error code.
+ */
+int bccam_uart_runtime_retry_establishment(bccam_uart_runtime_t *runtime);
+
 void bccam_uart_runtime_on_bootloader_enter(bccam_uart_runtime_t *runtime);
 
 int bccam_uart_runtime_receive_byte(bccam_uart_runtime_t *runtime, uint8_t byte);
@@ -90,6 +116,71 @@ int bccam_uart_runtime_step_control_probe(bccam_uart_runtime_t *runtime);
 bool bccam_uart_runtime_control_probe_done(const bccam_uart_runtime_t *runtime);
 
 bool bccam_uart_runtime_control_service_bound(const bccam_uart_runtime_t *runtime);
+
+/**
+ * Check whether this session discovered a compatible Console service.
+ *
+ * @param runtime Runtime containing the current Link session.
+ * @return true when a compatible bitcraze.console service is bound, otherwise
+ *         false. A NULL runtime returns false.
+ */
+bool bccam_uart_runtime_console_service_bound(const bccam_uart_runtime_t *runtime);
+
+/**
+ * Make one receive slot available to the bound Console service.
+ *
+ * Opening an already advertised slot is idempotent. Console and Control own
+ * independent receive staging slots, so either service may make progress
+ * while the other is stalled.
+ *
+ * @param runtime Runtime that owns the Link endpoint and receive slot.
+ * @return BCCAM_UART_OK when the slot is open or already open;
+ *         BCCAM_UART_ERR_BAD_ARGUMENT for NULL;
+ *         BCCAM_UART_ERR_UNKNOWN_SERVICE when Console is not bound; otherwise
+ *         the Link error produced while queuing the credit update.
+ */
+int bccam_uart_runtime_open_console_rx(bccam_uart_runtime_t *runtime);
+
+/**
+ * Take a pending Console frame from the runtime receive staging slot.
+ *
+ * Taking a frame removes it from the staging slot but does not return its Link
+ * credit. After the downstream consumer has accepted the complete frame, the
+ * caller must call bccam_uart_runtime_release_console_rx().
+ *
+ * @param runtime Runtime that owns the pending receive frame.
+ * @param payload Buffer that receives the frame payload when one is present.
+ *                Must not be NULL and must remain valid for this call.
+ * @param payload_capacity Number of bytes available in payload.
+ * @param payload_len Output set to the received payload length, or zero when
+ *                    no Console frame is pending. Must not be NULL.
+ * @param unit_present Output set true only when a frame was copied. Must not
+ *                     be NULL.
+ * @return BCCAM_UART_OK when a frame was taken or none was pending;
+ *         BCCAM_UART_ERR_BAD_ARGUMENT for invalid pointers;
+ *         BCCAM_UART_ERR_UNKNOWN_SERVICE when Console is not bound;
+ *         BCCAM_UART_ERR_BUFFER_TOO_SMALL when payload cannot hold the frame;
+ *         otherwise the error returned by the Link receive operation.
+ */
+int bccam_uart_runtime_take_console_rx(bccam_uart_runtime_t *runtime,
+                                       uint8_t *payload,
+                                       size_t payload_capacity,
+                                       uint16_t *payload_len,
+                                       bool *unit_present);
+
+/**
+ * Return the consumed Console receive slot to the peer.
+ *
+ * Call this exactly once for each frame successfully taken and fully accepted
+ * by the downstream consumer. This advertises one new Console receive credit.
+ *
+ * @param runtime Runtime that owns the consumed Console receive slot.
+ * @return BCCAM_UART_OK when the credit update was queued;
+ *         BCCAM_UART_ERR_BAD_ARGUMENT for NULL;
+ *         BCCAM_UART_ERR_UNKNOWN_SERVICE when Console is not bound; otherwise
+ *         the Link error produced while releasing the slot.
+ */
+int bccam_uart_runtime_release_console_rx(bccam_uart_runtime_t *runtime);
 
 uint8_t bccam_uart_runtime_control_service_id(const bccam_uart_runtime_t *runtime);
 

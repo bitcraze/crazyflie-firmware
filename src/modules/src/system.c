@@ -342,6 +342,7 @@ void systemTask(void *arg)
 /* Global system variables */
 void systemStart()
 {
+  consoleSourceFreeze();
   xSemaphoreGive(canStartMutex);
 #ifndef CONFIG_DEBUG
   watchdogInit();

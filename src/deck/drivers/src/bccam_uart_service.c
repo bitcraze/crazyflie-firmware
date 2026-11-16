@@ -10,6 +10,8 @@
 #include "queue.h"
 #include "semphr.h"
 #include "task.h"
+#include "console.h"
+#include "crtp.h"
 
 #if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
 #include "static_mem.h"
@@ -23,6 +25,8 @@
 #endif
 
 #define BCCAM_FW_STARTUP_TIMEOUT_MS 3000
+/** ESTABLISH is sent again this often while a running deck has not replied. */
+#define BCCAM_LINK_REESTABLISH_RETRY_MS 500
 #define BCCAM_UART_REQUEST_QUEUE_LENGTH 4
 #define BCCAM_UART_RX_QUEUE_LENGTH 8
 #define BCCAM_UART_RX_DRAIN_BUDGET BCCAM_UART_RX_QUEUE_LENGTH
@@ -56,6 +60,16 @@ static bccam_bootloader_uart_client_t bootloader_client;
 static bccam_firmware_uart_client_t firmware_client;
 static uint32_t firmware_startup_deadline_tick;
 static uint32_t firmware_startup_reset_count;
+/** Deadline for reporting a startup that stalls after the link is active. */
+static uint32_t startup_stall_deadline_tick;
+/** True once the stall has been reported for the current link session. */
+static bool startup_stall_reported;
+/** True while re-establishing with a deck that was not reset. */
+static bool link_reestablishing;
+/** When ESTABLISH is next sent again, or 0 before the first check. */
+static uint32_t link_reestablish_retry_tick;
+/** UART receive errors (overrun, noise, framing, parity) since startup. */
+static uint16_t uart_error_count;
 
 #if defined(UNIT_TEST) || defined(UNIT_TEST_MODE)
 static bool test_firmware_startup_result_forced;
@@ -64,6 +78,7 @@ static bool test_firmware_control_probe_phase_forced;
 static bccam_uart_control_probe_phase_t test_firmware_control_probe_phase;
 static uint16_t test_rx_post_drain_poll_count;
 static uint16_t test_incompatible_report_count;
+static uint16_t test_startup_stall_report_count;
 static bool test_bootloader_enter_result_forced;
 static bool test_bootloader_enter_result;
 #endif
@@ -75,6 +90,27 @@ static uint16_t control_malformed_logged;
 
 uint8_t bccam_uart_service_link_state_log;
 static bccam_uart_service_status_t service_status_cache;
+
+/** Static storage for the registered Camera Deck Console source. */
+static ConsoleSource console_source = { .path = "deck:bcCam" };
+/** True after Console accepts console_source. */
+static bool console_source_registered;
+/** Staging buffer for one accepted Camera Console frame. */
+static uint8_t console_frame[BCCAM_UART_CAMERA_PROFILE_MTU];
+/** Total number of bytes in console_frame. */
+static uint16_t console_frame_length;
+/** Offset of the next byte to enqueue to CRTP. */
+static uint16_t console_frame_offset;
+/** True while console_frame contains bytes still awaiting CRTP. */
+static bool console_frame_pending;
+/** True while the consumed Common Link slot still needs release. */
+static bool console_release_pending;
+/** True when completing console_frame must schedule a slot release. */
+static bool console_frame_needs_release;
+/** True when clients must be told that Console output may have been lost. */
+static bool console_loss_marker_pending;
+/** Same text as the marker the Camera Deck inserts when its spool overflows. */
+static const uint8_t console_loss_marker[] = "\r\n[console data lost]\r\n";
 
 #if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
 static xQueueHandle request_queue;
@@ -142,6 +178,7 @@ static void populate_status_from_live(bccam_uart_service_status_t *status) {
   status->tx_bytes = observation.tx_bytes;
   status->rx_crc_errors = observation.counters.rx_crc_errors;
   status->link_faults = observation.counters.link_faults;
+  status->uart_errors = uart_error_count;
   status->tx_flushes = observation.tx_flushes;
   status->last_error = observation.last_error;
   status->control_probe_done = observation.control_probe_done ? 1u : 0u;
@@ -562,14 +599,66 @@ static void reset_rx_queue_state(void) {
 #endif
 }
 
+/** Forget per-session state, keeping any Console bytes not yet forwarded. */
+static void reset_service_session_state(void) {
+  link_reestablishing = false;
+  link_reestablish_retry_tick = 0;
+  firmware_startup_deadline_tick = 0;
+  startup_stall_deadline_tick = 0;
+  startup_stall_reported = false;
+  reset_control_probe_logging();
+  // Received Console bytes were dispatched out of the link session as they
+  // arrived, so a pending frame survives and is forwarded in the next session.
+  if (!console_frame_pending) {
+    console_frame_length = 0u;
+    console_frame_offset = 0u;
+  }
+  // The retained bytes no longer own a receive slot in the next session.
+  console_frame_needs_release = false;
+  console_release_pending = false;
+}
+
 static void enter_fw_resetting(void) {
 #if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
   disable_firmware_rx_callbacks();
 #endif
   service_state = BCCAM_UART_SERVICE_STATE_FW_RESETTING;
-  firmware_startup_deadline_tick = 0;
-  reset_control_probe_logging();
+  reset_service_session_state();
   reset_rx_queue_state();
+  update_service_status_cache();
+}
+
+/**
+ * Tell Console clients that the frame lost with the session may have been theirs.
+ *
+ * It may not have been a Console frame, so the marker can be a false alarm. It
+ * is not sent if the source is disabled at that point, so a frame credited just
+ * before a disable is lost without a marker.
+ */
+static void note_console_output_may_be_lost(void) {
+  if (console_source_registered && consoleSourceIsEnabled(&console_source)) {
+    console_loss_marker_pending = true;
+  }
+}
+
+/**
+ * Recover a Link Fault caused by lost or corrupted bytes.
+ *
+ * The link has no retransmission, so the session cannot continue, but the deck
+ * itself is healthy: a new session keeps it and its camera stream running. A
+ * reset would not help as the loss happens on the Crazyflie side, so this is not
+ * limited in number. The startup watchdog resets the deck if a session does not
+ * come up.
+ */
+static void reestablish_after_byte_loss(void) {
+  note_console_output_may_be_lost();
+  reset_service_session_state();
+  if (bccam_uart_runtime_reestablish(&firmware_client.runtime) != BCCAM_UART_OK) {
+    enter_fw_resetting();
+    return;
+  }
+  link_reestablishing = true;
+  service_state = BCCAM_UART_SERVICE_STATE_FW_ESTABLISHING;
   update_service_status_cache();
 }
 
@@ -893,16 +982,11 @@ static void report_advertised_services(void) {
   }
 }
 
-static void report_firmware_startup_recovery(
-  const char *phase_message,
-  bccam_uart_control_probe_phase_t probe_phase) {
-  DEBUG_PRINT("bcCam UART: Camera deck startup did not complete within %u ms; resetting camera deck processor and retrying.\n",
+static void report_firmware_startup_recovery(const char *phase_message) {
+  DEBUG_PRINT("bcCam UART: Camera deck UART link was not active within %u ms; resetting camera deck processor and retrying.\n",
               BCCAM_FW_STARTUP_TIMEOUT_MS);
   if (phase_message != NULL) {
     DEBUG_PRINT("bcCam UART: %s\n", phase_message);
-  }
-  if (probe_phase == BCCAM_UART_CONTROL_PROBE_WAITING_FOR_CONTROL_SERVICE) {
-    report_advertised_services();
   }
 }
 
@@ -917,35 +1001,114 @@ static void report_firmware_startup_incompatible(const char *phase_message) {
   report_advertised_services();
 }
 
+static void report_firmware_startup_stall(
+  const char *phase_message,
+  bccam_uart_control_probe_phase_t probe_phase) {
+#if defined(UNIT_TEST) || defined(UNIT_TEST_MODE)
+  test_startup_stall_report_count++;
+#endif
+  DEBUG_PRINT("bcCam UART: Camera deck startup did not complete within %u ms after the link came up; not resetting.\n",
+              BCCAM_FW_STARTUP_TIMEOUT_MS);
+  if (phase_message != NULL) {
+    DEBUG_PRINT("bcCam UART: %s\n", phase_message);
+  }
+  if (probe_phase == BCCAM_UART_CONTROL_PROBE_WAITING_FOR_CONTROL_SERVICE) {
+    report_advertised_services();
+  }
+}
+
+/**
+ * Report, once per link session, a startup that stalls above the link.
+ *
+ * Services above the link are not recovered by resetting the deck; their
+ * state stays observable, and the deck's own Console can explain the stall.
+ */
+static void update_startup_stall_report(
+  uint32_t now_ticks,
+  const bccam_firmware_uart_client_observation_t *observation) {
+  if (startup_stall_reported ||
+      observation->startup_result != BCCAM_UART_FIRMWARE_STARTUP_WAITING) {
+    startup_stall_deadline_tick = 0;
+    return;
+  }
+
+  if (startup_stall_deadline_tick == 0) {
+    startup_stall_deadline_tick = now_ticks + M2T(BCCAM_FW_STARTUP_TIMEOUT_MS);
+    return;
+  }
+
+  if (!tick_has_reached((TickType_t)now_ticks,
+                        (TickType_t)startup_stall_deadline_tick)) {
+    return;
+  }
+
+  startup_stall_reported = true;
+  startup_stall_deadline_tick = 0;
+  report_firmware_startup_stall(startup_phase_message(),
+                                observation->control_probe_phase);
+}
+
+/**
+ * Send ESTABLISH again while re-establishing with a running deck.
+ *
+ * The request or its reply can be lost like any other bytes. This is limited to
+ * a deck known to be running: after a reset, the UART must not be written until
+ * the deck's application is ready for it. A failure is left to the watchdog.
+ */
+static void retry_reestablishment(uint32_t now_ticks) {
+  if (!link_reestablishing) {
+    return;
+  }
+  if (link_reestablish_retry_tick == 0) {
+    link_reestablish_retry_tick =
+      now_ticks + M2T(BCCAM_LINK_REESTABLISH_RETRY_MS);
+    return;
+  }
+  if (tick_has_reached((TickType_t)now_ticks,
+                       (TickType_t)link_reestablish_retry_tick)) {
+    link_reestablish_retry_tick =
+      now_ticks + M2T(BCCAM_LINK_REESTABLISH_RETRY_MS);
+    (void)bccam_uart_runtime_retry_establishment(&firmware_client.runtime);
+  }
+}
+
+/**
+ * Reset the deck when the UART link is not active within the startup timeout.
+ *
+ * The watchdog is a link-level construct: once the link is active it stays
+ * idle, whatever happens to the services above it.
+ */
 static bool update_startup_recovery_watchdog(
   uint32_t now_ticks,
-  const char **phase_message,
-  bccam_uart_control_probe_phase_t *probe_phase) {
+  const char **phase_message) {
   if (phase_message != NULL) {
     *phase_message = NULL;
   }
 
   bccam_firmware_uart_client_observation_t observation;
   observe_firmware_client(&observation);
-  if (probe_phase != NULL) {
-    *probe_phase = observation.control_probe_phase;
-  }
 
-  if (observation.startup_result == BCCAM_UART_FIRMWARE_STARTUP_READY ||
-      observation.startup_result == BCCAM_UART_FIRMWARE_STARTUP_INCOMPATIBLE ||
-      observation.startup_result == BCCAM_UART_FIRMWARE_STARTUP_ABNORMAL) {
+  if (observation.link_state == BCCAM_UART_LINK_ACTIVE) {
     firmware_startup_deadline_tick = 0;
+    link_reestablishing = false;
+    link_reestablish_retry_tick = 0;
+    update_startup_stall_report(now_ticks, &observation);
     return false;
   }
+
+  startup_stall_deadline_tick = 0;
+  startup_stall_reported = false;
 
   if (firmware_startup_deadline_tick == 0) {
     firmware_startup_deadline_tick =
       now_ticks + M2T(BCCAM_FW_STARTUP_TIMEOUT_MS);
+    retry_reestablishment(now_ticks);
     return false;
   }
 
   if (!tick_has_reached((TickType_t)now_ticks,
                         (TickType_t)firmware_startup_deadline_tick)) {
+    retry_reestablishment(now_ticks);
     return false;
   }
 
@@ -997,15 +1160,160 @@ static void poll_firmware_link_at(uint32_t now_ticks) {
   }
 
   const char *phase_message = NULL;
-  bccam_uart_control_probe_phase_t probe_phase =
-    BCCAM_UART_CONTROL_PROBE_WAITING_FOR_LINK;
-  if (update_startup_recovery_watchdog(now_ticks,
-                                       &phase_message,
-                                       &probe_phase)) {
-    report_firmware_startup_recovery(phase_message, probe_phase);
+  if (update_startup_recovery_watchdog(now_ticks, &phase_message)) {
+    report_firmware_startup_recovery(phase_message);
   }
 
   update_service_status_cache();
+}
+
+/** Return true for transient Console forwarding backpressure results. */
+static bool temporary_console_result(int result)
+{
+  return result == BCCAM_UART_ERR_TRANSACTION_BUSY ||
+         result == BCCAM_UART_ERR_NO_CREDIT;
+}
+
+/**
+ * Publish Console receive credit only while the source is enabled.
+ *
+ * A disable may land between the check and the publish. The camera then sends
+ * one frame, which waits in console_frame: consoleSourceSend() re-checks the
+ * enabled state under the Console lock, so nothing reaches CRTP.
+ */
+static int publish_console_credit_if_enabled(bool release_consumed_slot,
+                                             bool *published)
+{
+  int result = BCCAM_UART_OK;
+  *published = false;
+  if (consoleSourceIsEnabled(&console_source)) {
+    result = release_consumed_slot ?
+      bccam_uart_runtime_release_console_rx(&firmware_client.runtime) :
+      bccam_uart_runtime_open_console_rx(&firmware_client.runtime);
+    *published = result == BCCAM_UART_OK;
+  }
+  return result;
+}
+
+/** Advance the best-effort Camera Console to CRTP forwarding state machine. */
+static int forward_console(void)
+{
+  if (!console_source_registered ||
+      !bccam_uart_runtime_console_service_bound(&firmware_client.runtime)) {
+    return BCCAM_UART_OK;
+  }
+
+  const bool enabled = consoleSourceIsEnabled(&console_source);
+  if (!enabled) {
+    return BCCAM_UART_OK;
+  }
+
+  if (console_frame_pending) {
+    const size_t remaining = console_frame_length - console_frame_offset;
+    const size_t chunk = remaining < (CRTP_MAX_DATA_SIZE - 1u) ?
+      remaining : (CRTP_MAX_DATA_SIZE - 1u);
+    if (consoleSourceSend(&console_source,
+                          &console_frame[console_frame_offset], chunk)) {
+      console_frame_offset = (uint16_t)(console_frame_offset + chunk);
+      if (console_frame_offset == console_frame_length) {
+        console_frame_pending = false;
+        console_release_pending = console_frame_needs_release;
+        console_frame_needs_release = false;
+      }
+    }
+    return BCCAM_UART_OK;
+  }
+
+  // After any retained frame, which was received before the loss.
+  if (console_loss_marker_pending) {
+    if (consoleSourceSend(&console_source, console_loss_marker,
+                          sizeof(console_loss_marker) - 1u)) {
+      console_loss_marker_pending = false;
+    }
+    return BCCAM_UART_OK;
+  }
+
+  if (console_release_pending) {
+    bool published = false;
+    const int result = publish_console_credit_if_enabled(true, &published);
+    if (published) {
+      console_release_pending = false;
+    }
+    return result;
+  }
+
+  bool published = false;
+  return publish_console_credit_if_enabled(false, &published);
+}
+
+/**
+ * Accept one Console frame dispatched from the link.
+ *
+ * The frame holds this session's single receive credit, so console_frame is
+ * empty when it arrives; completing it releases the slot.
+ */
+static void console_receive_frame(const uint8_t *payload, uint16_t length)
+{
+  if (console_frame_pending || console_release_pending) {
+    DEBUG_PRINT("bcCam UART: dropped Console frame received without credit\n");
+    return;
+  }
+  memcpy(console_frame, payload, length);
+  console_frame_length = length;
+  console_frame_offset = 0u;
+  console_frame_pending = length > 0u;
+  console_frame_needs_release = length > 0u;
+  console_release_pending = length == 0u;
+}
+
+/** Receive handler for one service bound on the Camera Link. */
+typedef struct {
+  /** Move a received frame for the service out of the link, if any. */
+  int (*take)(bccam_uart_runtime_t *runtime, uint8_t *payload,
+              size_t payload_capacity, uint16_t *payload_len,
+              bool *unit_present);
+  /** Handle one received frame. */
+  void (*receive)(const uint8_t *payload, uint16_t length);
+} rx_service_handler_t;
+
+static const rx_service_handler_t rx_service_handlers[] = {
+  { bccam_uart_runtime_take_console_rx, console_receive_frame },
+};
+
+/**
+ * Hand frames received on the link to their service handlers.
+ *
+ * Called after every RX event, so a frame leaves the link session before a
+ * later event (boot notice, fault) can clear it. Handlers run whatever their
+ * service's client-facing state: taking a frame grants no new credit.
+ */
+static void dispatch_received_frames(void)
+{
+  uint8_t payload[BCCAM_UART_CAMERA_PROFILE_MTU];
+  for (size_t i = 0u;
+       i < sizeof(rx_service_handlers) / sizeof(rx_service_handlers[0]);
+       i++) {
+    uint16_t length = 0u;
+    bool present = false;
+    const int result = rx_service_handlers[i].take(
+      &firmware_client.runtime, payload, sizeof(payload), &length, &present);
+    if (result == BCCAM_UART_OK && present) {
+      rx_service_handlers[i].receive(payload, length);
+    }
+  }
+}
+
+/**
+ * Tell whether a fault means bytes were lost or corrupted on the wire.
+ *
+ * Anything else got through the frame checks intact, so it is a protocol
+ * violation by the peer, and only a reset can be expected to clear it.
+ */
+static bool rx_event_lost_bytes(const bccam_uart_rx_event_t *event, int result) {
+  return event->type == BCCAM_UART_RX_EVENT_FAULT ||
+         result == BCCAM_UART_ERR_BAD_CRC ||
+         result == BCCAM_UART_ERR_BAD_LENGTH ||
+         result == BCCAM_UART_ERR_BAD_VERSION;
 }
 
 static bool handle_rx_event(const bccam_uart_rx_event_t *event) {
@@ -1013,15 +1321,26 @@ static bool handle_rx_event(const bccam_uart_rx_event_t *event) {
     return false;
   }
 
+  if (event->type == BCCAM_UART_RX_EVENT_FAULT &&
+      event->fault == BCCAM_UART_RX_FAULT_UART_ERROR) {
+    uart_error_count++;
+  }
+
   const int result =
     bccam_firmware_uart_client_on_rx_event(&firmware_client, event);
-  if (result != BCCAM_UART_OK ||
-      bccam_uart_runtime_get_state(&firmware_client.runtime) ==
-        BCCAM_UART_LINK_FAULT) {
-    enter_fw_resetting();
+  if (bccam_uart_runtime_get_state(&firmware_client.runtime) ==
+      BCCAM_UART_LINK_FAULT) {
+    if (rx_event_lost_bytes(event, result)) {
+      reestablish_after_byte_loss();
+    } else {
+      enter_fw_resetting();
+    }
     return true;
   }
 
+  // Without a fault, a rejected frame needs no recovery: frames from the old
+  // session are expected before a new one is active.
+  dispatch_received_frames();
   return true;
 }
 
@@ -1128,6 +1447,14 @@ static void service_poll_once_at(uint32_t now_ticks) {
              service_state == BCCAM_UART_SERVICE_STATE_FW_ACTIVE ||
              service_state == BCCAM_UART_SERVICE_STATE_FW_INCOMPATIBLE) {
     poll_firmware_link_at(now_ticks);
+#if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
+    const int console_result = forward_console();
+    if (console_result != BCCAM_UART_OK &&
+        !temporary_console_result(console_result)) {
+      DEBUG_PRINT("UART console forwarding failed: %d\n", console_result);
+      enter_fw_resetting();
+    }
+#endif
   }
 }
 
@@ -1172,6 +1499,11 @@ void bccam_uart_service_init(DeckInfo *deck_info_arg) {
   firmware_startup_deadline_tick = 0;
   firmware_startup_reset_count = 0;
 #if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
+  const int console_registration_result = consoleSourceRegister(&console_source);
+  console_source_registered = console_registration_result == 0;
+  if (!console_source_registered) {
+    DEBUG_PRINT("Failed to register console source deck:bcCam\n");
+  }
   request_queue = STATIC_MEM_QUEUE_CREATE(request_queue);
   rx_queue = STATIC_MEM_QUEUE_CREATE(rx_queue);
   reset_rx_collector_for_firmware_mode();
@@ -1318,6 +1650,19 @@ void bccam_uart_service_test_reset(void) {
     BCCAM_UART_CONTROL_PROBE_WAITING_FOR_LINK;
   test_bootloader_enter_result_forced = false;
   test_bootloader_enter_result = false;
+  test_startup_stall_report_count = 0;
+  startup_stall_deadline_tick = 0;
+  startup_stall_reported = false;
+  link_reestablishing = false;
+  link_reestablish_retry_tick = 0;
+  uart_error_count = 0u;
+  console_loss_marker_pending = false;
+  console_source_registered = false;
+  console_frame_length = 0u;
+  console_frame_offset = 0u;
+  console_frame_pending = false;
+  console_release_pending = false;
+  console_frame_needs_release = false;
   bccam_firmware_uart_client_init(&firmware_client, &deck_controller);
   bccam_firmware_uart_client_test_trace_reset();
   reset_flash_session();
@@ -1368,6 +1713,16 @@ void bccam_uart_service_test_set_bootloader_enter_result(bool result) {
   test_bootloader_enter_result = result;
 }
 
+void bccam_uart_service_test_set_console_source_registered(bool registered)
+{
+  console_source_registered = registered;
+}
+
+int bccam_uart_service_test_forward_console(void)
+{
+  return forward_console();
+}
+
 void bccam_uart_service_test_poll_once(void) {
   service_poll_once_at(0);
 }
@@ -1405,6 +1760,10 @@ uint16_t bccam_uart_service_test_incompatible_report_count(void) {
   return test_incompatible_report_count;
 }
 
+uint16_t bccam_uart_service_test_startup_stall_report_count(void) {
+  return test_startup_stall_report_count;
+}
+
 bool bccam_uart_service_test_flash_write_allowed(void) {
   return flash_write_allowed();
 }
@@ -1422,10 +1781,8 @@ bool bccam_uart_service_test_update_startup_watchdog(
   uint32_t now_ticks,
   bccam_uart_service_test_startup_recovery_report_t *report) {
   const char *phase_message = NULL;
-  bccam_uart_control_probe_phase_t probe_phase =
-    BCCAM_UART_CONTROL_PROBE_WAITING_FOR_LINK;
   const bool recovered =
-    update_startup_recovery_watchdog(now_ticks, &phase_message, &probe_phase);
+    update_startup_recovery_watchdog(now_ticks, &phase_message);
   populate_startup_report(report,
                           false,
                           recovered ? BCCAM_FW_STARTUP_TIMEOUT_MS : 0,
