@@ -40,4 +40,5 @@ obj-$(CONFIG_DECK_BCCAM)               += syslink2_control_channel.o
 obj-$(CONFIG_DECK_BCCAM)               += syslink2_control_request_queue.o
 obj-$(CONFIG_DECK_BCCAM)               += syslink2_control_request_handling.o
 obj-$(CONFIG_DECK_BCCAM)               += syslink2_control_service.o
+obj-$(CONFIG_DECK_BCCAM)               += bccam_control.o
 obj-$(CONFIG_DECK_BCCAM_CONTROL_TEST)  += syslink2_control_test_user.o

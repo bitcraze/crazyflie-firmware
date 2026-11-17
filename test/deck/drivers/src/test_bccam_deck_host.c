@@ -6,6 +6,7 @@
 #include "deckctrl_gpio.h" // @NO_MODULE
 #include "bccam_uart_service.h" // @NO_MODULE
 #include "syslink2_control_service.h" // @NO_MODULE
+#include "bccam_control.h" // @NO_MODULE
 #include "task.h" // @NO_MODULE
 // @MODULE "bccam_deck.c"
 
@@ -57,6 +58,12 @@ void syslink2_control_service_init(bccam_uart_runtime_t *runtime) {
   control_init_runtime = runtime;
   control_init_count++;
 }
+static uint8_t endpoint_init_count;
+int bccam_control_init(void) {
+  TEST_ASSERT_EQUAL_UINT8(1, control_init_count);
+  endpoint_init_count++;
+  return 0;
+}
 void bccam_uart_service_get_status(bccam_uart_service_status_t *status) {
   memset(status, 0, sizeof(*status));
   status->service_state = service_state;
@@ -84,6 +91,7 @@ void setUp(void) {
   service_init_count = 0;
   control_init_count = 0;
   control_init_runtime = NULL;
+  endpoint_init_count = 0;
   delay_count = 0;
   service_state = BCCAM_UART_SERVICE_STATE_UNINITIALIZED;
   bccam_deck_test_reset();
@@ -96,6 +104,7 @@ static void assert_no_init_side_effects(void) {
   TEST_ASSERT_EQUAL_UINT8(0, gpio_write_count);
   TEST_ASSERT_EQUAL_UINT8(0, service_init_count);
   TEST_ASSERT_EQUAL_UINT8(0, control_init_count);
+  TEST_ASSERT_EQUAL_UINT8(0, endpoint_init_count);
   TEST_ASSERT_EQUAL_UINT8(0, delay_count);
   TEST_ASSERT_FALSE(driver_bccam_deck->test());
 }
@@ -130,6 +139,7 @@ void testRevisionGInitializesRevGPowerAndUartSelectMappings(void) {
   TEST_ASSERT_EQUAL_UINT8(1, service_init_count);
   TEST_ASSERT_EQUAL_UINT8(1, control_init_count);
   TEST_ASSERT_EQUAL_PTR(&fake_runtime, control_init_runtime);
+  TEST_ASSERT_EQUAL_UINT8(1, endpoint_init_count);
   TEST_ASSERT_TRUE(driver_bccam_deck->test());
   TEST_ASSERT_BITS_HIGH(DECK_MEMORY_MASK_STARTED,
                         driver_bccam_deck->memoryDef->properties());

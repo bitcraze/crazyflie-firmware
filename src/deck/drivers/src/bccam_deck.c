@@ -36,6 +36,7 @@
 #include "param.h"
 #include "bccam_uart_service.h"
 #include "syslink2_control_service.h"
+#include "bccam_control.h"
 
 #define DEBUG_MODULE "BCCAM"
 #include "debug.h"
@@ -340,6 +341,10 @@ static void bcCamDeckInit(DeckInfo *info) {
 
   bccam_uart_service_init(info);
   syslink2_control_service_init(bccam_uart_service_runtime());
+  const int controlResult = bccam_control_init();
+  if (controlResult != 0) {
+    DEBUG_PRINT("Control endpoint not registered (%d)\n", controlResult);
+  }
 
   isInit = true;
   DEBUG_PRINT("bcCam deck initialized\n");
