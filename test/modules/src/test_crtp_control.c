@@ -309,6 +309,33 @@ void testLongResponseIsThreeFragments(void) {
   TEST_ASSERT_EQUAL_MEMORY(value, &whole[2], 60);
 }
 
+void testErrorWithTheLongestDetailIsForwardedUnchanged(void) {
+  // A Camera Deck ERROR with a 60-byte detail, the most that fits in its 64-byte
+  // frame. The router and the bridge pass the detail through without reading it,
+  // multi-byte UTF-8 included.
+  registerAndFreeze();
+  DELIVER(2, 0x80, 1, 0x02, 9, 1, 'q', 0x10, 1, 101);
+  const char detail[] = "r\xc3\xa9solution 101 > max 100: stop the stream before setting it";
+  TEST_ASSERT_EQUAL_UINT(60, sizeof(detail) - 1);
+  uint8_t error[64] = {0x82, 0, 0x05, 60};
+  memcpy(&error[4], detail, 60);
+  completeLast(1, 0, error, sizeof(error));
+  crtpControlFinishSlotsForTest();
+
+  // [ep, status, 64-byte body] is 66 bytes: 29 + 29 + 8.
+  TEST_ASSERT_EQUAL_UINT(3, sentCount);
+  TEST_ASSERT_EQUAL_UINT8(0x82, sent[2].data[0]);
+  TEST_ASSERT_EQUAL_UINT8(9, sent[2].size);
+  uint8_t whole[66];
+  memcpy(whole, &sent[0].data[1], 29);
+  memcpy(&whole[29], &sent[1].data[1], 29);
+  memcpy(&whole[58], &sent[2].data[1], 8);
+  error[1] = 9;
+  TEST_ASSERT_EQUAL_UINT8(1, whole[0]);
+  TEST_ASSERT_EQUAL_UINT8(0, whole[1]);
+  TEST_ASSERT_EQUAL_MEMORY(error, &whole[2], 64);
+}
+
 void testFragmentGapIsBadMessage(void) {
   registerAndFreeze();
   DELIVER(2, 0x00, 1, 0x02, 5, 1, 'q');
