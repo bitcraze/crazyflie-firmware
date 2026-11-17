@@ -40,6 +40,21 @@ syslink2_control_submit_result_t syslink2_control_service_submit_raw(
   const uint8_t *data, uint8_t len,
   syslink2_control_on_complete_raw_t on_complete_raw);
 
+/**
+ * Receives each unsolicited frame from the deck, such as a NOTIFY, in the
+ * Control task. data is borrowed for the call. The frame is not checked
+ * beyond its kind byte (0xc0..0xff).
+ */
+typedef void (*syslink2_control_unsolicited_fn)(const uint8_t *data,
+                                                uint8_t len);
+
+/**
+ * Set the function that receives unsolicited frames, or NULL to drop them,
+ * which is the default. Call it at init, before the Control task runs.
+ */
+void syslink2_control_service_set_unsolicited_handler(
+  syslink2_control_unsolicited_fn handler);
+
 /** The ready flag. Requests are sent to the deck only while ready. */
 bool syslink2_control_service_is_ready(void);
 
