@@ -53,6 +53,7 @@
 #include "stabilizer.h"
 #include "commander.h"
 #include "console.h"
+#include "control.h"
 #include "usblink.h"
 #include "mem.h"
 #include "crtp_mem.h"
@@ -343,6 +344,7 @@ void systemTask(void *arg)
 void systemStart()
 {
   consoleSourceFreeze();
+  controlEndpointFreeze();
   xSemaphoreGive(canStartMutex);
 #ifndef CONFIG_DEBUG
   watchdogInit();
