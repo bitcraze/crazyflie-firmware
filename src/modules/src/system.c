@@ -54,6 +54,7 @@
 #include "commander.h"
 #include "console.h"
 #include "control.h"
+#include "crtp_control.h"
 #include "usblink.h"
 #include "mem.h"
 #include "crtp_mem.h"
@@ -122,6 +123,9 @@ void systemInit(void)
   debugInit();
   crtpInit();
   consoleInit();
+#ifdef CONFIG_CRTP_CONTROL
+  crtpControlInit();
+#endif
   crtpSupervisorInit();
 
   DEBUG_PRINT("----------------------------\n");
