@@ -61,14 +61,10 @@ bool syslink2_control_codec_request_valid(
                     request->value.data)) {
     return false;
   }
-  if (request->user == NULL || request->user->on_complete == NULL) {
-    return false;
-  }
   return true;
 }
 
 bool syslink2_control_codec_decode_request(const uint8_t *data, uint8_t len,
-                                           const syslink2_control_user_t *user,
                                            syslink2_control_request_t *request) {
   if (data == NULL || request == NULL || len < 3u) {
     return false;
@@ -109,7 +105,6 @@ bool syslink2_control_codec_decode_request(const uint8_t *data, uint8_t len,
   request->path_len = path_len;
   memcpy(request->path, &data[3], path_len);
   request->value = value;
-  request->user = user;
   return true;
 }
 
@@ -144,6 +139,28 @@ syslink2_control_frame_t syslink2_control_codec_encode_set(
   frame.data[offset++] = value->len;
   memcpy(&frame.data[offset], value->data, value->len);
   frame.len = (uint8_t)(offset + value->len);
+  return frame;
+}
+
+syslink2_control_frame_t syslink2_control_codec_encode_response(
+  uint8_t request_id, const syslink2_control_response_t *response) {
+  syslink2_control_frame_t frame;
+  memset(&frame, 0, sizeof(frame));
+  frame.data[0] = response->kind;
+  frame.data[1] = request_id;
+  uint8_t offset = HEADER_LEN;
+  if (response->kind == SYSLINK2_CONTROL_KIND_VALUE) {
+    frame.data[offset++] = response->value.type;
+    frame.data[offset++] = response->value.len;
+    memcpy(&frame.data[offset], response->value.data, response->value.len);
+    offset = (uint8_t)(offset + response->value.len);
+  } else if (response->kind == SYSLINK2_CONTROL_KIND_ERROR) {
+    frame.data[offset++] = response->error_code;
+    frame.data[offset++] = response->detail_len;
+    memcpy(&frame.data[offset], response->detail, response->detail_len);
+    offset = (uint8_t)(offset + response->detail_len);
+  }
+  frame.len = offset;
   return frame;
 }
 

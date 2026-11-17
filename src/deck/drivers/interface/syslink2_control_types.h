@@ -87,17 +87,8 @@ typedef struct {
   uint8_t error_code;
 } syslink2_control_result_t;
 
-struct syslink2_control_request_s;
-
-/** One user of the Control Service. Static, outlives every request. */
-typedef struct {
-  /** Called in the Control task when a request completes. Must not block. */
-  void (*on_complete)(const struct syslink2_control_request_s *request,
-                      const syslink2_control_result_t *result);
-} syslink2_control_user_t;
-
 /** A GET or SET request from a user. */
-typedef struct syslink2_control_request_s {
+typedef struct {
   /** SYSLINK2_CONTROL_KIND_GET or SYSLINK2_CONTROL_KIND_SET. */
   uint8_t operation;
   /** Owned by the user. Not read by the Control Service. */
@@ -107,8 +98,37 @@ typedef struct syslink2_control_request_s {
   uint8_t path_len;
   /** Read only for SET. */
   syslink2_control_value_t value;
-  const syslink2_control_user_t *user;
 } syslink2_control_request_t;
+
+/**
+ * Completion of a request from syslink2_control_service_submit. Called in the
+ * Control task. Must not block.
+ */
+typedef void (*syslink2_control_on_complete_t)(
+  const syslink2_control_request_t *request,
+  const syslink2_control_result_t *result);
+
+/**
+ * Completion of a raw request from syslink2_control_service_submit_raw.
+ * Called in the Control task. Must not block. data and len hold the raw
+ * response, an OK, VALUE or ERROR frame whose request_id byte is
+ * user_request_id, only for SYSLINK2_CONTROL_OUTCOME_OK, _VALUE and _ERROR.
+ * Otherwise data is NULL and len is 0. data is valid only during the call.
+ */
+typedef void (*syslink2_control_on_complete_raw_t)(
+  syslink2_control_outcome_t outcome, uint8_t user_request_id,
+  const uint8_t *data, uint8_t len);
+
+/**
+ * A submitted request and the callback to complete it with. Exactly one of
+ * on_complete and on_complete_raw is set; on_complete_raw for a raw request.
+ * Internal to the Control Service.
+ */
+typedef struct {
+  syslink2_control_request_t request;
+  syslink2_control_on_complete_t on_complete;
+  syslink2_control_on_complete_raw_t on_complete_raw;
+} syslink2_control_queue_entry_t;
 
 /** A decoded OK, VALUE or ERROR frame. */
 typedef struct {

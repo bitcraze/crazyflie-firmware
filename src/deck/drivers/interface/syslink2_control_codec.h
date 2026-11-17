@@ -15,12 +15,11 @@ bool syslink2_control_codec_request_valid(
   const syslink2_control_request_t *request);
 
 /**
- * Decode a raw request, laid out as a GET or SET frame, into request and set
- * request->user to user. Returns false when it cannot be decoded; request
- * must then not be used. Does not run the request checks.
+ * Decode a raw request, laid out as a GET or SET frame, into request. Returns
+ * false when it cannot be decoded; request must then not be used. Does not
+ * run the request checks.
  */
 bool syslink2_control_codec_decode_request(const uint8_t *data, uint8_t len,
-                                           const syslink2_control_user_t *user,
                                            syslink2_control_request_t *request);
 
 /** Build a GET frame. Precondition: path is from a valid request. */
@@ -40,3 +39,12 @@ syslink2_control_frame_t syslink2_control_codec_encode_set(
 syslink2_control_frame_class_t syslink2_control_codec_decode(
   const syslink2_control_frame_t *frame,
   syslink2_control_response_t *response);
+
+/**
+ * Build a raw response, an OK, VALUE or ERROR frame, from a decoded response,
+ * with request_id in place of response->request_id. Precondition: response
+ * was filled in by syslink2_control_codec_decode, and value_valid is true if
+ * it is a VALUE.
+ */
+syslink2_control_frame_t syslink2_control_codec_encode_response(
+  uint8_t request_id, const syslink2_control_response_t *response);

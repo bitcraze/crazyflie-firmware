@@ -36,20 +36,51 @@ static void on_complete(const syslink2_control_request_t *request,
   completed_result = *result;
 }
 
-static const syslink2_control_user_t user = { .on_complete = on_complete };
+/* Recording raw user. */
+static unsigned raw_completions;
+static syslink2_control_outcome_t raw_outcome;
+static uint8_t raw_user_request_id;
+static bool raw_data_null;
+static uint8_t raw_data[SYSLINK2_CONTROL_FRAME_MAX_LEN];
+static uint8_t raw_len;
+
+static void on_complete_raw(syslink2_control_outcome_t outcome,
+                            uint8_t user_request_id, const uint8_t *data,
+                            uint8_t len) {
+  raw_completions++;
+  raw_outcome = outcome;
+  raw_user_request_id = user_request_id;
+  raw_data_null = data == NULL;
+  raw_len = len;
+  if (data != NULL) {
+    memcpy(raw_data, data, len);
+  }
+}
+
+static void put(uint8_t operation, uint8_t user_id, bool raw) {
+  syslink2_control_queue_entry_t entry;
+  memset(&entry, 0, sizeof(entry));
+  entry.request.operation = operation;
+  entry.request.user_request_id = user_id;
+  entry.request.path_len = 3u;
+  memcpy(entry.request.path, "a.b", 3);
+  entry.request.value.type = SYSLINK2_CONTROL_TYPE_U8;
+  entry.request.value.len = 1u;
+  entry.request.value.data[0] = 42u;
+  if (raw) {
+    entry.on_complete_raw = on_complete_raw;
+  } else {
+    entry.on_complete = on_complete;
+  }
+  TEST_ASSERT_TRUE(syslink2_control_request_queue_put(&entry));
+}
 
 static void submit(uint8_t operation, uint8_t user_id) {
-  syslink2_control_request_t request;
-  memset(&request, 0, sizeof(request));
-  request.operation = operation;
-  request.user_request_id = user_id;
-  request.path_len = 3u;
-  memcpy(request.path, "a.b", 3);
-  request.value.type = SYSLINK2_CONTROL_TYPE_U8;
-  request.value.len = 1u;
-  request.value.data[0] = 42u;
-  request.user = &user;
-  TEST_ASSERT_TRUE(syslink2_control_request_queue_put(&request));
+  put(operation, user_id, false);
+}
+
+static void submit_raw(uint8_t operation, uint8_t user_id) {
+  put(operation, user_id, true);
 }
 
 static syslink2_control_response_t response(uint8_t kind, uint8_t request_id) {
@@ -91,6 +122,10 @@ void setUp(void) {
   completions = 0;
   memset(&completed_request, 0, sizeof(completed_request));
   memset(&completed_result, 0, sizeof(completed_result));
+  raw_completions = 0;
+  raw_data_null = false;
+  raw_len = 0xffu;
+  memset(raw_data, 0, sizeof(raw_data));
   syslink2_control_request_queue_init();
   syslink2_control_request_handling_init();
 }
@@ -291,4 +326,90 @@ void testNextRequestTakenOnlyAfterPreviousCompleted(void) {
   step(true, NULL, 5);
   TEST_ASSERT_EQUAL_UINT(2, sends);
   TEST_ASSERT_EQUAL_UINT8(first_id + 1u, sent.data[1]);
+}
+
+/* Raw requests */
+
+/* Takes and sends one raw request; returns its deck request ID. */
+static uint8_t take_and_send_raw(uint8_t operation, uint8_t user_id, uint32_t now) {
+  submit_raw(operation, user_id);
+  step(true, NULL, now);
+  step(true, NULL, now);
+  TEST_ASSERT_EQUAL_UINT(1, sends);
+  sends = 0;
+  return sent.data[1];
+}
+
+void testRawGetAnsweredWithValueGivesRawResponse(void) {
+  const uint8_t id = take_and_send_raw(SYSLINK2_CONTROL_KIND_GET, 7, 0);
+  const syslink2_control_response_t r = response(SYSLINK2_CONTROL_KIND_VALUE, id);
+  step(true, &r, 1);
+  TEST_ASSERT_EQUAL_UINT(1, raw_completions);
+  TEST_ASSERT_EQUAL_UINT(0, completions);
+  TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_OUTCOME_VALUE, raw_outcome);
+  TEST_ASSERT_EQUAL_UINT8(7, raw_user_request_id);
+  const uint8_t expected[] = { 0x81, 7, SYSLINK2_CONTROL_TYPE_U8, 1, 77 };
+  TEST_ASSERT_EQUAL_UINT8(sizeof(expected), raw_len);
+  TEST_ASSERT_EQUAL_MEMORY(expected, raw_data, sizeof(expected));
+}
+
+void testRawSetAnsweredWithOkGivesRawResponse(void) {
+  const uint8_t id = take_and_send_raw(SYSLINK2_CONTROL_KIND_SET, 8, 0);
+  const syslink2_control_response_t r = response(SYSLINK2_CONTROL_KIND_OK, id);
+  step(true, &r, 1);
+  TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_OUTCOME_OK, raw_outcome);
+  const uint8_t expected[] = { 0x80, 8 };
+  TEST_ASSERT_EQUAL_UINT8(sizeof(expected), raw_len);
+  TEST_ASSERT_EQUAL_MEMORY(expected, raw_data, sizeof(expected));
+}
+
+void testRawErrorAnswerKeepsDetail(void) {
+  const uint8_t id = take_and_send_raw(SYSLINK2_CONTROL_KIND_SET, 8, 0);
+  syslink2_control_response_t r = response(SYSLINK2_CONTROL_KIND_ERROR, id);
+  r.detail_len = 2u;
+  memcpy(r.detail, "no", 2);
+  step(true, &r, 1);
+  TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_OUTCOME_ERROR, raw_outcome);
+  const uint8_t expected[] = { 0x82, 8, 3, 2, 'n', 'o' };
+  TEST_ASSERT_EQUAL_UINT8(sizeof(expected), raw_len);
+  TEST_ASSERT_EQUAL_MEMORY(expected, raw_data, sizeof(expected));
+}
+
+void testRawTimeoutHasNoData(void) {
+  take_and_send_raw(SYSLINK2_CONTROL_KIND_GET, 5, 0);
+  step(true, NULL, TIMEOUT);
+  TEST_ASSERT_EQUAL_UINT(1, raw_completions);
+  TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_OUTCOME_TIMEOUT, raw_outcome);
+  TEST_ASSERT_EQUAL_UINT8(5, raw_user_request_id);
+  TEST_ASSERT_TRUE(raw_data_null);
+  TEST_ASSERT_EQUAL_UINT8(0, raw_len);
+}
+
+void testRawProtocolErrorHasNoData(void) {
+  const uint8_t id = take_and_send_raw(SYSLINK2_CONTROL_KIND_GET, 5, 0);
+  const syslink2_control_response_t r = response(SYSLINK2_CONTROL_KIND_OK, id);
+  step(true, &r, 1);
+  TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_OUTCOME_PROTOCOL_ERROR, raw_outcome);
+  TEST_ASSERT_TRUE(raw_data_null);
+  TEST_ASSERT_EQUAL_UINT8(0, raw_len);
+}
+
+void testRawNotReadyHasNoData(void) {
+  submit_raw(SYSLINK2_CONTROL_KIND_GET, 6);
+  step(false, NULL, 0);
+  TEST_ASSERT_EQUAL_UINT(1, raw_completions);
+  TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_OUTCOME_NOT_READY, raw_outcome);
+  TEST_ASSERT_EQUAL_UINT8(6, raw_user_request_id);
+  TEST_ASSERT_TRUE(raw_data_null);
+}
+
+void testRawAndStructuredRequestsGetTheirOwnCallback(void) {
+  submit(SYSLINK2_CONTROL_KIND_GET, 1);
+  submit_raw(SYSLINK2_CONTROL_KIND_GET, 2);
+  step(false, NULL, 0);
+  step(false, NULL, 1);
+  TEST_ASSERT_EQUAL_UINT(1, completions);
+  TEST_ASSERT_EQUAL_UINT8(1, completed_request.user_request_id);
+  TEST_ASSERT_EQUAL_UINT(1, raw_completions);
+  TEST_ASSERT_EQUAL_UINT8(2, raw_user_request_id);
 }

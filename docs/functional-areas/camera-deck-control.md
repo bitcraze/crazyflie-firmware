@@ -59,18 +59,26 @@ from the Crazyflie.
   Owned by the user, which assigns it. The Control Service does not read it
   and returns it with the result. For example, a user submits user request
   ID 2, the Control Service sends it to the deck as deck request ID 8, the
-  deck answers 8, and the user gets `on_complete` for user request ID 2.
+  deck answers 8, and the user gets the completion for user request ID 2.
 - **Raw request**: a user request given as bytes, laid out as a `GET` or
   `SET` frame, see [Frame layout](#frame-layout). Its `request_id` byte
   holds the user request ID, not the deck request ID. A raw request is
   submitted with `syslink2_control_service_submit_raw` and decoded into a
-  `syslink2_control_request_t` before it is queued.
+  `syslink2_control_request_t` before it is queued. It completes with
+  `on_complete_raw`.
+- **Raw response**: the answer to a raw request given as bytes, laid out as
+  an `OK`, `VALUE` or `ERROR` frame, see [Frame layout](#frame-layout). Its
+  `request_id` byte holds the user request ID, not the deck request ID. It
+  is passed to `on_complete_raw`, see [Raw responses](#raw-responses).
+- **Completion**: the one call that tells the user that a request has
+  completed: `on_complete` for a request from
+  `syslink2_control_service_submit`, `on_complete_raw` for a raw request.
 - **Probe**: the `GET 0 meta.schema_modules` request the runtime sends on
   the Control service before ready. The Control Service only observes the
   result.
 - **Lifecycle**: the states of something that is created and ends, and goes
   through them once, such as a request from `syslink2_control_service_submit`
-  to `on_complete`.
+  to its completion.
 - **State machine**: the states of something that lives as long as the
   system and moves between them repeatedly, such as
   `syslink2_control_service`.
@@ -166,9 +174,10 @@ unit's section.
 classDiagram
     direction TB
 
-    class syslink2_control_user_t {
+    class User {
         <<user API>>
         +on_complete
+        +on_complete_raw
     }
 
     class syslink2_control_service {
@@ -195,6 +204,7 @@ classDiagram
         +decode_request
         +encode_get
         +encode_set
+        +encode_response
         +decode
     }
 
@@ -230,7 +240,7 @@ classDiagram
         <<deck init>>
     }
 
-    syslink2_control_user_t ..> syslink2_control_service : submit, submit_raw, is_ready
+    User ..> syslink2_control_service : submit, submit_raw, is_ready
     bcCamDeckInit --> bccam_uart_service : init, runtime
     bcCamDeckInit --> syslink2_control_service : init
     syslink2_control_service --> ControlTask : creates
@@ -240,9 +250,9 @@ classDiagram
     syslink2_control_service --> syslink2_control_codec : request_valid, decode_request, decode
     syslink2_control_service --> syslink2_control_request_handling : init, step
     syslink2_control_request_handling --> syslink2_control_request_queue : take
-    syslink2_control_request_handling --> syslink2_control_codec : encode_get, encode_set
+    syslink2_control_request_handling --> syslink2_control_codec : encode_get, encode_set, encode_response
     syslink2_control_request_handling --> syslink2_control_channel : can_send, send
-    syslink2_control_request_handling --> syslink2_control_user_t : on_complete
+    syslink2_control_request_handling --> User : on_complete, on_complete_raw
     syslink2_control_channel --> bccam_uart_runtime : control_ready, grant_control_rx_credit, control_tx_credit, send_control, take_control_rx
 ```
 
@@ -265,9 +275,14 @@ classDiagram
         char path[SYSLINK2_CONTROL_PATH_MAX_LEN]
         uint8_t path_len
         syslink2_control_value_t value
-        const syslink2_control_user_t *user
     }
     note for syslink2_control_request_t "SYSLINK2_CONTROL_PATH_MAX_LEN = 55"
+
+    class syslink2_control_queue_entry_t {
+        syslink2_control_request_t request
+        syslink2_control_on_complete_t on_complete
+        syslink2_control_on_complete_raw_t on_complete_raw
+    }
 
     class syslink2_control_response_t {
         uint8_t kind OK, VALUE or ERROR
@@ -280,8 +295,14 @@ classDiagram
     }
     note for syslink2_control_response_t "SYSLINK2_CONTROL_DETAIL_MAX_LEN = 60"
 
-    class syslink2_control_user_t {
-        on_complete(const syslink2_control_request_t *request, const syslink2_control_result_t *result) void
+    class syslink2_control_on_complete_t {
+        <<function pointer>>
+        (const syslink2_control_request_t *request, const syslink2_control_result_t *result) void
+    }
+
+    class syslink2_control_on_complete_raw_t {
+        <<function pointer>>
+        (syslink2_control_outcome_t outcome, uint8_t user_request_id, const uint8_t *data, uint8_t len) void
     }
 
     class syslink2_control_result_t {
@@ -334,7 +355,10 @@ classDiagram
 
     syslink2_control_result_t --> syslink2_control_outcome_t
     syslink2_control_request_t --> syslink2_control_value_t
-    syslink2_control_request_t --> syslink2_control_user_t
+    syslink2_control_queue_entry_t --> syslink2_control_request_t
+    syslink2_control_queue_entry_t --> syslink2_control_on_complete_t
+    syslink2_control_queue_entry_t --> syslink2_control_on_complete_raw_t
+    syslink2_control_on_complete_raw_t --> syslink2_control_outcome_t
     syslink2_control_result_t --> syslink2_control_value_t
     syslink2_control_response_t --> syslink2_control_value_t
 ```
@@ -370,18 +394,25 @@ response fits in one frame:
 - `syslink2_control_submit_result_t` is what `syslink2_control_service_submit`
   and `syslink2_control_service_submit_raw` return, see
   [syslink2_control_service](#syslink2_control_service).
-- `user` points to a static `syslink2_control_user_t` that outlives every
-  request. The path and value are copied, so the user can drop its request
-  when `syslink2_control_service_submit` returns.
-- `syslink2_control_user_t` holds one function pointer, `on_complete`. There
-  is no context pointer: each user has its own `syslink2_control_user_t` and
-  its own callback, and `on_complete` gets the request, whose `user` tells
-  which user it belongs to.
+- `syslink2_control_request_t` holds only the request itself. It does not
+  say who submitted it or how it completes. The path and value are copied,
+  so the user can drop its request when `syslink2_control_service_submit`
+  returns.
+- `syslink2_control_on_complete_t` and `syslink2_control_on_complete_raw_t`
+  are the two kinds of completion, see [User API](#user-api). The user
+  passes one of them to submit. There is no user handle and no context
+  pointer: each user has its own callback, and the callback tells which user
+  a request belongs to.
+- `syslink2_control_queue_entry_t` is what the Control Service keeps for a
+  submitted request: the request and the callback to complete it with.
+  Exactly one of `on_complete` and `on_complete_raw` is set. `on_complete_raw`
+  is set for a raw request. Users never see this type.
 - `user_request_id` is the user request ID. The user sets it in
-  `syslink2_control_request_t`, and the Control Service does not read it. It
-  reaches `on_complete` in the request copy, so `syslink2_control_result_t`
-  does not repeat it. It is not the deck request ID, which only
-  `syslink2_control_request_handling` knows.
+  `syslink2_control_request_t`, or in the `request_id` byte of a raw request,
+  and the Control Service does not read it. It reaches `on_complete` in the
+  request copy, so `syslink2_control_result_t` does not repeat it. It
+  reaches `on_complete_raw` as an argument. It is not the deck request ID,
+  which only `syslink2_control_request_handling` knows.
 - `operation` holds the wire `kind` from the protocol, `GET` 0x01 or `SET`
   0x02, see [Frame layout](#frame-layout). In the same way,
   `syslink2_control_response_t.kind` holds `OK` 0x80, `VALUE` 0x81 or `ERROR`
@@ -452,37 +483,51 @@ flowchart TB
 Users see only the user API: `syslink2_control_service_submit`,
 `syslink2_control_service_submit_raw` and `syslink2_control_service_is_ready`,
 see [syslink2_control_service](#syslink2_control_service), and their own
-`on_complete` in their `syslink2_control_user_t`.
+completion callback, which they pass to submit.
 
 - `syslink2_control_service_submit` takes a request as a
-  `syslink2_control_request_t`, for users such as the param adapter.
-- `syslink2_control_service_submit_raw` takes a [raw request](#terms), for
-  users that already hold the request as bytes. Everything below applies to
-  both, and "submit" means either.
+  `syslink2_control_request_t` and an `on_complete`, for users such as the
+  param adapter. The request completes with `on_complete`.
+- `syslink2_control_service_submit_raw` takes a [raw request](#terms) and an
+  `on_complete_raw`, for users that hold the request as bytes and want the
+  answer as bytes, such as a future cflib proxy. The request completes with
+  `on_complete_raw`.
 
-| Function | What it does |
+Everything below applies to both. "Submit" means either, and "completion"
+means `on_complete` or `on_complete_raw`, whichever was passed to submit.
+
+| Callback | What it does |
 |---|---|
-| `on_complete(const syslink2_control_request_t *request, const syslink2_control_result_t *result) void` | Tells the user that a request has completed, with its result. |
+| `on_complete(const syslink2_control_request_t *request, const syslink2_control_result_t *result) void`, type `syslink2_control_on_complete_t` | Tells the user that a request from `syslink2_control_service_submit` has completed, with its result. |
+| `on_complete_raw(syslink2_control_outcome_t outcome, uint8_t user_request_id, const uint8_t *data, uint8_t len) void`, type `syslink2_control_on_complete_raw_t` | Tells the user that a raw request has completed, with its outcome, its user request ID and, for `SYSLINK2_CONTROL_OUTCOME_OK`, `_VALUE` and `_ERROR`, the [raw response](#terms). |
 
-- `on_complete` is called in the Control task. It must not block.
+- The completion is called in the Control task. It must not block.
 - Every request for which submit returns
-  `SYSLINK2_CONTROL_SUBMIT_ACCEPTED` gets exactly one `on_complete`. A request
+  `SYSLINK2_CONTROL_SUBMIT_ACCEPTED` gets exactly one completion. A request
   for which it returns `SYSLINK2_CONTROL_SUBMIT_QUEUE_FULL`,
   `SYSLINK2_CONTROL_SUBMIT_INVALID` or `SYSLINK2_CONTROL_SUBMIT_NOT_INITIALIZED`
   gets none. `_QUEUE_FULL` may be retried later. `_INVALID` is a bug in the
   user and must not be retried unchanged. `_NOT_INITIALIZED` means that
   `syslink2_control_service_init` has not been called, for example because no
   camera deck is attached. A retry does not help until it has been called.
-- `on_complete` gets the copy of the whole request, including its user
-  request ID, for every outcome. For a raw request, this is the decoded
-  `syslink2_control_request_t`, not the bytes. This includes the outcomes the Crazyflie
-  produces itself: `SYSLINK2_CONTROL_OUTCOME_NOT_READY`, `_ABORTED`,
-  `_TIMEOUT`, `_PROTOCOL_ERROR` and `_SEND_FAILED`. A user that needs only
-  the user request ID, such as a future cflib proxy, can ignore the rest. A user that needs
-  the operation, path or value, such as the param adapter, does not have
-  to keep its own table of pending requests.
-  `syslink2_control_request_handling` holds the copy while the request is
-  outstanding anyway.
+- The completion identifies the request for every outcome, also for the
+  outcomes the Crazyflie produces itself:
+  `SYSLINK2_CONTROL_OUTCOME_NOT_READY`, `_ABORTED`, `_TIMEOUT`,
+  `_PROTOCOL_ERROR` and `_SEND_FAILED`.
+  - `on_complete` gets the copy of the whole request, including its user
+    request ID. A user that needs the operation, path or value, such as the
+    param adapter, does not have to keep its own table of pending requests.
+    `syslink2_control_request_handling` holds the copy while the request is
+    outstanding anyway.
+  - `on_complete_raw` gets the user request ID as `user_request_id`, and
+    not the request.
+- `on_complete_raw` gets the raw response in `data` and `len` only when
+  `outcome` is `SYSLINK2_CONTROL_OUTCOME_OK`, `_VALUE` or `_ERROR`. Its
+  `request_id` byte equals `user_request_id`. For every other outcome the
+  deck has not given a usable answer, `data` is NULL and `len` is 0. `data`
+  is valid only during the call. A user that keeps the bytes copies them.
+- `on_complete` gets the `ERROR` code in `syslink2_control_result_t`, but not
+  the detail text. `on_complete_raw` gets the detail in the raw response.
 - User request IDs are separate per user. Two users can use the same user
   request ID. The Control Service does not check them for uniqueness.
 - A user should not reuse a user request ID while a request with it is queued
@@ -523,8 +568,8 @@ the same runtime and link state. Requirements on the runtime:
 
 ## Request lifecycle
 
-The lifecycle of one request, from `syslink2_control_service_submit` to
-`on_complete`. One request is outstanding at a time. The timeout starts
+The lifecycle of one request, from submit to its completion. One request is
+outstanding at a time. The timeout starts
 when the request is taken from the queue, so it also covers waiting until a
 frame can be sent.
 
@@ -547,7 +592,7 @@ stateDiagram-v2
     Outstanding --> Completed : timer expired
     Outstanding --> Completed : ready lost
 
-    Completed --> [*] : on_complete called
+    Completed --> [*] : on_complete or on_complete_raw called
 ```
 
 ### Sequence for request with an answer
@@ -567,14 +612,14 @@ sequenceDiagram
     participant Ch as syslink2_control_channel
     participant D as Camera deck<br/>Control Service
 
-    U->>CS: submit(request), no wait
+    U->>CS: submit(request, on_complete), no wait
     CS->>CS: request_valid (syslink2_control_codec), true
-    CS->>Q: put(request)
+    CS->>Q: put(entry: request, on_complete)
     Q-->>CS: true
     CS-->>U: SYSLINK2_CONTROL_SUBMIT_ACCEPTED
     CS->>H: step(true, none)
     H->>Q: take()
-    Q-->>H: request
+    Q-->>H: entry
     H->>H: ready, assign request_id, start timer
     CS->>H: step(true, none)
     H->>Ch: can_send(), wait until true
@@ -598,15 +643,22 @@ sequenceDiagram
     H->>U: on_complete(request, OK, VALUE or ERROR)
 ```
 
+A raw request follows the same sequence. It starts with
+`submit_raw(data, len, on_complete_raw)`, which decodes the bytes before
+the request checks, and ends with
+`on_complete_raw(outcome, user_request_id, raw response)`, see
+[Completing a request](#completing-a-request).
+
 ## syslink2_control_service
 
 The unit above the other four. It is the only unit users see, through
 `syslink2_control_service_submit`, `syslink2_control_service_submit_raw` and
 `syslink2_control_service_is_ready`. It owns the Control task, which steps it,
 see [Control task](#control-task). `syslink2_control_service_submit` validates the request and passes
-it on to `syslink2_control_request_queue`. `syslink2_control_service_submit_raw`
+it on to `syslink2_control_request_queue`, together with its `on_complete`, as
+a `syslink2_control_queue_entry_t`. `syslink2_control_service_submit_raw`
 first decodes the raw request into a `syslink2_control_request_t`, then does
-the same. Neither blocks.
+the same with its `on_complete_raw`. Neither blocks.
 The Control Service is ready when the runtime reports
 `bccam_uart_runtime_control_ready()`: the Control service is bound and the
 runtime's probe has been answered. `syslink2_control_service` reads it through
@@ -644,8 +696,8 @@ gets the ready flag as an argument to its step.
 
 | Function | What it does |
 |---|---|
-| `syslink2_control_service_submit(const syslink2_control_request_t *request) syslink2_control_submit_result_t` | Takes a request for submission, and returns if it has been submitted successfully or not. |
-| `syslink2_control_service_submit_raw(const uint8_t *data, uint8_t len, const syslink2_control_user_t *user) syslink2_control_submit_result_t` | Takes a raw request of `len` bytes for submission, decodes it, and returns if it has been submitted successfully or not. `user` gets `on_complete`. |
+| `syslink2_control_service_submit(const syslink2_control_request_t *request, syslink2_control_on_complete_t on_complete) syslink2_control_submit_result_t` | Takes a request for submission, and returns if it has been submitted successfully or not. The request completes with `on_complete`. |
+| `syslink2_control_service_submit_raw(const uint8_t *data, uint8_t len, syslink2_control_on_complete_raw_t on_complete_raw) syslink2_control_submit_result_t` | Takes a raw request of `len` bytes for submission, decodes it, and returns if it has been submitted successfully or not. The request completes with `on_complete_raw`. |
 | `syslink2_control_service_is_ready() bool` | Returns the ready flag. |
 | `syslink2_control_service_init(bccam_uart_runtime_t *runtime) void` | The public init functions of all control_service units. Initializes the control service unit and subunits. Passes `runtime` on to `syslink2_control_channel_init`. Then creates the Control task. Called once, from `bcCamDeckInit`. |
 | `syslink2_control_service_step(uint32_t now_ticks) void` | Does one step, see [One step of syslink2_control_service](#one-step-of-syslink2_control_service). `now_ticks` is the current tick count. The Control task reads it once per loop iteration with `xTaskGetTickCount()` and passes it in. It is passed on to `syslink2_control_request_handling_step`. Called only from the Control task, and from host tests. |
@@ -676,9 +728,12 @@ Each loop iteration:
 
 Returns `SYSLINK2_CONTROL_SUBMIT_NOT_INITIALIZED` when
 `syslink2_control_service_init` has not been called, and the request is not
-queued. Otherwise checks the request with `syslink2_control_codec_request_valid`.
-Returns `SYSLINK2_CONTROL_SUBMIT_INVALID` when it is not valid, and the request is
-not queued. Otherwise passes it on to `syslink2_control_request_queue` with
+queued. Otherwise checks that `on_complete` is not NULL, and checks the
+request with `syslink2_control_codec_request_valid`. Returns
+`SYSLINK2_CONTROL_SUBMIT_INVALID` when either check fails, and the request is
+not queued. Otherwise puts the request and `on_complete` in a
+`syslink2_control_queue_entry_t`, with `on_complete_raw` NULL, and passes it on
+to `syslink2_control_request_queue` with
 `syslink2_control_request_queue_put`, without blocking. Returns
 `SYSLINK2_CONTROL_SUBMIT_QUEUE_FULL` when the queue is full, and the request is
 not queued, and `SYSLINK2_CONTROL_SUBMIT_ACCEPTED` when it is queued. The checks
@@ -695,12 +750,14 @@ queued. Otherwise decodes the raw request into a local
 [Raw requests](#raw-requests). Returns `SYSLINK2_CONTROL_SUBMIT_INVALID` when
 it cannot be decoded, and the request is not queued. Otherwise it continues
 as [syslink2_control_service_submit](#syslink2_control_service_submit) after its
-init check: request checks, then queue.
+init check, with `on_complete_raw` in place of `on_complete`: callback and
+request checks, then queue. The queue entry has `on_complete_raw` set and
+`on_complete` NULL.
 
 - The checks are made in the order init, decode, validity, queue full.
-- A raw request that cannot be decoded and a decoded request that fails the
-  [Request checks](#request-checks) both give `_INVALID`. The user cannot
-  tell them apart.
+- A raw request that cannot be decoded, a NULL `on_complete_raw` and a
+  decoded request that fails the [Request checks](#request-checks) all give
+  `_INVALID`. The user cannot tell them apart.
 - The raw bytes are not kept. The user can reuse or drop them as soon as
   `syslink2_control_service_submit_raw` returns.
 
@@ -787,10 +844,11 @@ the Control task, by `syslink2_control_request_handling`.
 - The requests are stored in a FreeRTOS queue in static memory, the same
   pattern as the request queue in `bccam_uart_service`.
 - The queue holds 4 requests.
-- Each entry is a copy of the whole `syslink2_control_request_t`, including
-  its `value`. The user can reuse or drop its request as soon as
-  `syslink2_control_service_submit` returns.
-- `syslink2_control_request_queue_take` copies the request out to
+- Each entry is a `syslink2_control_queue_entry_t`: a copy of the whole
+  `syslink2_control_request_t`, including its `value`, and the callback to
+  complete it with. The user can reuse or drop its request as soon as
+  submit returns.
+- `syslink2_control_request_queue_take` copies the entry out to
   `syslink2_control_request_handling`, which keeps it while the request is
   outstanding. The `request` passed to `on_complete` is that copy, not the
   user's original.
@@ -804,16 +862,17 @@ the Control task, by `syslink2_control_request_handling`.
 | Function | What it does |
 |---|---|
 | `syslink2_control_request_queue_init() void` | Creates the queue. |
-| `syslink2_control_request_queue_put(const syslink2_control_request_t *request) bool` | Copies the request into the queue without blocking. Returns false when the queue is full, and the request is not queued. |
-| `syslink2_control_request_queue_take(syslink2_control_request_t *request) bool` | Copies the oldest request out of the queue without blocking. Returns false when the queue is empty. |
+| `syslink2_control_request_queue_put(const syslink2_control_queue_entry_t *entry) bool` | Copies the entry into the queue without blocking. Returns false when the queue is full, and the entry is not queued. |
+| `syslink2_control_request_queue_take(syslink2_control_queue_entry_t *entry) bool` | Copies the oldest entry out of the queue without blocking. Returns false when the queue is empty. |
 
-Requests are taken in the order they were put.
+Entries are taken in the order they were put, raw or not.
 
 ## syslink2_control_request_handling
 
 The unit `syslink2_control_request_handling` is the main responsible unit for
 the request lifecycle: taking requests off the queue, sending, matching
-the answer and calling the `on_complete` function.
+the answer and calling the completion, see
+[Completing a request](#completing-a-request).
 
 The unit is stepped by `syslink2_control_service`, once per service step.
 
@@ -838,7 +897,7 @@ responses, and only responses, see [Frame classes](#frame-classes).
 
 | Field | Type | What it holds |
 |---|---|---|
-| `outstanding` | `syslink2_control_request_t` | The copy of the outstanding request, taken from `syslink2_control_request_queue`. Passed to `on_complete`. |
+| `outstanding` | `syslink2_control_queue_entry_t` | The outstanding request and its callback, taken from `syslink2_control_request_queue`. Its request is passed to `on_complete`. |
 | `next_request_id` | `uint8_t` | The `request_id` for the next request. |
 | `deadline` | `uint32_t` | The tick count when the outstanding request times out. Set on start timer. |
 
@@ -869,7 +928,9 @@ What `syslink2_control_request_handling` does in one call to
 return. Each state has its own swim lane.  In Idle and WaitingToSend there is no request waiting
 for an answer, so a response is stale and dropped before ready
 is checked. A lane ends either without changing the state
-or by setting a new state, which takes effect from the next step.
+or by setting a new state, which takes effect from the next step. In the
+diagram, `on_complete` stands for the completion, `on_complete` or
+`on_complete_raw`, see [Completing a request](#completing-a-request).
 
 ```mermaid
 flowchart TD
@@ -931,7 +992,7 @@ flowchart TD
         px["drop stale"]
         pv{"kind fits operation,<br/>and value_valid<br/>if VALUE?"}
         pp["stop timer,<br/>on_complete<br/>SYSLINK2_CONTROL_OUTCOME_PROTOCOL_ERROR"]
-        pc["stop timer, build result,<br/>on_complete<br/>SYSLINK2_CONTROL_OUTCOME_OK, _VALUE or _ERROR"]
+        pc["stop timer,<br/>on_complete<br/>SYSLINK2_CONTROL_OUTCOME_OK, _VALUE or _ERROR"]
         p6{"timer expired?"}
         p7["on_complete<br/>SYSLINK2_CONTROL_OUTCOME_TIMEOUT"]
         p8(["state Idle"])
@@ -1005,21 +1066,46 @@ Consequences and design choices:
   is sent at the earliest in the next step, and the next request is taken
   at the earliest in the step after the previous one completed.
 
+### Completing a request
+
+Every lane in [One step](#one-step) that completes a request does it in the
+same way, with the outcome and, for `SYSLINK2_CONTROL_OUTCOME_OK`, `_VALUE`
+and `_ERROR`, the matching response. Which callback is called depends on the
+entry:
+
+- `on_complete` is set: builds a `syslink2_control_result_t` from the
+  outcome and the response, and calls
+  `on_complete(&outstanding.request, &result)`.
+- `on_complete_raw` is set: for `SYSLINK2_CONTROL_OUTCOME_OK`, `_VALUE` and
+  `_ERROR`, encodes the response as a raw response with
+  `syslink2_control_codec_encode_response`, with `request_id` set to the user
+  request ID, and calls
+  `on_complete_raw(outcome, user_request_id, frame.data, frame.len)`. For
+  every other outcome, calls
+  `on_complete_raw(outcome, user_request_id, NULL, 0)`.
+
+- `_PROTOCOL_ERROR` has no raw response, also when the deck did answer. The
+  answer did not fit the operation, or its value failed the value checks,
+  so it cannot be encoded again.
+- The raw response is built on the stack of the Control task and is valid
+  only during the call.
+
 ## syslink2_control_codec
 
 Validates requests, decodes raw requests, encodes `GET` and `SET`, sorts received frames into
-classes, and decodes `OK`, `VALUE` and `ERROR` and validates their bodies.
-Pure functions without state.
+classes, decodes `OK`, `VALUE` and `ERROR` and validates their bodies, and
+encodes raw responses. Pure functions without state.
 
 ### Functions
 
 | Function | What it does |
 |---|---|
 | `syslink2_control_codec_request_valid(const syslink2_control_request_t *request) bool` | Returns true when the request passes the request checks below. |
-| `syslink2_control_codec_decode_request(const uint8_t *data, uint8_t len, const syslink2_control_user_t *user, syslink2_control_request_t *request) bool` | Decodes a raw request into `request`, see [Raw requests](#raw-requests), and sets `request->user` to `user`. Returns false when it cannot be decoded, and `request` must not be used. Does not run the request checks. |
+| `syslink2_control_codec_decode_request(const uint8_t *data, uint8_t len, syslink2_control_request_t *request) bool` | Decodes a raw request into `request`, see [Raw requests](#raw-requests). Returns false when it cannot be decoded, and `request` must not be used. Does not run the request checks. |
 | `syslink2_control_codec_encode_get(uint8_t request_id, const char *path, uint8_t path_len) syslink2_control_frame_t` | Builds a `GET` frame as in [Frame layout](#frame-layout). Precondition: `path` and `path_len` are from a request that passed `syslink2_control_codec_request_valid`. Cannot fail. |
 | `syslink2_control_codec_encode_set(uint8_t request_id, const char *path, uint8_t path_len, const syslink2_control_value_t *value) syslink2_control_frame_t` | Builds a `SET` frame as in [Frame layout](#frame-layout). Precondition: `path`, `path_len` and `value` are from a request that passed `syslink2_control_codec_request_valid`. Cannot fail. |
 | `syslink2_control_codec_decode(const syslink2_control_frame_t *frame, syslink2_control_response_t *response) syslink2_control_frame_class_t` | Returns the class of the frame, see [Frame classes](#frame-classes). Fills in `response` only when the class is response. Otherwise `response` must not be used. |
+| `syslink2_control_codec_encode_response(uint8_t request_id, const syslink2_control_response_t *response) syslink2_control_frame_t` | Builds an `OK`, `VALUE` or `ERROR` frame as in [Frame layout](#frame-layout), see [Raw responses](#raw-responses). Precondition: `response` was filled in by `syslink2_control_codec_decode`, and `value_valid` is true if it is a `VALUE`. Cannot fail. |
 
 ### Request checks
 
@@ -1031,7 +1117,9 @@ hold:
 - Every byte of `path` is printable ASCII, 0x20..0x7e.
 - For `SET`, `value` passes the value checks below. For `GET`, `value` is
   not read.
-- `user` and `user->on_complete` are not NULL.
+
+The callback is not part of the request. Submit checks it separately, see
+[syslink2_control_service_submit](#syslink2_control_service_submit).
 
 The checks protect the encoders: a `path_len` over
 `SYSLINK2_CONTROL_PATH_MAX_LEN` or a `value.len` over
@@ -1065,9 +1153,28 @@ be used.
 
 The length checks protect the copy into the fixed arrays of
 `syslink2_control_request_t`. Everything else, such as a `path_len` of 0,
-non-printable path bytes, a value type out of scope or a `user` that is
-NULL, is left to the [Request checks](#request-checks), which
+non-printable path bytes or a value type out of scope, is left to the
+[Request checks](#request-checks), which
 `syslink2_control_service_submit_raw` runs after decoding.
+
+### Raw responses
+
+`syslink2_control_codec_encode_response` builds a raw response from a
+decoded response:
+
+| Response field | Raw byte |
+|---|---|
+| `kind` | `kind` |
+| the `request_id` argument | `request_id` |
+| `value` (`VALUE` only) | `value` |
+| `error_code`, `detail_len`, `detail` (`ERROR` only) | `error_code`, `detail_len`, `detail` |
+
+- `syslink2_control_request_handling` passes the user request ID as
+  `request_id`, not the deck request ID that `response->request_id` holds.
+- The encoding does not lose information compared with the received frame.
+  The frame passed the checks in [Received frames](#received-frames), the
+  value passed the value checks, and the longest detail that fits in a frame
+  fits in `detail`.
 
 ### Received frames
 
@@ -1371,21 +1478,22 @@ Severity rates the effect on the user after mitigation:
   `SYSLINK2_CONTROL_PATH_MAX_LEN`, an unknown `operation`, or a `SET` value
   with a type out of scope or a `len` that does not match the type. Or the
   user submits a raw request that cannot be decoded, see
-  [Raw requests](#raw-requests).
+  [Raw requests](#raw-requests). Or the user passes a NULL callback.
 - **Cause**: a bug in the user, or for a raw request, bad bytes from
   whoever the user got them from.
 - **Effect if unmitigated**: the encoders read past the end of `path` or
   `value.data`, or a frame the deck cannot parse is sent. For a raw
   request, the decoder reads past the end of `data` or writes past the end
-  of `path` or `value.data`.
+  of `path` or `value.data`. With a NULL callback, the Control task crashes
+  when the request completes.
 - **Mitigation**: `syslink2_control_service_submit_raw` decodes the raw
   request with `syslink2_control_codec_decode_request`, which checks its
   lengths. Both `syslink2_control_service_submit` and
-  `syslink2_control_service_submit_raw` check the request with
-  `syslink2_control_codec_request_valid` before it is queued. Either failure
-  returns `SYSLINK2_CONTROL_SUBMIT_INVALID`.
+  `syslink2_control_service_submit_raw` check that the callback is not NULL
+  and check the request with `syslink2_control_codec_request_valid` before
+  it is queued. Any failure returns `SYSLINK2_CONTROL_SUBMIT_INVALID`.
 - **Severity after mitigation**: Low.
-- **Outcome**: no `on_complete`, only the return
+- **Outcome**: no completion, only the return
   `SYSLINK2_CONTROL_SUBMIT_INVALID`.
 
 ### Queue full
@@ -1398,7 +1506,7 @@ Severity rates the effect on the user after mitigation:
 - **Mitigation**: `syslink2_control_request_queue_put` detects it, and
   `syslink2_control_service_submit` returns `SYSLINK2_CONTROL_SUBMIT_QUEUE_FULL`.
 - **Severity after mitigation**: Low.
-- **Outcome**: no `on_complete`, only the return
+- **Outcome**: no completion, only the return
   `SYSLINK2_CONTROL_SUBMIT_QUEUE_FULL`.
 
 ### Submit before init
@@ -1413,7 +1521,7 @@ Severity rates the effect on the user after mitigation:
   `syslink2_control_service_init` has not been called and returns
   `SYSLINK2_CONTROL_SUBMIT_NOT_INITIALIZED`. The request is not queued.
 - **Severity after mitigation**: Low.
-- **Outcome**: no `on_complete`, only the return
+- **Outcome**: no completion, only the return
   `SYSLINK2_CONTROL_SUBMIT_NOT_INITIALIZED`.
 
 ## Open questions
@@ -1505,7 +1613,7 @@ open.
   priority `tskIDLE_PRIORITY + 2` (the same as `bcCamUartTask`), defined in
   `syslink2_control_service.c` like the bcCam UART task. The task waits with
   `vTaskDelay`, so a submit is seen within 10 ms but does not wake it.
-  Question: is the stack enough for users' `on_complete`, which runs in this
+  Question: is the stack enough for users' completions, which run in this
   task? The stack headroom has not been measured.
 - Host test of `syslink2_control_request_queue`: under `UNIT_TEST_MODE` the
   queue is a ring buffer with the same behaviour. The FreeRTOS queue is only
@@ -1518,5 +1626,9 @@ open.
   `bccam_uart_service_runtime()`.
 - Hardware test user: `CONFIG_DECK_BCCAM_CONTROL_TEST` adds
   `syslink2_control_test_user.c`, with the `bcCamCtlT` param and log groups.
-  It is temporary. Question: keep it until a real user exists, or remove it
+  With `bcCamCtlT.raw` set it submits with
+  `syslink2_control_service_submit_raw` and completes in `on_complete_raw`,
+  which decodes the raw response into the same log variables and logs its
+  length in `bcCamCtlT.lastRawLen` (0 for `on_complete` and for outcomes
+  without a raw response). It is temporary. Question: keep it until a real user exists, or remove it
   before merge?

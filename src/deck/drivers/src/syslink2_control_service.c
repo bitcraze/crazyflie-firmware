@@ -53,33 +53,47 @@ void syslink2_control_service_init(bccam_uart_runtime_t *runtime) {
 #endif
 }
 
-static syslink2_control_submit_result_t queue_valid_request(
-  const syslink2_control_request_t *request) {
-  if (!syslink2_control_codec_request_valid(request)) {
+static syslink2_control_submit_result_t queue_valid_entry(
+  const syslink2_control_queue_entry_t *entry) {
+  if ((entry->on_complete == NULL && entry->on_complete_raw == NULL) ||
+      !syslink2_control_codec_request_valid(&entry->request)) {
     return SYSLINK2_CONTROL_SUBMIT_INVALID;
   }
-  return syslink2_control_request_queue_put(request) ?
+  return syslink2_control_request_queue_put(entry) ?
     SYSLINK2_CONTROL_SUBMIT_ACCEPTED : SYSLINK2_CONTROL_SUBMIT_QUEUE_FULL;
 }
 
 syslink2_control_submit_result_t syslink2_control_service_submit(
-  const syslink2_control_request_t *request) {
+  const syslink2_control_request_t *request,
+  syslink2_control_on_complete_t on_complete) {
   if (!initialized) {
     return SYSLINK2_CONTROL_SUBMIT_NOT_INITIALIZED;
   }
-  return queue_valid_request(request);
+  if (request == NULL) {
+    return SYSLINK2_CONTROL_SUBMIT_INVALID;
+  }
+  const syslink2_control_queue_entry_t entry = {
+    .request = *request,
+    .on_complete = on_complete,
+    .on_complete_raw = NULL,
+  };
+  return queue_valid_entry(&entry);
 }
 
 syslink2_control_submit_result_t syslink2_control_service_submit_raw(
-  const uint8_t *data, uint8_t len, const syslink2_control_user_t *user) {
+  const uint8_t *data, uint8_t len,
+  syslink2_control_on_complete_raw_t on_complete_raw) {
   if (!initialized) {
     return SYSLINK2_CONTROL_SUBMIT_NOT_INITIALIZED;
   }
-  syslink2_control_request_t request;
-  if (!syslink2_control_codec_decode_request(data, len, user, &request)) {
+  syslink2_control_queue_entry_t entry = {
+    .on_complete = NULL,
+    .on_complete_raw = on_complete_raw,
+  };
+  if (!syslink2_control_codec_decode_request(data, len, &entry.request)) {
     return SYSLINK2_CONTROL_SUBMIT_INVALID;
   }
-  return queue_valid_request(&request);
+  return queue_valid_entry(&entry);
 }
 
 bool syslink2_control_service_is_ready(void) {

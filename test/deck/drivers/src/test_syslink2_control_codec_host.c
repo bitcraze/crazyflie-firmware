@@ -4,15 +4,6 @@
 #include "unity.h"
 #include "syslink2_control_codec.h"
 
-static void on_complete(const syslink2_control_request_t *request,
-                        const syslink2_control_result_t *result) {
-  (void)request;
-  (void)result;
-}
-
-static const syslink2_control_user_t user = { .on_complete = on_complete };
-static const syslink2_control_user_t user_without_callback = { 0 };
-
 static syslink2_control_request_t make_request(uint8_t operation,
                                                const char *path) {
   syslink2_control_request_t request;
@@ -24,7 +15,6 @@ static syslink2_control_request_t make_request(uint8_t operation,
   request.value.type = SYSLINK2_CONTROL_TYPE_U8;
   request.value.len = 1u;
   request.value.data[0] = 42u;
-  request.user = &user;
   return request;
 }
 
@@ -96,12 +86,7 @@ void testGetValueIsNotRead(void) {
   TEST_ASSERT_TRUE(syslink2_control_codec_request_valid(&request));
 }
 
-void testMissingUserOrCallbackIsInvalid(void) {
-  syslink2_control_request_t request = make_request(SYSLINK2_CONTROL_KIND_GET, "a.b");
-  request.user = NULL;
-  TEST_ASSERT_FALSE(syslink2_control_codec_request_valid(&request));
-  request.user = &user_without_callback;
-  TEST_ASSERT_FALSE(syslink2_control_codec_request_valid(&request));
+void testNullRequestIsInvalid(void) {
   TEST_ASSERT_FALSE(syslink2_control_codec_request_valid(NULL));
 }
 
@@ -110,18 +95,17 @@ void testMissingUserOrCallbackIsInvalid(void) {
 void testDecodeRawGet(void) {
   const uint8_t raw[] = { 0x01, 7, 3, 'a', '.', 'b' };
   syslink2_control_request_t request;
-  TEST_ASSERT_TRUE(syslink2_control_codec_decode_request(raw, sizeof(raw), &user, &request));
+  TEST_ASSERT_TRUE(syslink2_control_codec_decode_request(raw, sizeof(raw), &request));
   TEST_ASSERT_EQUAL_UINT8(SYSLINK2_CONTROL_KIND_GET, request.operation);
   TEST_ASSERT_EQUAL_UINT8(7, request.user_request_id);
   TEST_ASSERT_EQUAL_UINT8(3, request.path_len);
   TEST_ASSERT_EQUAL_MEMORY("a.b", request.path, 3);
-  TEST_ASSERT_EQUAL_PTR(&user, request.user);
 }
 
 void testDecodeRawSet(void) {
   const uint8_t raw[] = { 0x02, 8, 1, 'q', 0x12, 2, 0x34, 0x12 };
   syslink2_control_request_t request;
-  TEST_ASSERT_TRUE(syslink2_control_codec_decode_request(raw, sizeof(raw), &user, &request));
+  TEST_ASSERT_TRUE(syslink2_control_codec_decode_request(raw, sizeof(raw), &request));
   TEST_ASSERT_EQUAL_UINT8(SYSLINK2_CONTROL_KIND_SET, request.operation);
   TEST_ASSERT_EQUAL_UINT8(0x12, request.value.type);
   TEST_ASSERT_EQUAL_UINT8(2, request.value.len);
@@ -132,20 +116,20 @@ void testDecodeRawSet(void) {
 void testDecodeRawRejectsBadLengths(void) {
   syslink2_control_request_t request;
   const uint8_t short_raw[] = { 0x01, 7 };
-  TEST_ASSERT_FALSE(syslink2_control_codec_decode_request(short_raw, sizeof(short_raw), &user, &request));
-  TEST_ASSERT_FALSE(syslink2_control_codec_decode_request(NULL, 3, &user, &request));
+  TEST_ASSERT_FALSE(syslink2_control_codec_decode_request(short_raw, sizeof(short_raw), &request));
+  TEST_ASSERT_FALSE(syslink2_control_codec_decode_request(NULL, 3, &request));
   const uint8_t bad_kind[] = { 0x81, 7, 1, 'a' };
-  TEST_ASSERT_FALSE(syslink2_control_codec_decode_request(bad_kind, sizeof(bad_kind), &user, &request));
+  TEST_ASSERT_FALSE(syslink2_control_codec_decode_request(bad_kind, sizeof(bad_kind), &request));
   const uint8_t path_too_long_for_len[] = { 0x01, 7, 4, 'a', 'b' };
-  TEST_ASSERT_FALSE(syslink2_control_codec_decode_request(path_too_long_for_len, sizeof(path_too_long_for_len), &user, &request));
+  TEST_ASSERT_FALSE(syslink2_control_codec_decode_request(path_too_long_for_len, sizeof(path_too_long_for_len), &request));
   const uint8_t get_trailing[] = { 0x01, 7, 1, 'a', 0 };
-  TEST_ASSERT_FALSE(syslink2_control_codec_decode_request(get_trailing, sizeof(get_trailing), &user, &request));
+  TEST_ASSERT_FALSE(syslink2_control_codec_decode_request(get_trailing, sizeof(get_trailing), &request));
   const uint8_t set_no_value_header[] = { 0x02, 7, 1, 'a', 0x10 };
-  TEST_ASSERT_FALSE(syslink2_control_codec_decode_request(set_no_value_header, sizeof(set_no_value_header), &user, &request));
+  TEST_ASSERT_FALSE(syslink2_control_codec_decode_request(set_no_value_header, sizeof(set_no_value_header), &request));
   const uint8_t set_value_too_long[] = { 0x02, 7, 1, 'a', 0x10, 5, 1, 2, 3, 4, 5 };
-  TEST_ASSERT_FALSE(syslink2_control_codec_decode_request(set_value_too_long, sizeof(set_value_too_long), &user, &request));
+  TEST_ASSERT_FALSE(syslink2_control_codec_decode_request(set_value_too_long, sizeof(set_value_too_long), &request));
   const uint8_t set_value_trailing[] = { 0x02, 7, 1, 'a', 0x10, 1, 5, 0 };
-  TEST_ASSERT_FALSE(syslink2_control_codec_decode_request(set_value_trailing, sizeof(set_value_trailing), &user, &request));
+  TEST_ASSERT_FALSE(syslink2_control_codec_decode_request(set_value_trailing, sizeof(set_value_trailing), &request));
 }
 
 void testDecodeRawPathOverMaxIsRejected(void) {
@@ -155,13 +139,13 @@ void testDecodeRawPathOverMaxIsRejected(void) {
   raw[1] = 0;
   raw[2] = SYSLINK2_CONTROL_PATH_MAX_LEN + 1u;
   syslink2_control_request_t request;
-  TEST_ASSERT_FALSE(syslink2_control_codec_decode_request(raw, sizeof(raw), &user, &request));
+  TEST_ASSERT_FALSE(syslink2_control_codec_decode_request(raw, sizeof(raw), &request));
 }
 
 void testDecodeRawLeavesContentChecksToRequestChecks(void) {
   const uint8_t raw[] = { 0x01, 7, 0 };
   syslink2_control_request_t request;
-  TEST_ASSERT_TRUE(syslink2_control_codec_decode_request(raw, sizeof(raw), NULL, &request));
+  TEST_ASSERT_TRUE(syslink2_control_codec_decode_request(raw, sizeof(raw), &request));
   TEST_ASSERT_FALSE(syslink2_control_codec_request_valid(&request));
 }
 
@@ -289,4 +273,46 @@ void testOtherKindsAndShortFramesAreMalformed(void) {
   TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_FRAME_CLASS_MALFORMED, syslink2_control_codec_decode(&frame, &response));
   frame.len = 0;
   TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_FRAME_CLASS_MALFORMED, syslink2_control_codec_decode(&frame, &response));
+}
+
+/* Raw responses */
+
+static void assert_round_trip(const uint8_t *bytes, uint8_t len) {
+  const syslink2_control_frame_t received = frame_of(bytes, len);
+  syslink2_control_response_t response;
+  TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_FRAME_CLASS_RESPONSE,
+                    syslink2_control_codec_decode(&received, &response));
+  const syslink2_control_frame_t raw =
+    syslink2_control_codec_encode_response(9u, &response);
+  TEST_ASSERT_EQUAL_UINT8(len, raw.len);
+  TEST_ASSERT_EQUAL_UINT8(bytes[0], raw.data[0]);
+  TEST_ASSERT_EQUAL_UINT8(9u, raw.data[1]);
+  if (len > 2u) {
+    TEST_ASSERT_EQUAL_MEMORY(&bytes[2], &raw.data[2], len - 2u);
+  }
+}
+
+void testEncodeResponseOk(void) {
+  const uint8_t bytes[] = { 0x80, 5 };
+  assert_round_trip(bytes, sizeof(bytes));
+}
+
+void testEncodeResponseValue(void) {
+  const uint8_t bytes[] = { 0x81, 5, 0x14, 4, 0x78, 0x56, 0x34, 0x12 };
+  assert_round_trip(bytes, sizeof(bytes));
+}
+
+void testEncodeResponseErrorWithDetail(void) {
+  const uint8_t bytes[] = { 0x82, 5, 0x03, 4, 'n', 'o', 'p', 'e' };
+  assert_round_trip(bytes, sizeof(bytes));
+}
+
+void testEncodeResponseErrorWithLongestDetail(void) {
+  uint8_t bytes[SYSLINK2_CONTROL_FRAME_MAX_LEN];
+  memset(bytes, 'd', sizeof(bytes));
+  bytes[0] = 0x82;
+  bytes[1] = 5;
+  bytes[2] = 0x09;
+  bytes[3] = SYSLINK2_CONTROL_DETAIL_MAX_LEN;
+  assert_round_trip(bytes, sizeof(bytes));
 }

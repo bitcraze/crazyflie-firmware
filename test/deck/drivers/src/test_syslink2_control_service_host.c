@@ -62,7 +62,23 @@ static void on_complete(const syslink2_control_request_t *request,
   completed_result = *result;
 }
 
-static const syslink2_control_user_t user = { .on_complete = on_complete };
+static unsigned raw_completions;
+static syslink2_control_outcome_t raw_outcome;
+static uint8_t raw_user_request_id;
+static uint8_t raw_data[SYSLINK2_CONTROL_FRAME_MAX_LEN];
+static uint8_t raw_len;
+
+static void on_complete_raw(syslink2_control_outcome_t outcome,
+                            uint8_t user_request_id, const uint8_t *data,
+                            uint8_t len) {
+  raw_completions++;
+  raw_outcome = outcome;
+  raw_user_request_id = user_request_id;
+  raw_len = len;
+  if (data != NULL) {
+    memcpy(raw_data, data, len);
+  }
+}
 
 static syslink2_control_request_t get_request(uint8_t user_id) {
   syslink2_control_request_t request;
@@ -71,7 +87,6 @@ static syslink2_control_request_t get_request(uint8_t user_id) {
   request.user_request_id = user_id;
   request.path_len = 1u;
   request.path[0] = 'q';
-  request.user = &user;
   return request;
 }
 
@@ -85,6 +100,7 @@ void setUp(void) {
   rx_full = false;
   receives = 0;
   completions = 0;
+  raw_completions = 0;
 }
 
 void tearDown(void) {}
@@ -92,13 +108,13 @@ void tearDown(void) {}
 void testSubmitBeforeInitIsNotInitialized(void) {
   const syslink2_control_request_t request = get_request(1);
   TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_SUBMIT_NOT_INITIALIZED,
-                    syslink2_control_service_submit(&request));
+                    syslink2_control_service_submit(&request, on_complete));
   const uint8_t raw[] = { 0x01, 1, 1, 'q' };
   TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_SUBMIT_NOT_INITIALIZED,
-                    syslink2_control_service_submit_raw(raw, sizeof(raw), &user));
+                    syslink2_control_service_submit_raw(raw, sizeof(raw), on_complete_raw));
   /* Not initialized wins over invalid. */
   TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_SUBMIT_NOT_INITIALIZED,
-                    syslink2_control_service_submit(NULL));
+                    syslink2_control_service_submit(NULL, on_complete));
 }
 
 void testInitPassesRuntimeToChannel(void) {
@@ -112,33 +128,42 @@ void testInvalidAndQueueFull(void) {
   syslink2_control_request_t request = get_request(1);
   request.path_len = 0u;
   TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_SUBMIT_INVALID,
-                    syslink2_control_service_submit(&request));
+                    syslink2_control_service_submit(&request, on_complete));
   request = get_request(1);
   for (unsigned i = 0; i < SYSLINK2_CONTROL_REQUEST_QUEUE_LENGTH; i++) {
     TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_SUBMIT_ACCEPTED,
-                      syslink2_control_service_submit(&request));
+                      syslink2_control_service_submit(&request, on_complete));
   }
   TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_SUBMIT_QUEUE_FULL,
-                    syslink2_control_service_submit(&request));
+                    syslink2_control_service_submit(&request, on_complete));
   /* Invalid wins over queue full. */
   request.path_len = 0u;
   TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_SUBMIT_INVALID,
-                    syslink2_control_service_submit(&request));
+                    syslink2_control_service_submit(&request, on_complete));
+}
+
+void testSubmitWithoutCallbackOrRequestIsInvalid(void) {
+  syslink2_control_service_init(&runtime);
+  const syslink2_control_request_t request = get_request(1);
+  TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_SUBMIT_INVALID,
+                    syslink2_control_service_submit(&request, NULL));
+  TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_SUBMIT_INVALID,
+                    syslink2_control_service_submit(NULL, on_complete));
 }
 
 void testSubmitRawDecodesAndChecks(void) {
   syslink2_control_service_init(&runtime);
   const uint8_t undecodable[] = { 0x01, 1, 5, 'q' };
   TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_SUBMIT_INVALID,
-                    syslink2_control_service_submit_raw(undecodable, sizeof(undecodable), &user));
+                    syslink2_control_service_submit_raw(undecodable, sizeof(undecodable), on_complete_raw));
   const uint8_t empty_path[] = { 0x01, 1, 0 };
   TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_SUBMIT_INVALID,
-                    syslink2_control_service_submit_raw(empty_path, sizeof(empty_path), &user));
+                    syslink2_control_service_submit_raw(empty_path, sizeof(empty_path), on_complete_raw));
   const uint8_t good[] = { 0x01, 9, 1, 'q' };
   TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_SUBMIT_INVALID,
                     syslink2_control_service_submit_raw(good, sizeof(good), NULL));
   TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_SUBMIT_ACCEPTED,
-                    syslink2_control_service_submit_raw(good, sizeof(good), &user));
+                    syslink2_control_service_submit_raw(good, sizeof(good), on_complete_raw));
 
   runtime_ready = true;
   syslink2_control_service_step(0);
@@ -146,9 +171,13 @@ void testSubmitRawDecodesAndChecks(void) {
   const uint8_t answer[] = { 0x81, sent.data[1], 0x10, 1, 55 };
   deliver(answer, sizeof(answer));
   syslink2_control_service_step(2);
-  TEST_ASSERT_EQUAL_UINT8(9, completed_request.user_request_id);
-  TEST_ASSERT_EQUAL_PTR(&user, completed_request.user);
-  TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_OUTCOME_VALUE, completed_result.outcome);
+  TEST_ASSERT_EQUAL_UINT(0, completions);
+  TEST_ASSERT_EQUAL_UINT(1, raw_completions);
+  TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_OUTCOME_VALUE, raw_outcome);
+  TEST_ASSERT_EQUAL_UINT8(9, raw_user_request_id);
+  const uint8_t expected[] = { 0x81, 9, 0x10, 1, 55 };
+  TEST_ASSERT_EQUAL_UINT8(sizeof(expected), raw_len);
+  TEST_ASSERT_EQUAL_MEMORY(expected, raw_data, sizeof(expected));
 }
 
 void testReadyOpensChannelOnceThenSetsFlag(void) {
@@ -183,7 +212,7 @@ void testFullRequestWithAnswer(void) {
   runtime_ready = true;
   const syslink2_control_request_t request = get_request(4);
   TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_SUBMIT_ACCEPTED,
-                    syslink2_control_service_submit(&request));
+                    syslink2_control_service_submit(&request, on_complete));
   syslink2_control_service_step(0);
   syslink2_control_service_step(1);
   TEST_ASSERT_EQUAL_UINT(1, sends);
@@ -203,7 +232,7 @@ void testUnsolicitedAndMalformedFramesAreDropped(void) {
   syslink2_control_service_init(&runtime);
   runtime_ready = true;
   const syslink2_control_request_t request = get_request(4);
-  syslink2_control_service_submit(&request);
+  syslink2_control_service_submit(&request, on_complete);
   syslink2_control_service_step(0);
   syslink2_control_service_step(1);
 
@@ -224,9 +253,9 @@ void testReadyLostAbortsOutstandingAndThenNotReady(void) {
   syslink2_control_service_init(&runtime);
   runtime_ready = true;
   syslink2_control_request_t request = get_request(1);
-  syslink2_control_service_submit(&request);
+  syslink2_control_service_submit(&request, on_complete);
   request.user_request_id = 2;
-  syslink2_control_service_submit(&request);
+  syslink2_control_service_submit(&request, on_complete);
   syslink2_control_service_step(0);
   syslink2_control_service_step(1);
   runtime_ready = false;

@@ -11,28 +11,28 @@
 
 static xQueueHandle queue;
 STATIC_MEM_QUEUE_ALLOC(queue, SYSLINK2_CONTROL_REQUEST_QUEUE_LENGTH,
-                       sizeof(syslink2_control_request_t));
+                       sizeof(syslink2_control_queue_entry_t));
 
 void syslink2_control_request_queue_init(void) {
   queue = STATIC_MEM_QUEUE_CREATE(queue);
 }
 
 bool syslink2_control_request_queue_put(
-  const syslink2_control_request_t *request) {
-  return queue != NULL && request != NULL &&
-         xQueueSend(queue, request, 0) == pdTRUE;
+  const syslink2_control_queue_entry_t *entry) {
+  return queue != NULL && entry != NULL &&
+         xQueueSend(queue, entry, 0) == pdTRUE;
 }
 
-bool syslink2_control_request_queue_take(syslink2_control_request_t *request) {
-  return queue != NULL && request != NULL &&
-         xQueueReceive(queue, request, 0) == pdTRUE;
+bool syslink2_control_request_queue_take(syslink2_control_queue_entry_t *entry) {
+  return queue != NULL && entry != NULL &&
+         xQueueReceive(queue, entry, 0) == pdTRUE;
 }
 
 #else
 
 /* Host tests: a ring buffer with the same behaviour as the FreeRTOS queue,
  * without its task safety. */
-static syslink2_control_request_t entries[SYSLINK2_CONTROL_REQUEST_QUEUE_LENGTH];
+static syslink2_control_queue_entry_t entries[SYSLINK2_CONTROL_REQUEST_QUEUE_LENGTH];
 static uint8_t head;
 static uint8_t count;
 
@@ -43,20 +43,20 @@ void syslink2_control_request_queue_init(void) {
 }
 
 bool syslink2_control_request_queue_put(
-  const syslink2_control_request_t *request) {
-  if (request == NULL || count >= SYSLINK2_CONTROL_REQUEST_QUEUE_LENGTH) {
+  const syslink2_control_queue_entry_t *entry) {
+  if (entry == NULL || count >= SYSLINK2_CONTROL_REQUEST_QUEUE_LENGTH) {
     return false;
   }
-  entries[(head + count) % SYSLINK2_CONTROL_REQUEST_QUEUE_LENGTH] = *request;
+  entries[(head + count) % SYSLINK2_CONTROL_REQUEST_QUEUE_LENGTH] = *entry;
   count++;
   return true;
 }
 
-bool syslink2_control_request_queue_take(syslink2_control_request_t *request) {
-  if (request == NULL || count == 0u) {
+bool syslink2_control_request_queue_take(syslink2_control_queue_entry_t *entry) {
+  if (entry == NULL || count == 0u) {
     return false;
   }
-  *request = entries[head];
+  *entry = entries[head];
   head = (uint8_t)((head + 1u) % SYSLINK2_CONTROL_REQUEST_QUEUE_LENGTH);
   count--;
   return true;

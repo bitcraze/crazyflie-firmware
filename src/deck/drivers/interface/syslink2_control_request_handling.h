@@ -1,6 +1,6 @@
 /**
  * Handles one outstanding Control request: take, send, match the answer and
- * call on_complete.
+ * call on_complete or on_complete_raw.
  *
  * See docs/functional-areas/camera-deck-control.md,
  * syslink2_control_request_handling.

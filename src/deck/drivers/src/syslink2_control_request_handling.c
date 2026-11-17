@@ -15,7 +15,7 @@ typedef enum {
 } state_t;
 
 static state_t state;
-static syslink2_control_request_t outstanding;
+static syslink2_control_queue_entry_t outstanding;
 static uint8_t next_request_id;
 static uint8_t request_id;
 static uint32_t deadline;
@@ -39,9 +39,24 @@ static bool timer_expired(uint32_t now_ticks) {
   return (int32_t)(now_ticks - deadline) >= 0;
 }
 
-static void complete(const syslink2_control_request_t *request,
+static void complete(const syslink2_control_queue_entry_t *entry,
                      syslink2_control_outcome_t outcome,
                      const syslink2_control_response_t *response) {
+  if (entry->on_complete_raw != NULL) {
+    if (response != NULL && (outcome == SYSLINK2_CONTROL_OUTCOME_OK ||
+                             outcome == SYSLINK2_CONTROL_OUTCOME_VALUE ||
+                             outcome == SYSLINK2_CONTROL_OUTCOME_ERROR)) {
+      const syslink2_control_frame_t frame =
+        syslink2_control_codec_encode_response(entry->request.user_request_id,
+                                               response);
+      entry->on_complete_raw(outcome, entry->request.user_request_id,
+                             frame.data, frame.len);
+    } else {
+      entry->on_complete_raw(outcome, entry->request.user_request_id, NULL, 0u);
+    }
+    return;
+  }
+
   syslink2_control_result_t result;
   memset(&result, 0, sizeof(result));
   result.outcome = outcome;
@@ -52,7 +67,7 @@ static void complete(const syslink2_control_request_t *request,
       result.error_code = response->error_code;
     }
   }
-  request->user->on_complete(request, &result);
+  entry->on_complete(&entry->request, &result);
 }
 
 static void complete_outstanding(syslink2_control_outcome_t outcome,
@@ -62,15 +77,15 @@ static void complete_outstanding(syslink2_control_outcome_t outcome,
 }
 
 static void step_idle(bool ready, uint32_t now_ticks) {
-  syslink2_control_request_t request;
-  if (!syslink2_control_request_queue_take(&request)) {
+  syslink2_control_queue_entry_t entry;
+  if (!syslink2_control_request_queue_take(&entry)) {
     return;
   }
   if (!ready) {
-    complete(&request, SYSLINK2_CONTROL_OUTCOME_NOT_READY, NULL);
+    complete(&entry, SYSLINK2_CONTROL_OUTCOME_NOT_READY, NULL);
     return;
   }
-  outstanding = request;
+  outstanding = entry;
   request_id = assign_request_id();
   deadline = now_ticks + M2T(SYSLINK2_CONTROL_TIMEOUT_MS);
   state = STATE_WAITING_TO_SEND;
@@ -89,12 +104,12 @@ static void step_waiting_to_send(bool ready, uint32_t now_ticks) {
     return;
   }
   const syslink2_control_frame_t frame =
-    outstanding.operation == SYSLINK2_CONTROL_KIND_SET ?
-      syslink2_control_codec_encode_set(request_id, outstanding.path,
-                                        outstanding.path_len,
-                                        &outstanding.value) :
-      syslink2_control_codec_encode_get(request_id, outstanding.path,
-                                        outstanding.path_len);
+    outstanding.request.operation == SYSLINK2_CONTROL_KIND_SET ?
+      syslink2_control_codec_encode_set(request_id, outstanding.request.path,
+                                        outstanding.request.path_len,
+                                        &outstanding.request.value) :
+      syslink2_control_codec_encode_get(request_id, outstanding.request.path,
+                                        outstanding.request.path_len);
   switch (syslink2_control_channel_send(&frame)) {
     case SYSLINK2_CONTROL_SEND_SENT:
       state = STATE_WAITING_RESPONSE;
@@ -116,7 +131,7 @@ static bool answer_fits(const syslink2_control_response_t *response) {
   if (response->kind == SYSLINK2_CONTROL_KIND_ERROR) {
     return true;
   }
-  if (outstanding.operation == SYSLINK2_CONTROL_KIND_GET) {
+  if (outstanding.request.operation == SYSLINK2_CONTROL_KIND_GET) {
     return response->kind == SYSLINK2_CONTROL_KIND_VALUE &&
            response->value_valid;
   }

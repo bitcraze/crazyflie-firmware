@@ -15,9 +15,9 @@
 /** Create the queue. */
 void syslink2_control_request_queue_init(void);
 
-/** Copy the request into the queue without blocking. False when full. */
+/** Copy the entry into the queue without blocking. False when full. */
 bool syslink2_control_request_queue_put(
-  const syslink2_control_request_t *request);
+  const syslink2_control_queue_entry_t *entry);
 
-/** Copy the oldest request out without blocking. False when empty. */
-bool syslink2_control_request_queue_take(syslink2_control_request_t *request);
+/** Copy the oldest entry out without blocking. False when empty. */
+bool syslink2_control_request_queue_take(syslink2_control_queue_entry_t *entry);

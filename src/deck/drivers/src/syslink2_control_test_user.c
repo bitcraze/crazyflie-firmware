@@ -40,6 +40,7 @@ static uint8_t lastOutcome;
 static int32_t lastValue;
 static uint8_t lastType;
 static uint8_t lastErrorCode;
+static uint8_t lastRawLen;
 static uint16_t completions;
 static uint16_t accepted;
 static uint8_t ready;
@@ -83,13 +84,34 @@ static void onComplete(const syslink2_control_request_t *request,
   lastValue = result->outcome == SYSLINK2_CONTROL_OUTCOME_VALUE ?
     decodeValue(&result->value) : 0;
   lastErrorCode = result->error_code;
+  lastRawLen = 0u;
   completions++;
   DEBUG_PRINT("id=%u op=%u outcome=%u value=%ld err=%u\n",
               request->user_request_id, request->operation, lastOutcome,
               (long)lastValue, lastErrorCode);
 }
 
-static const syslink2_control_user_t user = { .on_complete = onComplete };
+static void onCompleteRaw(syslink2_control_outcome_t outcome,
+                          uint8_t userRequestId, const uint8_t *data,
+                          uint8_t len) {
+  lastId = userRequestId;
+  lastOutcome = (uint8_t)outcome;
+  lastRawLen = len;
+  lastType = 0u;
+  lastValue = 0;
+  lastErrorCode = 0u;
+  if (outcome == SYSLINK2_CONTROL_OUTCOME_VALUE && len >= 4u) {
+    syslink2_control_value_t v = { .type = data[2], .len = data[3] };
+    memcpy(v.data, &data[4], v.len <= sizeof(v.data) ? v.len : sizeof(v.data));
+    lastType = v.type;
+    lastValue = decodeValue(&v);
+  } else if (outcome == SYSLINK2_CONTROL_OUTCOME_ERROR && len >= 3u) {
+    lastErrorCode = data[2];
+  }
+  completions++;
+  DEBUG_PRINT("raw id=%u outcome=%u len=%u value=%ld err=%u\n", userRequestId,
+              lastOutcome, len, (long)lastValue, lastErrorCode);
+}
 
 static syslink2_control_submit_result_t submitOne(uint8_t userId) {
   const char *path = paths[pathIndex < PATH_COUNT ? pathIndex : 0u];
@@ -113,7 +135,7 @@ static syslink2_control_submit_result_t submitOne(uint8_t userId) {
       memcpy(&raw[len], v.data, v.len);
       len = (uint8_t)(len + v.len);
     }
-    return syslink2_control_service_submit_raw(raw, len, &user);
+    return syslink2_control_service_submit_raw(raw, len, onCompleteRaw);
   }
 
   syslink2_control_request_t request = {
@@ -121,10 +143,9 @@ static syslink2_control_submit_result_t submitOne(uint8_t userId) {
     .user_request_id = userId,
     .path_len = pathLen,
     .value = v,
-    .user = &user,
   };
   memcpy(request.path, path, pathLen);
-  return syslink2_control_service_submit(&request);
+  return syslink2_control_service_submit(&request, onComplete);
 }
 
 static void triggerChanged(void) {
@@ -170,6 +191,7 @@ LOG_ADD(LOG_UINT8, lastOutcome, &lastOutcome)
 LOG_ADD(LOG_INT32, lastValue, &lastValue)
 LOG_ADD(LOG_UINT8, lastType, &lastType)
 LOG_ADD(LOG_UINT8, lastErr, &lastErrorCode)
+LOG_ADD(LOG_UINT8, lastRawLen, &lastRawLen)
 LOG_ADD(LOG_UINT16, completions, &completions)
 LOG_ADD(LOG_UINT16, accepted, &accepted)
 LOG_GROUP_STOP(bcCamCtlT)
