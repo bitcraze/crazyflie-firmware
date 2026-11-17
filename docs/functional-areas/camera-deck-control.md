@@ -132,12 +132,10 @@ interface.
 This page describes the Control Service layer and its two interfaces: the
 user API above and the runtime interface below.
 
-Note that the service task (`bcCamUartTask` in `bccam_uart_service`), which
-is part of the runtime layer, steps the Control Service.
-`bccam_control_service_init` is called from `bccam_uart_service_init`,
-before the service task is created. `bccam_control_service_step` must be
-called only from the service task. The service task steps the Control
-Service once per loop iteration, in every service state.
+The Control Service runs in a task of its own, the Control task, see [Control
+task](#control-task). `bccam_control_service_init` is called from the deck
+init, `bcCamDeckInit` in `bccam_deck`, after `bccam_uart_service_init`, and
+creates the Control task.
 
 ## Units
 
@@ -146,8 +144,8 @@ The Control Service is broken down into five units by responsibility.
 
 | Unit | Responsibility |
 |---|---|
-| [`bccam_control_service`](#bccam_control_service) | The unit that holds all public functions of the control service. The single entry point the service task steps. Holds the ready flag. Tells the other units what to do in a fixed order. Receives frames and passes responses on to `bccam_control_request_handling`. |
-| [`bccam_control_request_queue`](#bccam_control_request_queue) | Hands submitted requests from user tasks to the service task. |
+| [`bccam_control_service`](#bccam_control_service) | The unit that holds all public functions of the control service. Owns the Control task, which steps it. Holds the ready flag. Tells the other units what to do in a fixed order. Receives frames and passes responses on to `bccam_control_request_handling`. |
+| [`bccam_control_request_queue`](#bccam_control_request_queue) | Hands submitted requests from user tasks to the Control task. |
 | [`bccam_control_request_handling`](#bccam_control_request_handling) | Handles one outstanding request. |
 | [`bccam_control_codec`](#bccam_control_codec) | Library of functions for encoding, decoding and validation. |
 | [`bccam_control_channel`](#bccam_control_channel) | Handles transmit and receive, and its allowance; the only unit aware of the receive slot and credit. The only unit that calls the runtime. |
@@ -218,17 +216,25 @@ classDiagram
         +take_control_rx
     }
 
-    class ServiceTask {
-        <<bccam_uart_service task>>
+    class ControlTask {
+        <<bccam_control_service task>>
     }
 
-    class bccam_uart_service_init {
+    class bccam_uart_service {
+        <<runtime layer>>
+        +init
+        +runtime
+    }
+
+    class bcCamDeckInit {
         <<deck init>>
     }
 
     bccam_control_user_t ..> bccam_control_service : submit, submit_raw, is_ready
-    bccam_uart_service_init --> bccam_control_service : init
-    ServiceTask --> bccam_control_service : step
+    bcCamDeckInit --> bccam_uart_service : init, runtime
+    bcCamDeckInit --> bccam_control_service : init
+    bccam_control_service --> ControlTask : creates
+    ControlTask --> bccam_control_service : step
     bccam_control_service --> bccam_control_request_queue : init, put
     bccam_control_service --> bccam_control_channel : init, runtime_ready, open, receive
     bccam_control_service --> bccam_control_codec : request_valid, decode_request, decode
@@ -389,6 +395,7 @@ as `stdbool.h` and `stdint.h` are left out.
 ```mermaid
 flowchart TB
     user["user, for example camera settings"]
+    deck["bccam_deck"]
     uart_service["bccam_uart_service"]
 
     service["bccam_control_service"]
@@ -401,7 +408,9 @@ flowchart TB
     runtime["bccam_uart_runtime"]
 
     user --> service
-    uart_service --> service
+    deck --> service
+    deck --> uart_service
+    uart_service --> runtime
 
     service --> queue
     service --> handling
@@ -430,7 +439,11 @@ flowchart TB
   `bccam_control_frame_t`, which `bccam_uart_runtime_send_control` and
   `bccam_uart_runtime_take_control_rx` take, see
   [Runtime interface](#runtime-interface).
-- Users and `bccam_uart_service` include only `bccam_control_service`.
+- Users include only `bccam_control_service`.
+- `bccam_deck` includes `bccam_control_service` and `bccam_uart_service`.
+  It gets the runtime instance from `bccam_uart_service` and passes it to
+  `bccam_control_service_init`, see [Runtime interface](#runtime-interface).
+- `bccam_uart_service` does not include any Control Service header.
 - There are no include cycles. `bccam_control_types` includes no other
   project header.
 
@@ -451,7 +464,7 @@ see [bccam_control_service](#bccam_control_service), and their own
 |---|---|
 | `on_complete(const bccam_control_request_t *request, const bccam_control_result_t *result) void` | Tells the user that a request has completed, with its result. |
 
-- `on_complete` is called in the service task. It must not block.
+- `on_complete` is called in the Control task. It must not block.
 - Every request for which submit returns
   `BCCAM_CONTROL_SUBMIT_ACCEPTED` gets exactly one `on_complete`. A request
   for which it returns `BCCAM_CONTROL_SUBMIT_QUEUE_FULL`,
@@ -488,10 +501,17 @@ The functions of the runtime that the Control Service uses. They belong to
 functions take the runtime instance, `bccam_uart_runtime_t *runtime`, as
 their first argument. It is left out here. The runtime instance is
 `firmware_client.runtime`, held by the `bccam_firmware_uart_client_t`
-`firmware_client` in `bccam_uart_service`. `bccam_uart_service` passes it
-to `bccam_control_service_init`, which
-passes it on to `bccam_control_channel_init`. `bccam_control_channel`
-stores it.
+`firmware_client` in `bccam_uart_service`. `bccam_uart_service` returns it
+with `bccam_uart_service_runtime() bccam_uart_runtime_t *`. `bcCamDeckInit`
+passes it to `bccam_control_service_init`, which passes it on to
+`bccam_control_channel_init`. `bccam_control_channel` stores it.
+
+The functions are called from the Control task, while `bcCamUartTask` uses
+the same runtime and link state. Requirements on the runtime:
+
+- All five functions are safe to call from a task other than
+  `bcCamUartTask`.
+- None of them blocks for longer than a short critical section.
 
 | Function | What it does |
 |---|---|
@@ -582,8 +602,8 @@ sequenceDiagram
 
 The unit above the other four. It is the only unit users see, through
 `bccam_control_service_submit`, `bccam_control_service_submit_raw` and
-`bccam_control_service_is_ready`, and the single entry point the service
-task steps. `bccam_control_service_submit` validates the request and passes
+`bccam_control_service_is_ready`. It owns the Control task, which steps it,
+see [Control task](#control-task). `bccam_control_service_submit` validates the request and passes
 it on to `bccam_control_request_queue`. `bccam_control_service_submit_raw`
 first decodes the raw request into a `bccam_control_request_t`, then does
 the same. Neither blocks.
@@ -605,7 +625,7 @@ gets the ready flag as an argument to its step.
   which completes the outstanding request with
   `BCCAM_CONTROL_OUTCOME_ABORTED`. Requests taken from the queue after that
   complete with `BCCAM_CONTROL_OUTCOME_NOT_READY`.
-- The ready flag is written only in the service task. Users read it with
+- The ready flag is written only in the Control task. Users read it with
   `bccam_control_service_is_ready` from their own task.
 
 `bccam_control_service` also receives the frames from the deck, so that
@@ -627,14 +647,30 @@ gets the ready flag as an argument to its step.
 | `bccam_control_service_submit(const bccam_control_request_t *request) bccam_control_submit_result_t` | Takes a request for submission, and returns if it has been submitted successfully or not. |
 | `bccam_control_service_submit_raw(const uint8_t *data, uint8_t len, const bccam_control_user_t *user) bccam_control_submit_result_t` | Takes a raw request of `len` bytes for submission, decodes it, and returns if it has been submitted successfully or not. `user` gets `on_complete`. |
 | `bccam_control_service_is_ready() bool` | Returns the ready flag. |
-| `bccam_control_service_init(bccam_uart_runtime_t *runtime) void` | The public init functions of all control_service units. Initializes the control service unit and subunits. Passes `runtime` on to `bccam_control_channel_init`. |
-| `bccam_control_service_step(uint32_t now_ticks) void` | Does one step, see [One step of bccam_control_service](#one-step-of-bccam_control_service). `now_ticks` is the current tick count. The service task reads it once per loop iteration with `xTaskGetTickCount()` and passes it in, as it does for `service_poll_once_at`. It is passed on to `bccam_control_request_handling_step`. |
+| `bccam_control_service_init(bccam_uart_runtime_t *runtime) void` | The public init functions of all control_service units. Initializes the control service unit and subunits. Passes `runtime` on to `bccam_control_channel_init`. Then creates the Control task. Called once, from `bcCamDeckInit`. |
+| `bccam_control_service_step(uint32_t now_ticks) void` | Does one step, see [One step of bccam_control_service](#one-step-of-bccam_control_service). `now_ticks` is the current tick count. The Control task reads it once per loop iteration with `xTaskGetTickCount()` and passes it in. It is passed on to `bccam_control_request_handling_step`. Called only from the Control task, and from host tests. |
 
 ### Data
 
 | Field | Type | What it holds |
 |---|---|---|
-| `ready` | `bool` | The ready flag. Written only in the service task. |
+| `ready` | `bool` | The ready flag. Written only in the Control task. |
+
+### Control task
+
+The FreeRTOS task that steps the Control Service. `bccam_control_service`
+creates it in `bccam_control_service_init`, in static memory, and it runs as
+long as the system. It is the only task that steps the Control Service, and
+the only task the Control Service calls the runtime from.
+
+Each loop iteration:
+
+1. Read the tick count with `xTaskGetTickCount()`.
+2. Call `bccam_control_service_step(now_ticks)`.
+3. Wait 10 ms.
+
+- A submitted request, a received frame, a change in credit or ready, and
+  an expired timer are all seen within one period, 10 ms.
 
 ### bccam_control_service_submit
 
@@ -741,10 +777,10 @@ sequenceDiagram
 
 ## bccam_control_request_queue
 
-Hands submitted requests from user tasks to the service task.
+Hands submitted requests from user tasks to the Control task.
 `bccam_control_request_queue_put` is called from user tasks, through
 `bccam_control_service`. `bccam_control_request_queue_take` is called from
-the service task, by `bccam_control_request_handling`.
+the Control task, by `bccam_control_request_handling`.
 
 ### Storage
 
@@ -761,9 +797,6 @@ the service task, by `bccam_control_request_handling`.
 - The FreeRTOS queue makes `bccam_control_request_queue_put` and
   `bccam_control_request_queue_take` safe between tasks.
   `bccam_control_request_queue` has no lock of its own.
-- The service task is not notified when a request is put. The request is
-  taken in a later step, within one loop iteration of the service task.
-  When the service task is idle, that is within its 10 ms idle wait.
 - The queue is not cleared when ready is lost.
 
 ### Functions
@@ -1189,7 +1222,7 @@ Severity rates the effect on the user after mitigation:
   The service carries on correctly afterwards.
 - **High**: the service is stuck, also when it recovers once the deck or
   the link recovers, or the failure spreads beyond the Control Service, for
-  example by blocking the bcCam UART service task.
+  example by blocking the bcCam UART service task through the runtime.
 
 ### No answer before the timeout
 
@@ -1372,8 +1405,8 @@ Severity rates the effect on the user after mitigation:
 
 - **Failure mode**: the user submits a request before
   `bccam_control_service_init` has been called.
-- **Cause**: no camera deck is attached, so `bccam_uart_service_init` never
-  runs, or the user submits before deck init.
+- **Cause**: no camera deck is attached, so `bcCamDeckInit` never runs, or
+  the user submits before deck init.
 - **Effect if unmitigated**: `bccam_control_request_queue_put` uses a queue
   that was never created.
 - **Mitigation**: `bccam_control_service_submit` detects that
@@ -1403,7 +1436,18 @@ Severity rates the effect on the user after mitigation:
   - How a grant after a take maps to the link,
     `bccam_uart_link_release_rx_slot` with advertised credit + 1, is not
     described.
-- The ready flag is written in the service task and read from user tasks.
+  - The five functions must be safe to call from the Control task while
+    `bcCamUartTask` uses the runtime, see
+    [Runtime interface](#runtime-interface). How, for example with a mutex
+    or a queue into `bcCamUartTask`, is not decided.
+  - `bccam_uart_service_runtime` does not exist.
+- Control task: the FreeRTOS task name, stack size and priority are not
+  decided.
+- Transport: the runtime interface is UART specific (`bccam_uart_runtime_*`
+  and the `BCCAM_UART_ERR_*` codes mapped in `bccam_control_channel`).
+  Moving the Control Service to another transport needs a
+  transport-neutral interface. Only `bccam_control_channel` would change.
+- The ready flag is written in the Control task and read from user tasks.
   Whether `volatile` is enough is not stated.
 - Work through the ready state machine - it seems that there is a risk that
   control channel is not started if the ready toggles quickly
