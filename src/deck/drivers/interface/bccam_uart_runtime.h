@@ -6,6 +6,7 @@
 #include "bccam_uart_frame.h"
 #include "bccam_uart_link.h"
 #include "bccam_uart_rx_collector.h"
+#include "syslink2_control_types.h"
 
 /* true means the complete packet finished local transmission. false means
  * ambiguous completion and forces fail-stop Link Fault; the packet is never
@@ -41,6 +42,34 @@ typedef enum {
   BCCAM_UART_FIRMWARE_STARTUP_ABNORMAL,
 } bccam_uart_firmware_startup_result_t;
 
+/**
+ * Hand-over between the Control task and bcCamUartTask for the Control
+ * service, after the probe. The Control task only reads and writes this block,
+ * under a short critical section; bcCamUartTask moves frames and grants
+ * between it and the Link in bccam_uart_runtime_step_control_mailbox() and
+ * bccam_uart_runtime_stage_control_rx().
+ */
+typedef struct {
+  /** Control service bound and probe answered, as last published. */
+  bool ready;
+  /** Ready went false and the Control task has not yet seen it. */
+  bool ready_lost_unobserved;
+  /** bcCamUartTask has left the session (for example while the deck is
+   * reset). Ready is not published again until a new session starts.
+   * Written only by bcCamUartTask. */
+  bool closed;
+  /** Negotiated Link payload MTU, as last published. */
+  uint16_t payload_mtu;
+  /** Receive credit grants not yet given to the Link. */
+  uint8_t grants_pending;
+  /** A frame from the Control task waits to be given to the Link. */
+  bool tx_full;
+  syslink2_control_frame_t tx_frame;
+  /** A received frame waits to be taken by the Control task. */
+  bool rx_full;
+  syslink2_control_frame_t rx_frame;
+} bccam_uart_control_mailbox_t;
+
 typedef struct bccam_uart_runtime_t {
   bccam_uart_link_endpoint_t link;
   bccam_uart_frame_parser_t parser;
@@ -60,6 +89,7 @@ typedef struct bccam_uart_runtime_t {
   uint8_t control_schema_module_count;
   bccam_uart_control_schema_module_t
     control_schema_modules[BCCAM_UART_CONTROL_MAX_SCHEMA_MODULES];
+  bccam_uart_control_mailbox_t control_mailbox;
 } bccam_uart_runtime_t;
 
 void bccam_uart_runtime_init(bccam_uart_runtime_t *runtime);
@@ -164,7 +194,78 @@ bccam_uart_control_probe_phase_t bccam_uart_runtime_control_probe_phase(
 bccam_uart_firmware_startup_result_t bccam_uart_runtime_firmware_startup_result(
   const bccam_uart_runtime_t *runtime);
 
+/**
+ * Transmit credit of the Control service, 0 when it is not bound.
+ *
+ * Also called from the Control task. It reads two single-byte fields of the
+ * Link without a lock, which may be one bcCamUartTask step stale.
+ */
 uint8_t bccam_uart_runtime_control_tx_credit(const bccam_uart_runtime_t *runtime);
+
+/*
+ * Control service interface used by the Control task
+ * (syslink2_control_channel). Safe to call from a task other than
+ * bcCamUartTask; none blocks for longer than a short critical section.
+ */
+
+/**
+ * True when the Control service is bound and the probe has been answered with
+ * VALUE. After ready has been lost, returns false at least once, also when
+ * ready has come back since.
+ */
+bool bccam_uart_runtime_control_ready(bccam_uart_runtime_t *runtime);
+
+/**
+ * Grant one receive credit to the deck. Kept pending until bcCamUartTask can
+ * give it to the Link. Ignored while not ready.
+ */
+void bccam_uart_runtime_grant_control_rx_credit(bccam_uart_runtime_t *runtime);
+
+/**
+ * Hand a frame over for sending on the Control service.
+ *
+ * The frame is put in the mailbox and sent by bcCamUartTask on a later step,
+ * so the result is not that of bccam_uart_link_send_normal:
+ * BCCAM_UART_OK when the frame was accepted into the mailbox;
+ * BCCAM_UART_ERR_TRANSACTION_BUSY when a frame is already waiting;
+ * BCCAM_UART_ERR_NOT_ACTIVE when not ready;
+ * BCCAM_UART_ERR_PAYLOAD_TOO_LONG when the frame exceeds the Link MTU;
+ * BCCAM_UART_ERR_BAD_ARGUMENT for NULL.
+ */
+int bccam_uart_runtime_send_control(bccam_uart_runtime_t *runtime,
+                                    const syslink2_control_frame_t *frame);
+
+/**
+ * Copy a received Control frame out of the mailbox. False when there was
+ * none; frame must then not be used. Does not grant receive credit.
+ */
+bool bccam_uart_runtime_take_control_rx(bccam_uart_runtime_t *runtime,
+                                        syslink2_control_frame_t *frame);
+
+/*
+ * bcCamUartTask side of the Control mailbox.
+ */
+
+/**
+ * Publish ready, and move pending grants and a waiting frame from the mailbox
+ * to the Link. Gives at most one unit to the Link per call. Temporary Link
+ * results keep the grant or frame pending for a later call.
+ */
+int bccam_uart_runtime_step_control_mailbox(bccam_uart_runtime_t *runtime);
+
+/**
+ * End the Control service for the current session at once, for example when
+ * the deck is being reset. Publishes not ready and empties the mailbox; ready
+ * is published again only after a new session has been established.
+ */
+void bccam_uart_runtime_close_control(bccam_uart_runtime_t *runtime);
+
+/**
+ * Move a received Control frame from the Link to the mailbox, if the mailbox
+ * is empty and the probe is done. Called after every RX event, so that the
+ * frame is in the mailbox before a later credit update is processed.
+ */
+void bccam_uart_runtime_stage_control_rx(bccam_uart_runtime_t *runtime);
 
 uint8_t bccam_uart_runtime_control_rx_slots(const bccam_uart_runtime_t *runtime);
 

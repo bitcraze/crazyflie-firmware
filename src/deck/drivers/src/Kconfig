@@ -588,3 +588,12 @@ config DECK_BCCAM_DEBUG
     default n
     help
         Enable extra debug prints for the WiFi camera deck driver.
+
+config DECK_BCCAM_CONTROL_TEST
+    depends on DECK_BCCAM
+    bool "Enable WiFi camera deck Control Service test user"
+    default n
+    help
+        Temporary test user of the camera deck Control Service. Adds the
+        bcCamCtlT param and log groups, used to submit GET and SET requests
+        to the deck and read the results on hardware.

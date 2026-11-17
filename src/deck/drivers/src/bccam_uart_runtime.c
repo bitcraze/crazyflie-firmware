@@ -3,6 +3,19 @@
 #include <stddef.h>
 #include <string.h>
 
+#if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
+#include "FreeRTOS.h"
+#include "task.h"
+/* Protects control_mailbox, shared by the Control task and bcCamUartTask. */
+#define CONTROL_MAILBOX_LOCK() taskENTER_CRITICAL()
+#define CONTROL_MAILBOX_UNLOCK() taskEXIT_CRITICAL()
+#else
+#define CONTROL_MAILBOX_LOCK()
+#define CONTROL_MAILBOX_UNLOCK()
+#endif
+
+#define CONTROL_MAX_GRANTS_PENDING 127u
+
 #define CONTROL_KIND_GET 0x01u
 #define CONTROL_KIND_VALUE 0x81u
 #define CONTROL_TYPE_BYTES 0x21u
@@ -26,7 +39,23 @@ static bool temporary_result(int result) {
          result == BCCAM_UART_ERR_NO_CREDIT;
 }
 
+/** Empty the Control mailbox and publish not ready. */
+static void clear_control_mailbox(bccam_uart_runtime_t *runtime) {
+  bccam_uart_control_mailbox_t *mailbox = &runtime->control_mailbox;
+  CONTROL_MAILBOX_LOCK();
+  if (mailbox->ready) {
+    mailbox->ready_lost_unobserved = true;
+  }
+  mailbox->ready = false;
+  mailbox->payload_mtu = 0u;
+  mailbox->grants_pending = 0u;
+  mailbox->tx_full = false;
+  mailbox->rx_full = false;
+  CONTROL_MAILBOX_UNLOCK();
+}
+
 static void clear_control_state(bccam_uart_runtime_t *runtime) {
+  clear_control_mailbox(runtime);
   runtime->control_service_bound = false;
   runtime->control_service_id = 0u;
   runtime->control_rx_credit_opened = false;
@@ -42,6 +71,7 @@ static void clear_control_state(bccam_uart_runtime_t *runtime) {
 static void reset_runtime_session(bccam_uart_runtime_t *runtime) {
   runtime->next_descriptor_ordinal = 0u;
   clear_control_state(runtime);
+  runtime->control_mailbox.closed = false;
   bccam_uart_frame_parser_configure(&runtime->parser,
                                     BCCAM_UART_LINK_VERSION_1,
                                     BCCAM_UART_BOOTSTRAP_PAYLOAD_MTU);
@@ -614,4 +644,187 @@ bccam_uart_link_state_t bccam_uart_runtime_get_state(
 const bccam_uart_link_counters_t *bccam_uart_runtime_get_counters(
   const bccam_uart_runtime_t *runtime) {
   return runtime == NULL ? NULL : &runtime->link.counters;
+}
+
+/* Control mailbox: Control task side. */
+
+bool bccam_uart_runtime_control_ready(bccam_uart_runtime_t *runtime) {
+  if (runtime == NULL) {
+    return false;
+  }
+  bccam_uart_control_mailbox_t *mailbox = &runtime->control_mailbox;
+  CONTROL_MAILBOX_LOCK();
+  const bool ready = mailbox->ready && !mailbox->ready_lost_unobserved;
+  mailbox->ready_lost_unobserved = false;
+  CONTROL_MAILBOX_UNLOCK();
+  return ready;
+}
+
+void bccam_uart_runtime_grant_control_rx_credit(bccam_uart_runtime_t *runtime) {
+  if (runtime == NULL) {
+    return;
+  }
+  bccam_uart_control_mailbox_t *mailbox = &runtime->control_mailbox;
+  CONTROL_MAILBOX_LOCK();
+  if (mailbox->ready && mailbox->grants_pending < CONTROL_MAX_GRANTS_PENDING) {
+    mailbox->grants_pending++;
+  }
+  CONTROL_MAILBOX_UNLOCK();
+}
+
+int bccam_uart_runtime_send_control(bccam_uart_runtime_t *runtime,
+                                    const syslink2_control_frame_t *frame) {
+  if (runtime == NULL || frame == NULL) {
+    return BCCAM_UART_ERR_BAD_ARGUMENT;
+  }
+  if (frame->len > SYSLINK2_CONTROL_FRAME_MAX_LEN) {
+    return BCCAM_UART_ERR_PAYLOAD_TOO_LONG;
+  }
+  bccam_uart_control_mailbox_t *mailbox = &runtime->control_mailbox;
+  int result = BCCAM_UART_OK;
+  CONTROL_MAILBOX_LOCK();
+  if (!mailbox->ready) {
+    result = BCCAM_UART_ERR_NOT_ACTIVE;
+  } else if (frame->len > mailbox->payload_mtu) {
+    result = BCCAM_UART_ERR_PAYLOAD_TOO_LONG;
+  } else if (mailbox->tx_full) {
+    result = BCCAM_UART_ERR_TRANSACTION_BUSY;
+  } else {
+    mailbox->tx_frame = *frame;
+    mailbox->tx_full = true;
+  }
+  CONTROL_MAILBOX_UNLOCK();
+  return result;
+}
+
+bool bccam_uart_runtime_take_control_rx(bccam_uart_runtime_t *runtime,
+                                        syslink2_control_frame_t *frame) {
+  if (runtime == NULL || frame == NULL) {
+    return false;
+  }
+  bccam_uart_control_mailbox_t *mailbox = &runtime->control_mailbox;
+  bool taken = false;
+  CONTROL_MAILBOX_LOCK();
+  if (mailbox->rx_full) {
+    *frame = mailbox->rx_frame;
+    mailbox->rx_full = false;
+    taken = true;
+  }
+  CONTROL_MAILBOX_UNLOCK();
+  return taken;
+}
+
+/* Control mailbox: bcCamUartTask side. */
+
+void bccam_uart_runtime_close_control(bccam_uart_runtime_t *runtime) {
+  if (runtime == NULL) {
+    return;
+  }
+  clear_control_mailbox(runtime);
+  runtime->control_mailbox.closed = true;
+}
+
+static bool control_link_ready(const bccam_uart_runtime_t *runtime) {
+  return !runtime->control_mailbox.closed &&
+         runtime->link.state == BCCAM_UART_LINK_ACTIVE &&
+         runtime->control_service_bound && runtime->control_probe_done;
+}
+
+void bccam_uart_runtime_stage_control_rx(bccam_uart_runtime_t *runtime) {
+  if (runtime == NULL || !control_link_ready(runtime)) {
+    return;
+  }
+  bccam_uart_control_mailbox_t *mailbox = &runtime->control_mailbox;
+  CONTROL_MAILBOX_LOCK();
+  const bool rx_full = mailbox->rx_full;
+  CONTROL_MAILBOX_UNLOCK();
+  if (rx_full) {
+    /* Stays staged in the Link until the Control task has taken the last. */
+    return;
+  }
+  uint8_t payload[BCCAM_UART_NORMAL_MAX_PAYLOAD];
+  uint16_t payload_len = 0u;
+  bool present = false;
+  const int result = bccam_uart_link_take_rx_for_service(
+    &runtime->link, runtime->control_service_id, payload, sizeof(payload),
+    &payload_len, &present);
+  if (result != BCCAM_UART_OK || !present) {
+    set_last_error(runtime, result);
+    return;
+  }
+  if (payload_len > SYSLINK2_CONTROL_FRAME_MAX_LEN) {
+    /* Cannot be a Control frame in scope. Drop it and return its slot. */
+    runtime->control_rx_malformed++;
+    CONTROL_MAILBOX_LOCK();
+    if (mailbox->grants_pending < CONTROL_MAX_GRANTS_PENDING) {
+      mailbox->grants_pending++;
+    }
+    CONTROL_MAILBOX_UNLOCK();
+    return;
+  }
+  CONTROL_MAILBOX_LOCK();
+  memcpy(mailbox->rx_frame.data, payload, payload_len);
+  mailbox->rx_frame.len = (uint8_t)payload_len;
+  mailbox->rx_full = true;
+  CONTROL_MAILBOX_UNLOCK();
+}
+
+int bccam_uart_runtime_step_control_mailbox(bccam_uart_runtime_t *runtime) {
+  if (runtime == NULL) {
+    return BCCAM_UART_ERR_BAD_ARGUMENT;
+  }
+  bccam_uart_control_mailbox_t *mailbox = &runtime->control_mailbox;
+  if (!control_link_ready(runtime)) {
+    CONTROL_MAILBOX_LOCK();
+    const bool was_ready = mailbox->ready;
+    CONTROL_MAILBOX_UNLOCK();
+    if (was_ready) {
+      clear_control_mailbox(runtime);
+    }
+    return BCCAM_UART_OK;
+  }
+
+  CONTROL_MAILBOX_LOCK();
+  mailbox->payload_mtu = runtime->link.negotiated_payload;
+  mailbox->ready = true;
+  const bool grant_pending = mailbox->grants_pending > 0u;
+  CONTROL_MAILBOX_UNLOCK();
+
+  bccam_uart_runtime_stage_control_rx(runtime);
+
+  if (grant_pending) {
+    const int result = bccam_uart_link_release_rx_slot(
+      &runtime->link, runtime->control_service_id);
+    if (result == BCCAM_UART_OK) {
+      CONTROL_MAILBOX_LOCK();
+      mailbox->grants_pending--;
+      CONTROL_MAILBOX_UNLOCK();
+    } else if (!temporary_result(result)) {
+      set_last_error(runtime, result);
+      return result;
+    }
+    /* The Link has a single transmit slot: one unit per step. */
+    return BCCAM_UART_OK;
+  }
+
+  syslink2_control_frame_t frame;
+  CONTROL_MAILBOX_LOCK();
+  const bool tx_full = mailbox->tx_full;
+  if (tx_full) {
+    frame = mailbox->tx_frame;
+  }
+  CONTROL_MAILBOX_UNLOCK();
+  if (!tx_full) {
+    return BCCAM_UART_OK;
+  }
+  const int result = bccam_uart_link_send_normal(
+    &runtime->link, runtime->control_service_id, frame.data, frame.len);
+  if (temporary_result(result)) {
+    return BCCAM_UART_OK;
+  }
+  CONTROL_MAILBOX_LOCK();
+  mailbox->tx_full = false;
+  CONTROL_MAILBOX_UNLOCK();
+  set_last_error(runtime, result);
+  return result;
 }

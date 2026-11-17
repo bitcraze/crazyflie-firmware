@@ -141,7 +141,7 @@ static void complete_console_service_link_establishment(void)
                           descriptor_request->bytes[6]);
   const uint8_t descriptor_reply[] = {
     BCCAM_UART_LINK_OP_SERVICE_DESCRIPTOR, descriptor_request->bytes[7], 0,
-    7, 1, 0, 16,
+    7, BCCAM_UART_CONSOLE_CONTRACT_MAJOR, 0, 16,
     'b','i','t','c','r','a','z','e','.','c','o','n','s','o','l','e'
   };
   service_receive_management(descriptor_reply, sizeof(descriptor_reply));
@@ -190,7 +190,7 @@ void testCompatibleStartupBecomesFirmwareActive(void) {
                         bccam_uart_service_get_state());
 }
 
-void testControlZeroZeroIncompatibilityStopsWithoutResetLoop(void) {
+void testControlIncompatibilityStopsWithoutResetLoop(void) {
   bccam_uart_service_test_startup_recovery_report_t report = {0};
   bccam_uart_service_test_set_state(BCCAM_UART_SERVICE_STATE_FW_ESTABLISHING);
   bccam_uart_service_test_set_firmware_startup_result(
@@ -225,7 +225,7 @@ void testIncompatibleSessionBootNoticeStartsFreshEstablishment(void) {
                           descriptor_request->bytes[6]);
   const uint8_t descriptor_reply[] = {
     BCCAM_UART_LINK_OP_SERVICE_DESCRIPTOR, descriptor_request->bytes[7], 0,
-    7, 0, 0, 16,
+    7, BCCAM_UART_CONTROL_CONTRACT_MAJOR + 1u, 0, 16,
     'b','i','t','c','r','a','z','e','.','c','o','n','t','r','o','l'
   };
   const uint8_t sends_before_incompatible = uart_send_count();

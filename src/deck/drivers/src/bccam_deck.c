@@ -35,6 +35,7 @@
 #include "log.h"
 #include "param.h"
 #include "bccam_uart_service.h"
+#include "syslink2_control_service.h"
 
 #define DEBUG_MODULE "BCCAM"
 #include "debug.h"
@@ -338,6 +339,7 @@ static void bcCamDeckInit(DeckInfo *info) {
   }
 
   bccam_uart_service_init(info);
+  syslink2_control_service_init(bccam_uart_service_runtime());
 
   isInit = true;
   DEBUG_PRINT("bcCam deck initialized\n");

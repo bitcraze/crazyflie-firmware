@@ -11,7 +11,9 @@
 #define BCCAM_UART_NORMAL_MAX_PAYLOAD 256u
 #define BCCAM_UART_SERVICE_LINK_MANAGEMENT 0u
 #define BCCAM_UART_SERVICE_CONTRACT_ID_MAX_LEN 24u
-#define BCCAM_UART_CONTROL_CONTRACT_MAJOR 1u
+/** Major version of bitcraze.control bound by the Crazyflie. 0 matches the
+ * camera deck firmware, see docs/functional-areas/camera-deck-control.md. */
+#define BCCAM_UART_CONTROL_CONTRACT_MAJOR 0u
 /** Supported major version of the bitcraze.console service contract. */
 #define BCCAM_UART_CONSOLE_CONTRACT_MAJOR 1u
 

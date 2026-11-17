@@ -1457,3 +1457,66 @@ Severity rates the effect on the user after mitigation:
 - Version: the scope says `bitcraze.control` version 0.0, the protocol talks
   about v1 error codes and types.
 - Build integration of the new files is not mentioned.
+
+### From the implementation
+
+Decisions made during the implementation, each with the question it leaves
+open.
+
+- Runtime thread safety: the five runtime functions use a mailbox,
+  `bccam_uart_control_mailbox_t` in `bccam_uart_runtime_t`. The Control task
+  only reads and writes the mailbox, under `taskENTER_CRITICAL`.
+  `bcCamUartTask` moves grants and frames between the mailbox and the Link in
+  `bccam_uart_runtime_step_control_mailbox`, called from the firmware UART
+  client poll. It also moves received frames in
+  `bccam_uart_runtime_stage_control_rx`, called after every RX event, so an
+  answer is in the mailbox before a later `CREDIT_UPDATE` is processed. A
+  grant that cannot be sent at once stays pending, so
+  `bccam_uart_runtime_grant_control_rx_credit` does not fail temporarily.
+  Question: `bccam_uart_runtime_send_control` returns `BCCAM_UART_OK` when the
+  frame is accepted into the mailbox, not the result of
+  `bccam_uart_link_send_normal`. A Link error after that ends the session and
+  gives `SYSLINK2_CONTROL_OUTCOME_ABORTED`, or the request times out. Is that
+  deviation from [Runtime interface](#runtime-interface) acceptable?
+- `bccam_uart_runtime_control_tx_credit` is the existing function. It reads
+  two single-byte fields of the Link from the Control task without a lock,
+  and the value may be one `bcCamUartTask` step old. Question: should the
+  transmit credit be published in the mailbox instead?
+- Ready toggling quickly: `bccam_uart_runtime_control_ready` returns false at
+  least once after ready has been lost, also when ready has come back before
+  the Control task looked again. So `syslink2_control_service` always aborts
+  the outstanding request and opens the channel again for the new session.
+  Question: a grant that the Control task sends after reading ready, if the
+  session ends and a new one becomes ready in between, is applied to the new
+  session. The deck then gets receive credit 2. Is that acceptable?
+- Ready lost on deck reset: `bccam_uart_service` calls
+  `bccam_uart_runtime_close_control` when it enters FW_RESETTING. Before
+  that, ready stayed true for the whole reset, about 2 s, because the runtime
+  session was only reset when the deck had booted again. Ready is published
+  again only after a new session.
+- Version: `BCCAM_UART_CONTROL_CONTRACT_MAJOR` is changed from 1 to 0, so the
+  Crazyflie binds `bitcraze.control` 0.x as the deck advertises it. The host
+  tests now use the constant for a compatible major and the constant + 1 for
+  an incompatible one. Question: when the protocol reaches 1.0, which side
+  changes first?
+- Timeout: `SYSLINK2_CONTROL_TIMEOUT_MS` is 500 ms, defined in
+  `syslink2_control_request_handling.h`.
+- Control task: name `bcCamCtrl`, stack `configMINIMAL_STACK_SIZE * 2`,
+  priority `tskIDLE_PRIORITY + 2` (the same as `bcCamUartTask`), defined in
+  `syslink2_control_service.c` like the bcCam UART task. The task waits with
+  `vTaskDelay`, so a submit is seen within 10 ms but does not wake it.
+  Question: is the stack enough for users' `on_complete`, which runs in this
+  task? The stack headroom has not been measured.
+- Host test of `syslink2_control_request_queue`: under `UNIT_TEST_MODE` the
+  queue is a ring buffer with the same behaviour. The FreeRTOS queue is only
+  tested on hardware.
+- A received Control frame longer than `SYSLINK2_CONTROL_FRAME_MAX_LEN` is
+  dropped in the runtime, counted in `control_rx_malformed`, and its receive
+  slot is granted again.
+- Build integration: the units are built with `CONFIG_DECK_BCCAM`.
+  `bcCamDeckInit` calls `syslink2_control_service_init` with
+  `bccam_uart_service_runtime()`.
+- Hardware test user: `CONFIG_DECK_BCCAM_CONTROL_TEST` adds
+  `syslink2_control_test_user.c`, with the `bcCamCtlT` param and log groups.
+  It is temporary. Question: keep it until a real user exists, or remove it
+  before merge?

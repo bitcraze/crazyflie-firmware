@@ -591,6 +591,8 @@ static void enter_fw_resetting(void) {
   disable_firmware_rx_callbacks();
 #endif
   service_state = BCCAM_UART_SERVICE_STATE_FW_RESETTING;
+  // The Control session ends now, not when the deck has booted again.
+  bccam_uart_runtime_close_control(&firmware_client.runtime);
   firmware_startup_deadline_tick = 0;
   startup_stall_deadline_tick = 0;
   startup_stall_reported = false;
@@ -1198,6 +1200,9 @@ static const rx_service_handler_t rx_service_handlers[] = {
  */
 static void dispatch_received_frames(void)
 {
+  /* Control frames go to the Control mailbox, see bccam_uart_runtime.h. */
+  bccam_uart_runtime_stage_control_rx(&firmware_client.runtime);
+
   uint8_t payload[BCCAM_UART_CAMERA_PROFILE_MTU];
   for (size_t i = 0u;
        i < sizeof(rx_service_handlers) / sizeof(rx_service_handlers[0]);
@@ -1377,6 +1382,10 @@ static void bcCamUartTask(void *arg) {
   }
 }
 #endif
+
+bccam_uart_runtime_t *bccam_uart_service_runtime(void) {
+  return &firmware_client.runtime;
+}
 
 void bccam_uart_service_init(DeckInfo *deck_info_arg) {
   bccam_deck_controller_init(&deck_controller, deck_info_arg);

@@ -310,6 +310,11 @@ int bccam_firmware_uart_client_poll(
   if (result != BCCAM_UART_OK) {
     return result;
   }
+  /* Also on a fault, so that the Control task sees ready go false. */
+  result = bccam_uart_runtime_step_control_mailbox(&client->runtime);
+  if (result != BCCAM_UART_OK) {
+    return result;
+  }
   if (bccam_uart_runtime_get_state(&client->runtime) == BCCAM_UART_LINK_FAULT) {
     return BCCAM_UART_OK;
   }

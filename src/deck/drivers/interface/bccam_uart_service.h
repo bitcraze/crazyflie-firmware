@@ -44,6 +44,9 @@ typedef struct {
 
 void bccam_uart_service_init(DeckInfo *deck_info);
 
+/** The runtime instance of the firmware UART client, for the Control Service. */
+bccam_uart_runtime_t *bccam_uart_service_runtime(void);
+
 void bccam_uart_service_request_bootloader(void);
 
 void bccam_uart_service_request_firmware(void);

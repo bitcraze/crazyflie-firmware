@@ -148,7 +148,7 @@ void testCatalogStreamsDescriptorsAndBindsOpaqueControlHandle(void) {
   reply_descriptor(&link, 0, 0x31, 1, 4, "vendor.telemetry_long");
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_link_start_service_descriptor(&link, 1));
-  reply_descriptor(&link, 1, 0xA5, 1, 0, "bitcraze.control");
+  reply_descriptor(&link, 1, 0xA5, BCCAM_UART_CONTROL_CONTRACT_MAJOR, 0, "bitcraze.control");
 
   TEST_ASSERT_TRUE(bccam_uart_link_catalog_complete(&link));
   TEST_ASSERT_TRUE(bccam_uart_link_control_binding(&link, &descriptor));
@@ -202,7 +202,7 @@ void testControlAndConsoleCanHoldPendingFramesAtTheSameTime(void) {
   reply_count(&link, 2);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_link_start_service_descriptor(&link, 0));
-  reply_descriptor(&link, 0, 7, 1, 0, "bitcraze.control");
+  reply_descriptor(&link, 0, 7, BCCAM_UART_CONTROL_CONTRACT_MAJOR, 0, "bitcraze.control");
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_link_start_service_descriptor(&link, 1));
   reply_descriptor(&link, 1, 9, 1, 0, "bitcraze.console");
@@ -237,7 +237,7 @@ void testControlAndConsoleCanHoldPendingFramesAtTheSameTime(void) {
   TEST_ASSERT_EQUAL_MEMORY("control", payload, 7);
 }
 
-void testExperimentalControlIsDiscoveredButNotBound(void) {
+void testIncompatibleControlMajorIsDiscoveredButNotBound(void) {
   bccam_uart_link_endpoint_t link;
   bccam_uart_service_descriptor_t descriptor;
 
@@ -246,7 +246,7 @@ void testExperimentalControlIsDiscoveredButNotBound(void) {
   reply_count(&link, 1);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_link_start_service_descriptor(&link, 0));
-  reply_descriptor(&link, 0, 7, 0, 0, "bitcraze.control");
+  reply_descriptor(&link, 0, 7, BCCAM_UART_CONTROL_CONTRACT_MAJOR + 1u, 0, "bitcraze.control");
 
   TEST_ASSERT_TRUE(bccam_uart_link_catalog_complete(&link));
   TEST_ASSERT_FALSE(bccam_uart_link_control_binding(&link, &descriptor));
@@ -279,7 +279,7 @@ void testBootNoticeClearsSessionBindingCreditsAndPendingUnits(void) {
   reply_count(&link, 1);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_link_start_service_descriptor(&link, 0));
-  reply_descriptor(&link, 0, 9, 1, 0, "bitcraze.control");
+  reply_descriptor(&link, 0, 9, BCCAM_UART_CONTROL_CONTRACT_MAJOR, 0, "bitcraze.control");
   {
     const uint8_t credit[] = { BCCAM_UART_LINK_OP_CREDIT_UPDATE, 0, 9, 1 };
     TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
@@ -312,7 +312,7 @@ void testNegotiatedMtuAndPerServiceCreditAreEnforced(void) {
   reply_count(&link, 1);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_link_start_service_descriptor(&link, 0));
-  reply_descriptor(&link, 0, 0x44, 1, 0, "bitcraze.control");
+  reply_descriptor(&link, 0, 0x44, BCCAM_UART_CONTROL_CONTRACT_MAJOR, 0, "bitcraze.control");
   {
     const uint8_t credit[] = { BCCAM_UART_LINK_OP_CREDIT_UPDATE, 0, 0x44, 1 };
     TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
