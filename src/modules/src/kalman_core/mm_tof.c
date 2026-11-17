@@ -24,6 +24,13 @@
  */
 
 #include "mm_tof.h"
+#include "log.h"
+#include "FreeRTOS.h"
+#include "task.h"
+
+static float predictedTerrainHeight = 0.0f;
+static float predictedElevation = 0.0f;
+static float measuredElevation = 0.0f;
 
 void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof)
 {
@@ -38,7 +45,9 @@ void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof)
       angle = 0.0f;
     }
     float predictedDistance = this->S[KC_STATE_Z] / cosf(angle);
+    predictedElevation = this->S[KC_STATE_Z];
     float measuredDistance = tof->distance; // [m]
+    measuredElevation = tof->distance * cosf(angle) + predictedTerrainHeight; // [m]
 
     /*
     The sensor model (Pg.95-96, https://lup.lub.lu.se/student-papers/search/publication/8905295)
@@ -55,7 +64,29 @@ void kalmanCoreUpdateWithTof(kalmanCoreData_t* this, tofMeasurement_t *tof)
 
     h[KC_STATE_Z] = 1 / cosf(angle); // This just acts like a gain for the sensor model. Further updates are done in the scalar update function below
 
-    // Scalar update
-    kalmanCoreScalarUpdate(this, &H, measuredDistance-predictedDistance, tof->stdDev);
+    // Compute residual for ToF measurement (difference between measured and predicted distance)
+    float residual = measuredDistance - predictedDistance;
+
+    // Check if residual elevation indicates a new terrain feature below
+    static float terrainThreshold = INFINITY;
+    if (fabsf(predictedElevation - measuredElevation) > terrainThreshold) {
+        // Significant change detected, prepare terrain height measurement
+        predictedTerrainHeight += predictedElevation - measuredElevation;  // Update terrain height
+    }
+
+    // set terrain threshold after first iteration
+    // sensor update rate we receive here is about 25Hz, assuming a maximum vertical velocity of 1m/s, we can expect up to 4cm change in elevation without terrain change
+    terrainThreshold = 0.04f;
+
+    residual += predictedTerrainHeight; // Add predicted terrain height to residual
+
+    // Perform Kalman update with the computed residual
+    kalmanCoreScalarUpdate(this, &H, residual, tof->stdDev);
   }
 }
+
+LOG_GROUP_START(mmtof)
+  LOG_ADD(LOG_FLOAT, prdTerrainHeight, &predictedTerrainHeight)
+  LOG_ADD(LOG_FLOAT, prdElevation, &predictedElevation)
+  LOG_ADD(LOG_FLOAT, measElevation, &measuredElevation)
+LOG_GROUP_STOP(mmtof)
