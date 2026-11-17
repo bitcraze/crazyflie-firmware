@@ -467,3 +467,83 @@ void testWireIdsArePerEndpoint(void) {
   TEST_ASSERT_EQUAL(0, controlSubmit(b, &ob.request, ob.buffer, sizeof(getQ)));
   TEST_ASSERT_EQUAL_UINT8(fakes[0].lastMessage[1], fakes[1].lastMessage[1]);
 }
+
+// ---- Listeners and NOTIFY ----
+
+typedef struct {
+  ControlListener listener;
+  unsigned calls;
+  ControlEndpoint *endpoint;
+  uint8_t message[64];
+  size_t length;
+} RecordingListener;
+
+static void recordNotify(ControlListener *listener, ControlEndpoint *endpoint,
+                         const uint8_t *message, size_t length) {
+  RecordingListener *r = (RecordingListener *)listener;
+  r->calls++;
+  r->endpoint = endpoint;
+  memcpy(r->message, message, length);
+  r->length = length;
+}
+
+static const uint8_t notifyQ[] = {0xc0, 1, 'q', 0x10, 1, 42};
+
+void testListenerRegisterRejectsBadListeners(void) {
+  RecordingListener r = {.listener = {.onNotify = NULL}};
+  TEST_ASSERT_EQUAL(EINVAL, controlListenerRegister(NULL));
+  TEST_ASSERT_EQUAL(EINVAL, controlListenerRegister(&r.listener));
+  r.listener.onNotify = recordNotify;
+  TEST_ASSERT_EQUAL(0, controlListenerRegister(&r.listener));
+  TEST_ASSERT_EQUAL(EEXIST, controlListenerRegister(&r.listener));
+  controlEndpointFreeze();
+  RecordingListener late = {.listener = {.onNotify = recordNotify}};
+  TEST_ASSERT_EQUAL(EBUSY, controlListenerRegister(&late.listener));
+}
+
+void testNotifyReachesMatchingListeners(void) {
+  ControlEndpoint *a = newEndpoint("cf:stm32");
+  ControlEndpoint *b = newEndpoint("deck:bcCam");
+  TEST_ASSERT_EQUAL(0, controlEndpointRegister(a));
+  TEST_ASSERT_EQUAL(0, controlEndpointRegister(b));
+  RecordingListener all = {.listener = {.onNotify = recordNotify, .endpoint = NULL}};
+  RecordingListener onlyB = {.listener = {.onNotify = recordNotify, .endpoint = b}};
+  TEST_ASSERT_EQUAL(0, controlListenerRegister(&all.listener));
+  TEST_ASSERT_EQUAL(0, controlListenerRegister(&onlyB.listener));
+  controlEndpointFreeze();
+
+  controlEndpointNotify(a, notifyQ, sizeof(notifyQ));
+  TEST_ASSERT_EQUAL_UINT(1, all.calls);
+  TEST_ASSERT_EQUAL_UINT(0, onlyB.calls);
+  TEST_ASSERT_EQUAL_PTR(a, all.endpoint);
+
+  controlEndpointNotify(b, notifyQ, sizeof(notifyQ));
+  TEST_ASSERT_EQUAL_UINT(2, all.calls);
+  TEST_ASSERT_EQUAL_UINT(1, onlyB.calls);
+  TEST_ASSERT_EQUAL_PTR(b, onlyB.endpoint);
+  TEST_ASSERT_EQUAL_UINT(sizeof(notifyQ), onlyB.length);
+  TEST_ASSERT_EQUAL_MEMORY(notifyQ, onlyB.message, sizeof(notifyQ));
+  TEST_ASSERT_EQUAL_UINT32(0, controlNotifyDroppedCount());
+}
+
+void testNotifyDropsBadMessagesAndBeforeFreeze(void) {
+  ControlEndpoint *a = newEndpoint("deck:bcCam");
+  TEST_ASSERT_EQUAL(0, controlEndpointRegister(a));
+  RecordingListener r = {.listener = {.onNotify = recordNotify}};
+  TEST_ASSERT_EQUAL(0, controlListenerRegister(&r.listener));
+
+  controlEndpointNotify(a, notifyQ, sizeof(notifyQ));   // before the freeze
+  controlEndpointFreeze();
+  const uint8_t response[] = {0x80, 3};
+  controlEndpointNotify(a, response, sizeof(response)); // a response kind
+  controlEndpointNotify(a, notifyQ, 0);                 // empty
+  controlEndpointNotify(a, NULL, 3);
+  controlEndpointNotify(NULL, notifyQ, sizeof(notifyQ));
+  TEST_ASSERT_EQUAL_UINT(0, r.calls);
+  TEST_ASSERT_EQUAL_UINT32(5, controlNotifyDroppedCount());
+
+  // Unknown unsolicited kinds are passed on: the listeners decide.
+  const uint8_t future[] = {0xc1};
+  controlEndpointNotify(a, future, sizeof(future));
+  TEST_ASSERT_EQUAL_UINT(1, r.calls);
+}

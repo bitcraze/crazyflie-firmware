@@ -35,6 +35,8 @@
 
 /** Bit 7 of the kind byte: set for target-to-initiator messages. */
 #define CONTROL_KIND_TI_BIT 0x80u
+/** First unsolicited kind (NOTIFY and reserved unsolicited kinds). */
+#define CONTROL_KIND_UNSOLICITED_FIRST 0xc0u
 /** First and last response kind (OK, VALUE, ERROR and reserved responses). */
 #define CONTROL_KIND_RESPONSE_FIRST 0x80u
 #define CONTROL_KIND_RESPONSE_LAST 0xbfu
@@ -50,6 +52,10 @@ static uint16_t endpointCount;
  * and then walk the immutable list without a lock.
  */
 static atomic_bool endpointsFrozen;
+
+/** Registered listeners. Written before the freeze only, like the endpoints. */
+static ControlListener *listenerHead;
+static atomic_uint_least32_t notifyDropped;
 
 /** True for a path of printable ASCII with ':' between non-empty segments. */
 static bool validPath(const char *path, size_t *lengthOut)
@@ -254,12 +260,55 @@ void controlRequestComplete(ControlRequest *request, int status,
   request->complete(request, status, length);
 }
 
+int controlListenerRegister(ControlListener *listener)
+{
+  if (listener == NULL || listener->onNotify == NULL) {
+    return EINVAL;
+  }
+  if (atomic_load_explicit(&endpointsFrozen, memory_order_relaxed)) {
+    return EBUSY;
+  }
+  for (ControlListener *entry = listenerHead; entry != NULL; entry = entry->next) {
+    if (entry == listener) {
+      return EEXIST;
+    }
+  }
+  listener->next = listenerHead;
+  listenerHead = listener;
+  return 0;
+}
+
+void controlEndpointNotify(ControlEndpoint *endpoint, const uint8_t *message,
+                           size_t length)
+{
+  // The listener list is immutable after the freeze, so it is walked without
+  // a lock, as the endpoint list.
+  if (endpoint == NULL || message == NULL || length < 1u ||
+      message[0] < CONTROL_KIND_UNSOLICITED_FIRST ||
+      !controlEndpointsAreFrozen()) {
+    atomic_fetch_add_explicit(&notifyDropped, 1u, memory_order_relaxed);
+    return;
+  }
+  for (ControlListener *listener = listenerHead; listener != NULL; listener = listener->next) {
+    if (listener->endpoint == NULL || listener->endpoint == endpoint) {
+      listener->onNotify(listener, endpoint, message, length);
+    }
+  }
+}
+
+uint32_t controlNotifyDroppedCount(void)
+{
+  return atomic_load_explicit(&notifyDropped, memory_order_relaxed);
+}
+
 #ifdef UNIT_TEST_MODE
 void controlResetForTest(void)
 {
   endpointHead = NULL;
   endpointTail = NULL;
   endpointCount = 0u;
+  listenerHead = NULL;
+  atomic_store(&notifyDropped, 0u);
   atomic_store(&endpointsFrozen, false);
 }
 #endif

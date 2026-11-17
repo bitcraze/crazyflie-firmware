@@ -87,6 +87,23 @@ static void originator_init(originator_t *o, const uint8_t *message, size_t len)
 static ControlEndpoint *ep;
 static uint32_t now;
 
+/* Recording listener. */
+static unsigned notify_calls;
+static ControlEndpoint *notify_endpoint;
+static uint8_t notify_data[64];
+static size_t notify_len;
+
+static void on_notify(ControlListener *listener, ControlEndpoint *endpoint,
+                      const uint8_t *message, size_t length) {
+  (void)listener;
+  notify_calls++;
+  notify_endpoint = endpoint;
+  memcpy(notify_data, message, length);
+  notify_len = length;
+}
+
+static ControlListener listener = {.onNotify = on_notify};
+
 static void step(void) {
   syslink2_control_service_step(now++);
 }
@@ -101,6 +118,8 @@ void setUp(void) {
   now = 0;
   syslink2_control_service_init(&runtime);
   TEST_ASSERT_EQUAL(0, bccam_control_init());
+  notify_calls = 0;
+  TEST_ASSERT_EQUAL(0, controlListenerRegister(&listener));
   controlEndpointFreeze();
   ep = controlEndpointById(0);
   TEST_ASSERT_EQUAL_PTR(bccam_control_endpoint(), ep);
@@ -109,6 +128,21 @@ void setUp(void) {
 void tearDown(void) {}
 
 static const uint8_t get_q[] = {0x01, 7, 6, 's', 't', 'r', 'e', 'a', 'm'};
+
+void testNotifyFromTheDeckReachesListeners(void) {
+  runtime_ready = true;
+  step();
+  const uint8_t notify[] = {0xc0, 6, 's', 't', 'r', 'e', 'a', 'm', 0x10, 1, 42};
+  memset(&rx, 0, sizeof(rx));
+  memcpy(rx.data, notify, sizeof(notify));
+  rx.len = sizeof(notify);
+  rx_full = true;
+  step();
+  TEST_ASSERT_EQUAL_UINT(1, notify_calls);
+  TEST_ASSERT_EQUAL_PTR(ep, notify_endpoint);
+  TEST_ASSERT_EQUAL_UINT(sizeof(notify), notify_len);
+  TEST_ASSERT_EQUAL_MEMORY(notify, notify_data, sizeof(notify));
+}
 
 void testRegistersDeckPathWithLinkLimits(void) {
   TEST_ASSERT_EQUAL_STRING("deck:bcCam", ep->path);

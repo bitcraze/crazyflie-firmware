@@ -146,8 +146,17 @@ static int submit(const ControlEndpoint *ep, ControlRequest *request,
   }
 }
 
+/** Runs in the Control Service task. */
+static void on_unsolicited(const uint8_t *data, uint8_t len) {
+  controlEndpointNotify(&endpoint, data, len);
+}
+
 int bccam_control_init(void) {
-  return controlEndpointRegister(&endpoint);
+  const int result = controlEndpointRegister(&endpoint);
+  if (result == 0) {
+    syslink2_control_service_set_unsolicited_handler(on_unsolicited);
+  }
+  return result;
 }
 
 ControlEndpoint *bccam_control_endpoint(void) {
