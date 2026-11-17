@@ -354,4 +354,17 @@ config CRTP_CONTROL_MAX_MESSAGE
         Size of each request slot: the largest Control message the bridge
         carries in either direction. Reported to clients as max_message.
 
+config CRTP_CONTROL_NOTIFY_BUFFER
+    int "Buffer for forwarded notifications, in bytes"
+    depends on CRTP_CONTROL
+    range 0 4096
+    default 512
+    help
+        Bytes that hold the NOTIFY messages waiting to be sent to the client,
+        for the endpoints it turned forwarding on for. Each message takes its
+        length plus 3 bytes. When the buffer is full, messages are dropped and
+        the client gets a NOTIFY_LOST event. 512 bytes hold about eight Camera
+        Deck notifications. 0 turns notification forwarding off: SET_NOTIFY
+        then answers ENOSYS.
+
 endmenu

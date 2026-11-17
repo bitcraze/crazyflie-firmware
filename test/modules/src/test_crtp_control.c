@@ -56,6 +56,16 @@ int crtpSendPacketBlock(CRTPPacket *packet) {
   return 1;
 }
 
+/** Set to make the non-blocking send find the CRTP queue full. */
+static bool crtpQueueFull;
+
+int crtpSendPacket(CRTPPacket *packet) {
+  if (crtpQueueFull) {
+    return 0;
+  }
+  return crtpSendPacketBlock(packet);
+}
+
 static void deliver(uint8_t channel, const uint8_t *data, size_t length) {
   CRTPPacket packet;
   memset(&packet, 0, sizeof(packet));
@@ -153,6 +163,7 @@ void setUp(void) {
   memset(endpoints, 0, sizeof(endpoints));
   memset(sent, 0, sizeof(sent));
   sentCount = 0u;
+  crtpQueueFull = false;
 }
 
 void tearDown(void) {}
@@ -216,7 +227,7 @@ void testGetStatus(void) {
   DELIVER(1, 0x00, 9);
   EXPECT_PACKET(2, 1, 0x00, ENOENT);
   DELIVER(1, 0x01, 1, 1);
-  EXPECT_PACKET(3, 1, 0x01, ENOSYS);
+  EXPECT_PACKET(3, 1, 0x01, 0, 1, 1);
   DELIVER(1, 0x00);
   EXPECT_PACKET(4, 1, 0x00, EINVAL);
   DELIVER(1, 0x09);
@@ -542,4 +553,148 @@ void testResetLeavesSubmittedSlotBusyUntilCompletion(void) {
   // The new client may reuse an orphaned slot's ID, but there is no free slot.
   DELIVER(2, 0x80, 1, 0x01, 0, 1, 'q');
   EXPECT_PACKET(1, 2, 0x80, 1, ENOBUFS, 0x01, 0);
+}
+
+// ---- Notifications ----
+
+static ControlEndpoint *bcCam(void) { return &endpoints[1]; }
+
+/** NOTIFY stream.fps_max u8 value, as the deck sends it. */
+static void deckNotify(ControlEndpoint *endpoint, uint8_t value) {
+  const uint8_t notify[] = {0xc0, 14, 's', 't', 'r', 'e', 'a', 'm', '.', 'f', 'p', 's',
+                            '_', 'm', 'a', 'x', 0x10, 1, value};
+  controlEndpointNotify(endpoint, notify, sizeof(notify));
+}
+
+#define EXPECT_NOTIFY(index, endpointId, value) \
+  EXPECT_PACKET((index), 2, 0x80, (endpointId), 0, 0xc0, 14, 's', 't', 'r', 'e', 'a', 'm', '.', \
+                'f', 'p', 's', '_', 'm', 'a', 'x', 0x10, 1, (value))
+
+void testSetNotifyCommand(void) {
+  DELIVER(1, 0x01, 1, 1);
+  EXPECT_PACKET(0, 1, 0x01, EAGAIN);
+  registerAndFreeze();
+  DELIVER(1, 0x01, 1, 1);
+  EXPECT_PACKET(1, 1, 0x01, 0, 1, 1);
+  DELIVER(1, 0x01, 1, 1);                 // Idempotent.
+  EXPECT_PACKET(2, 1, 0x01, 0, 1, 1);
+  DELIVER(1, 0x01, 0xff, 0);
+  EXPECT_PACKET(3, 1, 0x01, 0, 0xff, 0);
+  DELIVER(1, 0x01, 2, 1);
+  EXPECT_PACKET(4, 1, 0x01, ENOENT);
+  DELIVER(1, 0x01, 1, 2);
+  EXPECT_PACKET(5, 1, 0x01, EINVAL);
+  DELIVER(1, 0x01, 1);
+  EXPECT_PACKET(6, 1, 0x01, EINVAL);
+}
+
+void testNotifyIsForwardedOnlyWhenEnabled(void) {
+  registerAndFreeze();
+  deckNotify(bcCam(), 15);
+  crtpControlSendDownlinkForTest();
+  TEST_ASSERT_EQUAL_UINT(0, sentCount);
+
+  DELIVER(1, 0x01, 1, 1);
+  deckNotify(bcCam(), 15);
+  deckNotify(&endpoints[0], 16);          // Not enabled for cf:stm32.
+  TEST_ASSERT_EQUAL_UINT(1, sentCount);   // Queued, not sent from the provider's task.
+  crtpControlSendDownlinkForTest();
+  TEST_ASSERT_EQUAL_UINT(2, sentCount);
+  EXPECT_NOTIFY(1, 1, 15);
+
+  DELIVER(1, 0x01, 0xff, 0);
+  deckNotify(bcCam(), 17);
+  crtpControlSendDownlinkForTest();
+  TEST_ASSERT_EQUAL_UINT(3, sentCount);   // Only the SET_NOTIFY answer.
+}
+
+void testResponseGoesBeforeNotifyAndOrderIsKept(void) {
+  registerAndFreeze();
+  DELIVER(1, 0x01, 1, 1);
+  DELIVER(2, 0x80, 1, 0x02, 7, 1, 'q', 0x10, 1, 5);
+  // The deck answers OK, then sends the notifications its setter raised.
+  const uint8_t ok[] = {0x80, 0};
+  completeLast(1, 0, ok, sizeof(ok));
+  deckNotify(bcCam(), 1);
+  deckNotify(bcCam(), 2);
+  crtpControlSendDownlinkForTest();
+  TEST_ASSERT_EQUAL_UINT(4, sentCount);
+  EXPECT_PACKET(1, 2, 0x80, 1, 0, 0x80, 7);
+  EXPECT_NOTIFY(2, 1, 1);
+  EXPECT_NOTIFY(3, 1, 2);
+}
+
+void testNotifyRingFullIsReportedOnChannel3(void) {
+  registerAndFreeze();
+  DELIVER(1, 0x01, 1, 1);
+  // Each record is 3 + 19 = 22 bytes: 23 fit in 512, the next 4 are dropped.
+  const unsigned fit = CONFIG_CRTP_CONTROL_NOTIFY_BUFFER / 22u;
+  for (unsigned i = 0; i < fit + 4u; i++) {
+    deckNotify(bcCam(), (uint8_t)i);
+  }
+  crtpQueueFull = true;   // The report waits for room; notifications do not.
+  crtpControlSendDownlinkForTest();
+  TEST_ASSERT_EQUAL_UINT(1 + fit, sentCount);
+  EXPECT_NOTIFY(1, 1, 0);
+  EXPECT_NOTIFY(fit, 1, (uint8_t)(fit - 1u));
+
+  crtpQueueFull = false;
+  crtpControlSendDownlinkForTest();
+  TEST_ASSERT_EQUAL_UINT(2 + fit, sentCount);
+  EXPECT_PACKET(1 + fit, 3, 0x01, 1, 4);
+
+  // Reported once: the count starts again.
+  crtpControlSendDownlinkForTest();
+  TEST_ASSERT_EQUAL_UINT(2 + fit, sentCount);
+  deckNotify(bcCam(), 99);
+  crtpControlSendDownlinkForTest();
+  EXPECT_NOTIFY(2 + fit, 1, 99);
+}
+
+void testDroppedCountSaturates(void) {
+  registerAndFreeze();
+  DELIVER(1, 0x01, 1, 1);
+  for (unsigned i = 0; i < 400u; i++) {
+    deckNotify(bcCam(), 0);
+  }
+  // Notifications go first; the report is the last packet.
+  crtpControlSendDownlinkForTest();
+  EXPECT_PACKET(sentCount - 1u, 3, 0x01, 1, 255);
+}
+
+void testResetClearsForwardingRingAndLosses(void) {
+  registerAndFreeze();
+  DELIVER(1, 0x01, 1, 1);
+  for (unsigned i = 0; i < 30u; i++) {
+    deckNotify(bcCam(), 0);
+  }
+  DELIVER(1, 0x02);
+  EXPECT_PACKET(1, 1, 0x02, 0);
+  crtpControlSendDownlinkForTest();
+  TEST_ASSERT_EQUAL_UINT(2, sentCount);   // Nothing queued and no report.
+  deckNotify(bcCam(), 1);
+  crtpControlSendDownlinkForTest();
+  TEST_ASSERT_EQUAL_UINT(2, sentCount);   // Forwarding is off again.
+}
+
+void testLongNotifyIsFragmented(void) {
+  registerAndFreeze();
+  DELIVER(1, 0x01, 1, 1);
+  uint8_t notify[60] = {0xc0, 1, 'q', 0x21, 55};
+  for (int i = 5; i < 60; i++) {
+    notify[i] = (uint8_t)i;
+  }
+  controlEndpointNotify(bcCam(), notify, sizeof(notify));
+  crtpControlSendDownlinkForTest();
+  TEST_ASSERT_EQUAL_UINT(4, sentCount);   // SET_NOTIFY answer and three fragments.
+  TEST_ASSERT_EQUAL_UINT8(0x00, sent[1].data[0]);
+  TEST_ASSERT_EQUAL_UINT8(0x01, sent[2].data[0]);
+  TEST_ASSERT_EQUAL_UINT8(0x82, sent[3].data[0]);
+  uint8_t whole[62];
+  memcpy(whole, &sent[1].data[1], 29);
+  memcpy(&whole[29], &sent[2].data[1], 29);
+  memcpy(&whole[58], &sent[3].data[1], 4);
+  TEST_ASSERT_EQUAL_UINT8(1, whole[0]);
+  TEST_ASSERT_EQUAL_UINT8(0, whole[1]);
+  TEST_ASSERT_EQUAL_MEMORY(notify, &whole[2], 60);
 }
