@@ -44,4 +44,11 @@ different numbers for the same errors.
 | EPIPE   | 32     | Broken pipe |
 | EDOM    | 33     | Math argument out of domain of func |
 | ERANGE  | 34     | Math result not representable |
+| EPROTO  | 71     | Protocol error |
+| EBADMSG | 77     | Bad message |
 | ENOSYS  | 88     | Function not implemented |
+| ECONNRESET | 104 | Connection reset by peer |
+| ENOBUFS | 105    | No buffer space available |
+| ETIMEDOUT | 116  | Connection timed out |
+| EMSGSIZE | 122   | Message too long |
+| ENOTCONN | 128   | Not connected |
