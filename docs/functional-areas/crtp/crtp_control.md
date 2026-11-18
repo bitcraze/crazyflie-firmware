@@ -8,6 +8,9 @@ CRTP port 10 lets a client list the Crazyflie's Control endpoints and send
 Control protocol, such as the Camera Deck (`deck:bcCam`). Its requests and
 responses (`GET`, `SET`, `CMD`, `OK`, `VALUE`, `ERROR`) are defined by the
 `bitcraze.control` service contract and pass through the Crazyflie unchanged.
+An endpoint can also send unsolicited `NOTIFY` messages when one of its values
+changes. A client that turns forwarding on with `SET_NOTIFY` receives them on
+the tunnel.
 
 Port 10 requires CRTP protocol version 14.
 
@@ -16,9 +19,9 @@ Port 10 requires CRTP protocol version 14.
 | Ch | Name              | Framing       | Content                                            |
 |----|-------------------|---------------|----------------------------------------------------|
 | 0  | Catalog           | single packet | `GET_ITEM`, `GET_INFO`                             |
-| 1  | Endpoint commands | single packet | `GET_STATUS`, `SET_NOTIFY` (reserved), `RESET`     |
-| 2  | Tunnel            | fragmented    | Requests up, responses and bridge failures down    |
-| 3  | Events            | —             | Reserved. Nothing is sent on it yet.               |
+| 1  | Endpoint commands | single packet | `GET_STATUS`, `SET_NOTIFY`, `RESET`                |
+| 2  | Tunnel            | fragmented    | Requests up; responses, bridge failures and forwarded `NOTIFY` down |
+| 3  | Events            | single packet | `NOTIFY_LOST`                                      |
 
 Channels 0 and 1 follow the [console](crtp_console.md) conventions. A response
 starts with the request's command byte, then a status byte: 0 on success or a
@@ -81,7 +84,18 @@ An unknown ID returns `ENOENT`.
 
 ### 0x01 SET_NOTIFY
 
-Reserved. Answers `[0x01, ENOSYS]`.
+```text
+Request: [0x01, endpoint_id | 0xff, enabled]
+Success: [0x01, 0x00, endpoint_id | 0xff, enabled]
+```
+
+Turns forwarding of the endpoint's `NOTIFY` messages on (`enabled = 1`) or off
+(`enabled = 0`). `0xff` applies to every endpoint. Forwarding starts off, is
+idempotent, and `RESET` turns it off on every endpoint. Errors: `EAGAIN` before
+the catalog is frozen, `ENOENT` for an unknown ID, `EINVAL` for a short request
+or `enabled` above 1, and `ENOSYS` when the firmware is built without a
+notification buffer (`CRTP_CONTROL_NOTIFY_BUFFER = 0`). Firmware code that
+listens to an endpoint gets its notifications whatever this setting is.
 
 ### 0x02 RESET
 
@@ -94,7 +108,9 @@ A client sends `RESET` once, before its first tunnel request. CRTP has one
 client at a time, so it tells the bridge that a new client starts from a clean
 state. The bridge:
 
-1. drops the uplink message being reassembled, without answering it;
+1. drops the uplink message being reassembled, without answering it, turns
+   notification forwarding off on every endpoint, and drops the notifications
+   and loss counts not sent yet;
 2. marks every request that is submitted, or completed but not yet sent, as
    orphaned: its completion frees the slot and nothing is sent;
 3. sends the `RESET` response.
@@ -156,10 +172,19 @@ without an answer.
   kinds `0x80..0xbf`), with the client's request ID in its byte 1.
 - `status ≠ 0`: the request failed before or outside the endpoint. `body` is
   exactly `[kind, request_id]` from the request.
-- Kinds `0xc0..0xff` (`NOTIFY`) are not sent yet. Clients must ignore them.
+- `status = 0` with a body kind in `0xc0..0xff`: an unsolicited message from
+  the endpoint, forwarded because the client turned forwarding on. A `NOTIFY`
+  (`0xc0`) body is `[0xc0, path_len, path, value TLV]`, as in
+  `bitcraze.control`. It has no request ID. Clients ignore the other kinds.
 
 A Control-level failure, such as an unknown path, arrives as status 0 with an
 `ERROR` body.
+
+Notifications are best effort. The bridge keeps them in a buffer
+(`CRTP_CONTROL_NOTIFY_BUFFER`) and sends them after the responses that are
+ready, in the order the endpoint sent them. When the buffer is full, a
+notification is dropped and counted, and the count is reported on channel 3.
+After a loss, a client reads again the paths it mirrors.
 
 ### Uplink checks
 
@@ -211,6 +236,21 @@ The first uplink packet carries 28 Control bytes, enough for a `GET` with a
 path of up to 25 characters. The first downlink packet carries 27, enough for
 a `VALUE` with up to 23 data bytes. Every later packet carries 29.
 
+## Channel 3: events
+
+Single packets with no fragment header, from the Crazyflie only. Clients ignore
+unknown events and trailing bytes. Event `0x00` is reserved.
+
+### 0x01 NOTIFY_LOST
+
+```text
+[0x01, endpoint_id, dropped]
+```
+
+At least `dropped` notifications of the endpoint were lost since the last
+report (saturating at 255). It is sent when the CRTP queue has room, so it
+never blocks responses, and a later loss is reported in a later event.
+
 ## Errors
 
 | errno        | No. | Channels | Meaning |
@@ -241,10 +281,14 @@ a `VALUE` with up to 23 data bytes. Every later packet carries 29.
   at once when its session is lost.
 - No retries in the bridge.
 - Order: requests are submitted in arrival order. Responses can come back in
-  any order.
+  any order. Notifications from one endpoint arrive in the order it sent them,
+  and never ahead of a response that is ready; a `SET` whose setter changes
+  other paths is answered before the notifications it raised.
+- Notifications are best effort: a dropped one is always followed by a
+  `NOTIFY_LOST`, unless a `RESET` comes first.
 - Forward compatibility: trailing bytes in channel 0 and 1 responses are
-  ignored by clients, unknown commands answer `ENOSYS`, downlink `NOTIFY` kinds
-  are ignored by clients, and channel 3 is reserved.
+  ignored by clients, unknown commands answer `ENOSYS`, unknown unsolicited
+  kinds and unknown channel 3 events are ignored by clients.
 
 ## Firmware configuration
 
@@ -253,3 +297,4 @@ a `VALUE` with up to 23 data bytes. Every later packet carries 29.
 | `CRTP_CONTROL`             | y       | Build the bridge. With no endpoint registered it serves an empty catalog. |
 | `CRTP_CONTROL_SLOTS`       | 4       | 1 to 16. Reported as `max_in_flight`. |
 | `CRTP_CONTROL_MAX_MESSAGE` | 256     | 64 to 1024. Reported as `max_message`. |
+| `CRTP_CONTROL_NOTIFY_BUFFER` | 512   | 0 to 4096 bytes for notifications waiting to be sent, 3 bytes per message plus its length. 0 turns forwarding off. |

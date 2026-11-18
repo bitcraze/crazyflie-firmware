@@ -249,6 +249,50 @@ void testUnsolicitedAndMalformedFramesAreDropped(void) {
   TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_OUTCOME_TIMEOUT, completed_result.outcome);
 }
 
+static unsigned unsolicited_calls;
+static uint8_t unsolicited_data[SYSLINK2_CONTROL_FRAME_MAX_LEN];
+static uint8_t unsolicited_len;
+
+static void on_unsolicited(const uint8_t *data, uint8_t len) {
+  unsolicited_calls++;
+  memcpy(unsolicited_data, data, len);
+  unsolicited_len = len;
+}
+
+void testUnsolicitedFramesGoToTheirHandler(void) {
+  unsolicited_calls = 0;
+  syslink2_control_service_init(&runtime);
+  syslink2_control_service_set_unsolicited_handler(on_unsolicited);
+  runtime_ready = true;
+  const syslink2_control_request_t request = get_request(4);
+  syslink2_control_service_submit(&request, on_complete);
+  syslink2_control_service_step(0);
+  syslink2_control_service_step(1);
+
+  /* A NOTIFY while a request is outstanding reaches the handler unchanged
+   * and does not complete the request. */
+  const uint8_t notify[] = { 0xc0, 1, 'q', 0x10, 1, 42 };
+  deliver(notify, sizeof(notify));
+  syslink2_control_service_step(2);
+  TEST_ASSERT_EQUAL_UINT(1, unsolicited_calls);
+  TEST_ASSERT_EQUAL_UINT(sizeof(notify), unsolicited_len);
+  TEST_ASSERT_EQUAL_MEMORY(notify, unsolicited_data, sizeof(notify));
+  TEST_ASSERT_EQUAL_UINT(0, completions);
+
+  /* A malformed frame does not. */
+  const uint8_t malformed[] = { 0x80, 1, 0 };
+  deliver(malformed, sizeof(malformed));
+  syslink2_control_service_step(3);
+  TEST_ASSERT_EQUAL_UINT(1, unsolicited_calls);
+
+  /* The request still gets its answer. */
+  const uint8_t value[] = { 0x81, sent.data[1], 0x10, 1, 7 };
+  deliver(value, sizeof(value));
+  syslink2_control_service_step(4);
+  TEST_ASSERT_EQUAL_UINT(1, completions);
+  TEST_ASSERT_EQUAL(SYSLINK2_CONTROL_OUTCOME_VALUE, completed_result.outcome);
+}
+
 void testReadyLostAbortsOutstandingAndThenNotReady(void) {
   syslink2_control_service_init(&runtime);
   runtime_ready = true;

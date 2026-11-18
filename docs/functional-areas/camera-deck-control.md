@@ -19,10 +19,11 @@ In scope, matching `bitcraze.control` version 0.0 on the deck:
 - the responses `OK`, `VALUE` and `ERROR`,
 - the value types `bool`, `u8`, `i8`, `u16`, `i16`, `u32` and `i32`,
 - one request outstanding at a time,
-- recognizing unsolicited frames from the deck, such as `NOTIFY`, and
-  dropping them, see [Frame classes](#frame-classes).
+- recognizing unsolicited frames from the deck, such as `NOTIFY`, and passing
+  them to the unsolicited handler, or dropping them when none is set, see
+  [Frame classes](#frame-classes).
 
-Out of scope: `CMD`, handling `NOTIFY`, more than one request in flight,
+Out of scope: `CMD`, decoding `NOTIFY`, more than one request in flight,
 path handles, listing paths and chunking. The probe is also out of scope.
 The runtime runs it before the Control Service takes over, see
 [Ready](#ready).
@@ -689,8 +690,12 @@ gets the ready flag as an argument to its step.
   `syslink2_control_request_handling`.
 - It decodes the frame with `syslink2_control_codec` and acts on its class,
   see [Frame classes](#frame-classes). A response is passed on to
-  `syslink2_control_request_handling`. An unsolicited or malformed frame is
-  dropped.
+  `syslink2_control_request_handling`. An unsolicited frame is passed to the
+  handler set with `syslink2_control_service_set_unsolicited_handler()`, in
+  the Control task, borrowed for the call; the bcCam driver passes it to the
+  Control router with `controlEndpointNotify()`. Without a handler, and for a
+  malformed frame, it is dropped. Either way the receive slot is already free
+  again, so the next frame can come at once.
 
 ### Functions
 
@@ -1431,8 +1436,8 @@ Severity rates the effect on the user after mitigation:
 - **Cause**: not stated.
 - **Effect if unmitigated**: it is taken as the answer to a request.
 - **Mitigation**: `syslink2_control_codec` classifies it as unsolicited, and
-  `syslink2_control_service` drops it. It never completes a
-  request.
+  `syslink2_control_service` passes it to the unsolicited handler, or drops
+  it. It never completes a request.
 - **Severity after mitigation**: None.
 - **Outcome**: nothing.
 

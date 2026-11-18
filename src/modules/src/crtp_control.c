@@ -29,6 +29,13 @@
  * state except the SUBMITTED -> DONE transition, which the completion
  * callback makes from the provider's task. The bridge only reads the first
  * two bytes of a Control message.
+ *
+ * Notifications: the bridge is a Control listener. For each endpoint whose
+ * forwarding the client turned on with SET_NOTIFY, it copies the endpoint's
+ * NOTIFY messages into a byte ring, from the provider's task. The bridge task
+ * sends them on the tunnel after the responses that are ready. When the ring
+ * is full, a message is dropped and counted, and the count is reported with a
+ * NOTIFY_LOST event on channel 3.
  */
 
 #include "crtp_control.h"
@@ -55,14 +62,19 @@
 #ifndef CONFIG_CRTP_CONTROL_MAX_MESSAGE
 #define CONFIG_CRTP_CONTROL_MAX_MESSAGE 256
 #endif
+#ifndef CONFIG_CRTP_CONTROL_NOTIFY_BUFFER
+#define CONFIG_CRTP_CONTROL_NOTIFY_BUFFER 512
+#endif
 
 #define SLOTS CONFIG_CRTP_CONTROL_SLOTS
 #define MAX_MESSAGE CONFIG_CRTP_CONTROL_MAX_MESSAGE
+#define NOTIFY_BUFFER CONFIG_CRTP_CONTROL_NOTIFY_BUFFER
 
 /** CRTP channels on port 10. */
 #define CHANNEL_CATALOG 0u
 #define CHANNEL_ENDPOINT 1u
 #define CHANNEL_TUNNEL 2u
+#define CHANNEL_EVENTS 3u
 
 /** Channel 0 commands. */
 #define CATALOG_GET_ITEM 0x00u
@@ -71,6 +83,10 @@
 #define ENDPOINT_GET_STATUS 0x00u
 #define ENDPOINT_SET_NOTIFY 0x01u
 #define ENDPOINT_RESET 0x02u
+/** SET_NOTIFY endpoint ID for every endpoint. */
+#define ENDPOINT_ALL 0xffu
+/** Channel 3 events. 0x00 is reserved for a STATE event. */
+#define EVENT_NOTIFY_LOST 0x01u
 
 /** Tunnel fragment header: bit 7 marks the last fragment. */
 #define FRAGMENT_LAST 0x80u
@@ -82,6 +98,11 @@
 #define DOWNLINK_HEADER 2u    // endpoint_id, status
 
 #define RX_QUEUE_LENGTH 16
+
+/** A ring record is [endpoint_id, length u16 LE] then the message. */
+#define NOTIFY_RECORD_HEADER 3u
+/** While a loss is not reported yet, the task wakes this often to retry. */
+#define NOTIFY_LOST_RETRY_MS 10u
 
 typedef enum {
   SLOT_FREE = 0,
@@ -113,6 +134,25 @@ static uint32_t catalogCrc;
 
 static bool isInit;
 
+// ---- Notification state ----
+// Written by the listener in the provider's task and by this task, always in a
+// critical section.
+
+#if NOTIFY_BUFFER > 0
+/** One bit per endpoint ID: forwarding turned on by SET_NOTIFY. */
+static uint32_t notifyEnabled[(CONTROL_ENDPOINT_MAX + 31u) / 32u];
+/** Notifications dropped per endpoint since the last NOTIFY_LOST, saturating. */
+static uint8_t notifyDropped[CONTROL_ENDPOINT_MAX];
+/** True while at least one notifyDropped entry is not 0. */
+static bool notifyLostPending;
+static uint8_t notifyRing[NOTIFY_BUFFER];
+static size_t notifyHead;   ///< Next byte to read.
+static size_t notifyUsed;
+/** A message taken out of the ring for sending. Task only. */
+static uint8_t notifyOut[MAX_MESSAGE];
+static ControlListener notifyListener;
+#endif
+
 #ifndef UNIT_TEST_MODE
 static TaskHandle_t task;
 static xQueueHandle rxQueue;
@@ -126,6 +166,12 @@ STATIC_MEM_TASK_ALLOC(crtpControlTask, CRTP_CONTROL_TASK_STACKSIZE);
 static void sendPacket(CRTPPacket *packet)
 {
   (void)crtpSendPacketBlock(packet);
+}
+
+/** Send without waiting. False when the CRTP queue is full. */
+static bool sendPacketTry(CRTPPacket *packet)
+{
+  return crtpSendPacket(packet) == pdTRUE;
 }
 
 static void notifyTask(void)
@@ -258,6 +304,177 @@ static void finishSlots(void)
   }
 }
 
+// ---- Notifications ----
+
+#if NOTIFY_BUFFER > 0
+static bool notifyIsEnabled(uint8_t endpointId)
+{
+  return (notifyEnabled[endpointId / 32u] & (1uL << (endpointId % 32u))) != 0u;
+}
+
+static void notifySetEnabled(uint8_t endpointId, bool enabled)
+{
+  const uint32_t bit = 1uL << (endpointId % 32u);
+  if (enabled) {
+    notifyEnabled[endpointId / 32u] |= bit;
+  } else {
+    notifyEnabled[endpointId / 32u] &= ~bit;
+  }
+}
+
+static void ringWrite(const uint8_t *bytes, size_t length)
+{
+  size_t at = (notifyHead + notifyUsed) % NOTIFY_BUFFER;
+  for (size_t i = 0u; i < length; i++) {
+    notifyRing[at] = bytes[i];
+    at = (at + 1u) % NOTIFY_BUFFER;
+  }
+  notifyUsed += length;
+}
+
+static void ringRead(uint8_t *bytes, size_t length)
+{
+  for (size_t i = 0u; i < length; i++) {
+    bytes[i] = notifyRing[notifyHead];
+    notifyHead = (notifyHead + 1u) % NOTIFY_BUFFER;
+  }
+  notifyUsed -= length;
+}
+
+/** Router listener. Provider's task: copy and never block. */
+static void onNotify(ControlListener *listener, ControlEndpoint *endpoint,
+                     const uint8_t *message, size_t length)
+{
+  (void)listener;
+  const uint8_t id = endpoint->id;
+  bool queued = false;
+  taskENTER_CRITICAL();
+  if (notifyIsEnabled(id)) {
+    if (length <= MAX_MESSAGE &&
+        NOTIFY_RECORD_HEADER + length <= NOTIFY_BUFFER - notifyUsed) {
+      const uint8_t header[NOTIFY_RECORD_HEADER] = {
+        id, (uint8_t)length, (uint8_t)(length >> 8),
+      };
+      ringWrite(header, sizeof(header));
+      ringWrite(message, length);
+    } else if (notifyDropped[id] < UINT8_MAX) {
+      notifyDropped[id]++;
+    }
+    if (notifyDropped[id] > 0u) {
+      notifyLostPending = true;
+    }
+    queued = true;
+  }
+  taskEXIT_CRITICAL();
+  if (queued) {
+    notifyTask();
+  }
+}
+
+/** Take the oldest message out of the ring. Task only. */
+static bool notifyTake(uint8_t *endpointId, size_t *length)
+{
+  bool taken = false;
+  taskENTER_CRITICAL();
+  if (notifyUsed > 0u) {
+    uint8_t header[NOTIFY_RECORD_HEADER];
+    ringRead(header, sizeof(header));
+    *endpointId = header[0];
+    *length = (size_t)header[1] | ((size_t)header[2] << 8);
+    ringRead(notifyOut, *length);
+    taken = true;
+  }
+  taskEXIT_CRITICAL();
+  return taken;
+}
+
+/** Report losses on channel 3, without waiting for room in the CRTP queue. */
+static void sendLostEvents(void)
+{
+  // Forwarding needs SET_NOTIFY, which loads the catalog, so only catalog IDs
+  // can have drops.
+  bool pending = false;
+  for (uint16_t id = 0u; id < catalogCount; id++) {
+    taskENTER_CRITICAL();
+    const uint8_t dropped = notifyDropped[id];
+    taskEXIT_CRITICAL();
+    if (dropped == 0u) {
+      continue;
+    }
+    CRTPPacket packet;
+    packet.header = CRTP_HEADER(CRTP_PORT_CONTROL, CHANNEL_EVENTS);
+    packet.data[0] = EVENT_NOTIFY_LOST;
+    packet.data[1] = (uint8_t)id;
+    packet.data[2] = dropped;
+    packet.size = 3u;
+    if (sendPacketTry(&packet)) {
+      // Drops counted meanwhile stay for the next report.
+      taskENTER_CRITICAL();
+      notifyDropped[id] = (uint8_t)(notifyDropped[id] - dropped);
+      pending = pending || notifyDropped[id] > 0u;
+      taskEXIT_CRITICAL();
+    } else {
+      pending = true;
+    }
+  }
+  taskENTER_CRITICAL();
+  // A drop counted after its endpoint was checked set the flag again.
+  if (!pending) {
+    for (uint16_t id = 0u; id < catalogCount && !pending; id++) {
+      pending = notifyDropped[id] > 0u;
+    }
+  }
+  notifyLostPending = pending;
+  taskEXIT_CRITICAL();
+}
+
+static void notifyClear(void)
+{
+  taskENTER_CRITICAL();
+  memset(notifyEnabled, 0, sizeof(notifyEnabled));
+  memset(notifyDropped, 0, sizeof(notifyDropped));
+  notifyLostPending = false;
+  notifyHead = 0u;
+  notifyUsed = 0u;
+  taskEXIT_CRITICAL();
+}
+
+static bool notifyLostIsPending(void)
+{
+  taskENTER_CRITICAL();
+  const bool pending = notifyLostPending;
+  taskEXIT_CRITICAL();
+  return pending;
+}
+
+static void notifyRegisterListener(void)
+{
+  memset(&notifyListener, 0, sizeof(notifyListener));
+  notifyListener.onNotify = onNotify;
+  (void)controlListenerRegister(&notifyListener);
+}
+#endif
+
+/**
+ * Send the ready responses, then the forwarded notifications, checking the
+ * slots again after each one, then the loss reports. Task only.
+ */
+static void sendDownlink(void)
+{
+  finishSlots();
+#if NOTIFY_BUFFER > 0
+  uint8_t endpointId;
+  size_t length;
+  while (notifyTake(&endpointId, &length)) {
+    sendMessage(endpointId, 0u, notifyOut, length);
+    finishSlots();
+  }
+  if (notifyLostIsPending()) {
+    sendLostEvents();
+  }
+#endif
+}
+
 // ---- Catalog ----
 
 static bool catalogLoad(void)
@@ -337,6 +554,9 @@ static void handleCatalog(CRTPPacket *packet)
 /** Drop the message being reassembled and orphan everything in flight. */
 static void reset(void)
 {
+#if NOTIFY_BUFFER > 0
+  notifyClear();
+#endif
   if (receiving != NULL) {
     slotFree(receiving);
     receiving = NULL;
@@ -393,7 +613,39 @@ static void handleEndpointCommand(CRTPPacket *packet)
       packet->size = 2u;
       sendPacket(packet);
       break;
-    case ENDPOINT_SET_NOTIFY:
+    case ENDPOINT_SET_NOTIFY: {
+#if NOTIFY_BUFFER > 0
+      if (packet->size < 3u || packet->data[2] > 1u) {
+        sendCommandError(packet, EINVAL);
+        return;
+      }
+      if (!catalogLoad()) {
+        sendCommandError(packet, EAGAIN);
+        return;
+      }
+      const uint8_t id = packet->data[1];
+      const bool enabled = packet->data[2] == 1u;
+      if (id != ENDPOINT_ALL && id >= catalogCount) {
+        sendCommandError(packet, ENOENT);
+        return;
+      }
+      taskENTER_CRITICAL();
+      for (uint16_t i = 0u; i < catalogCount; i++) {
+        if (id == ENDPOINT_ALL || i == id) {
+          notifySetEnabled((uint8_t)i, enabled);
+        }
+      }
+      taskEXIT_CRITICAL();
+      packet->data[3] = packet->data[2];
+      packet->data[2] = id;
+      packet->data[1] = 0u;
+      packet->size = 4u;
+      sendPacket(packet);
+#else
+      sendCommandError(packet, ENOSYS);
+#endif
+      break;
+    }
     default:
       sendCommandError(packet, ENOSYS);
       break;
@@ -545,12 +797,18 @@ static void crtpControlTask(void *arg)
 {
   (void)arg;
   for (;;) {
-    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    TickType_t wait = portMAX_DELAY;
+#if NOTIFY_BUFFER > 0
+    if (notifyLostIsPending()) {
+      wait = M2T(NOTIFY_LOST_RETRY_MS);
+    }
+#endif
+    ulTaskNotifyTake(pdTRUE, wait);
     CRTPPacket packet;
     while (xQueueReceive(rxQueue, &packet, 0) == pdTRUE) {
       handlePacket(&packet);
     }
-    finishSlots();
+    sendDownlink();
   }
 }
 #endif
@@ -565,6 +823,10 @@ void crtpControlInit(void)
   task = STATIC_MEM_TASK_CREATE(crtpControlTask, crtpControlTask,
                                 CRTP_CONTROL_TASK_NAME, NULL, CRTP_CONTROL_TASK_PRI);
   crtpRegisterPortCB(CRTP_PORT_CONTROL, onPacket);
+#endif
+#if NOTIFY_BUFFER > 0
+  // Before the freeze in systemStart(), like the endpoints.
+  notifyRegisterListener();
 #endif
   isInit = true;
 }
@@ -585,6 +847,11 @@ void crtpControlFinishSlotsForTest(void)
   finishSlots();
 }
 
+void crtpControlSendDownlinkForTest(void)
+{
+  sendDownlink();
+}
+
 void crtpControlResetForTest(void)
 {
   memset(slots, 0, sizeof(slots));
@@ -593,5 +860,10 @@ void crtpControlResetForTest(void)
   catalogCount = 0u;
   catalogCrc = 0u;
   isInit = false;
+#if NOTIFY_BUFFER > 0
+  notifyClear();
+  // The router was reset too: register again, before the test freezes it.
+  notifyRegisterListener();
+#endif
 }
 #endif

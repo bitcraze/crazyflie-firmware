@@ -25,6 +25,8 @@ STATIC_MEM_TASK_ALLOC(syslink2ControlTask, SYSLINK2_CONTROL_TASK_STACKSIZE);
  * read from user tasks. */
 static volatile bool initialized;
 static volatile bool ready;
+/* Set at init, read in the Control task. */
+static syslink2_control_unsolicited_fn unsolicited_handler;
 
 #if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
 static void syslink2ControlTask(void *arg) {
@@ -96,6 +98,11 @@ syslink2_control_submit_result_t syslink2_control_service_submit_raw(
   return queue_valid_entry(&entry);
 }
 
+void syslink2_control_service_set_unsolicited_handler(
+  syslink2_control_unsolicited_fn handler) {
+  unsolicited_handler = handler;
+}
+
 bool syslink2_control_service_is_ready(void) {
   return ready;
 }
@@ -118,12 +125,19 @@ void syslink2_control_service_step(uint32_t now_ticks) {
   syslink2_control_frame_t frame;
   if (syslink2_control_channel_receive(&frame)) {
     syslink2_control_response_t response;
-    if (syslink2_control_codec_decode(&frame, &response) ==
-        SYSLINK2_CONTROL_FRAME_CLASS_RESPONSE) {
+    const syslink2_control_frame_class_t frame_class =
+      syslink2_control_codec_decode(&frame, &response);
+    if (frame_class == SYSLINK2_CONTROL_FRAME_CLASS_RESPONSE) {
       syslink2_control_request_handling_step(true, &response, now_ticks);
       return;
     }
-    /* Unsolicited and malformed frames are dropped. */
+    /* Unsolicited frames go to their handler. Malformed frames, and
+     * unsolicited ones without a handler, are dropped. The receive slot is
+     * already free again. */
+    if (frame_class == SYSLINK2_CONTROL_FRAME_CLASS_UNSOLICITED &&
+        unsolicited_handler != NULL) {
+      unsolicited_handler(frame.data, frame.len);
+    }
   }
   syslink2_control_request_handling_step(true, NULL, now_ticks);
 }
@@ -132,5 +146,6 @@ void syslink2_control_service_step(uint32_t now_ticks) {
 void syslink2_control_service_test_reset(void) {
   initialized = false;
   ready = false;
+  unsolicited_handler = NULL;
 }
 #endif

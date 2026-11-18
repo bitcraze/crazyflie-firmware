@@ -48,6 +48,8 @@ bool crtpControlTest(void);
 void crtpControlHandlePacketForTest(CRTPPacket *packet);
 /** Send or drop the responses of completed slots, as the bridge task does. */
 void crtpControlFinishSlotsForTest(void);
+/** Run the downlink step of the task: responses, notifications, losses. */
+void crtpControlSendDownlinkForTest(void);
 /** Reset bridge state between host tests. */
 void crtpControlResetForTest(void);
 #endif

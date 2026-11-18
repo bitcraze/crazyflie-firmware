@@ -42,6 +42,10 @@
  * an endpoint a unique wire ID in byte 1 of the Control message, and puts the
  * originator's ID back in the response. The router allocates nothing: the
  * endpoint node and each ControlRequest are owned by their callers.
+ *
+ * Unsolicited NOTIFY messages from an endpoint go the other way: its provider
+ * passes them to controlEndpointNotify(), which hands them to every
+ * registered ControlListener, such as the CRTP Control bridge.
  */
 
 /** Longest endpoint path, in bytes, so that it fits a CRTP catalog item. */
@@ -172,6 +176,50 @@ int controlSubmit(ControlEndpoint *endpoint, ControlRequest *request,
  */
 void controlRequestComplete(ControlRequest *request, int status,
                             const uint8_t *response, size_t length);
+
+/**
+ * Pass an unsolicited message from the endpoint, such as a NOTIFY, to the
+ * listeners. Task context, never an ISR. message is borrowed for the call.
+ * Messages before the freeze, empty ones and ones whose kind is not
+ * unsolicited (0xc0..0xff) are dropped and counted.
+ */
+void controlEndpointNotify(ControlEndpoint *endpoint, const uint8_t *message,
+                           size_t length);
+
+// ---- Listeners: firmware code that wants the NOTIFY messages ----
+
+typedef struct ControlListener ControlListener;
+
+/**
+ * Caller-provided listener node. Set the caller fields before registration.
+ * The node must stay valid and unchanged for the firmware lifetime.
+ */
+struct ControlListener {
+  /**
+   * Caller: called for each unsolicited message of a matching endpoint, in
+   * the provider's task. message is borrowed for the call: copy what you
+   * need. Must not block.
+   */
+  void (*onNotify)(ControlListener *listener, ControlEndpoint *endpoint,
+                   const uint8_t *message, size_t length);
+  /** Caller: the endpoint to listen to, or NULL for every endpoint. */
+  ControlEndpoint *endpoint;
+  /** Caller: for the listener's own use. */
+  void *context;
+
+  ControlListener *next;          ///< Control-owned list link.
+};
+
+/**
+ * Register a listener. Call only from the startup task, before
+ * controlEndpointFreeze().
+ * @return 0 on success; EINVAL for a NULL node or a missing onNotify; EEXIST
+ *         for a node already registered; EBUSY after the freeze.
+ */
+int controlListenerRegister(ControlListener *listener);
+
+/** Unsolicited messages dropped by controlEndpointNotify(), for diagnostics. */
+uint32_t controlNotifyDroppedCount(void);
 
 #ifdef UNIT_TEST_MODE
 /** Reset router state between host tests. */
