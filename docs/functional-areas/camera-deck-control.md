@@ -153,7 +153,7 @@ The Control Service is broken down into five units by responsibility.
 
 | Unit | Responsibility |
 |---|---|
-| [`syslink2_control_service`](#syslink2_control_service) | The unit that holds all public functions of the control service. Owns the Control task, which steps it. Holds the ready flag. Tells the other units what to do in a fixed order. Receives frames and passes responses on to `syslink2_control_request_handling`. |
+| [`syslink2_control_service`](#syslink2_control_service) | The unit that holds all public functions of the control service. Owns the Control task, which steps it. Holds the ready flag. Tells the other units what to do in a fixed order. Receives frames, passes responses on to `syslink2_control_request_handling` and unsolicited frames to the unsolicited handler. |
 | [`syslink2_control_request_queue`](#syslink2_control_request_queue) | Hands submitted requests from user tasks to the Control task. |
 | [`syslink2_control_request_handling`](#syslink2_control_request_handling) | Handles one outstanding request. |
 | [`syslink2_control_codec`](#syslink2_control_codec) | Library of functions for encoding, decoding and validation. |
@@ -179,6 +179,7 @@ classDiagram
         <<user API>>
         +on_complete
         +on_complete_raw
+        +unsolicited_handler
     }
 
     class syslink2_control_service {
@@ -186,6 +187,7 @@ classDiagram
         +submit
         +submit_raw
         +is_ready
+        +set_unsolicited_handler
         +step
     }
 
@@ -241,7 +243,8 @@ classDiagram
         <<deck init>>
     }
 
-    User ..> syslink2_control_service : submit, submit_raw, is_ready
+    User ..> syslink2_control_service : submit, submit_raw, is_ready, set_unsolicited_handler
+    syslink2_control_service --> User : unsolicited_handler
     bcCamDeckInit --> bccam_uart_service : init, runtime
     bcCamDeckInit --> syslink2_control_service : init
     syslink2_control_service --> ControlTask : creates
@@ -304,6 +307,11 @@ classDiagram
     class syslink2_control_on_complete_raw_t {
         <<function pointer>>
         (syslink2_control_outcome_t outcome, uint8_t user_request_id, const uint8_t *data, uint8_t len) void
+    }
+
+    class syslink2_control_unsolicited_fn {
+        <<function pointer>>
+        (const uint8_t *data, uint8_t len) void
     }
 
     class syslink2_control_result_t {
@@ -404,6 +412,9 @@ response fits in one frame:
   passes one of them to submit. There is no user handle and no context
   pointer: each user has its own callback, and the callback tells which user
   a request belongs to.
+- `syslink2_control_unsolicited_fn` is the unsolicited handler, see
+  [User API](#user-api). It is defined in `syslink2_control_service.h`, not
+  in `syslink2_control_types.h`.
 - `syslink2_control_queue_entry_t` is what the Control Service keeps for a
   submitted request: the request and the callback to complete it with.
   Exactly one of `on_complete` and `on_complete_raw` is set. `on_complete_raw`
@@ -482,9 +493,11 @@ flowchart TB
 ### User API
 
 Users see only the user API: `syslink2_control_service_submit`,
-`syslink2_control_service_submit_raw` and `syslink2_control_service_is_ready`,
-see [syslink2_control_service](#syslink2_control_service), and their own
-completion callback, which they pass to submit.
+`syslink2_control_service_submit_raw`, `syslink2_control_service_is_ready` and
+`syslink2_control_service_set_unsolicited_handler`, see
+[syslink2_control_service](#syslink2_control_service), their own completion
+callback, which they pass to submit, and the unsolicited handler, which they
+set with `syslink2_control_service_set_unsolicited_handler`.
 
 - `syslink2_control_service_submit` takes a request as a
   `syslink2_control_request_t` and an `on_complete`, for users such as the
@@ -501,6 +514,7 @@ means `on_complete` or `on_complete_raw`, whichever was passed to submit.
 |---|---|
 | `on_complete(const syslink2_control_request_t *request, const syslink2_control_result_t *result) void`, type `syslink2_control_on_complete_t` | Tells the user that a request from `syslink2_control_service_submit` has completed, with its result. |
 | `on_complete_raw(syslink2_control_outcome_t outcome, uint8_t user_request_id, const uint8_t *data, uint8_t len) void`, type `syslink2_control_on_complete_raw_t` | Tells the user that a raw request has completed, with its outcome, its user request ID and, for `SYSLINK2_CONTROL_OUTCOME_OK`, `_VALUE` and `_ERROR`, the [raw response](#terms). |
+| `unsolicited_handler(const uint8_t *data, uint8_t len) void`, type `syslink2_control_unsolicited_fn` | Receives each unsolicited frame from the deck, such as a `NOTIFY`. |
 
 - The completion is called in the Control task. It must not block.
 - Every request for which submit returns
@@ -539,6 +553,27 @@ means `on_complete` or `on_complete_raw`, whichever was passed to submit.
   adapter, for example, compares it with the type of the param. For `SET`,
   the deck checks the type and answers `ERROR` when it does not match,
   which gives `SYSLINK2_CONTROL_OUTCOME_ERROR`.
+
+The unsolicited handler:
+
+- There is one handler for the service. It is set with
+  `syslink2_control_service_set_unsolicited_handler` at init. NULL, the
+  default, drops unsolicited frames.
+- It may be set after the Control task has started. `bcCamDeckInit` calls
+  `bccam_control_init`, which sets it, after
+  `syslink2_control_service_init`, which creates the task. An unsolicited
+  frame received before then is dropped. In practice none is: the service is
+  not ready until the link session is up, and before
+  `controlEndpointFreeze()` the router drops notifications anyway.
+- It is called in the Control task, once for each unsolicited frame. It must
+  not block.
+- `data` holds the whole frame, starting with its `kind` byte, and is valid
+  only during the call. A handler that keeps the bytes copies them.
+- The frame is checked only for its class: at least 1 byte, with `kind` in
+  0xc0..0xff, see [Received frames](#received-frames). The rest is not
+  checked.
+- The bcCam driver, `bccam_control`, sets it and passes each frame to the
+  Control router with `controlEndpointNotify()`.
 
 ### Runtime interface
 
@@ -653,8 +688,9 @@ the request checks, and ends with
 ## syslink2_control_service
 
 The unit above the other four. It is the only unit users see, through
-`syslink2_control_service_submit`, `syslink2_control_service_submit_raw` and
-`syslink2_control_service_is_ready`. It owns the Control task, which steps it,
+`syslink2_control_service_submit`, `syslink2_control_service_submit_raw`,
+`syslink2_control_service_is_ready` and
+`syslink2_control_service_set_unsolicited_handler`. It owns the Control task, which steps it,
 see [Control task](#control-task). `syslink2_control_service_submit` validates the request and passes
 it on to `syslink2_control_request_queue`, together with its `on_complete`, as
 a `syslink2_control_queue_entry_t`. `syslink2_control_service_submit_raw`
@@ -704,6 +740,7 @@ gets the ready flag as an argument to its step.
 | `syslink2_control_service_submit(const syslink2_control_request_t *request, syslink2_control_on_complete_t on_complete) syslink2_control_submit_result_t` | Takes a request for submission, and returns if it has been submitted successfully or not. The request completes with `on_complete`. |
 | `syslink2_control_service_submit_raw(const uint8_t *data, uint8_t len, syslink2_control_on_complete_raw_t on_complete_raw) syslink2_control_submit_result_t` | Takes a raw request of `len` bytes for submission, decodes it, and returns if it has been submitted successfully or not. The request completes with `on_complete_raw`. |
 | `syslink2_control_service_is_ready() bool` | Returns the ready flag. |
+| `syslink2_control_service_set_unsolicited_handler(syslink2_control_unsolicited_fn handler) void` | Sets the function that receives unsolicited frames, or NULL to drop them, which is the default. Called at init, possibly after the Control task has started. |
 | `syslink2_control_service_init(bccam_uart_runtime_t *runtime) void` | The public init functions of all control_service units. Initializes the control service unit and subunits. Passes `runtime` on to `syslink2_control_channel_init`. Then creates the Control task. Called once, from `bcCamDeckInit`. |
 | `syslink2_control_service_step(uint32_t now_ticks) void` | Does one step, see [One step of syslink2_control_service](#one-step-of-syslink2_control_service). `now_ticks` is the current tick count. The Control task reads it once per loop iteration with `xTaskGetTickCount()` and passes it in. It is passed on to `syslink2_control_request_handling_step`. Called only from the Control task, and from host tests. |
 
@@ -712,6 +749,7 @@ gets the ready flag as an argument to its step.
 | Field | Type | What it holds |
 |---|---|---|
 | `ready` | `bool` | The ready flag. Written only in the Control task. |
+| `unsolicited_handler` | `syslink2_control_unsolicited_fn` | The function that receives unsolicited frames, or NULL. Written once at init, possibly while the Control task runs, read in the Control task. |
 
 ### Control task
 
@@ -781,7 +819,9 @@ flowchart TD
     f0{"syslink2_control_channel<br/>receive gives a frame?"}
     f1["decode (syslink2_control_codec)"]
     f2{"class?"}
-    fu["drop unsolicited"]
+    fu{"unsolicited handler set?"}
+    fh["unsolicited_handler(data, len)"]
+    fd["drop unsolicited"]
     fm["drop malformed"]
     h1["syslink2_control_request_handling<br/>step(true, response, now_ticks)"]
     h2["syslink2_control_request_handling<br/>step(true, none, now_ticks)"]
@@ -799,7 +839,9 @@ flowchart TD
     f0 -- "yes" --> f1 --> f2
     f0 -- "no" --> h2
     f2 -- "response" --> h1
-    f2 -- "unsolicited" --> fu --> h2
+    f2 -- "unsolicited" --> fu
+    fu -- "yes" --> fh --> h2
+    fu -- "no" --> fd --> h2
     f2 -- "malformed" --> fm --> h2
 
     r0 -- "false" --> n1
@@ -1441,6 +1483,29 @@ Severity rates the effect on the user after mitigation:
 - **Severity after mitigation**: None.
 - **Outcome**: nothing.
 
+### Burst of unsolicited frames
+
+- **Failure mode**: the deck sends many unsolicited frames, such as
+  `NOTIFY`, in a row while a request is outstanding.
+- **Cause**: values on the deck change often, for example while a setter
+  changes several paths, or the deck sends notifications faster than the
+  Control task takes them.
+- **Effect if unmitigated**: the answer to the request is held back behind
+  the unsolicited frames, the request times out although the deck answered,
+  and the Control task spends its steps in the unsolicited handler.
+- **Mitigation**: `syslink2_control_service` receives one frame per step and
+  `syslink2_control_channel` grants receive credit again at once, so each
+  unsolicited frame delays the answer by at most one step and one round
+  trip, and never blocks it, see [Credit](#credit). The unsolicited handler
+  must not block, see [User API](#user-api). The bcCam driver's handler only
+  passes the frame to the Control router, whose listeners copy it and
+  return. A notification lost after the handler, in the router or in the
+  CRTP bridge, is not a failure of the Control Service, see
+  [CRTP Control](crtp/crtp_control.md).
+- **Severity after mitigation**: Low.
+- **Outcome**: the request completes as usual, or with
+  `SYSLINK2_CONTROL_OUTCOME_TIMEOUT` when the burst outlasts its timeout.
+
 ### Ready lost with a request outstanding
 
 - **Failure mode**: ready is lost while a request is outstanding.
@@ -1618,8 +1683,11 @@ open.
   priority `tskIDLE_PRIORITY + 2` (the same as `bcCamUartTask`), defined in
   `syslink2_control_service.c` like the bcCam UART task. The task waits with
   `vTaskDelay`, so a submit is seen within 10 ms but does not wake it.
-  Question: is the stack enough for users' completions, which run in this
-  task? The stack headroom has not been measured.
+  Question: is the stack enough for users' completions and the unsolicited
+  handler, which run in this task? The handler path goes through
+  `bccam_control`, `controlEndpointNotify()` and every Control listener, such
+  as the CRTP bridge, which copies the frame into its notification buffer.
+  The stack headroom has not been measured.
 - Host test of `syslink2_control_request_queue`: under `UNIT_TEST_MODE` the
   queue is a ring buffer with the same behaviour. The FreeRTOS queue is only
   tested on hardware.

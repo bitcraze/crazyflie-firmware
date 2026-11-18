@@ -50,7 +50,8 @@ typedef void (*syslink2_control_unsolicited_fn)(const uint8_t *data,
 
 /**
  * Set the function that receives unsolicited frames, or NULL to drop them,
- * which is the default. Call it at init, before the Control task runs.
+ * which is the default. Call it at init. It may be called after the Control
+ * task has started: an unsolicited frame received before then is dropped.
  */
 void syslink2_control_service_set_unsolicited_handler(
   syslink2_control_unsolicited_fn handler);

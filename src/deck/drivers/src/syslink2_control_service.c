@@ -25,8 +25,9 @@ STATIC_MEM_TASK_ALLOC(syslink2ControlTask, SYSLINK2_CONTROL_TASK_STACKSIZE);
  * read from user tasks. */
 static volatile bool initialized;
 static volatile bool ready;
-/* Set at init, read in the Control task. */
-static syslink2_control_unsolicited_fn unsolicited_handler;
+/* Set at init, possibly while the Control task runs, read in the Control
+ * task. */
+static volatile syslink2_control_unsolicited_fn unsolicited_handler;
 
 #if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
 static void syslink2ControlTask(void *arg) {
