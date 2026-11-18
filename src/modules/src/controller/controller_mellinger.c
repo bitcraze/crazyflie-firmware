@@ -226,8 +226,8 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
     target_thrust.y = 0;
     target_thrust.z = self->mass * GRAVITY_MAGNITUDE + self->kp_z  * r_error.z + self->kd_z  * v_error.z + self->ki_z  * self->i_error_z;
 
-    // Calculate axis [zB_des]
-    self->z_axis_desired = vnormalize(target_thrust);
+    // Set z axis [zB_des]
+    self->z_axis_desired = mkvec(0, 0, 1);
 
     // [xC_des]
     // x_axis_desired = z_axis_desired x [sin(yaw), cos(yaw), 0]^T
