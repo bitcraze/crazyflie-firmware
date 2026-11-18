@@ -132,7 +132,12 @@ typedef struct deck_driver {
   uint8_t (*status)(void);
 } DeckDriver;
 
+#ifndef UNIT_TEST_MODE
 #define DECK_DRIVER(NAME) const struct deck_driver * driver_##NAME __attribute__((section(".deckDriver." #NAME), used)) = &(NAME)
+#else
+// Unit tests access the registration pointer directly and do not use the firmware linker section.
+#define DECK_DRIVER(NAME) const struct deck_driver * driver_##NAME = &(NAME)
+#endif
 
 /****** Deck_info *******/
 

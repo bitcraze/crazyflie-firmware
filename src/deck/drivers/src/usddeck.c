@@ -120,7 +120,10 @@ typedef struct usdLogConfig_s {
 
 typedef struct usdLogStats_s {
   uint32_t eventsRequested;
-  uint32_t eventsWritten;
+  // Events that fit in the log buffer; the rest were dropped.
+  uint32_t eventsAccepted;
+  // FRESULT of the first failed open, write or close of the run, 0 if none.
+  uint8_t writeError;
 } usdLogStats_t;
 
 // Ring buffer
@@ -483,9 +486,16 @@ static void usddeckWriteEventData(const usdLogEventConfig_t* cfg, const uint8_t*
     return;
   }
 
-  ++usdLogStats.eventsRequested;
-
   xSemaphoreTake(logBufferMutex, portMAX_DELAY);
+
+  // Logging may have stopped while we waited for the mutex.
+  if (!enableLogging) {
+    xSemaphoreGive(logBufferMutex);
+    return;
+  }
+
+  // Incremented from several task contexts, so keep it under the mutex.
+  ++usdLogStats.eventsRequested;
 
   // trigger writing once there is some data
   if (logBuffer.size > 0 && xHandleWriteTask) {
@@ -525,7 +535,7 @@ static void usddeckWriteEventData(const usdLogEventConfig_t* cfg, const uint8_t*
         break;
       }
     }
-    ++usdLogStats.eventsWritten;
+    ++usdLogStats.eventsAccepted;
   }
   xSemaphoreGive(logBufferMutex);
 }
@@ -806,12 +816,24 @@ static bool handleMemRead(const uint8_t internal_id, const uint32_t memAddr, con
   return result;
 }
 
+// Keep the first error of the run; it is the one that says what went wrong.
+static void usdRecordWriteError(FRESULT status)
+{
+  if (usdLogStats.writeError == 0) {
+    usdLogStats.writeError = (uint8_t)status;
+  }
+}
+
 static void usdWriteData(const void *data, size_t size)
 {
   UINT bytesWritten;
   FRESULT status = f_write(&logFile, data, size, &bytesWritten);
-  if (status != FR_OK) {
-    DEBUG_PRINT("usd deck write failure %d\n", status);
+  if (status != FR_OK || bytesWritten < size) {
+    DEBUG_PRINT("usd deck write failure %d (%u of %u B)\n",
+                status, (unsigned)bytesWritten, (unsigned)size);
+    // A short write with FR_OK means a full volume or the 4 GiB FAT file size
+    // limit. Report it as FR_DENIED, which FatFS also uses for a full volume.
+    usdRecordWriteError((status != FR_OK) ? status : FR_DENIED);
     enableLogging = false;
   } else {
     crc32Update(&crcContext, data, size);
@@ -831,13 +853,12 @@ static void usdWriteTask(void* prm)
   while (!in_shutdown) {
     vTaskSuspend(NULL);
     if (enableLogging) {
-      // reset stats
-      usdLogStats.eventsRequested = 0;
-      usdLogStats.eventsWritten = 0;
-
-      // reset the buffer
+      // Reset under the mutex; producers update the counters under it too.
       xSemaphoreTake(logBufferMutex, portMAX_DELAY);
       ringBuffer_reset(&logBuffer);
+      usdLogStats.eventsRequested = 0;
+      usdLogStats.eventsAccepted = 0;
+      usdLogStats.writeError = 0;
       xSemaphoreGive(logBufferMutex);
 
       xSemaphoreTake(logFileMutex, portMAX_DELAY);
@@ -865,8 +886,9 @@ static void usdWriteTask(void* prm)
       }
 
       /* try to create file */
-      if (f_open(&logFile, usdLogConfig.filename, FA_CREATE_ALWAYS | FA_WRITE)
-          == FR_OK) {
+      FRESULT openStatus = f_open(&logFile, usdLogConfig.filename,
+                                  FA_CREATE_ALWAYS | FA_WRITE);
+      if (openStatus == FR_OK) {
 
         DEBUG_PRINT("Logging to: %s\n", usdLogConfig.filename);
 
@@ -1014,8 +1036,12 @@ static void usdWriteTask(void* prm)
         uint32_t crcValue = crc32Out(&crcContext);
         usdWriteData(&crcValue, sizeof(crcValue));
 
-        // close file
-        f_close(&logFile);
+        // f_close syncs the FIL buffer, so it can fail like a write does.
+        FRESULT closeStatus = f_close(&logFile);
+        if (closeStatus != FR_OK) {
+          DEBUG_PRINT("usd deck close failure %d\n", closeStatus);
+          usdRecordWriteError(closeStatus);
+        }
 
         // Update file size for fast query
         FILINFO info;
@@ -1026,13 +1052,16 @@ static void usdWriteTask(void* prm)
         DEBUG_PRINT("Wrote %ld B to: %s (%ld of %ld events)\n",
           lastFileSize,
           usdLogConfig.filename,
-          usdLogStats.eventsWritten,
+          usdLogStats.eventsAccepted,
           usdLogStats.eventsRequested);
 
         xSemaphoreGive(logFileMutex);
       } else {
+        // The writer task exits below and usd.logging stays 1, so this is the
+        // only sign that nothing is reaching the card.
+        usdRecordWriteError(openStatus);
         f_mount(NULL, "", 0);
-        DEBUG_PRINT("Failed to open file: %s\n", usdLogConfig.filename);
+        DEBUG_PRINT("Failed to open file: %s (%d)\n", usdLogConfig.filename, openStatus);
         break;
       }
     }
@@ -1126,4 +1155,27 @@ STATS_CNT_RATE_LOG_ADD(spiReBps, &spiReadRate)
  * @brief Data write rate to the SD card [bytes/s]
  */
 STATS_CNT_RATE_LOG_ADD(fatWrBps, &fatWriteRate)
+/**
+ * @brief Number of events offered to the uSD log during the current/last run
+ */
+LOG_ADD(LOG_UINT32, eventsRequested, &usdLogStats.eventsRequested)
+/**
+ * @brief Number of events accepted into the uSD log buffer during the current/last run
+ *
+ * Counted on entry into the buffer, not on the card. Fewer than eventsRequested
+ * means events were dropped and the log is incomplete.
+ */
+LOG_ADD(LOG_UINT32, eventsAccepted, &usdLogStats.eventsAccepted)
+/**
+ * @brief FRESULT of the first failed file open, SD write or file close of the current/last run, 0 if none
+ *
+ * Non-zero means the log is truncated or, after a failed open, missing. A
+ * failed open is set right away and usd.logging stays 1; otherwise the value
+ * is only final once the writer has closed the file, some time after
+ * usd.logging reads 0.
+ *
+ * 7 (FR_DENIED) means the card is full, or the file reached the 4 GiB FAT
+ * size limit. It is not a permissions problem.
+ */
+LOG_ADD(LOG_UINT8, writeError, &usdLogStats.writeError)
 LOG_GROUP_STOP(usd)

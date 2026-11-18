@@ -327,13 +327,173 @@ void testPollFailureFormattingKeepsLinkDiagnostics(void) {
   TEST_ASSERT_NOT_NULL(strstr(text, "FAULT"));
 }
 
-void testRxFaultWhileLinkActiveMovesServiceToExternalRecovery(void) {
+static const bccam_uart_rx_event_t uart_error_event = {
+  .type = BCCAM_UART_RX_EVENT_FAULT,
+  .fault = BCCAM_UART_RX_FAULT_UART_ERROR,
+};
+
+static void encode_raw_frame_event(bccam_uart_rx_event_t *event,
+                                   const uint8_t *payload,
+                                   size_t payload_len)
+{
+  size_t length = 0u;
+  event->type = BCCAM_UART_RX_EVENT_RAW_FRAME;
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_frame_encode_version(1, 7, payload, payload_len,
+      event->raw_frame.bytes, sizeof(event->raw_frame.bytes), &length));
+  event->raw_frame.length = (uint16_t)length;
+}
+
+/** Verify byte loss starts a new session, on a deck that was not reset. */
+void testUartErrorWhileLinkActiveReestablishesWithoutResettingDeck(void) {
   establish_service_link();
-  const bccam_uart_rx_event_t event = {
-    .type = BCCAM_UART_RX_EVENT_FAULT,
-    .fault = BCCAM_UART_RX_FAULT_SYNC_LOST,
-  };
+  const uint8_t sends_before_fault = uart_send_count();
+
+  bccam_uart_service_test_handle_rx_event(&uart_error_event);
+
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_SERVICE_STATE_FW_ESTABLISHING,
+                        bccam_uart_service_get_state());
+  TEST_ASSERT_EQUAL_UINT8((uint8_t)(sends_before_fault + 1u), uart_send_count());
+  complete_service_link_establishment();
+
+  bccam_uart_service_status_t status;
+  bccam_uart_service_get_status(&status);
+  TEST_ASSERT_EQUAL_UINT16(1u, status.link_faults);
+  TEST_ASSERT_EQUAL_UINT16(1u, status.uart_errors);
+}
+
+/** Verify a frame failing its CRC is handled like any other byte loss. */
+void testCorruptedFrameWhileLinkActiveReestablishesWithoutResettingDeck(void) {
+  establish_service_link();
+  bccam_uart_rx_event_t event;
+  const uint8_t payload[] = { 1, 2, 3 };
+  encode_raw_frame_event(&event, payload, sizeof(payload));
+  event.raw_frame.bytes[event.raw_frame.length - 1u] ^= 0xffu;
+
   bccam_uart_service_test_handle_rx_event(&event);
+
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_SERVICE_STATE_FW_ESTABLISHING,
+                        bccam_uart_service_get_state());
+}
+
+/** Verify frames the deck sent before seeing ESTABLISH do not reset it. */
+void testOldSessionFramesDuringReestablishmentAreIgnored(void) {
+  establish_service_link();
+  bccam_uart_service_test_handle_rx_event(&uart_error_event);
+
+  bccam_uart_rx_event_t event;
+  const uint8_t small[] = { 1, 2, 3 };
+  uint8_t large[64] = { 0 };
+  encode_raw_frame_event(&event, small, sizeof(small));
+  bccam_uart_service_test_handle_rx_event(&event);
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_SERVICE_STATE_FW_ESTABLISHING,
+                        bccam_uart_service_get_state());
+
+  encode_raw_frame_event(&event, large, sizeof(large));
+  bccam_uart_service_test_handle_rx_event(&event);
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_SERVICE_STATE_FW_ESTABLISHING,
+                        bccam_uart_service_get_state());
+
+  complete_service_link_establishment();
+}
+
+/** Verify a session that does not come back still ends in a deck reset. */
+void testFailedReestablishmentResetsDeckAfterStartupTimeout(void) {
+  establish_service_link();
+  bccam_uart_service_test_handle_rx_event(&uart_error_event);
+
+  bccam_uart_service_test_startup_recovery_report_t report;
+  TEST_ASSERT_FALSE(bccam_uart_service_test_update_startup_watchdog(
+    M2T(500u), &report));
+  bccam_uart_service_test_poll_once();
+  TEST_ASSERT_FALSE(bccam_uart_service_test_update_startup_watchdog(
+    M2T(2999u), &report));
+  TEST_ASSERT_TRUE(bccam_uart_service_test_update_startup_watchdog(
+    M2T(3000u), &report));
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_SERVICE_STATE_FW_RESETTING,
+                        bccam_uart_service_get_state());
+}
+
+/** Verify overruns in quick succession, as in the field, never reset the deck. */
+void testRepeatedLinkFaultsWithoutStableLinkDoNotResetDeck(void) {
+  establish_service_link();
+  for (unsigned int i = 0u; i < 20u; i++) {
+    bccam_uart_service_test_handle_rx_event(&uart_error_event);
+    TEST_ASSERT_EQUAL_INT(BCCAM_UART_SERVICE_STATE_FW_ESTABLISHING,
+                          bccam_uart_service_get_state());
+    complete_service_link_establishment();
+  }
+
+  bccam_uart_service_status_t status;
+  bccam_uart_service_get_status(&status);
+  TEST_ASSERT_EQUAL_UINT16(20u, status.link_faults);
+  TEST_ASSERT_EQUAL_UINT16(20u, status.uart_errors);
+}
+
+/** Verify a lost ESTABLISH reply is recovered by sending ESTABLISH again. */
+void testLostEstablishReplyIsRetriedWithoutResettingDeck(void) {
+  bccam_uart_service_test_startup_recovery_report_t report;
+  establish_service_link();
+  bccam_uart_service_test_handle_rx_event(&uart_error_event);
+  const uint8_t sends_before_retry = uart_send_count();
+
+  // The reply is lost to another overrun, which does not fault an Inactive link.
+  bccam_uart_service_test_handle_rx_event(&uart_error_event);
+  TEST_ASSERT_EQUAL_UINT8(sends_before_retry, uart_send_count());
+
+  TEST_ASSERT_FALSE(bccam_uart_service_test_update_startup_watchdog(
+    M2T(499u), &report));
+  bccam_uart_service_test_poll_once();
+  TEST_ASSERT_EQUAL_UINT8(sends_before_retry, uart_send_count());
+
+  TEST_ASSERT_FALSE(bccam_uart_service_test_update_startup_watchdog(
+    M2T(500u), &report));
+  bccam_uart_service_test_poll_once();
+  TEST_ASSERT_EQUAL_UINT8((uint8_t)(sends_before_retry + 1u), uart_send_count());
+
+  complete_service_link_establishment();
+}
+
+/** Verify a late reply to the previous ESTABLISH does not disturb the retry. */
+void testLateReplyToPreviousEstablishIsIgnored(void) {
+  bccam_uart_service_test_startup_recovery_report_t report;
+  establish_service_link();
+  bccam_uart_service_test_handle_rx_event(&uart_error_event);
+  const uint8_t late_reply[] = {
+    BCCAM_UART_LINK_OP_ESTABLISH_REPLY, last_uart_send()->bytes[7],
+    BCCAM_UART_ESTABLISH_ACCEPTED, 1, 64, 0
+  };
+
+  TEST_ASSERT_FALSE(bccam_uart_service_test_update_startup_watchdog(
+    M2T(500u), &report));
+  bccam_uart_service_test_poll_once();
+  service_receive_management(late_reply, sizeof(late_reply));
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_SERVICE_STATE_FW_ESTABLISHING,
+                        bccam_uart_service_get_state());
+
+  complete_service_link_establishment();
+}
+
+/** Verify ESTABLISH is not repeated to a deck that may still be booting. */
+void testEstablishIsNotRetriedAfterDeckReset(void) {
+  bccam_uart_service_test_startup_recovery_report_t report;
+  bccam_uart_service_test_start_firmware_establishment();
+  bccam_uart_service_test_poll_once();
+  const uint8_t sends_before = uart_send_count();
+
+  TEST_ASSERT_FALSE(bccam_uart_service_test_update_startup_watchdog(
+    M2T(500u), &report));
+  TEST_ASSERT_FALSE(bccam_uart_service_test_update_startup_watchdog(
+    M2T(1000u), &report));
+  bccam_uart_service_test_poll_once();
+  TEST_ASSERT_EQUAL_UINT8(sends_before, uart_send_count());
+}
+
+/** Verify a protocol violation by the deck still resets it. */
+void testProtocolViolationWhileLinkActiveResetsDeck(void) {
+  establish_service_link();
+  const uint8_t malformed[] = { 0xeeu };
+  service_receive_management(malformed, sizeof(malformed));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_SERVICE_STATE_FW_RESETTING,
                         bccam_uart_service_get_state());
 }
@@ -365,8 +525,11 @@ void testRxFaultInTransportAttachedIncompatibleStateTriggersRecovery(void) {
     .type = BCCAM_UART_RX_EVENT_FAULT,
     .fault = BCCAM_UART_RX_FAULT_SYNC_LOST,
   };
+  // A new session has not re-evaluated compatibility yet.
+  bccam_uart_service_test_set_firmware_startup_result(
+    BCCAM_UART_FIRMWARE_STARTUP_WAITING);
   bccam_uart_service_test_handle_rx_event(&event);
-  TEST_ASSERT_EQUAL_INT(BCCAM_UART_SERVICE_STATE_FW_RESETTING,
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_SERVICE_STATE_FW_ESTABLISHING,
                         bccam_uart_service_get_state());
 }
 
@@ -700,6 +863,48 @@ void testConsoleFrameSurvivesLinkFault(void)
   forward_all_console_output();
   TEST_ASSERT_EQUAL_UINT(sizeof(text), console_output_length);
   TEST_ASSERT_EQUAL_UINT8_ARRAY(text, console_output, sizeof(text));
+}
+
+/** Verify clients see the loss after retained output and before new output. */
+void testConsoleLossMarkerFollowsRetainedFrameAfterByteLoss(void)
+{
+  const uint8_t text[] = "output before loss";
+  const uint8_t live[] = "live";
+  const uint8_t marker[] = "\r\n[console data lost]\r\n";
+  accept_console_frame(text, sizeof(text));
+
+  bccam_uart_service_test_handle_rx_event(&uart_error_event);
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_SERVICE_STATE_FW_ESTABLISHING,
+                        bccam_uart_service_get_state());
+  complete_console_service_link_establishment();
+
+  forward_all_console_output();
+  TEST_ASSERT_EQUAL_UINT(sizeof(text) + sizeof(marker) - 1u,
+                         console_output_length);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(text, console_output, sizeof(text));
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(marker, &console_output[sizeof(text)],
+                                sizeof(marker) - 1u);
+
+  receive_console_frame(live, sizeof(live));
+  forward_all_console_output();
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(
+    live, &console_output[sizeof(text) + sizeof(marker) - 1u], sizeof(live));
+}
+
+/** Verify byte loss on a disabled source does not report lost output. */
+void testNoConsoleLossMarkerWhenSourceWasDisabled(void)
+{
+  establish_console_service_link();
+  console_enabled_after_first_check = false;
+  console_accept_output = true;
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_service_test_forward_console());
+
+  bccam_uart_service_test_handle_rx_event(&uart_error_event);
+  complete_console_service_link_establishment();
+
+  console_enabled_after_first_check = true;
+  forward_all_console_output();
+  TEST_ASSERT_EQUAL_UINT(0u, console_output_length);
 }
 
 /** Verify a frame received after a disable waits until the next enable. */

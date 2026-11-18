@@ -32,15 +32,21 @@ CCS_COMMAND_SILENT="  CCS   $@"
 	@$(if $(QUIET), ,echo $(CCS_COMMAND$(VERBOSE)) )
 	@$(CCS_COMMAND)
 
+LOGPARAM_COMMAND=$(PYTHON) $(srctree)/tools/verify/elf_sanity.py --output $@ $<
+LOGPARAM_COMMAND_SILENT="  CHECK $<"
+$(PROG).logparam: $(PROG).elf
+	@$(if $(QUIET), ,echo $(LOGPARAM_COMMAND$(VERBOSE)) )
+	@$(LOGPARAM_COMMAND)
+
 HEX_COMMAND=$(OBJCOPY) $< -O ihex $@
 HEX_COMMAND_SILENT="  COPY  $@"
-$(PROG).hex: $(PROG).elf
+$(PROG).hex: $(PROG).elf $(PROG).logparam
 	@$(if $(QUIET), ,echo $(HEX_COMMAND$(VERBOSE)) )
 	@$(HEX_COMMAND)
 
 BIN_COMMAND=$(OBJCOPY) $< -O binary --pad-to 0 --remove-section=.bss --remove-section=.nzds  --remove-section=._usrstack $@
 BIN_COMMAND_SILENT="  COPY  $@"
-$(PROG).bin: $(PROG).elf
+$(PROG).bin: $(PROG).elf $(PROG).logparam
 	@$(if $(QUIET), ,echo $(BIN_COMMAND$(VERBOSE)) )
 	@$(BIN_COMMAND)
 

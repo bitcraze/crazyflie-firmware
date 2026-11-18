@@ -36,6 +36,7 @@ typedef struct {
   uint16_t tx_bytes;
   uint16_t rx_crc_errors;
   uint16_t link_faults;
+  uint16_t uart_errors;
   uint16_t tx_flushes;
   int32_t last_error;
   uint8_t control_probe_done;

@@ -359,6 +359,66 @@ void testSuccessfulOneShotControlProbeKeepsReceiveCreditClosed(void) {
   TEST_ASSERT_EQUAL_size_t(0, writer.length);
 }
 
+void testReestablishRecoversFaultAndKeepsCounters(void) {
+  bccam_uart_runtime_t runtime;
+  writer_t writer = { .succeed = true };
+  bccam_uart_frame_t frame;
+  establish_and_get_count(&runtime, &writer, 1);
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_ERR_LINK_FAULT,
+    bccam_uart_runtime_on_rx_fault(&runtime, BCCAM_UART_RX_FAULT_UART_ERROR));
+
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_runtime_reestablish(&runtime));
+
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_LINK_INACTIVE,
+    bccam_uart_runtime_get_state(&runtime));
+  TEST_ASSERT_EQUAL_UINT16(1, runtime.link.counters.link_faults);
+  TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_ESTABLISH,
+    flush_operation(&runtime, &writer, &frame));
+}
+
+void testRetryEstablishmentUsesNewTransactionId(void) {
+  bccam_uart_runtime_t runtime;
+  writer_t writer = { .succeed = true };
+  bccam_uart_frame_t frame;
+  bccam_uart_runtime_init(&runtime);
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_runtime_on_firmware_boot(&runtime));
+
+  // The first ESTABLISH has not been sent yet, so nothing is queued.
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_runtime_retry_establishment(&runtime));
+  TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_ESTABLISH,
+    flush_operation(&runtime, &writer, &frame));
+  const uint8_t first_id = frame.payload[1];
+  TEST_ASSERT_EQUAL_UINT(1, writer.calls);
+
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_runtime_retry_establishment(&runtime));
+  TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_ESTABLISH,
+    flush_operation(&runtime, &writer, &frame));
+  TEST_ASSERT_NOT_EQUAL(first_id, frame.payload[1]);
+}
+
+void testRetryEstablishmentDoesNothingAfterRejection(void) {
+  bccam_uart_runtime_t runtime;
+  writer_t writer = { .succeed = true };
+  bccam_uart_frame_t frame;
+  bccam_uart_runtime_init(&runtime);
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_runtime_on_firmware_boot(&runtime));
+  TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_ESTABLISH,
+    flush_operation(&runtime, &writer, &frame));
+  const uint8_t reply[] = {
+    BCCAM_UART_LINK_OP_ESTABLISH_REPLY, frame.payload[1],
+    BCCAM_UART_ESTABLISH_NO_COMMON_LINK_VERSION, 1, 64, 0
+  };
+  feed_management(&runtime, reply, sizeof(reply));
+
+  TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
+    bccam_uart_runtime_retry_establishment(&runtime));
+  TEST_ASSERT_FALSE(runtime.link.tx_pending);
+}
+
 void testSynchronousTxFailureIsFailStopAndNeverRetriedDuringBootstrap(void) {
   bccam_uart_runtime_t runtime;
   writer_t failing = { .succeed = false };

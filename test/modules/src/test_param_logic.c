@@ -384,8 +384,9 @@ void testWriteProcessUint8(void) {
   TEST_ASSERT_EQUAL_UINT8(expected, myUint8);
 }
 
-static size_t storageFetchMockFunc(const char *key, void* buffer, size_t length)
+static size_t storageFetchMockFunc(const char *key, void* buffer, size_t length, int cmock_num_calls)
 {
+  (void)cmock_num_calls;
   TEST_ASSERT_EQUAL_STRING(fetchMockExpectedKey, key);
   size_t cpyLen = length;
   if (fetchMockBufferLength < length) {

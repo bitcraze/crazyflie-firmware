@@ -21,7 +21,7 @@
 #include <stdbool.h>
 
 static void uart1SetSequence(char* sequence, int length);
-static emptySequence[] = {0};
+static char emptySequence[] = {0};
 static int uart1BytesRead = 0;
 static char* uart1Sequence;
 static int uart1SequenceLength;
@@ -273,16 +273,10 @@ static void uart1ReadCallback(char* ch, int cmock_num_calls) {
     uart1BytesRead++;
 }
 
-static bool uart1GetcharCallback(char* ch, int cmock_num_calls) {
-    uart1ReadCallback(ch, cmock_num_calls);
-    return true;
-}
-
 static void uart1SetSequence(char* sequence, int length) {
     uart1BytesRead = 0;
     uart1Sequence = sequence;
     uart1SequenceLength = length;
 
     uart1Getchar_StubWithCallback(uart1ReadCallback);
-    uart1Getchar_StubWithCallback(uart1GetcharCallback);
 }

@@ -20,16 +20,19 @@ Our toolchain policy is to support the two most recent [Ubuntu Long Term Support
 
 This means that if the firmware can not be compiled using gcc 10.3, **or anything newer**, it should be considered a bug.
 
+The build also needs Python 3 (version 3.7 or newer), with no extra packages.
+It is used to generate the version information and to check the log and parameter names in the firmware.
+
 ##### Ubuntu
 ```
-$ sudo apt-get install make gcc-arm-none-eabi
+$ sudo apt-get install make gcc gcc-arm-none-eabi git python3
 ```
 
 ##### macOS
 The required toolchain on macOS can be installed using [homebrew](https://brew.sh/)
 
 ```
-$ brew install gcc-arm-embedded coreutils gnu-sed
+$ brew install gcc-arm-embedded coreutils gnu-sed python3
 ```
 
 ##### Windows
@@ -44,7 +47,7 @@ This can be done by opening `power shell` as administrator and typing:
 $ wsl --install
 ```
 
-Then follow the [install instruction for Ubuntu 20.04](#ubuntu) above to install the required build dependencies.
+Then follow the [install instruction for Ubuntu](#ubuntu) above to install the required build dependencies inside WSL.
 
 For [flashing](#flashing) you need to install [Python](https://www.python.org/downloads/windows/) (=>version 3.7) and the [CFclient](https://github.com/bitcraze/crazyflie-clients-python) **on Windows**.
 When installing Python, the checkbox to add python to the Path should be checked and then the CFclient can be installed with pip in a `powershell` or `cmd` window:
