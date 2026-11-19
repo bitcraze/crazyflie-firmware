@@ -17,7 +17,7 @@ When a client enables `deck:bcCam`, the Crazyflie grants one Common Link
 receive slot for Console output. It forwards received bytes into the CRTP
 transmit queue, splitting a Common Link frame across CRTP packets when needed.
 It grants another slot only after the previous frame has been queued. The
-Console slot is independent of the Control service slot, so a stalled Control
+Console slot is independent of the API Service slot, so a stalled API Service
 probe does not prevent Console output.
 
 If the CRTP transmit queue is full, the Crazyflie keeps the accepted frame and
@@ -49,6 +49,6 @@ The Crazyflie resets the deck when a session cannot be recovered this way:
 Once the link is active, the startup-recovery watchdog does not reset the deck,
 whatever the state of the services above the link, and enabling the console has
 no effect on it. If startup still has not completed 3 seconds after the link
-came up, for example because the Control probe stalled, the Crazyflie reports
+came up, for example because the API Service probe stalled, the Crazyflie reports
 it once on its own console. The deck's console output then remains available to
 explain the stall.

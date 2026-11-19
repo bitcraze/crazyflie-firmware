@@ -21,16 +21,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * crtp_control.c - CRTP port 10 bridge to the Control router.
+ * crtp_apiservice.c - CRTP port 10 bridge to the API Service router.
  *
  * The bridge keeps a fixed number of slots. Each slot holds one reassembled
- * request, is handed to the Control router with controlSubmit(), and receives
+ * request, is handed to the API Service router with apiserviceSubmit(), and receives
  * the response in place in its completion callback. One task owns all bridge
  * state except the SUBMITTED -> DONE transition, which the completion
  * callback makes from the provider's task. The bridge only reads the first
- * two bytes of a Control message.
+ * two bytes of an API Service message.
  *
- * Notifications: the bridge is a Control listener. For each endpoint whose
+ * Notifications: the bridge is an API Service listener. For each endpoint whose
  * forwarding the client turned on with SET_NOTIFY, it copies the endpoint's
  * NOTIFY messages into a byte ring, from the provider's task. The bridge task
  * sends them on the tunnel after the responses that are ready. When the ring
@@ -38,7 +38,7 @@
  * NOTIFY_LOST event on channel 3.
  */
 
-#include "crtp_control.h"
+#include "crtp_apiservice.h"
 
 #include <errno.h>
 #include <string.h>
@@ -47,7 +47,7 @@
 #include "task.h"
 #include "queue.h"
 
-#include "control.h"
+#include "apiservice.h"
 #include "crc32.h"
 #include "crtp.h"
 
@@ -56,19 +56,19 @@
 #include "static_mem.h"
 #endif
 
-#ifndef CONFIG_CRTP_CONTROL_SLOTS
-#define CONFIG_CRTP_CONTROL_SLOTS 4
+#ifndef CONFIG_CRTP_APISERVICE_SLOTS
+#define CONFIG_CRTP_APISERVICE_SLOTS 4
 #endif
-#ifndef CONFIG_CRTP_CONTROL_MAX_MESSAGE
-#define CONFIG_CRTP_CONTROL_MAX_MESSAGE 256
+#ifndef CONFIG_CRTP_APISERVICE_MAX_MESSAGE
+#define CONFIG_CRTP_APISERVICE_MAX_MESSAGE 256
 #endif
-#ifndef CONFIG_CRTP_CONTROL_NOTIFY_BUFFER
-#define CONFIG_CRTP_CONTROL_NOTIFY_BUFFER 512
+#ifndef CONFIG_CRTP_APISERVICE_NOTIFY_BUFFER
+#define CONFIG_CRTP_APISERVICE_NOTIFY_BUFFER 512
 #endif
 
-#define SLOTS CONFIG_CRTP_CONTROL_SLOTS
-#define MAX_MESSAGE CONFIG_CRTP_CONTROL_MAX_MESSAGE
-#define NOTIFY_BUFFER CONFIG_CRTP_CONTROL_NOTIFY_BUFFER
+#define SLOTS CONFIG_CRTP_APISERVICE_SLOTS
+#define MAX_MESSAGE CONFIG_CRTP_APISERVICE_MAX_MESSAGE
+#define NOTIFY_BUFFER CONFIG_CRTP_APISERVICE_NOTIFY_BUFFER
 
 /** CRTP channels on port 10. */
 #define CHANNEL_CATALOG 0u
@@ -93,7 +93,7 @@
 #define FRAGMENT_INDEX_MASK 0x7fu
 /** Message bytes in one tunnel fragment. */
 #define FRAGMENT_PAYLOAD (CRTP_MAX_DATA_SIZE - 1u)
-/** Bytes before the Control message in each tunnel direction. */
+/** Bytes before the API Service message in each tunnel direction. */
 #define UPLINK_HEADER 1u      // endpoint_id
 #define DOWNLINK_HEADER 2u    // endpoint_id, status
 
@@ -120,13 +120,13 @@ typedef struct {
   uint8_t nextIndex;               ///< Next expected fragment index while receiving.
   uint16_t length;                 ///< Request length, then response length.
   int status;                      ///< Completion errno, 0 on success.
-  ControlRequest request;          ///< .response = buffer, .user = this slot.
+  ApiserviceRequest request;          ///< .response = buffer, .user = this slot.
   uint8_t buffer[MAX_MESSAGE];     ///< Request, then response in place.
-} controlSlot_t;
+} apiserviceSlot_t;
 
-static controlSlot_t slots[SLOTS];
+static apiserviceSlot_t slots[SLOTS];
 /** The slot being reassembled, or NULL. At most one, as messages do not interleave. */
-static controlSlot_t *receiving;
+static apiserviceSlot_t *receiving;
 
 static bool catalogReady;
 static uint8_t catalogCount;
@@ -140,9 +140,9 @@ static bool isInit;
 
 #if NOTIFY_BUFFER > 0
 /** One bit per endpoint ID: forwarding turned on by SET_NOTIFY. */
-static uint32_t notifyEnabled[(CONTROL_ENDPOINT_MAX + 31u) / 32u];
+static uint32_t notifyEnabled[(APISERVICE_ENDPOINT_MAX + 31u) / 32u];
 /** Notifications dropped per endpoint since the last NOTIFY_LOST, saturating. */
-static uint8_t notifyDropped[CONTROL_ENDPOINT_MAX];
+static uint8_t notifyDropped[APISERVICE_ENDPOINT_MAX];
 /** True while at least one notifyDropped entry is not 0. */
 static bool notifyLostPending;
 static uint8_t notifyRing[NOTIFY_BUFFER];
@@ -150,7 +150,7 @@ static size_t notifyHead;   ///< Next byte to read.
 static size_t notifyUsed;
 /** A message taken out of the ring for sending. Task only. */
 static uint8_t notifyOut[MAX_MESSAGE];
-static ControlListener notifyListener;
+static ApiserviceListener notifyListener;
 #endif
 
 #ifndef UNIT_TEST_MODE
@@ -158,7 +158,7 @@ static TaskHandle_t task;
 static xQueueHandle rxQueue;
 static uint32_t rxDropped;
 STATIC_MEM_QUEUE_ALLOC(rxQueue, RX_QUEUE_LENGTH, sizeof(CRTPPacket));
-STATIC_MEM_TASK_ALLOC(crtpControlTask, CRTP_CONTROL_TASK_STACKSIZE);
+STATIC_MEM_TASK_ALLOC(crtpApiserviceTask, CRTP_APISERVICE_TASK_STACKSIZE);
 #endif
 
 // ---- Hooks: the only FreeRTOS calls of the handlers ----
@@ -185,23 +185,23 @@ static void notifyTask(void)
 
 // ---- Slots ----
 
-static slotState_t slotState(const controlSlot_t *slot)
+static slotState_t slotState(const apiserviceSlot_t *slot)
 {
   return __atomic_load_n(&slot->state, __ATOMIC_ACQUIRE);
 }
 
-static void slotSetState(controlSlot_t *slot, slotState_t state)
+static void slotSetState(apiserviceSlot_t *slot, slotState_t state)
 {
   __atomic_store_n(&slot->state, state, __ATOMIC_RELEASE);
 }
 
-static void slotFree(controlSlot_t *slot)
+static void slotFree(apiserviceSlot_t *slot)
 {
   slot->orphan = false;
   slotSetState(slot, SLOT_FREE);
 }
 
-static controlSlot_t *slotFindFree(void)
+static apiserviceSlot_t *slotFindFree(void)
 {
   for (int i = 0; i < SLOTS; i++) {
     if (slotState(&slots[i]) == SLOT_FREE) {
@@ -224,10 +224,10 @@ static bool requestIdOutstanding(uint8_t endpointId, uint8_t requestId)
   return false;
 }
 
-/** Router completion. Provider's task, maybe inside controlSubmit(). */
-static void onComplete(ControlRequest *request, int status, size_t length)
+/** Router completion. Provider's task, maybe inside apiserviceSubmit(). */
+static void onComplete(ApiserviceRequest *request, int status, size_t length)
 {
-  controlSlot_t *slot = request->user;
+  apiserviceSlot_t *slot = request->user;
   slot->status = status;
   slot->length = (uint16_t)length;
   slotSetState(slot, SLOT_DONE);
@@ -250,7 +250,7 @@ static void sendMessage(uint8_t endpointId, uint8_t status,
   uint8_t index = 0u;
   while (offset < total) {
     CRTPPacket packet;
-    packet.header = CRTP_HEADER(CRTP_PORT_CONTROL, CHANNEL_TUNNEL);
+    packet.header = CRTP_HEADER(CRTP_PORT_APISERVICE, CHANNEL_TUNNEL);
     size_t chunk = total - offset;
     if (chunk > FRAGMENT_PAYLOAD) {
       chunk = FRAGMENT_PAYLOAD;
@@ -283,7 +283,7 @@ static void sendFailure(uint8_t endpointId, int status, uint8_t kind, uint8_t re
 }
 
 /** Send or drop the response of a DONE slot, then free it. Task only. */
-static void finishSlot(controlSlot_t *slot)
+static void finishSlot(apiserviceSlot_t *slot)
 {
   if (!slot->orphan) {
     if (slot->status == 0) {
@@ -342,7 +342,7 @@ static void ringRead(uint8_t *bytes, size_t length)
 }
 
 /** Router listener. Provider's task: copy and never block. */
-static void onNotify(ControlListener *listener, ControlEndpoint *endpoint,
+static void onNotify(ApiserviceListener *listener, ApiserviceEndpoint *endpoint,
                      const uint8_t *message, size_t length)
 {
   (void)listener;
@@ -402,7 +402,7 @@ static void sendLostEvents(void)
       continue;
     }
     CRTPPacket packet;
-    packet.header = CRTP_HEADER(CRTP_PORT_CONTROL, CHANNEL_EVENTS);
+    packet.header = CRTP_HEADER(CRTP_PORT_APISERVICE, CHANNEL_EVENTS);
     packet.data[0] = EVENT_NOTIFY_LOST;
     packet.data[1] = (uint8_t)id;
     packet.data[2] = dropped;
@@ -451,7 +451,7 @@ static void notifyRegisterListener(void)
 {
   memset(&notifyListener, 0, sizeof(notifyListener));
   notifyListener.onNotify = onNotify;
-  (void)controlListenerRegister(&notifyListener);
+  (void)apiserviceListenerRegister(&notifyListener);
 }
 #endif
 
@@ -479,15 +479,15 @@ static void sendDownlink(void)
 
 static bool catalogLoad(void)
 {
-  if (!controlEndpointsAreFrozen()) {
+  if (!apiserviceEndpointsAreFrozen()) {
     return false;
   }
   if (!catalogReady) {
     crc32Context_t context;
     crc32ContextInit(&context);
-    catalogCount = controlEndpointCount();
+    catalogCount = apiserviceEndpointCount();
     for (uint8_t id = 0u; id < catalogCount; id++) {
-      const ControlEndpoint *endpoint = controlEndpointById(id);
+      const ApiserviceEndpoint *endpoint = apiserviceEndpointById(id);
       crc32Update(&context, &endpoint->id, sizeof(endpoint->id));
       crc32Update(&context, endpoint->path, endpoint->pathLength);
     }
@@ -538,7 +538,7 @@ static void handleCatalog(CRTPPacket *packet)
     packet->size = 10u;
   } else {
     const uint8_t id = packet->data[1];
-    const ControlEndpoint *endpoint = controlEndpointById(id);
+    const ApiserviceEndpoint *endpoint = apiserviceEndpointById(id);
     if (endpoint == NULL) {
       sendCommandError(packet, ENOENT);
       return;
@@ -593,14 +593,14 @@ static void handleEndpointCommand(CRTPPacket *packet)
         return;
       }
       const uint8_t id = packet->data[1];
-      const ControlEndpoint *endpoint = controlEndpointById(id);
+      const ApiserviceEndpoint *endpoint = apiserviceEndpointById(id);
       if (endpoint == NULL) {
         sendCommandError(packet, ENOENT);
         return;
       }
       packet->data[1] = 0u;
       packet->data[2] = id;
-      packet->data[3] = controlEndpointIsReady(endpoint) ? 1u : 0u;
+      packet->data[3] = apiserviceEndpointIsReady(endpoint) ? 1u : 0u;
       putU16(&packet->data[4], endpoint->maxRequest);
       putU16(&packet->data[6], endpoint->maxResponse);
       packet->size = 8u;
@@ -657,14 +657,14 @@ static void handleEndpointCommand(CRTPPacket *packet)
 /** Answer the message being reassembled with an error and drop it. */
 static void receivingFail(int status)
 {
-  controlSlot_t *slot = receiving;
+  apiserviceSlot_t *slot = receiving;
   receiving = NULL;
   sendFailure(slot->endpointId, status, slot->kind, slot->requestId);
   slotFree(slot);
 }
 
 /** Check fragment 0 and take a slot. Answers and returns NULL on failure. */
-static controlSlot_t *startMessage(const uint8_t *payload, size_t length)
+static apiserviceSlot_t *startMessage(const uint8_t *payload, size_t length)
 {
   if (length < UPLINK_HEADER + 2u) {
     return NULL;   // No request ID to answer with.
@@ -682,7 +682,7 @@ static controlSlot_t *startMessage(const uint8_t *payload, size_t length)
   } else if (requestIdOutstanding(endpointId, requestId)) {
     error = EBUSY;
   }
-  controlSlot_t *slot = NULL;
+  apiserviceSlot_t *slot = NULL;
   if (error == 0) {
     slot = slotFindFree();
     if (slot == NULL) {
@@ -709,12 +709,12 @@ static controlSlot_t *startMessage(const uint8_t *payload, size_t length)
   return slot;
 }
 
-static void submit(controlSlot_t *slot)
+static void submit(apiserviceSlot_t *slot)
 {
-  ControlEndpoint *endpoint = controlEndpointById(slot->endpointId);
+  ApiserviceEndpoint *endpoint = apiserviceEndpointById(slot->endpointId);
   // SUBMITTED before the call, so a completion inside it finds a consistent slot.
   slotSetState(slot, SLOT_SUBMITTED);
-  const int result = controlSubmit(endpoint, &slot->request, slot->buffer, slot->length);
+  const int result = apiserviceSubmit(endpoint, &slot->request, slot->buffer, slot->length);
   if (result != 0) {
     sendFailure(slot->endpointId, result, slot->kind, slot->requestId);
     slotFree(slot);
@@ -757,7 +757,7 @@ static void handleTunnel(CRTPPacket *packet)
   receiving->nextIndex = (uint8_t)(index + 1u);
 
   if (last) {
-    controlSlot_t *slot = receiving;
+    apiserviceSlot_t *slot = receiving;
     receiving = NULL;
     submit(slot);
   }
@@ -793,7 +793,7 @@ static void onPacket(CRTPPacket *packet)
   }
 }
 
-static void crtpControlTask(void *arg)
+static void crtpApiserviceTask(void *arg)
 {
   (void)arg;
   for (;;) {
@@ -813,16 +813,16 @@ static void crtpControlTask(void *arg)
 }
 #endif
 
-void crtpControlInit(void)
+void crtpApiserviceInit(void)
 {
   if (isInit) {
     return;
   }
 #ifndef UNIT_TEST_MODE
   rxQueue = STATIC_MEM_QUEUE_CREATE(rxQueue);
-  task = STATIC_MEM_TASK_CREATE(crtpControlTask, crtpControlTask,
-                                CRTP_CONTROL_TASK_NAME, NULL, CRTP_CONTROL_TASK_PRI);
-  crtpRegisterPortCB(CRTP_PORT_CONTROL, onPacket);
+  task = STATIC_MEM_TASK_CREATE(crtpApiserviceTask, crtpApiserviceTask,
+                                CRTP_APISERVICE_TASK_NAME, NULL, CRTP_APISERVICE_TASK_PRI);
+  crtpRegisterPortCB(CRTP_PORT_APISERVICE, onPacket);
 #endif
 #if NOTIFY_BUFFER > 0
   // Before the freeze in systemStart(), like the endpoints.
@@ -831,28 +831,28 @@ void crtpControlInit(void)
   isInit = true;
 }
 
-bool crtpControlTest(void)
+bool crtpApiserviceTest(void)
 {
   return isInit;
 }
 
 #ifdef UNIT_TEST_MODE
-void crtpControlHandlePacketForTest(CRTPPacket *packet)
+void crtpApiserviceHandlePacketForTest(CRTPPacket *packet)
 {
   handlePacket(packet);
 }
 
-void crtpControlFinishSlotsForTest(void)
+void crtpApiserviceFinishSlotsForTest(void)
 {
   finishSlots();
 }
 
-void crtpControlSendDownlinkForTest(void)
+void crtpApiserviceSendDownlinkForTest(void)
 {
   sendDownlink();
 }
 
-void crtpControlResetForTest(void)
+void crtpApiserviceResetForTest(void)
 {
   memset(slots, 0, sizeof(slots));
   receiving = NULL;

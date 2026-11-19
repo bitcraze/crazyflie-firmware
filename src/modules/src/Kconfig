@@ -326,37 +326,37 @@ config DEFRAG_STORAGE_ON_STARTUP
 
 endmenu
 
-menu "Control bridge"
+menu "API Service bridge"
 
-config CRTP_CONTROL
-    bool "CRTP Control bridge"
+config CRTP_APISERVICE
+    bool "CRTP API Service bridge"
     default y
     help
-        CRTP port 10 bridge that lets a client list the Control endpoints,
-        such as the Camera Deck, and send bitcraze.control requests to them.
+        CRTP port 10 bridge that lets a client list the API Service endpoints,
+        such as the Camera Deck, and send bitcraze.api requests to them.
         With no endpoint registered it serves an empty catalog.
 
-config CRTP_CONTROL_SLOTS
+config CRTP_APISERVICE_SLOTS
     int "Requests in flight"
-    depends on CRTP_CONTROL
+    depends on CRTP_APISERVICE
     range 1 16
     default 4
     help
         Number of requests the bridge holds at once, across all endpoints.
         Reported to clients as max_in_flight.
 
-config CRTP_CONTROL_MAX_MESSAGE
-    int "Largest Control message, in bytes"
-    depends on CRTP_CONTROL
+config CRTP_APISERVICE_MAX_MESSAGE
+    int "Largest API Service message, in bytes"
+    depends on CRTP_APISERVICE
     range 64 1024
     default 256
     help
-        Size of each request slot: the largest Control message the bridge
+        Size of each request slot: the largest API Service message the bridge
         carries in either direction. Reported to clients as max_message.
 
-config CRTP_CONTROL_NOTIFY_BUFFER
+config CRTP_APISERVICE_NOTIFY_BUFFER
     int "Buffer for forwarded notifications, in bytes"
-    depends on CRTP_CONTROL
+    depends on CRTP_APISERVICE
     range 0 4096
     default 512
     help

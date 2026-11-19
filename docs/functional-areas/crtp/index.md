@@ -115,7 +115,7 @@ its handling on the ground.
 |  6       | [Localization](crtp_localization.md)         | Packets related to localization|
 |  7       | [Generic Setpoint](crtp_generic_setpoint.md) | Generic instantaneous setpoints (ie. position control and more) |
 |  9       | [Supervisor](crtp_supervisor.md)             | Supervisor commands (arm, emergency stop) and state queries |
-|  10      | [Control](crtp_control.md)                   | List Control endpoints, such as decks, and tunnel `bitcraze.control` requests to them |
+|  10      | [API Service](crtp_apiservice.md)                   | List API Service endpoints, such as decks, and tunnel `bitcraze.api` requests to them |
 |  13      | [Platform](crtp_platform.md)                 | Used for misc platform control, like debugging and power off |
 |  14      | Client-side debugging                        | Debugging the UI and exists only in the Crazyflie Python API and not in the Crazyflie itself.|
 |  15      | [Link layer](crtp_link.md)                   | Low level link-related service. For example *echo* to ping the Crazyflie |

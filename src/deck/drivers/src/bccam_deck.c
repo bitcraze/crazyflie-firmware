@@ -35,8 +35,8 @@
 #include "log.h"
 #include "param.h"
 #include "bccam_uart_service.h"
-#include "syslink2_control_service.h"
-#include "bccam_control.h"
+#include "syslink2_apiservice.h"
+#include "bccam_apiservice.h"
 
 #define DEBUG_MODULE "BCCAM"
 #include "debug.h"
@@ -196,12 +196,12 @@ static int32_t bcCamLogLastErr(uint32_t timestamp, void *data) {
   return status.last_error;
 }
 
-static uint8_t bcCamLogControlDone(uint32_t timestamp, void *data) {
+static uint8_t bcCamLogApiserviceDone(uint32_t timestamp, void *data) {
   (void)timestamp;
   (void)data;
   bccam_uart_service_status_t status;
   bccam_uart_service_get_status(&status);
-  return status.control_probe_done;
+  return status.apiservice_probe_done;
 }
 
 static uint8_t bcCamLogSchemaCount(uint32_t timestamp, void *data) {
@@ -209,7 +209,7 @@ static uint8_t bcCamLogSchemaCount(uint32_t timestamp, void *data) {
   (void)data;
   bccam_uart_service_status_t status;
   bccam_uart_service_get_status(&status);
-  return status.control_schema_count;
+  return status.apiservice_schema_count;
 }
 
 static logByFunction_t driverStateLogDef = {
@@ -254,8 +254,8 @@ static logByFunction_t txFlushesLogDef = {
 static logByFunction_t lastLinkErrorLogDef = {
   .acquireInt32 = bcCamLogLastErr,
 };
-static logByFunction_t controlDoneLogDef = {
-  .acquireUInt8 = bcCamLogControlDone,
+static logByFunction_t apiserviceDoneLogDef = {
+  .acquireUInt8 = bcCamLogApiserviceDone,
 };
 static logByFunction_t schemaCountLogDef = {
   .acquireUInt8 = bcCamLogSchemaCount,
@@ -351,10 +351,10 @@ static void bcCamDeckInit(DeckInfo *info) {
   }
 
   bccam_uart_service_init(info);
-  syslink2_control_service_init(bccam_uart_service_runtime());
-  const int controlResult = bccam_control_init();
-  if (controlResult != 0) {
-    DEBUG_PRINT("Control endpoint not registered (%d)\n", controlResult);
+  syslink2_apiservice_init(bccam_uart_service_runtime());
+  const int apiserviceResult = bccam_apiservice_init();
+  if (apiserviceResult != 0) {
+    DEBUG_PRINT("API Service endpoint not registered (%d)\n", apiserviceResult);
   }
 
   isInit = true;
@@ -418,6 +418,6 @@ LOG_ADD_BY_FUNCTION(LOG_UINT8, txCredit, &txCreditLogDef)
 LOG_ADD_BY_FUNCTION(LOG_UINT8, rxSlots, &rxSlotsLogDef)
 LOG_ADD_BY_FUNCTION(LOG_UINT16, txFlushes, &txFlushesLogDef)
 LOG_ADD_BY_FUNCTION(LOG_INT32, lastErr, &lastLinkErrorLogDef)
-LOG_ADD_BY_FUNCTION(LOG_UINT8, controlDone, &controlDoneLogDef)
+LOG_ADD_BY_FUNCTION(LOG_UINT8, apiserviceDone, &apiserviceDoneLogDef)
 LOG_ADD_BY_FUNCTION(LOG_UINT8, schemaCount, &schemaCountLogDef)
 LOG_GROUP_STOP(bcCam)

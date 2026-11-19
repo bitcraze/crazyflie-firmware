@@ -10,8 +10,8 @@
 #include "deckctrl_gpio.h" // @NO_MODULE
 #include "mem.h" // @NO_MODULE
 #include "task.h" // @NO_MODULE
-#include "syslink2_control_service.h" // @NO_MODULE
-#include "bccam_control.h" // @NO_MODULE
+#include "syslink2_apiservice.h" // @NO_MODULE
+#include "bccam_apiservice.h" // @NO_MODULE
 // @MODULE "bccam_bootloader_uart_client.c"
 // @MODULE "bccam_deck.c"
 // @MODULE "bccam_deck_controller.c"
@@ -42,8 +42,8 @@ bool deckctrl_gpio_write(DeckInfo *info, DeckCtrlGPIOPin pin, uint32_t value) {
   (void)info; (void)pin; (void)value; return true;
 }
 void vTaskDelay(const TickType_t ticks) { (void)ticks; }
-void syslink2_control_service_init(bccam_uart_runtime_t *runtime) { (void)runtime; }
-int bccam_control_init(void) { return 0; }
+void syslink2_apiservice_init(bccam_uart_runtime_t *runtime) { (void)runtime; }
+int bccam_apiservice_init(void) { return 0; }
 void vPortEnterCritical(void) {}
 void vPortExitCritical(void) {}
 bool consoleSourceIsEnabled(const ConsoleSource *source) {

@@ -23,8 +23,8 @@
  */
 
 /**
- * Host tests for the CRTP Control bridge, with fake providers registered in
- * the real Control router. Captured CRTP packets are compared byte for byte.
+ * Host tests for the CRTP API Service bridge, with fake providers registered in
+ * the real API Service router. Captured CRTP packets are compared byte for byte.
  *
  * @file
  */
@@ -33,14 +33,14 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "control.h"
+#include "apiservice.h"
 #include "crc32.h"
 #include "crtp.h" // @NO_MODULE
-#include "crtp_control.h"
+#include "crtp_apiservice.h"
 #include "unity.h"
 
-#define SLOTS CONFIG_CRTP_CONTROL_SLOTS
-#define MAX_MESSAGE CONFIG_CRTP_CONTROL_MAX_MESSAGE
+#define SLOTS CONFIG_CRTP_APISERVICE_SLOTS
+#define MAX_MESSAGE CONFIG_CRTP_APISERVICE_MAX_MESSAGE
 
 void vPortEnterCritical(void) {}
 void vPortExitCritical(void) {}
@@ -69,10 +69,10 @@ int crtpSendPacket(CRTPPacket *packet) {
 static void deliver(uint8_t channel, const uint8_t *data, size_t length) {
   CRTPPacket packet;
   memset(&packet, 0, sizeof(packet));
-  packet.header = CRTP_HEADER(CRTP_PORT_CONTROL, channel);
+  packet.header = CRTP_HEADER(CRTP_PORT_APISERVICE, channel);
   memcpy(packet.data, data, length);
   packet.size = (uint8_t)length;
-  crtpControlHandlePacketForTest(&packet);
+  crtpApiserviceHandlePacketForTest(&packet);
 }
 
 #define DELIVER(channel, ...) do { \
@@ -82,7 +82,7 @@ static void deliver(uint8_t channel, const uint8_t *data, size_t length) {
 
 static void expectPacket(size_t index, uint8_t channel, const uint8_t *data, size_t length) {
   TEST_ASSERT_LESS_THAN(sentCount, index);
-  TEST_ASSERT_EQUAL_UINT8(CRTP_PORT_CONTROL, sent[index].port);
+  TEST_ASSERT_EQUAL_UINT8(CRTP_PORT_APISERVICE, sent[index].port);
   TEST_ASSERT_EQUAL_UINT8(channel, sent[index].channel);
   TEST_ASSERT_EQUAL_UINT8(length, sent[index].size);
   TEST_ASSERT_EQUAL_MEMORY(data, sent[index].data, length);
@@ -100,19 +100,19 @@ typedef struct {
   int submitResult;
   bool completeInSubmit;
   unsigned submits;
-  ControlRequest *last;
+  ApiserviceRequest *last;
   uint8_t lastMessage[MAX_MESSAGE];
   size_t lastLength;
 } FakeProvider;
 
 static FakeProvider fakes[2];
-static ControlEndpoint endpoints[2];
+static ApiserviceEndpoint endpoints[2];
 
-static bool fakeIsReady(const ControlEndpoint *endpoint) {
+static bool fakeIsReady(const ApiserviceEndpoint *endpoint) {
   return ((FakeProvider *)endpoint->context)->ready;
 }
 
-static int fakeSubmit(const ControlEndpoint *endpoint, ControlRequest *request,
+static int fakeSubmit(const ApiserviceEndpoint *endpoint, ApiserviceRequest *request,
                       const uint8_t *message, size_t length) {
   FakeProvider *fake = endpoint->context;
   fake->submits++;
@@ -124,12 +124,12 @@ static int fakeSubmit(const ControlEndpoint *endpoint, ControlRequest *request,
   }
   if (fake->completeInSubmit) {
     const uint8_t ok[] = {0x80, message[1]};
-    controlRequestComplete(request, 0, ok, sizeof(ok));
+    apiserviceRequestComplete(request, 0, ok, sizeof(ok));
   }
   return 0;
 }
 
-static const ControlEndpointOps fakeOps = {fakeIsReady, fakeSubmit};
+static const ApiserviceEndpointOps fakeOps = {fakeIsReady, fakeSubmit};
 
 /** Register cf:stm32 (0) and deck:bcCam (1), both ready, then freeze. */
 static void registerAndFreeze(void) {
@@ -140,10 +140,10 @@ static void registerAndFreeze(void) {
     endpoints[i].context = &fakes[i];
     endpoints[i].maxRequest = 64u;
     endpoints[i].maxResponse = 64u;
-    TEST_ASSERT_EQUAL(0, controlEndpointRegister(&endpoints[i]));
+    TEST_ASSERT_EQUAL(0, apiserviceEndpointRegister(&endpoints[i]));
     fakes[i].ready = true;
   }
-  controlEndpointFreeze();
+  apiserviceEndpointFreeze();
 }
 
 /** Complete the last request seen by fake 1 with a response using its wire ID. */
@@ -153,12 +153,12 @@ static void completeLast(int fakeIndex, int status, const uint8_t *response, siz
     memcpy(copy, response, length);
     copy[1] = fakes[fakeIndex].lastMessage[1];
   }
-  controlRequestComplete(fakes[fakeIndex].last, status, response ? copy : NULL, length);
+  apiserviceRequestComplete(fakes[fakeIndex].last, status, response ? copy : NULL, length);
 }
 
 void setUp(void) {
-  controlResetForTest();
-  crtpControlResetForTest();
+  apiserviceResetForTest();
+  crtpApiserviceResetForTest();
   memset(fakes, 0, sizeof(fakes));
   memset(endpoints, 0, sizeof(endpoints));
   memset(sent, 0, sizeof(sent));
@@ -209,7 +209,7 @@ void testCatalogAfterFreeze(void) {
 }
 
 void testEmptyCatalog(void) {
-  controlEndpointFreeze();
+  apiserviceEndpointFreeze();
   DELIVER(0, 0x01);
   EXPECT_PACKET(0, 0, 0x01, 0, 0, 0, 0, 0, 0, SLOTS, (uint8_t)MAX_MESSAGE, (uint8_t)(MAX_MESSAGE >> 8));
 }
@@ -250,7 +250,7 @@ void testOnePacketGetRoundTrip(void) {
   const uint8_t value[] = {0x81, 0, 0x10, 1, 80};
   completeLast(1, 0, value, sizeof(value));
   TEST_ASSERT_EQUAL_UINT(0, sentCount);
-  crtpControlFinishSlotsForTest();
+  crtpApiserviceFinishSlotsForTest();
   EXPECT_PACKET(0, 2, 0x80, 1, 0, 0x81, 7, 0x10, 1, 80);
   TEST_ASSERT_EQUAL_UINT(1, sentCount);
 }
@@ -261,11 +261,11 @@ void testClientIdRestoredWhenWireIdDiffers(void) {
   DELIVER(2, 0x80, 1, 0x01, 3, 1, 'q');
   const uint8_t ok[] = {0x80, 0};
   completeLast(1, 0, ok, sizeof(ok));
-  crtpControlFinishSlotsForTest();
+  crtpApiserviceFinishSlotsForTest();
   DELIVER(2, 0x80, 1, 0x01, 3, 1, 'q');
   TEST_ASSERT_NOT_EQUAL(3, fakes[1].lastMessage[1]);
   completeLast(1, 0, ok, sizeof(ok));
-  crtpControlFinishSlotsForTest();
+  crtpApiserviceFinishSlotsForTest();
   EXPECT_PACKET(1, 2, 0x80, 1, 0, 0x80, 3);
 }
 
@@ -289,7 +289,7 @@ void testTwoPacketSetReassembles(void) {
 
   const uint8_t ok[] = {0x80, 0};
   completeLast(1, 0, ok, sizeof(ok));
-  crtpControlFinishSlotsForTest();
+  crtpApiserviceFinishSlotsForTest();
   EXPECT_PACKET(0, 2, 0x80, 1, 0, 0x80, 0x08);
 }
 
@@ -301,7 +301,7 @@ void testLongResponseIsThreeFragments(void) {
     value[i] = (uint8_t)i;
   }
   completeLast(1, 0, value, sizeof(value));
-  crtpControlFinishSlotsForTest();
+  crtpApiserviceFinishSlotsForTest();
   TEST_ASSERT_EQUAL_UINT(3, sentCount);
   TEST_ASSERT_EQUAL_UINT8(0x00, sent[0].data[0]);
   TEST_ASSERT_EQUAL_UINT8(0x01, sent[1].data[0]);
@@ -331,7 +331,7 @@ void testErrorWithTheLongestDetailIsForwardedUnchanged(void) {
   uint8_t error[64] = {0x82, 0, 0x05, 60};
   memcpy(&error[4], detail, 60);
   completeLast(1, 0, error, sizeof(error));
-  crtpControlFinishSlotsForTest();
+  crtpApiserviceFinishSlotsForTest();
 
   // [ep, status, 64-byte body] is 66 bytes: 29 + 29 + 8.
   TEST_ASSERT_EQUAL_UINT(3, sentCount);
@@ -367,7 +367,7 @@ void testNewMessageMidMessageIsBadMessageThenWorks(void) {
   TEST_ASSERT_EQUAL_UINT8(0x01, fakes[1].lastMessage[0]);
   const uint8_t value[] = {0x81, 0, 0x10, 1, 1};
   completeLast(1, 0, value, sizeof(value));
-  crtpControlFinishSlotsForTest();
+  crtpApiserviceFinishSlotsForTest();
   EXPECT_PACKET(1, 2, 0x80, 1, 0, 0x81, 6, 0x10, 1, 1);
 }
 
@@ -420,7 +420,7 @@ void testOversizeResponseIsMessageSize(void) {
   DELIVER(2, 0x80, 1, 0x01, 7, 1, 'q');
   uint8_t value[MAX_MESSAGE + 1] = {0x81, 0};
   completeLast(1, 0, value, sizeof(value));
-  crtpControlFinishSlotsForTest();
+  crtpApiserviceFinishSlotsForTest();
   EXPECT_PACKET(0, 2, 0x80, 1, EMSGSIZE, 0x01, 7);
 }
 
@@ -428,8 +428,8 @@ void testShortResponseIsProtocolError(void) {
   registerAndFreeze();
   DELIVER(2, 0x80, 1, 0x01, 7, 1, 'q');
   const uint8_t shortResponse[] = {0x80};
-  controlRequestComplete(fakes[1].last, 0, shortResponse, sizeof(shortResponse));
-  crtpControlFinishSlotsForTest();
+  apiserviceRequestComplete(fakes[1].last, 0, shortResponse, sizeof(shortResponse));
+  crtpApiserviceFinishSlotsForTest();
   EXPECT_PACKET(0, 2, 0x80, 1, EPROTO, 0x01, 7);
 }
 
@@ -496,7 +496,7 @@ void testSubmitAndCallbackErrnosAreForwarded(void) {
   fakes[1].submitResult = 0;
   DELIVER(2, 0x80, 1, 0x02, 4, 1, 'q', 0x10, 1, 5);
   completeLast(1, ECONNRESET, NULL, 0);
-  crtpControlFinishSlotsForTest();
+  crtpApiserviceFinishSlotsForTest();
   EXPECT_PACKET(1, 2, 0x80, 1, ECONNRESET, 0x02, 4);
   // Slot freed: the same ID can be used again.
   DELIVER(2, 0x80, 1, 0x02, 4, 1, 'q', 0x10, 1, 5);
@@ -507,7 +507,7 @@ void testCompletionInsideSubmit(void) {
   registerAndFreeze();
   fakes[1].completeInSubmit = true;
   DELIVER(2, 0x80, 1, 0x02, 4, 1, 'q', 0x10, 1, 5);
-  crtpControlFinishSlotsForTest();
+  crtpApiserviceFinishSlotsForTest();
   EXPECT_PACKET(0, 2, 0x80, 1, 0, 0x80, 4);
   TEST_ASSERT_EQUAL_UINT(1, sentCount);
 }
@@ -515,7 +515,7 @@ void testCompletionInsideSubmit(void) {
 void testResetOrphansInFlightRequests(void) {
   registerAndFreeze();
   DELIVER(2, 0x80, 1, 0x01, 1, 1, 'q');
-  ControlRequest *first = fakes[1].last;
+  ApiserviceRequest *first = fakes[1].last;
   const uint8_t firstWire = fakes[1].lastMessage[1];
   DELIVER(2, 0x80, 1, 0x01, 2, 1, 'q');
   // The second is done but not sent yet.
@@ -529,8 +529,8 @@ void testResetOrphansInFlightRequests(void) {
 
   // The first completes after the RESET: nothing is sent, the slot is freed.
   const uint8_t late[] = {0x80, firstWire};
-  controlRequestComplete(first, 0, late, sizeof(late));
-  crtpControlFinishSlotsForTest();
+  apiserviceRequestComplete(first, 0, late, sizeof(late));
+  crtpApiserviceFinishSlotsForTest();
   TEST_ASSERT_EQUAL_UINT(1, sentCount);
   // The rest of the reassembled message is ignored.
   DELIVER(2, 0x81, 0x10, 1, 1);
@@ -557,13 +557,13 @@ void testResetLeavesSubmittedSlotBusyUntilCompletion(void) {
 
 // ---- Notifications ----
 
-static ControlEndpoint *bcCam(void) { return &endpoints[1]; }
+static ApiserviceEndpoint *bcCam(void) { return &endpoints[1]; }
 
 /** NOTIFY stream.fps_max u8 value, as the deck sends it. */
-static void deckNotify(ControlEndpoint *endpoint, uint8_t value) {
+static void deckNotify(ApiserviceEndpoint *endpoint, uint8_t value) {
   const uint8_t notify[] = {0xc0, 14, 's', 't', 'r', 'e', 'a', 'm', '.', 'f', 'p', 's',
                             '_', 'm', 'a', 'x', 0x10, 1, value};
-  controlEndpointNotify(endpoint, notify, sizeof(notify));
+  apiserviceEndpointNotify(endpoint, notify, sizeof(notify));
 }
 
 #define EXPECT_NOTIFY(index, endpointId, value) \
@@ -591,20 +591,20 @@ void testSetNotifyCommand(void) {
 void testNotifyIsForwardedOnlyWhenEnabled(void) {
   registerAndFreeze();
   deckNotify(bcCam(), 15);
-  crtpControlSendDownlinkForTest();
+  crtpApiserviceSendDownlinkForTest();
   TEST_ASSERT_EQUAL_UINT(0, sentCount);
 
   DELIVER(1, 0x01, 1, 1);
   deckNotify(bcCam(), 15);
   deckNotify(&endpoints[0], 16);          // Not enabled for cf:stm32.
   TEST_ASSERT_EQUAL_UINT(1, sentCount);   // Queued, not sent from the provider's task.
-  crtpControlSendDownlinkForTest();
+  crtpApiserviceSendDownlinkForTest();
   TEST_ASSERT_EQUAL_UINT(2, sentCount);
   EXPECT_NOTIFY(1, 1, 15);
 
   DELIVER(1, 0x01, 0xff, 0);
   deckNotify(bcCam(), 17);
-  crtpControlSendDownlinkForTest();
+  crtpApiserviceSendDownlinkForTest();
   TEST_ASSERT_EQUAL_UINT(3, sentCount);   // Only the SET_NOTIFY answer.
 }
 
@@ -617,7 +617,7 @@ void testResponseGoesBeforeNotifyAndOrderIsKept(void) {
   completeLast(1, 0, ok, sizeof(ok));
   deckNotify(bcCam(), 1);
   deckNotify(bcCam(), 2);
-  crtpControlSendDownlinkForTest();
+  crtpApiserviceSendDownlinkForTest();
   TEST_ASSERT_EQUAL_UINT(4, sentCount);
   EXPECT_PACKET(1, 2, 0x80, 1, 0, 0x80, 7);
   EXPECT_NOTIFY(2, 1, 1);
@@ -628,26 +628,26 @@ void testNotifyRingFullIsReportedOnChannel3(void) {
   registerAndFreeze();
   DELIVER(1, 0x01, 1, 1);
   // Each record is 3 + 19 = 22 bytes: 23 fit in 512, the next 4 are dropped.
-  const unsigned fit = CONFIG_CRTP_CONTROL_NOTIFY_BUFFER / 22u;
+  const unsigned fit = CONFIG_CRTP_APISERVICE_NOTIFY_BUFFER / 22u;
   for (unsigned i = 0; i < fit + 4u; i++) {
     deckNotify(bcCam(), (uint8_t)i);
   }
   crtpQueueFull = true;   // The report waits for room; notifications do not.
-  crtpControlSendDownlinkForTest();
+  crtpApiserviceSendDownlinkForTest();
   TEST_ASSERT_EQUAL_UINT(1 + fit, sentCount);
   EXPECT_NOTIFY(1, 1, 0);
   EXPECT_NOTIFY(fit, 1, (uint8_t)(fit - 1u));
 
   crtpQueueFull = false;
-  crtpControlSendDownlinkForTest();
+  crtpApiserviceSendDownlinkForTest();
   TEST_ASSERT_EQUAL_UINT(2 + fit, sentCount);
   EXPECT_PACKET(1 + fit, 3, 0x01, 1, 4);
 
   // Reported once: the count starts again.
-  crtpControlSendDownlinkForTest();
+  crtpApiserviceSendDownlinkForTest();
   TEST_ASSERT_EQUAL_UINT(2 + fit, sentCount);
   deckNotify(bcCam(), 99);
-  crtpControlSendDownlinkForTest();
+  crtpApiserviceSendDownlinkForTest();
   EXPECT_NOTIFY(2 + fit, 1, 99);
 }
 
@@ -658,7 +658,7 @@ void testDroppedCountSaturates(void) {
     deckNotify(bcCam(), 0);
   }
   // Notifications go first; the report is the last packet.
-  crtpControlSendDownlinkForTest();
+  crtpApiserviceSendDownlinkForTest();
   EXPECT_PACKET(sentCount - 1u, 3, 0x01, 1, 255);
 }
 
@@ -670,10 +670,10 @@ void testResetClearsForwardingRingAndLosses(void) {
   }
   DELIVER(1, 0x02);
   EXPECT_PACKET(1, 1, 0x02, 0);
-  crtpControlSendDownlinkForTest();
+  crtpApiserviceSendDownlinkForTest();
   TEST_ASSERT_EQUAL_UINT(2, sentCount);   // Nothing queued and no report.
   deckNotify(bcCam(), 1);
-  crtpControlSendDownlinkForTest();
+  crtpApiserviceSendDownlinkForTest();
   TEST_ASSERT_EQUAL_UINT(2, sentCount);   // Forwarding is off again.
 }
 
@@ -684,8 +684,8 @@ void testLongNotifyIsFragmented(void) {
   for (int i = 5; i < 60; i++) {
     notify[i] = (uint8_t)i;
   }
-  controlEndpointNotify(bcCam(), notify, sizeof(notify));
-  crtpControlSendDownlinkForTest();
+  apiserviceEndpointNotify(bcCam(), notify, sizeof(notify));
+  crtpApiserviceSendDownlinkForTest();
   TEST_ASSERT_EQUAL_UINT(4, sentCount);   // SET_NOTIFY answer and three fragments.
   TEST_ASSERT_EQUAL_UINT8(0x00, sent[1].data[0]);
   TEST_ASSERT_EQUAL_UINT8(0x01, sent[2].data[0]);

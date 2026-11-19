@@ -1,13 +1,13 @@
 ---
-title: Control
-page_id: crtp_control
+title: API Service
+page_id: crtp_apiservice
 ---
 
-CRTP port 10 lets a client list the Crazyflie's Control endpoints and send
-`bitcraze.control` requests to them. An endpoint is a target that serves the
-Control protocol, such as the Camera Deck (`deck:bcCam`). Its requests and
+CRTP port 10 lets a client list the Crazyflie's API Service endpoints and send
+`bitcraze.api` requests to them. An endpoint is a target that serves the
+API Service protocol, such as the Camera Deck (`deck:bcCam`). Its requests and
 responses (`GET`, `SET`, `CMD`, `OK`, `VALUE`, `ERROR`) are defined by the
-`bitcraze.control` service contract and pass through the Crazyflie unchanged.
+`bitcraze.api` service contract and pass through the Crazyflie unchanged.
 An endpoint can also send unsolicited `NOTIFY` messages when one of its values
 changes. A client that turns forwarding on with `SET_NOTIFY` receives them on
 the tunnel.
@@ -33,8 +33,8 @@ fields.
 
 ## Endpoints and catalog
 
-Firmware code, such as a deck driver, registers a `ControlEndpoint` with the
-Control router (`control.h`) at init. `systemStart()` freezes the list, after
+Firmware code, such as a deck driver, registers a `ApiserviceEndpoint` with the
+API Service router (`apiservice.h`) at init. `systemStart()` freezes the list, after
 deck init. Endpoint IDs start at 0 in registration order and stay the same
 until reboot. IDs go from `0x00` to `0xfe`; `0xff` is reserved for "all
 endpoints". An endpoint whose link is not up yet is still listed, and reports
@@ -60,7 +60,7 @@ GET_INFO success:  [0x01, 0x00, count, catalog_crc (u32 LE),
   over each entry in ID order: one ID byte, then the path bytes.
 - `max_in_flight` is the number of bridge slots: the most requests a client may
   have outstanding, across all endpoints.
-- `max_message` is the slot size: the largest Control message the bridge
+- `max_message` is the slot size: the largest API Service message the bridge
   carries in either direction, not counting the tunnel's own bytes.
 
 An unknown ID returns `ENOENT`.
@@ -77,7 +77,7 @@ Success: [0x00, 0x00, endpoint_id, state (u8),
 
 `state` is 0 when the endpoint is not ready and 1 when it is ready. Value 2
 (configuring) is reserved. `max_request` and `max_response` are the endpoint's
-own limits on a Control message. They can be lower than `max_message`: the
+own limits on an API Service message. They can be lower than `max_message`: the
 Camera Deck carries 64 bytes. More fields may be appended later.
 
 An unknown ID returns `ENOENT`.
@@ -94,7 +94,7 @@ Turns forwarding of the endpoint's `NOTIFY` messages on (`enabled = 1`) or off
 idempotent, and `RESET` turns it off on every endpoint. Errors: `EAGAIN` before
 the catalog is frozen, `ENOENT` for an unknown ID, `EINVAL` for a short request
 or `enabled` above 1, and `ENOSYS` when the firmware is built without a
-notification buffer (`CRTP_CONTROL_NOTIFY_BUFFER = 0`). Firmware code that
+notification buffer (`CRTP_APISERVICE_NOTIFY_BUFFER = 0`). Firmware code that
 listens to an endpoint gets its notifications whatever this setting is.
 
 ### 0x02 RESET
@@ -147,12 +147,12 @@ Every channel 2 packet starts with one header byte:
 
 ```text
 +-------------+------+------------+--------------------------------+
-| endpoint_id | kind | request_id | rest of the Control request    |
+| endpoint_id | kind | request_id | rest of the API Service request    |
 +-------------+------+------------+--------------------------------+
   u8            u8     u8           path, value ...
 ```
 
-Everything after `endpoint_id` is a `bitcraze.control` request (bit 7 of
+Everything after `endpoint_id` is a `bitcraze.api` request (bit 7 of
 `kind` is 0), passed to the endpoint as is. `request_id` is chosen by the
 client; the firmware gives the request another ID on its way to the endpoint
 and puts the client's ID back in the response. The first fragment must hold at
@@ -175,13 +175,13 @@ without an answer.
 - `status = 0` with a body kind in `0xc0..0xff`: an unsolicited message from
   the endpoint, forwarded because the client turned forwarding on. A `NOTIFY`
   (`0xc0`) body is `[0xc0, path_len, path, value TLV]`, as in
-  `bitcraze.control`. It has no request ID. Clients ignore the other kinds.
+  `bitcraze.api`. It has no request ID. Clients ignore the other kinds.
 
-A Control-level failure, such as an unknown path, arrives as status 0 with an
+An API Service-level failure, such as an unknown path, arrives as status 0 with an
 `ERROR` body.
 
 Notifications are best effort. The bridge keeps them in a buffer
-(`CRTP_CONTROL_NOTIFY_BUFFER`) and sends them after the responses that are
+(`CRTP_APISERVICE_NOTIFY_BUFFER`) and sends them after the responses that are
 ready, in the order the endpoint sent them. When the buffer is full, a
 notification is dropped and counted, and the count is reported on channel 3.
 After a loss, a client reads again the paths it mirrors.
@@ -217,7 +217,7 @@ up   ch2  80 01 01 07 13 "meta.schema_modules"           (24 bytes)
 down ch2  80 01 00 81 07 21 01 00
 ```
 
-`SET wifi.ssid` to a 32-byte string, request ID 8. The Control message is
+`SET wifi.ssid` to a 32-byte string, request ID 8. The API Service message is
 `02 08 09 "wifi.ssid" 20 20 <32 bytes>`, 46 bytes:
 
 ```text
@@ -232,7 +232,7 @@ Endpoint not ready:
 down ch2  80 01 80 01 07     status 0x80 = ENOTCONN (128), body = GET, id 7
 ```
 
-The first uplink packet carries 28 Control bytes, enough for a `GET` with a
+The first uplink packet carries 28 API Service bytes, enough for a `GET` with a
 path of up to 25 characters. The first downlink packet carries 27, enough for
 a `VALUE` with up to 23 data bytes. Every later packet carries 29.
 
@@ -294,7 +294,7 @@ never blocks responses, and a later loss is reported in a later event.
 
 | Kconfig                    | Default | Meaning |
 |----------------------------|---------|---------|
-| `CRTP_CONTROL`             | y       | Build the bridge. With no endpoint registered it serves an empty catalog. |
-| `CRTP_CONTROL_SLOTS`       | 4       | 1 to 16. Reported as `max_in_flight`. |
-| `CRTP_CONTROL_MAX_MESSAGE` | 256     | 64 to 1024. Reported as `max_message`. |
-| `CRTP_CONTROL_NOTIFY_BUFFER` | 512   | 0 to 4096 bytes for notifications waiting to be sent, 3 bytes per message plus its length. 0 turns forwarding off. |
+| `CRTP_APISERVICE`             | y       | Build the bridge. With no endpoint registered it serves an empty catalog. |
+| `CRTP_APISERVICE_SLOTS`       | 4       | 1 to 16. Reported as `max_in_flight`. |
+| `CRTP_APISERVICE_MAX_MESSAGE` | 256     | 64 to 1024. Reported as `max_message`. |
+| `CRTP_APISERVICE_NOTIFY_BUFFER` | 512   | 0 to 4096 bytes for notifications waiting to be sent, 3 bytes per message plus its length. 0 turns forwarding off. |

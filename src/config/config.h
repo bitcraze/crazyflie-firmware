@@ -77,7 +77,7 @@
 #define LOG_TASK_PRI              1
 #define MEM_TASK_PRI              1
 #define PARAM_TASK_PRI            1
-#define CRTP_CONTROL_TASK_PRI     1
+#define CRTP_APISERVICE_TASK_PRI     1
 #define PROXIMITY_TASK_PRI        0
 #define PM_TASK_PRI               0
 #define USDLOG_TASK_PRI           1
@@ -124,7 +124,7 @@
 #define LOG_TASK_NAME             "LOG"
 #define MEM_TASK_NAME             "MEM"
 #define PARAM_TASK_NAME           "PARAM"
-#define CRTP_CONTROL_TASK_NAME    "CRTP-CTRL"
+#define CRTP_APISERVICE_TASK_NAME    "CRTP-APIS"
 #define SENSORS_TASK_NAME         "SENSORS"
 #define STABILIZER_TASK_NAME      "STABILIZER"
 #define RATE_SUPERVISOR_TASK_NAME "RATE_SUPERVISOR"
@@ -181,7 +181,7 @@
 #define LOG_TASK_STACKSIZE              (2 * configMINIMAL_STACK_SIZE)
 #define MEM_TASK_STACKSIZE              (2 * configMINIMAL_STACK_SIZE)
 #define PARAM_TASK_STACKSIZE            (2 * configMINIMAL_STACK_SIZE)
-#define CRTP_CONTROL_TASK_STACKSIZE     (2 * configMINIMAL_STACK_SIZE)
+#define CRTP_APISERVICE_TASK_STACKSIZE     (2 * configMINIMAL_STACK_SIZE)
 #define SENSORS_TASK_STACKSIZE          (2 * configMINIMAL_STACK_SIZE)
 #define STABILIZER_TASK_STACKSIZE       (3 * configMINIMAL_STACK_SIZE)
 #define RATE_SUPERVISOR_TASK_STACKSIZE  configMINIMAL_STACK_SIZE

@@ -39,13 +39,13 @@ typedef struct {
   uint16_t uart_errors;
   uint16_t tx_flushes;
   int32_t last_error;
-  uint8_t control_probe_done;
-  uint8_t control_schema_count;
+  uint8_t apiservice_probe_done;
+  uint8_t apiservice_schema_count;
 } bccam_uart_service_status_t;
 
 void bccam_uart_service_init(DeckInfo *deck_info);
 
-/** The runtime instance of the firmware UART client, for the Control Service. */
+/** The runtime instance of the firmware UART client, for the API Service. */
 bccam_uart_runtime_t *bccam_uart_service_runtime(void);
 
 void bccam_uart_service_request_bootloader(void);
@@ -87,8 +87,8 @@ typedef struct {
   const char *phase_message;
   bool incompatible;
   uint8_t advertised_service_count;
-  bool control_descriptor_present;
-  bccam_uart_service_descriptor_t control_descriptor;
+  bool apiservice_descriptor_present;
+  bccam_uart_service_descriptor_t apiservice_descriptor;
 } bccam_uart_service_test_startup_recovery_report_t;
 
 void bccam_uart_service_test_reset(void);
@@ -96,8 +96,8 @@ void bccam_uart_service_test_set_state(bccam_uart_service_state_t state);
 bool bccam_uart_service_test_handle_request(bccam_uart_service_test_request_t request);
 void bccam_uart_service_test_set_firmware_startup_result(
   bccam_uart_firmware_startup_result_t result);
-void bccam_uart_service_test_set_firmware_control_probe_phase(
-  bccam_uart_control_probe_phase_t phase);
+void bccam_uart_service_test_set_firmware_apiservice_probe_phase(
+  bccam_uart_apiservice_probe_phase_t phase);
 void bccam_uart_service_test_set_bootloader_enter_result(bool result);
 
 /**

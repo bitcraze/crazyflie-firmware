@@ -310,15 +310,15 @@ int bccam_firmware_uart_client_poll(
   if (result != BCCAM_UART_OK) {
     return result;
   }
-  /* Also on a fault, so that the Control task sees ready go false. */
-  result = bccam_uart_runtime_step_control_mailbox(&client->runtime);
+  /* Also on a fault, so that the API Service task sees ready go false. */
+  result = bccam_uart_runtime_step_apiservice_mailbox(&client->runtime);
   if (result != BCCAM_UART_OK) {
     return result;
   }
   if (bccam_uart_runtime_get_state(&client->runtime) == BCCAM_UART_LINK_FAULT) {
     return BCCAM_UART_OK;
   }
-  result = bccam_uart_runtime_step_control_probe(&client->runtime);
+  result = bccam_uart_runtime_step_apiservice_probe(&client->runtime);
   if (result != BCCAM_UART_OK) {
     return result;
   }
@@ -335,14 +335,14 @@ bccam_firmware_uart_client_startup_result(
   return bccam_uart_runtime_firmware_startup_result(&client->runtime);
 }
 
-bccam_uart_control_probe_phase_t
-bccam_firmware_uart_client_control_probe_phase(
+bccam_uart_apiservice_probe_phase_t
+bccam_firmware_uart_client_apiservice_probe_phase(
   const bccam_firmware_uart_client_t *client) {
   if (client == NULL) {
-    return BCCAM_UART_CONTROL_PROBE_WAITING_FOR_LINK;
+    return BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_LINK;
   }
 
-  return bccam_uart_runtime_control_probe_phase(&client->runtime);
+  return bccam_uart_runtime_apiservice_probe_phase(&client->runtime);
 }
 
 void bccam_firmware_uart_client_observe(
@@ -357,8 +357,8 @@ void bccam_firmware_uart_client_observe(
   if (client == NULL) {
     observation->link_state = BCCAM_UART_LINK_FAULT;
     observation->startup_result = BCCAM_UART_FIRMWARE_STARTUP_ABNORMAL;
-    observation->control_probe_phase =
-      BCCAM_UART_CONTROL_PROBE_WAITING_FOR_LINK;
+    observation->apiservice_probe_phase =
+      BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_LINK;
     observation->last_error = BCCAM_UART_ERR_BAD_ARGUMENT;
     return;
   }
@@ -372,41 +372,41 @@ void bccam_firmware_uart_client_observe(
   observation->link_state = bccam_uart_runtime_get_state(&client->runtime);
   observation->startup_result =
     bccam_uart_runtime_firmware_startup_result(&client->runtime);
-  observation->control_probe_phase =
-    bccam_uart_runtime_control_probe_phase(&client->runtime);
+  observation->apiservice_probe_phase =
+    bccam_uart_runtime_apiservice_probe_phase(&client->runtime);
   observation->negotiated_payload =
     bccam_uart_link_get_negotiated_payload(&client->runtime.link);
   observation->rx_bytes = client->runtime.rx_bytes;
   observation->tx_bytes = client->runtime.tx_bytes;
   observation->tx_flushes = client->runtime.tx_flushes;
-  observation->control_malformed =
-    bccam_uart_runtime_get_control_malformed_count(&client->runtime);
+  observation->apiservice_malformed =
+    bccam_uart_runtime_get_apiservice_malformed_count(&client->runtime);
   observation->last_error = (int32_t)client->runtime.last_error;
-  observation->control_tx_credit =
-    bccam_uart_runtime_control_tx_credit(&client->runtime);
-  observation->control_rx_slots =
-    bccam_uart_runtime_control_rx_slots(&client->runtime);
-  observation->control_schema_module_count =
-    bccam_uart_runtime_control_schema_module_count(&client->runtime);
+  observation->apiservice_tx_credit =
+    bccam_uart_runtime_apiservice_tx_credit(&client->runtime);
+  observation->apiservice_rx_slots =
+    bccam_uart_runtime_apiservice_rx_slots(&client->runtime);
+  observation->apiservice_schema_module_count =
+    bccam_uart_runtime_apiservice_schema_module_count(&client->runtime);
   observation->advertised_service_count = client->runtime.link.service_count;
-  observation->control_probe_done =
-    bccam_uart_runtime_control_probe_done(&client->runtime);
+  observation->apiservice_probe_done =
+    bccam_uart_runtime_apiservice_probe_done(&client->runtime);
 }
 
-bool bccam_firmware_uart_client_control_descriptor(
+bool bccam_firmware_uart_client_apiservice_descriptor(
   const bccam_firmware_uart_client_t *client,
   bccam_uart_service_descriptor_t *descriptor) {
   return client != NULL &&
-    bccam_uart_link_control_binding(&client->runtime.link, descriptor);
+    bccam_uart_link_apiservice_binding(&client->runtime.link, descriptor);
 }
 
-const bccam_uart_control_schema_module_t *
-bccam_firmware_uart_client_control_schema_module(
+const bccam_uart_apiservice_schema_module_t *
+bccam_firmware_uart_client_apiservice_schema_module(
   const bccam_firmware_uart_client_t *client,
   uint8_t index) {
   if (client == NULL) {
     return NULL;
   }
 
-  return bccam_uart_runtime_control_schema_module(&client->runtime, index);
+  return bccam_uart_runtime_apiservice_schema_module(&client->runtime, index);
 }

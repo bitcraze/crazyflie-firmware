@@ -21,15 +21,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * crtp_control.h - CRTP port 10 bridge to the Control router.
+ * crtp_apiservice.h - CRTP port 10 bridge to the API Service router.
  *
- * Lets a ground client list the Control endpoints and tunnel
- * bitcraze.control requests to them. See
- * docs/functional-areas/crtp/crtp_control.md.
+ * Lets a ground client list the API Service endpoints and tunnel
+ * bitcraze.api requests to them. See
+ * docs/functional-areas/crtp/crtp_apiservice.md.
  */
 
-#ifndef CRTP_CONTROL_H_
-#define CRTP_CONTROL_H_
+#ifndef CRTP_APISERVICE_H_
+#define CRTP_APISERVICE_H_
 
 #include <stdbool.h>
 
@@ -38,20 +38,20 @@
 #endif
 
 /** Register the CRTP port and start the bridge task. */
-void crtpControlInit(void);
+void crtpApiserviceInit(void);
 
-/** True after crtpControlInit(). */
-bool crtpControlTest(void);
+/** True after crtpApiserviceInit(). */
+bool crtpApiserviceTest(void);
 
 #ifdef UNIT_TEST_MODE
 /** Handle one CRTP port 10 packet, as the bridge task does. */
-void crtpControlHandlePacketForTest(CRTPPacket *packet);
+void crtpApiserviceHandlePacketForTest(CRTPPacket *packet);
 /** Send or drop the responses of completed slots, as the bridge task does. */
-void crtpControlFinishSlotsForTest(void);
+void crtpApiserviceFinishSlotsForTest(void);
 /** Run the downlink step of the task: responses, notifications, losses. */
-void crtpControlSendDownlinkForTest(void);
+void crtpApiserviceSendDownlinkForTest(void);
 /** Reset bridge state between host tests. */
-void crtpControlResetForTest(void);
+void crtpApiserviceResetForTest(void);
 #endif
 
-#endif /* CRTP_CONTROL_H_ */
+#endif /* CRTP_APISERVICE_H_ */

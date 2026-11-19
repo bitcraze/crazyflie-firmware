@@ -6,25 +6,25 @@
 #if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
 #include "FreeRTOS.h"
 #include "task.h"
-/* Protects control_mailbox, shared by the Control task and bcCamUartTask. */
-#define CONTROL_MAILBOX_LOCK() taskENTER_CRITICAL()
-#define CONTROL_MAILBOX_UNLOCK() taskEXIT_CRITICAL()
+/* Protects apiservice_mailbox, shared by the API Service task and bcCamUartTask. */
+#define APISERVICE_MAILBOX_LOCK() taskENTER_CRITICAL()
+#define APISERVICE_MAILBOX_UNLOCK() taskEXIT_CRITICAL()
 #else
-#define CONTROL_MAILBOX_LOCK()
-#define CONTROL_MAILBOX_UNLOCK()
+#define APISERVICE_MAILBOX_LOCK()
+#define APISERVICE_MAILBOX_UNLOCK()
 #endif
 
-#define CONTROL_MAX_GRANTS_PENDING 127u
+#define APISERVICE_MAX_GRANTS_PENDING 127u
 
-#define CONTROL_KIND_GET 0x01u
-#define CONTROL_KIND_VALUE 0x81u
-#define CONTROL_TYPE_BYTES 0x21u
-#define CONTROL_SCHEMA_REQUEST_ID 0u
+#define APISERVICE_KIND_GET 0x01u
+#define APISERVICE_KIND_VALUE 0x81u
+#define APISERVICE_TYPE_BYTES 0x21u
+#define APISERVICE_SCHEMA_REQUEST_ID 0u
 
-static const char control_schema_modules_path[] = "meta.schema_modules";
-static const uint8_t control_schema_modules_request[] = {
-  CONTROL_KIND_GET, CONTROL_SCHEMA_REQUEST_ID,
-  sizeof(control_schema_modules_path) - 1u,
+static const char apiservice_schema_modules_path[] = "meta.schema_modules";
+static const uint8_t apiservice_schema_modules_request[] = {
+  APISERVICE_KIND_GET, APISERVICE_SCHEMA_REQUEST_ID,
+  sizeof(apiservice_schema_modules_path) - 1u,
   'm','e','t','a','.','s','c','h','e','m','a','_','m','o','d','u','l','e','s'
 };
 
@@ -39,10 +39,10 @@ static bool temporary_result(int result) {
          result == BCCAM_UART_ERR_NO_CREDIT;
 }
 
-/** Empty the Control mailbox and publish not ready. */
-static void clear_control_mailbox(bccam_uart_runtime_t *runtime) {
-  bccam_uart_control_mailbox_t *mailbox = &runtime->control_mailbox;
-  CONTROL_MAILBOX_LOCK();
+/** Empty the API Service mailbox and publish not ready. */
+static void clear_apiservice_mailbox(bccam_uart_runtime_t *runtime) {
+  bccam_uart_apiservice_mailbox_t *mailbox = &runtime->apiservice_mailbox;
+  APISERVICE_MAILBOX_LOCK();
   if (mailbox->ready) {
     mailbox->ready_lost_unobserved = true;
   }
@@ -51,27 +51,27 @@ static void clear_control_mailbox(bccam_uart_runtime_t *runtime) {
   mailbox->grants_pending = 0u;
   mailbox->tx_full = false;
   mailbox->rx_full = false;
-  CONTROL_MAILBOX_UNLOCK();
+  APISERVICE_MAILBOX_UNLOCK();
 }
 
-static void clear_control_state(bccam_uart_runtime_t *runtime) {
-  clear_control_mailbox(runtime);
-  runtime->control_service_bound = false;
-  runtime->control_service_id = 0u;
-  runtime->control_rx_credit_opened = false;
-  runtime->control_request_sent = false;
-  runtime->control_probe_done = false;
-  runtime->control_rx_release_pending = false;
-  runtime->control_rx_malformed = 0u;
-  runtime->control_schema_module_count = 0u;
-  memset(runtime->control_schema_modules, 0,
-         sizeof(runtime->control_schema_modules));
+static void clear_apiservice_state(bccam_uart_runtime_t *runtime) {
+  clear_apiservice_mailbox(runtime);
+  runtime->apiservice_bound = false;
+  runtime->apiservice_id = 0u;
+  runtime->apiservice_rx_credit_opened = false;
+  runtime->apiservice_request_sent = false;
+  runtime->apiservice_probe_done = false;
+  runtime->apiservice_rx_release_pending = false;
+  runtime->apiservice_rx_malformed = 0u;
+  runtime->apiservice_schema_module_count = 0u;
+  memset(runtime->apiservice_schema_modules, 0,
+         sizeof(runtime->apiservice_schema_modules));
 }
 
 static void reset_runtime_session(bccam_uart_runtime_t *runtime) {
   runtime->next_descriptor_ordinal = 0u;
-  clear_control_state(runtime);
-  runtime->control_mailbox.closed = false;
+  clear_apiservice_state(runtime);
+  runtime->apiservice_mailbox.closed = false;
   bccam_uart_frame_parser_configure(&runtime->parser,
                                     BCCAM_UART_LINK_VERSION_1,
                                     BCCAM_UART_BOOTSTRAP_PAYLOAD_MTU);
@@ -101,20 +101,20 @@ static bool parse_schema_module_table(bccam_uart_runtime_t *runtime,
   }
   uint8_t offset = 0u;
   const uint8_t count = table[offset++];
-  if (count > BCCAM_UART_CONTROL_MAX_SCHEMA_MODULES) {
+  if (count > BCCAM_UART_APISERVICE_MAX_SCHEMA_MODULES) {
     return false;
   }
-  memset(runtime->control_schema_modules, 0,
-         sizeof(runtime->control_schema_modules));
+  memset(runtime->apiservice_schema_modules, 0,
+         sizeof(runtime->apiservice_schema_modules));
   for (uint8_t i = 0u; i < count; i++) {
-    bccam_uart_control_schema_module_t *module =
-      &runtime->control_schema_modules[i];
+    bccam_uart_apiservice_schema_module_t *module =
+      &runtime->apiservice_schema_modules[i];
     if (offset >= table_len) {
       return false;
     }
     const uint8_t namespace_len = table[offset++];
     if (namespace_len == 0u ||
-        namespace_len >= BCCAM_UART_CONTROL_SCHEMA_NAMESPACE_MAX_LEN ||
+        namespace_len >= BCCAM_UART_APISERVICE_SCHEMA_NAMESPACE_MAX_LEN ||
         (uint16_t)offset + namespace_len > table_len ||
         contains_nul(&table[offset], namespace_len)) {
       return false;
@@ -126,7 +126,7 @@ static bool parse_schema_module_table(bccam_uart_runtime_t *runtime,
     }
     const uint8_t contract_len = table[offset++];
     if (contract_len == 0u ||
-        contract_len >= BCCAM_UART_CONTROL_SCHEMA_CONTRACT_ID_MAX_LEN ||
+        contract_len >= BCCAM_UART_APISERVICE_SCHEMA_CONTRACT_ID_MAX_LEN ||
         (uint16_t)offset + contract_len > table_len ||
         contains_nul(&table[offset], contract_len)) {
       return false;
@@ -142,7 +142,7 @@ static bool parse_schema_module_table(bccam_uart_runtime_t *runtime,
   if (offset != table_len) {
     return false;
   }
-  runtime->control_schema_module_count = count;
+  runtime->apiservice_schema_module_count = count;
   return true;
 }
 
@@ -150,30 +150,30 @@ static bool handle_schema_response(bccam_uart_runtime_t *runtime,
                                    const uint8_t *payload,
                                    uint16_t payload_len) {
   if (runtime == NULL || payload == NULL || payload_len < 4u ||
-      payload[0] != CONTROL_KIND_VALUE ||
-      payload[1] != CONTROL_SCHEMA_REQUEST_ID ||
-      payload[2] != CONTROL_TYPE_BYTES ||
+      payload[0] != APISERVICE_KIND_VALUE ||
+      payload[1] != APISERVICE_SCHEMA_REQUEST_ID ||
+      payload[2] != APISERVICE_TYPE_BYTES ||
       payload_len != (uint16_t)(4u + payload[3])) {
     return false;
   }
   return parse_schema_module_table(runtime, &payload[4], payload[3]);
 }
 
-static void refresh_control_binding(bccam_uart_runtime_t *runtime) {
+static void refresh_apiservice_binding(bccam_uart_runtime_t *runtime) {
   bccam_uart_service_descriptor_t descriptor;
-  if (!bccam_uart_link_control_binding(&runtime->link, &descriptor)) {
-    runtime->control_service_bound = false;
-    runtime->control_service_id = 0u;
+  if (!bccam_uart_link_apiservice_binding(&runtime->link, &descriptor)) {
+    runtime->apiservice_bound = false;
+    runtime->apiservice_id = 0u;
     return;
   }
-  if (!runtime->control_service_bound ||
-      runtime->control_service_id != descriptor.handle) {
-    const uint16_t malformed = runtime->control_rx_malformed;
-    clear_control_state(runtime);
-    runtime->control_rx_malformed = malformed;
+  if (!runtime->apiservice_bound ||
+      runtime->apiservice_id != descriptor.handle) {
+    const uint16_t malformed = runtime->apiservice_rx_malformed;
+    clear_apiservice_state(runtime);
+    runtime->apiservice_rx_malformed = malformed;
   }
-  runtime->control_service_bound = true;
-  runtime->control_service_id = descriptor.handle;
+  runtime->apiservice_bound = true;
+  runtime->apiservice_id = descriptor.handle;
 }
 
 /** Resolve the compatible Console handle bound in the current Link session. */
@@ -268,7 +268,7 @@ static int receive_frame(bccam_uart_runtime_t *runtime,
                                         runtime->link.active_link_version,
                                         runtime->link.negotiated_payload);
     }
-    refresh_control_binding(runtime);
+    refresh_apiservice_binding(runtime);
   }
   set_last_error(runtime, result);
   return result;
@@ -401,11 +401,11 @@ static bool ordinal_seen(const bccam_uart_link_endpoint_t *link, uint8_t ordinal
           (uint8_t)(1u << (ordinal & 7u))) != 0u;
 }
 
-static int release_control_rx(bccam_uart_runtime_t *runtime) {
+static int release_apiservice_rx(bccam_uart_runtime_t *runtime) {
   const int result = bccam_uart_link_release_rx_slot(
-    &runtime->link, runtime->control_service_id);
+    &runtime->link, runtime->apiservice_id);
   if (result == BCCAM_UART_OK) {
-    runtime->control_rx_release_pending = false;
+    runtime->apiservice_rx_release_pending = false;
     return BCCAM_UART_OK;
   }
   if (temporary_result(result)) {
@@ -415,7 +415,7 @@ static int release_control_rx(bccam_uart_runtime_t *runtime) {
   return result;
 }
 
-int bccam_uart_runtime_step_control_probe(bccam_uart_runtime_t *runtime) {
+int bccam_uart_runtime_step_apiservice_probe(bccam_uart_runtime_t *runtime) {
   if (runtime == NULL) {
     return BCCAM_UART_ERR_BAD_ARGUMENT;
   }
@@ -453,25 +453,25 @@ int bccam_uart_runtime_step_control_probe(bccam_uart_runtime_t *runtime) {
     set_last_error(runtime, result);
     return result;
   }
-  refresh_control_binding(runtime);
+  refresh_apiservice_binding(runtime);
   if (!bccam_uart_link_catalog_complete(&runtime->link) ||
-      !runtime->control_service_bound) {
+      !runtime->apiservice_bound) {
     return BCCAM_UART_OK;
   }
-  if (runtime->control_rx_release_pending) {
-    const int result = release_control_rx(runtime);
-    if (result != BCCAM_UART_OK || runtime->control_rx_release_pending) {
+  if (runtime->apiservice_rx_release_pending) {
+    const int result = release_apiservice_rx(runtime);
+    if (result != BCCAM_UART_OK || runtime->apiservice_rx_release_pending) {
       return result;
     }
   }
-  if (runtime->control_probe_done) {
+  if (runtime->apiservice_probe_done) {
     return BCCAM_UART_OK;
   }
-  if (!runtime->control_rx_credit_opened) {
+  if (!runtime->apiservice_rx_credit_opened) {
     const int result = bccam_uart_link_send_credit_update(
-      &runtime->link, runtime->control_service_id, 1u);
+      &runtime->link, runtime->apiservice_id, 1u);
     if (result == BCCAM_UART_OK) {
-      runtime->control_rx_credit_opened = true;
+      runtime->apiservice_rx_credit_opened = true;
       return BCCAM_UART_OK;
     }
     if (temporary_result(result)) {
@@ -480,14 +480,14 @@ int bccam_uart_runtime_step_control_probe(bccam_uart_runtime_t *runtime) {
     set_last_error(runtime, result);
     return result;
   }
-  if (!runtime->control_request_sent &&
+  if (!runtime->apiservice_request_sent &&
       bccam_uart_link_get_tx_credit(&runtime->link,
-                                    runtime->control_service_id) > 0u) {
+                                    runtime->apiservice_id) > 0u) {
     const int result = bccam_uart_link_send_normal(
-      &runtime->link, runtime->control_service_id,
-      control_schema_modules_request, sizeof(control_schema_modules_request));
+      &runtime->link, runtime->apiservice_id,
+      apiservice_schema_modules_request, sizeof(apiservice_schema_modules_request));
     if (result == BCCAM_UART_OK) {
-      runtime->control_request_sent = true;
+      runtime->apiservice_request_sent = true;
       return BCCAM_UART_OK;
     }
     if (temporary_result(result)) {
@@ -500,7 +500,7 @@ int bccam_uart_runtime_step_control_probe(bccam_uart_runtime_t *runtime) {
   uint16_t payload_len = 0u;
   bool unit_present = false;
   const int result = bccam_uart_link_take_rx_for_service(
-    &runtime->link, runtime->control_service_id, payload, sizeof(payload),
+    &runtime->link, runtime->apiservice_id, payload, sizeof(payload),
     &payload_len, &unit_present);
   if (result != BCCAM_UART_OK) {
     set_last_error(runtime, result);
@@ -509,23 +509,23 @@ int bccam_uart_runtime_step_control_probe(bccam_uart_runtime_t *runtime) {
   if (!unit_present) {
     return BCCAM_UART_OK;
   }
-  if (runtime->control_request_sent &&
+  if (runtime->apiservice_request_sent &&
       handle_schema_response(runtime, payload, payload_len)) {
-    runtime->control_probe_done = true;
-    runtime->control_rx_release_pending = false;
+    runtime->apiservice_probe_done = true;
+    runtime->apiservice_rx_release_pending = false;
     return BCCAM_UART_OK;
   }
-  runtime->control_rx_malformed++;
-  runtime->control_rx_release_pending = true;
-  return release_control_rx(runtime);
+  runtime->apiservice_rx_malformed++;
+  runtime->apiservice_rx_release_pending = true;
+  return release_apiservice_rx(runtime);
 }
 
-bool bccam_uart_runtime_control_probe_done(const bccam_uart_runtime_t *runtime) {
-  return runtime != NULL && runtime->control_probe_done;
+bool bccam_uart_runtime_apiservice_probe_done(const bccam_uart_runtime_t *runtime) {
+  return runtime != NULL && runtime->apiservice_probe_done;
 }
 
-bool bccam_uart_runtime_control_service_bound(const bccam_uart_runtime_t *runtime) {
-  return runtime != NULL && runtime->control_service_bound;
+bool bccam_uart_runtime_apiservice_bound(const bccam_uart_runtime_t *runtime) {
+  return runtime != NULL && runtime->apiservice_bound;
 }
 
 bool bccam_uart_runtime_console_service_bound(const bccam_uart_runtime_t *runtime)
@@ -592,30 +592,30 @@ int bccam_uart_runtime_release_console_rx(bccam_uart_runtime_t *runtime)
   return result;
 }
 
-uint8_t bccam_uart_runtime_control_service_id(const bccam_uart_runtime_t *runtime) {
-  return runtime == NULL || !runtime->control_service_bound ? 0u :
-    runtime->control_service_id;
+uint8_t bccam_uart_runtime_apiservice_id(const bccam_uart_runtime_t *runtime) {
+  return runtime == NULL || !runtime->apiservice_bound ? 0u :
+    runtime->apiservice_id;
 }
 
-bccam_uart_control_probe_phase_t bccam_uart_runtime_control_probe_phase(
+bccam_uart_apiservice_probe_phase_t bccam_uart_runtime_apiservice_probe_phase(
   const bccam_uart_runtime_t *runtime) {
   if (runtime == NULL || runtime->link.state != BCCAM_UART_LINK_ACTIVE ||
       !bccam_uart_link_catalog_complete(&runtime->link)) {
-    return BCCAM_UART_CONTROL_PROBE_WAITING_FOR_LINK;
+    return BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_LINK;
   }
-  if (!runtime->control_service_bound) {
-    return BCCAM_UART_CONTROL_PROBE_WAITING_FOR_CONTROL_SERVICE;
+  if (!runtime->apiservice_bound) {
+    return BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_APISERVICE;
   }
-  if (runtime->control_probe_done) {
-    return BCCAM_UART_CONTROL_PROBE_DONE;
+  if (runtime->apiservice_probe_done) {
+    return BCCAM_UART_APISERVICE_PROBE_DONE;
   }
-  if (!runtime->control_rx_credit_opened) {
-    return BCCAM_UART_CONTROL_PROBE_WAITING_FOR_LOCAL_RX_CREDIT;
+  if (!runtime->apiservice_rx_credit_opened) {
+    return BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_LOCAL_RX_CREDIT;
   }
-  if (!runtime->control_request_sent) {
-    return BCCAM_UART_CONTROL_PROBE_WAITING_FOR_TARGET_TX_CREDIT;
+  if (!runtime->apiservice_request_sent) {
+    return BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_TARGET_TX_CREDIT;
   }
-  return BCCAM_UART_CONTROL_PROBE_WAITING_FOR_RESPONSE;
+  return BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_RESPONSE;
 }
 
 bccam_uart_firmware_startup_result_t bccam_uart_runtime_firmware_startup_result(
@@ -627,38 +627,38 @@ bccam_uart_firmware_startup_result_t bccam_uart_runtime_firmware_startup_result(
       !bccam_uart_link_catalog_complete(&runtime->link)) {
     return BCCAM_UART_FIRMWARE_STARTUP_WAITING;
   }
-  if (!runtime->control_service_bound) {
+  if (!runtime->apiservice_bound) {
     return BCCAM_UART_FIRMWARE_STARTUP_INCOMPATIBLE;
   }
-  return runtime->control_probe_done ? BCCAM_UART_FIRMWARE_STARTUP_READY :
+  return runtime->apiservice_probe_done ? BCCAM_UART_FIRMWARE_STARTUP_READY :
     BCCAM_UART_FIRMWARE_STARTUP_WAITING;
 }
 
-uint8_t bccam_uart_runtime_control_tx_credit(const bccam_uart_runtime_t *runtime) {
-  return runtime == NULL || !runtime->control_service_bound ? 0u :
-    bccam_uart_link_get_tx_credit(&runtime->link, runtime->control_service_id);
+uint8_t bccam_uart_runtime_apiservice_tx_credit(const bccam_uart_runtime_t *runtime) {
+  return runtime == NULL || !runtime->apiservice_bound ? 0u :
+    bccam_uart_link_get_tx_credit(&runtime->link, runtime->apiservice_id);
 }
 
-uint8_t bccam_uart_runtime_control_rx_slots(const bccam_uart_runtime_t *runtime) {
-  return runtime == NULL || !runtime->control_service_bound ? 0u :
+uint8_t bccam_uart_runtime_apiservice_rx_slots(const bccam_uart_runtime_t *runtime) {
+  return runtime == NULL || !runtime->apiservice_bound ? 0u :
     bccam_uart_link_get_rx_advertised_credit(&runtime->link,
-                                             runtime->control_service_id);
+                                             runtime->apiservice_id);
 }
 
-uint8_t bccam_uart_runtime_control_schema_module_count(
+uint8_t bccam_uart_runtime_apiservice_schema_module_count(
   const bccam_uart_runtime_t *runtime) {
-  return runtime == NULL ? 0u : runtime->control_schema_module_count;
+  return runtime == NULL ? 0u : runtime->apiservice_schema_module_count;
 }
 
-const bccam_uart_control_schema_module_t *bccam_uart_runtime_control_schema_module(
+const bccam_uart_apiservice_schema_module_t *bccam_uart_runtime_apiservice_schema_module(
   const bccam_uart_runtime_t *runtime, uint8_t index) {
-  return runtime == NULL || index >= runtime->control_schema_module_count ? NULL :
-    &runtime->control_schema_modules[index];
+  return runtime == NULL || index >= runtime->apiservice_schema_module_count ? NULL :
+    &runtime->apiservice_schema_modules[index];
 }
 
-uint16_t bccam_uart_runtime_get_control_malformed_count(
+uint16_t bccam_uart_runtime_get_apiservice_malformed_count(
   const bccam_uart_runtime_t *runtime) {
-  return runtime == NULL ? 0u : runtime->control_rx_malformed;
+  return runtime == NULL ? 0u : runtime->apiservice_rx_malformed;
 }
 
 bccam_uart_link_state_t bccam_uart_runtime_get_state(
@@ -671,43 +671,43 @@ const bccam_uart_link_counters_t *bccam_uart_runtime_get_counters(
   return runtime == NULL ? NULL : &runtime->link.counters;
 }
 
-/* Control mailbox: Control task side. */
+/* API Service mailbox: API Service task side. */
 
-bool bccam_uart_runtime_control_ready(bccam_uart_runtime_t *runtime) {
+bool bccam_uart_runtime_apiservice_ready(bccam_uart_runtime_t *runtime) {
   if (runtime == NULL) {
     return false;
   }
-  bccam_uart_control_mailbox_t *mailbox = &runtime->control_mailbox;
-  CONTROL_MAILBOX_LOCK();
+  bccam_uart_apiservice_mailbox_t *mailbox = &runtime->apiservice_mailbox;
+  APISERVICE_MAILBOX_LOCK();
   const bool ready = mailbox->ready && !mailbox->ready_lost_unobserved;
   mailbox->ready_lost_unobserved = false;
-  CONTROL_MAILBOX_UNLOCK();
+  APISERVICE_MAILBOX_UNLOCK();
   return ready;
 }
 
-void bccam_uart_runtime_grant_control_rx_credit(bccam_uart_runtime_t *runtime) {
+void bccam_uart_runtime_grant_apiservice_rx_credit(bccam_uart_runtime_t *runtime) {
   if (runtime == NULL) {
     return;
   }
-  bccam_uart_control_mailbox_t *mailbox = &runtime->control_mailbox;
-  CONTROL_MAILBOX_LOCK();
-  if (mailbox->ready && mailbox->grants_pending < CONTROL_MAX_GRANTS_PENDING) {
+  bccam_uart_apiservice_mailbox_t *mailbox = &runtime->apiservice_mailbox;
+  APISERVICE_MAILBOX_LOCK();
+  if (mailbox->ready && mailbox->grants_pending < APISERVICE_MAX_GRANTS_PENDING) {
     mailbox->grants_pending++;
   }
-  CONTROL_MAILBOX_UNLOCK();
+  APISERVICE_MAILBOX_UNLOCK();
 }
 
-int bccam_uart_runtime_send_control(bccam_uart_runtime_t *runtime,
-                                    const syslink2_control_frame_t *frame) {
+int bccam_uart_runtime_send_apiservice(bccam_uart_runtime_t *runtime,
+                                    const syslink2_apiservice_frame_t *frame) {
   if (runtime == NULL || frame == NULL) {
     return BCCAM_UART_ERR_BAD_ARGUMENT;
   }
-  if (frame->len > SYSLINK2_CONTROL_FRAME_MAX_LEN) {
+  if (frame->len > SYSLINK2_APISERVICE_FRAME_MAX_LEN) {
     return BCCAM_UART_ERR_PAYLOAD_TOO_LONG;
   }
-  bccam_uart_control_mailbox_t *mailbox = &runtime->control_mailbox;
+  bccam_uart_apiservice_mailbox_t *mailbox = &runtime->apiservice_mailbox;
   int result = BCCAM_UART_OK;
-  CONTROL_MAILBOX_LOCK();
+  APISERVICE_MAILBOX_LOCK();
   if (!mailbox->ready) {
     result = BCCAM_UART_ERR_NOT_ACTIVE;
   } else if (frame->len > mailbox->payload_mtu) {
@@ -718,112 +718,112 @@ int bccam_uart_runtime_send_control(bccam_uart_runtime_t *runtime,
     mailbox->tx_frame = *frame;
     mailbox->tx_full = true;
   }
-  CONTROL_MAILBOX_UNLOCK();
+  APISERVICE_MAILBOX_UNLOCK();
   return result;
 }
 
-bool bccam_uart_runtime_take_control_rx(bccam_uart_runtime_t *runtime,
-                                        syslink2_control_frame_t *frame) {
+bool bccam_uart_runtime_take_apiservice_rx(bccam_uart_runtime_t *runtime,
+                                        syslink2_apiservice_frame_t *frame) {
   if (runtime == NULL || frame == NULL) {
     return false;
   }
-  bccam_uart_control_mailbox_t *mailbox = &runtime->control_mailbox;
+  bccam_uart_apiservice_mailbox_t *mailbox = &runtime->apiservice_mailbox;
   bool taken = false;
-  CONTROL_MAILBOX_LOCK();
+  APISERVICE_MAILBOX_LOCK();
   if (mailbox->rx_full) {
     *frame = mailbox->rx_frame;
     mailbox->rx_full = false;
     taken = true;
   }
-  CONTROL_MAILBOX_UNLOCK();
+  APISERVICE_MAILBOX_UNLOCK();
   return taken;
 }
 
-/* Control mailbox: bcCamUartTask side. */
+/* API Service mailbox: bcCamUartTask side. */
 
-void bccam_uart_runtime_close_control(bccam_uart_runtime_t *runtime) {
+void bccam_uart_runtime_close_apiservice(bccam_uart_runtime_t *runtime) {
   if (runtime == NULL) {
     return;
   }
-  clear_control_mailbox(runtime);
-  runtime->control_mailbox.closed = true;
+  clear_apiservice_mailbox(runtime);
+  runtime->apiservice_mailbox.closed = true;
 }
 
-static bool control_link_ready(const bccam_uart_runtime_t *runtime) {
-  return !runtime->control_mailbox.closed &&
+static bool apiservice_link_ready(const bccam_uart_runtime_t *runtime) {
+  return !runtime->apiservice_mailbox.closed &&
          runtime->link.state == BCCAM_UART_LINK_ACTIVE &&
-         runtime->control_service_bound && runtime->control_probe_done;
+         runtime->apiservice_bound && runtime->apiservice_probe_done;
 }
 
-void bccam_uart_runtime_stage_control_rx(bccam_uart_runtime_t *runtime) {
-  if (runtime == NULL || !control_link_ready(runtime)) {
+void bccam_uart_runtime_stage_apiservice_rx(bccam_uart_runtime_t *runtime) {
+  if (runtime == NULL || !apiservice_link_ready(runtime)) {
     return;
   }
-  bccam_uart_control_mailbox_t *mailbox = &runtime->control_mailbox;
-  CONTROL_MAILBOX_LOCK();
+  bccam_uart_apiservice_mailbox_t *mailbox = &runtime->apiservice_mailbox;
+  APISERVICE_MAILBOX_LOCK();
   const bool rx_full = mailbox->rx_full;
-  CONTROL_MAILBOX_UNLOCK();
+  APISERVICE_MAILBOX_UNLOCK();
   if (rx_full) {
-    /* Stays staged in the Link until the Control task has taken the last. */
+    /* Stays staged in the Link until the API Service task has taken the last. */
     return;
   }
   uint8_t payload[BCCAM_UART_NORMAL_MAX_PAYLOAD];
   uint16_t payload_len = 0u;
   bool present = false;
   const int result = bccam_uart_link_take_rx_for_service(
-    &runtime->link, runtime->control_service_id, payload, sizeof(payload),
+    &runtime->link, runtime->apiservice_id, payload, sizeof(payload),
     &payload_len, &present);
   if (result != BCCAM_UART_OK || !present) {
     set_last_error(runtime, result);
     return;
   }
-  if (payload_len > SYSLINK2_CONTROL_FRAME_MAX_LEN) {
-    /* Cannot be a Control frame in scope. Drop it and return its slot. */
-    runtime->control_rx_malformed++;
-    CONTROL_MAILBOX_LOCK();
-    if (mailbox->grants_pending < CONTROL_MAX_GRANTS_PENDING) {
+  if (payload_len > SYSLINK2_APISERVICE_FRAME_MAX_LEN) {
+    /* Cannot be an API Service frame in scope. Drop it and return its slot. */
+    runtime->apiservice_rx_malformed++;
+    APISERVICE_MAILBOX_LOCK();
+    if (mailbox->grants_pending < APISERVICE_MAX_GRANTS_PENDING) {
       mailbox->grants_pending++;
     }
-    CONTROL_MAILBOX_UNLOCK();
+    APISERVICE_MAILBOX_UNLOCK();
     return;
   }
-  CONTROL_MAILBOX_LOCK();
+  APISERVICE_MAILBOX_LOCK();
   memcpy(mailbox->rx_frame.data, payload, payload_len);
   mailbox->rx_frame.len = (uint8_t)payload_len;
   mailbox->rx_full = true;
-  CONTROL_MAILBOX_UNLOCK();
+  APISERVICE_MAILBOX_UNLOCK();
 }
 
-int bccam_uart_runtime_step_control_mailbox(bccam_uart_runtime_t *runtime) {
+int bccam_uart_runtime_step_apiservice_mailbox(bccam_uart_runtime_t *runtime) {
   if (runtime == NULL) {
     return BCCAM_UART_ERR_BAD_ARGUMENT;
   }
-  bccam_uart_control_mailbox_t *mailbox = &runtime->control_mailbox;
-  if (!control_link_ready(runtime)) {
-    CONTROL_MAILBOX_LOCK();
+  bccam_uart_apiservice_mailbox_t *mailbox = &runtime->apiservice_mailbox;
+  if (!apiservice_link_ready(runtime)) {
+    APISERVICE_MAILBOX_LOCK();
     const bool was_ready = mailbox->ready;
-    CONTROL_MAILBOX_UNLOCK();
+    APISERVICE_MAILBOX_UNLOCK();
     if (was_ready) {
-      clear_control_mailbox(runtime);
+      clear_apiservice_mailbox(runtime);
     }
     return BCCAM_UART_OK;
   }
 
-  CONTROL_MAILBOX_LOCK();
+  APISERVICE_MAILBOX_LOCK();
   mailbox->payload_mtu = runtime->link.negotiated_payload;
   mailbox->ready = true;
   const bool grant_pending = mailbox->grants_pending > 0u;
-  CONTROL_MAILBOX_UNLOCK();
+  APISERVICE_MAILBOX_UNLOCK();
 
-  bccam_uart_runtime_stage_control_rx(runtime);
+  bccam_uart_runtime_stage_apiservice_rx(runtime);
 
   if (grant_pending) {
     const int result = bccam_uart_link_release_rx_slot(
-      &runtime->link, runtime->control_service_id);
+      &runtime->link, runtime->apiservice_id);
     if (result == BCCAM_UART_OK) {
-      CONTROL_MAILBOX_LOCK();
+      APISERVICE_MAILBOX_LOCK();
       mailbox->grants_pending--;
-      CONTROL_MAILBOX_UNLOCK();
+      APISERVICE_MAILBOX_UNLOCK();
     } else if (!temporary_result(result)) {
       set_last_error(runtime, result);
       return result;
@@ -832,24 +832,24 @@ int bccam_uart_runtime_step_control_mailbox(bccam_uart_runtime_t *runtime) {
     return BCCAM_UART_OK;
   }
 
-  syslink2_control_frame_t frame;
-  CONTROL_MAILBOX_LOCK();
+  syslink2_apiservice_frame_t frame;
+  APISERVICE_MAILBOX_LOCK();
   const bool tx_full = mailbox->tx_full;
   if (tx_full) {
     frame = mailbox->tx_frame;
   }
-  CONTROL_MAILBOX_UNLOCK();
+  APISERVICE_MAILBOX_UNLOCK();
   if (!tx_full) {
     return BCCAM_UART_OK;
   }
   const int result = bccam_uart_link_send_normal(
-    &runtime->link, runtime->control_service_id, frame.data, frame.len);
+    &runtime->link, runtime->apiservice_id, frame.data, frame.len);
   if (temporary_result(result)) {
     return BCCAM_UART_OK;
   }
-  CONTROL_MAILBOX_LOCK();
+  APISERVICE_MAILBOX_LOCK();
   mailbox->tx_full = false;
-  CONTROL_MAILBOX_UNLOCK();
+  APISERVICE_MAILBOX_UNLOCK();
   set_last_error(runtime, result);
   return result;
 }

@@ -190,13 +190,13 @@ void testCompatibleStartupBecomesFirmwareActive(void) {
                         bccam_uart_service_get_state());
 }
 
-void testControlIncompatibilityStopsWithoutResetLoop(void) {
+void testApiserviceIncompatibilityStopsWithoutResetLoop(void) {
   bccam_uart_service_test_startup_recovery_report_t report = {0};
   bccam_uart_service_test_set_state(BCCAM_UART_SERVICE_STATE_FW_ESTABLISHING);
   bccam_uart_service_test_set_firmware_startup_result(
     BCCAM_UART_FIRMWARE_STARTUP_INCOMPATIBLE);
-  bccam_uart_service_test_set_firmware_control_probe_phase(
-    BCCAM_UART_CONTROL_PROBE_WAITING_FOR_CONTROL_SERVICE);
+  bccam_uart_service_test_set_firmware_apiservice_probe_phase(
+    BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_APISERVICE);
 
   bccam_uart_service_test_poll_once();
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_SERVICE_STATE_FW_INCOMPATIBLE,
@@ -225,7 +225,7 @@ void testIncompatibleSessionBootNoticeStartsFreshEstablishment(void) {
                           descriptor_request->bytes[6]);
   const uint8_t descriptor_reply[] = {
     BCCAM_UART_LINK_OP_SERVICE_DESCRIPTOR, descriptor_request->bytes[7], 0,
-    7, BCCAM_UART_CONTROL_CONTRACT_MAJOR + 1u, 0, 16,
+    7, BCCAM_UART_APISERVICE_CONTRACT_MAJOR + 1u, 0, 16,
     'b','i','t','c','r','a','z','e','.','c','o','n','t','r','o','l'
   };
   const uint8_t sends_before_incompatible = uart_send_count();
@@ -315,8 +315,8 @@ void testPollFailureFormattingKeepsLinkDiagnostics(void) {
   char text[256];
   bccam_firmware_uart_client_observation_t observation = {0};
   observation.link_state = BCCAM_UART_LINK_FAULT;
-  observation.control_probe_phase =
-    BCCAM_UART_CONTROL_PROBE_WAITING_FOR_LINK;
+  observation.apiservice_probe_phase =
+    BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_LINK;
   observation.startup_result = BCCAM_UART_FIRMWARE_STARTUP_ABNORMAL;
   observation.counters.tx_failures = 1;
   observation.counters.link_faults = 1;
@@ -593,7 +593,7 @@ void testServiceStatusSnapshotAndCacheTrackState(void) {
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_SERVICE_STATE_FW_ACTIVE,
                         status.service_state);
   TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_ACTIVE, status.link_state);
-  TEST_ASSERT_EQUAL_UINT8(1, status.control_probe_done);
+  TEST_ASSERT_EQUAL_UINT8(1, status.apiservice_probe_done);
   TEST_ASSERT_EQUAL_INT32(BCCAM_UART_OK, status.last_error);
 
   bccam_uart_service_test_set_state(BCCAM_UART_SERVICE_STATE_ISP_READY);
@@ -651,8 +651,8 @@ void testIncompatibleAndReadyStartupDisableDeadlineRecovery(void) {
 void testActiveLinkWithStalledStartupReportsOnceWithoutReset(void) {
   bccam_uart_service_test_startup_recovery_report_t report = {0};
   establish_service_link();
-  bccam_uart_service_test_set_firmware_control_probe_phase(
-    BCCAM_UART_CONTROL_PROBE_WAITING_FOR_RESPONSE);
+  bccam_uart_service_test_set_firmware_apiservice_probe_phase(
+    BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_RESPONSE);
 
   TEST_ASSERT_FALSE(bccam_uart_service_test_update_startup_watchdog(2999,
                                                                     &report));
@@ -714,8 +714,8 @@ void testInactiveDiagnosticUsesFinalizedLifecycleName(void) {
   char text[256];
   bccam_firmware_uart_client_observation_t observation = {0};
   observation.link_state = BCCAM_UART_LINK_INACTIVE;
-  observation.control_probe_phase =
-    BCCAM_UART_CONTROL_PROBE_WAITING_FOR_LINK;
+  observation.apiservice_probe_phase =
+    BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_LINK;
   observation.startup_result = BCCAM_UART_FIRMWARE_STARTUP_WAITING;
   bccam_uart_service_test_format_poll_failure(text, sizeof(text),
                                                BCCAM_UART_ERR_BAD_CRC,

@@ -74,8 +74,8 @@ static uint16_t uart_error_count;
 #if defined(UNIT_TEST) || defined(UNIT_TEST_MODE)
 static bool test_firmware_startup_result_forced;
 static bccam_uart_firmware_startup_result_t test_firmware_startup_result;
-static bool test_firmware_control_probe_phase_forced;
-static bccam_uart_control_probe_phase_t test_firmware_control_probe_phase;
+static bool test_firmware_apiservice_probe_phase_forced;
+static bccam_uart_apiservice_probe_phase_t test_firmware_apiservice_probe_phase;
 static uint16_t test_rx_post_drain_poll_count;
 static uint16_t test_incompatible_report_count;
 static uint16_t test_startup_stall_report_count;
@@ -84,8 +84,8 @@ static bool test_bootloader_enter_result;
 #endif
 
 #ifdef CONFIG_DECK_BCCAM_DEBUG
-static bool control_probe_logged;
-static uint16_t control_malformed_logged;
+static bool apiservice_probe_logged;
+static uint16_t apiservice_malformed_logged;
 #endif
 
 uint8_t bccam_uart_service_link_state_log;
@@ -139,22 +139,22 @@ static void observe_firmware_client(
     observation->startup_result = test_firmware_startup_result;
     if (test_firmware_startup_result == BCCAM_UART_FIRMWARE_STARTUP_READY) {
       observation->link_state = BCCAM_UART_LINK_ACTIVE;
-      observation->control_probe_done = true;
-      observation->control_probe_phase = BCCAM_UART_CONTROL_PROBE_DONE;
+      observation->apiservice_probe_done = true;
+      observation->apiservice_probe_phase = BCCAM_UART_APISERVICE_PROBE_DONE;
     } else if (test_firmware_startup_result ==
                BCCAM_UART_FIRMWARE_STARTUP_INCOMPATIBLE) {
       observation->link_state = BCCAM_UART_LINK_ACTIVE;
-      observation->control_probe_phase =
-        BCCAM_UART_CONTROL_PROBE_WAITING_FOR_CONTROL_SERVICE;
+      observation->apiservice_probe_phase =
+        BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_APISERVICE;
     } else if (test_firmware_startup_result ==
                BCCAM_UART_FIRMWARE_STARTUP_ABNORMAL) {
       observation->link_state = BCCAM_UART_LINK_FAULT;
     }
   }
-  if (observation != NULL && test_firmware_control_probe_phase_forced) {
-    observation->control_probe_phase = test_firmware_control_probe_phase;
-    observation->control_probe_done =
-      test_firmware_control_probe_phase == BCCAM_UART_CONTROL_PROBE_DONE;
+  if (observation != NULL && test_firmware_apiservice_probe_phase_forced) {
+    observation->apiservice_probe_phase = test_firmware_apiservice_probe_phase;
+    observation->apiservice_probe_done =
+      test_firmware_apiservice_probe_phase == BCCAM_UART_APISERVICE_PROBE_DONE;
   }
 #endif
 }
@@ -169,8 +169,8 @@ static void populate_status_from_live(bccam_uart_service_status_t *status) {
 
   status->service_state = service_state;
   status->link_state = (uint8_t)observation.link_state;
-  status->tx_credit = observation.control_tx_credit;
-  status->rx_slots = observation.control_rx_slots;
+  status->tx_credit = observation.apiservice_tx_credit;
+  status->rx_slots = observation.apiservice_rx_slots;
   status->negotiated_payload = observation.negotiated_payload;
   status->rx_frames = observation.counters.rx_frames;
   status->tx_frames = observation.counters.tx_frames;
@@ -181,8 +181,8 @@ static void populate_status_from_live(bccam_uart_service_status_t *status) {
   status->uart_errors = uart_error_count;
   status->tx_flushes = observation.tx_flushes;
   status->last_error = observation.last_error;
-  status->control_probe_done = observation.control_probe_done ? 1u : 0u;
-  status->control_schema_count = observation.control_schema_module_count;
+  status->apiservice_probe_done = observation.apiservice_probe_done ? 1u : 0u;
+  status->apiservice_schema_count = observation.apiservice_schema_module_count;
 }
 
 static void store_service_status_cache(
@@ -227,7 +227,7 @@ static bool is_isp_state(bccam_uart_service_state_t state) {
          state == BCCAM_UART_SERVICE_STATE_ISP_COMPLETE;
 }
 
-static void reset_control_probe_logging(void);
+static void reset_apiservice_probe_logging(void);
 static void reset_rx_queue_state(void);
 static void enter_fw_resetting(void);
 
@@ -291,7 +291,7 @@ static void suspend_firmware_link(void) {
 #endif
   bccam_firmware_uart_client_suspend(&firmware_client);
   firmware_startup_deadline_tick = 0;
-  reset_control_probe_logging();
+  reset_apiservice_probe_logging();
   update_service_status_cache();
 }
 
@@ -299,10 +299,10 @@ static void reset_flash_session(void) {
   bccam_bootloader_uart_client_reset_flash_session(&bootloader_client);
 }
 
-static void reset_control_probe_logging(void) {
+static void reset_apiservice_probe_logging(void) {
 #ifdef CONFIG_DECK_BCCAM_DEBUG
-  control_probe_logged = false;
-  control_malformed_logged = 0;
+  apiservice_probe_logged = false;
+  apiservice_malformed_logged = 0;
 #endif
 }
 
@@ -352,20 +352,20 @@ static const char *link_state_name(bccam_uart_link_state_t state) {
   return "UNKNOWN";
 }
 
-static const char *control_probe_phase_name(
-  bccam_uart_control_probe_phase_t phase) {
+static const char *apiservice_probe_phase_name(
+  bccam_uart_apiservice_probe_phase_t phase) {
   switch (phase) {
-    case BCCAM_UART_CONTROL_PROBE_WAITING_FOR_LINK:
+    case BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_LINK:
       return "WAITING_FOR_LINK";
-    case BCCAM_UART_CONTROL_PROBE_WAITING_FOR_CONTROL_SERVICE:
-      return "WAITING_FOR_CONTROL_SERVICE";
-    case BCCAM_UART_CONTROL_PROBE_WAITING_FOR_LOCAL_RX_CREDIT:
+    case BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_APISERVICE:
+      return "WAITING_FOR_APISERVICE";
+    case BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_LOCAL_RX_CREDIT:
       return "WAITING_FOR_LOCAL_RX_CREDIT";
-    case BCCAM_UART_CONTROL_PROBE_WAITING_FOR_TARGET_TX_CREDIT:
+    case BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_TARGET_TX_CREDIT:
       return "WAITING_FOR_TARGET_TX_CREDIT";
-    case BCCAM_UART_CONTROL_PROBE_WAITING_FOR_RESPONSE:
+    case BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_RESPONSE:
       return "WAITING_FOR_RESPONSE";
-    case BCCAM_UART_CONTROL_PROBE_DONE:
+    case BCCAM_UART_APISERVICE_PROBE_DONE:
       return "DONE";
   }
 
@@ -505,8 +505,8 @@ static void format_poll_failure(
                           buffer_size,
                           &position,
                           "phase",
-                          control_probe_phase_name(
-                            observation->control_probe_phase));
+                          apiservice_probe_phase_name(
+                            observation->apiservice_probe_phase));
   append_key_value_string(buffer,
                           buffer_size,
                           &position,
@@ -525,8 +525,8 @@ static void format_poll_failure(
   append_key_value_uint(buffer,
                         buffer_size,
                         &position,
-                        "control",
-                        observation->control_malformed);
+                        "apiservice",
+                        observation->apiservice_malformed);
   append_key_value_uint(buffer,
                         buffer_size,
                         &position,
@@ -606,7 +606,7 @@ static void reset_service_session_state(void) {
   firmware_startup_deadline_tick = 0;
   startup_stall_deadline_tick = 0;
   startup_stall_reported = false;
-  reset_control_probe_logging();
+  reset_apiservice_probe_logging();
   // Received Console bytes were dispatched out of the link session as they
   // arrived, so a pending frame survives and is forwarded in the next session.
   if (!console_frame_pending) {
@@ -623,8 +623,8 @@ static void enter_fw_resetting(void) {
   disable_firmware_rx_callbacks();
 #endif
   service_state = BCCAM_UART_SERVICE_STATE_FW_RESETTING;
-  // The Control session ends now, not when the deck has booted again.
-  bccam_uart_runtime_close_control(&firmware_client.runtime);
+  // The API Service session ends now, not when the deck has booted again.
+  bccam_uart_runtime_close_apiservice(&firmware_client.runtime);
   reset_service_session_state();
   reset_rx_queue_state();
   update_service_status_cache();
@@ -672,18 +672,18 @@ static const char *startup_phase_message(void) {
     return "startup stopped because the UART link entered fault state.";
   }
 
-  switch (observation.control_probe_phase) {
-    case BCCAM_UART_CONTROL_PROBE_WAITING_FOR_LINK:
+  switch (observation.apiservice_probe_phase) {
+    case BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_LINK:
       return "startup stopped while waiting for Camera Link establishment or catalog enumeration.";
-    case BCCAM_UART_CONTROL_PROBE_WAITING_FOR_CONTROL_SERVICE:
-      return "startup stopped because a compatible Control service was not advertised.";
-    case BCCAM_UART_CONTROL_PROBE_WAITING_FOR_LOCAL_RX_CREDIT:
-      return "startup stopped while preparing local Control communication.";
-    case BCCAM_UART_CONTROL_PROBE_WAITING_FOR_TARGET_TX_CREDIT:
-      return "startup stopped while waiting for the camera deck to grant Control communication.";
-    case BCCAM_UART_CONTROL_PROBE_WAITING_FOR_RESPONSE:
-      return "startup stopped after sending the Control request, before a valid response was received.";
-    case BCCAM_UART_CONTROL_PROBE_DONE:
+    case BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_APISERVICE:
+      return "startup stopped because a compatible API Service was not advertised.";
+    case BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_LOCAL_RX_CREDIT:
+      return "startup stopped while preparing local API Service communication.";
+    case BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_TARGET_TX_CREDIT:
+      return "startup stopped while waiting for the camera deck to grant API Service communication.";
+    case BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_RESPONSE:
+      return "startup stopped after sending the API Service request, before a valid response was received.";
+    case BCCAM_UART_APISERVICE_PROBE_DONE:
       return "startup completed.";
   }
 
@@ -723,38 +723,38 @@ static bool update_firmware_startup_progress(const char **phase_message) {
 
   service_state = BCCAM_UART_SERVICE_STATE_FW_INCOMPATIBLE;
   firmware_startup_deadline_tick = 0;
-  reset_control_probe_logging();
+  reset_apiservice_probe_logging();
   update_service_status_cache();
   return true;
 }
 
 #ifdef CONFIG_DECK_BCCAM_DEBUG
-static void log_control_probe_progress(void) {
+static void log_apiservice_probe_progress(void) {
   bccam_firmware_uart_client_observation_t observation;
   observe_firmware_client(&observation);
 
-  if (!control_probe_logged && observation.control_probe_done) {
-    const uint8_t module_count = observation.control_schema_module_count;
+  if (!apiservice_probe_logged && observation.apiservice_probe_done) {
+    const uint8_t module_count = observation.apiservice_schema_module_count;
 
-    DEBUG_PRINT("UART control schema modules: %u\n", module_count);
+    DEBUG_PRINT("UART API Service schema modules: %u\n", module_count);
     for (uint8_t i = 0; i < module_count; i++) {
-      const bccam_uart_control_schema_module_t *module =
-        bccam_firmware_uart_client_control_schema_module(&firmware_client, i);
+      const bccam_uart_apiservice_schema_module_t *module =
+        bccam_firmware_uart_client_apiservice_schema_module(&firmware_client, i);
       if (module != NULL) {
-        DEBUG_PRINT("UART control schema %s: %s %u.%u\n",
+        DEBUG_PRINT("UART API Service schema %s: %s %u.%u\n",
                     module->namespace,
                     module->contract_id,
                     module->major,
                     module->minor);
       }
     }
-    control_probe_logged = true;
+    apiservice_probe_logged = true;
   }
 
-  const uint16_t malformed = observation.control_malformed;
-  if (malformed != control_malformed_logged) {
-    DEBUG_PRINT("UART control malformed responses: %u\n", malformed);
-    control_malformed_logged = malformed;
+  const uint16_t malformed = observation.apiservice_malformed;
+  if (malformed != apiservice_malformed_logged) {
+    DEBUG_PRINT("UART API Service malformed responses: %u\n", malformed);
+    apiservice_malformed_logged = malformed;
   }
 }
 #endif
@@ -777,7 +777,7 @@ static void start_firmware_establishment_at(TickType_t now) {
 #if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
   enable_firmware_rx_callbacks();
 #endif
-  reset_control_probe_logging();
+  reset_apiservice_probe_logging();
   service_state = BCCAM_UART_SERVICE_STATE_FW_ESTABLISHING;
   firmware_startup_deadline_tick =
     (uint32_t)now + M2T(BCCAM_FW_STARTUP_TIMEOUT_MS);
@@ -964,23 +964,23 @@ static void populate_startup_report(
   observe_firmware_client(&observation);
   report->reset_count = firmware_startup_reset_count;
   report->advertised_service_count = observation.advertised_service_count;
-  memset(&report->control_descriptor, 0, sizeof(report->control_descriptor));
-  report->control_descriptor_present =
-    bccam_firmware_uart_client_control_descriptor(
-      &firmware_client, &report->control_descriptor);
+  memset(&report->apiservice_descriptor, 0, sizeof(report->apiservice_descriptor));
+  report->apiservice_descriptor_present =
+    bccam_firmware_uart_client_apiservice_descriptor(
+      &firmware_client, &report->apiservice_descriptor);
 }
 #endif
 
 static void report_advertised_services(void) {
   bccam_firmware_uart_client_observation_t observation;
-  bccam_uart_service_descriptor_t control;
+  bccam_uart_service_descriptor_t apiservice;
   observe_firmware_client(&observation);
 
   DEBUG_PRINT("bcCam UART: advertised service count: %u\n",
               observation.advertised_service_count);
-  if (bccam_firmware_uart_client_control_descriptor(&firmware_client, &control)) {
-    DEBUG_PRINT("bcCam UART: compatible Control handle=%u version=%u.%u\n",
-                control.handle, control.major, control.minor);
+  if (bccam_firmware_uart_client_apiservice_descriptor(&firmware_client, &apiservice)) {
+    DEBUG_PRINT("bcCam UART: compatible API Service handle=%u version=%u.%u\n",
+                apiservice.handle, apiservice.major, apiservice.minor);
   }
 }
 
@@ -1005,7 +1005,7 @@ static void report_firmware_startup_incompatible(const char *phase_message) {
 
 static void report_firmware_startup_stall(
   const char *phase_message,
-  bccam_uart_control_probe_phase_t probe_phase) {
+  bccam_uart_apiservice_probe_phase_t probe_phase) {
 #if defined(UNIT_TEST) || defined(UNIT_TEST_MODE)
   test_startup_stall_report_count++;
 #endif
@@ -1014,7 +1014,7 @@ static void report_firmware_startup_stall(
   if (phase_message != NULL) {
     DEBUG_PRINT("bcCam UART: %s\n", phase_message);
   }
-  if (probe_phase == BCCAM_UART_CONTROL_PROBE_WAITING_FOR_CONTROL_SERVICE) {
+  if (probe_phase == BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_APISERVICE) {
     report_advertised_services();
   }
 }
@@ -1047,7 +1047,7 @@ static void update_startup_stall_report(
   startup_stall_reported = true;
   startup_stall_deadline_tick = 0;
   report_firmware_startup_stall(startup_phase_message(),
-                                observation->control_probe_phase);
+                                observation->apiservice_probe_phase);
 }
 
 /**
@@ -1152,7 +1152,7 @@ static void poll_firmware_link_at(uint32_t now_ticks) {
       previous_service_state != BCCAM_UART_SERVICE_STATE_FW_INCOMPATIBLE) {
     service_state = BCCAM_UART_SERVICE_STATE_FW_ACTIVE;
 #ifdef CONFIG_DECK_BCCAM_DEBUG
-    log_control_probe_progress();
+    log_apiservice_probe_progress();
 #endif
 
     const char *incompatible_phase_message = NULL;
@@ -1291,8 +1291,8 @@ static const rx_service_handler_t rx_service_handlers[] = {
  */
 static void dispatch_received_frames(void)
 {
-  /* Control frames go to the Control mailbox, see bccam_uart_runtime.h. */
-  bccam_uart_runtime_stage_control_rx(&firmware_client.runtime);
+  /* API Service frames go to the API Service mailbox, see bccam_uart_runtime.h. */
+  bccam_uart_runtime_stage_apiservice_rx(&firmware_client.runtime);
 
   uint8_t payload[BCCAM_UART_CAMERA_PROFILE_MTU];
   for (size_t i = 0u;
@@ -1654,9 +1654,9 @@ void bccam_uart_service_test_reset(void) {
   test_incompatible_report_count = 0;
   test_firmware_startup_result_forced = false;
   test_firmware_startup_result = BCCAM_UART_FIRMWARE_STARTUP_WAITING;
-  test_firmware_control_probe_phase_forced = false;
-  test_firmware_control_probe_phase =
-    BCCAM_UART_CONTROL_PROBE_WAITING_FOR_LINK;
+  test_firmware_apiservice_probe_phase_forced = false;
+  test_firmware_apiservice_probe_phase =
+    BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_LINK;
   test_bootloader_enter_result_forced = false;
   test_bootloader_enter_result = false;
   test_startup_stall_report_count = 0;
@@ -1711,10 +1711,10 @@ void bccam_uart_service_test_set_firmware_startup_result(
   test_firmware_startup_result = result;
 }
 
-void bccam_uart_service_test_set_firmware_control_probe_phase(
-  bccam_uart_control_probe_phase_t phase) {
-  test_firmware_control_probe_phase_forced = true;
-  test_firmware_control_probe_phase = phase;
+void bccam_uart_service_test_set_firmware_apiservice_probe_phase(
+  bccam_uart_apiservice_probe_phase_t phase) {
+  test_firmware_apiservice_probe_phase_forced = true;
+  test_firmware_apiservice_probe_phase = phase;
 }
 
 void bccam_uart_service_test_set_bootloader_enter_result(bool result) {

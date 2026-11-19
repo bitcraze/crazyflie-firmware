@@ -136,7 +136,7 @@ void testEstablishAndCatalogRequestsMatchPinnedGoldenVectors(void) {
   TEST_ASSERT_EQUAL_MEMORY(golden_get_service_descriptor_frame, frame, frame_len);
 }
 
-void testCatalogStreamsDescriptorsAndBindsOpaqueControlHandle(void) {
+void testCatalogStreamsDescriptorsAndBindsOpaqueApiserviceHandle(void) {
   bccam_uart_link_endpoint_t link;
   bccam_uart_service_descriptor_t descriptor;
 
@@ -148,13 +148,13 @@ void testCatalogStreamsDescriptorsAndBindsOpaqueControlHandle(void) {
   reply_descriptor(&link, 0, 0x31, 1, 4, "vendor.telemetry_long");
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_link_start_service_descriptor(&link, 1));
-  reply_descriptor(&link, 1, 0xA5, BCCAM_UART_CONTROL_CONTRACT_MAJOR, 0, "bitcraze.control");
+  reply_descriptor(&link, 1, 0xA5, BCCAM_UART_APISERVICE_CONTRACT_MAJOR, 0, "bitcraze.api");
 
   TEST_ASSERT_TRUE(bccam_uart_link_catalog_complete(&link));
-  TEST_ASSERT_TRUE(bccam_uart_link_control_binding(&link, &descriptor));
+  TEST_ASSERT_TRUE(bccam_uart_link_apiservice_binding(&link, &descriptor));
   TEST_ASSERT_EQUAL_UINT8(0xA5, descriptor.handle);
-  TEST_ASSERT_EQUAL_UINT8(16, descriptor.contract_id_len);
-  TEST_ASSERT_EQUAL_MEMORY("bitcraze.control", descriptor.contract_id, 16);
+  TEST_ASSERT_EQUAL_UINT8(12, descriptor.contract_id_len);
+  TEST_ASSERT_EQUAL_MEMORY("bitcraze.api", descriptor.contract_id, 12);
 }
 
 /** Verify discovery and receive credit for an opaque Console handle. */
@@ -194,7 +194,7 @@ void testCatalogBindsConsoleAndAppliesIndependentReceiveCredit(void) {
 }
 
 /** Verify supported services own independent pending receive slots. */
-void testControlAndConsoleCanHoldPendingFramesAtTheSameTime(void) {
+void testApiserviceAndConsoleCanHoldPendingFramesAtTheSameTime(void) {
   bccam_uart_link_endpoint_t link;
 
   establish(&link);
@@ -202,7 +202,7 @@ void testControlAndConsoleCanHoldPendingFramesAtTheSameTime(void) {
   reply_count(&link, 2);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_link_start_service_descriptor(&link, 0));
-  reply_descriptor(&link, 0, 7, BCCAM_UART_CONTROL_CONTRACT_MAJOR, 0, "bitcraze.control");
+  reply_descriptor(&link, 0, 7, BCCAM_UART_APISERVICE_CONTRACT_MAJOR, 0, "bitcraze.api");
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_link_start_service_descriptor(&link, 1));
   reply_descriptor(&link, 1, 9, 1, 0, "bitcraze.console");
@@ -237,7 +237,7 @@ void testControlAndConsoleCanHoldPendingFramesAtTheSameTime(void) {
   TEST_ASSERT_EQUAL_MEMORY("control", payload, 7);
 }
 
-void testIncompatibleControlMajorIsDiscoveredButNotBound(void) {
+void testIncompatibleApiserviceMajorIsDiscoveredButNotBound(void) {
   bccam_uart_link_endpoint_t link;
   bccam_uart_service_descriptor_t descriptor;
 
@@ -246,10 +246,10 @@ void testIncompatibleControlMajorIsDiscoveredButNotBound(void) {
   reply_count(&link, 1);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_link_start_service_descriptor(&link, 0));
-  reply_descriptor(&link, 0, 7, BCCAM_UART_CONTROL_CONTRACT_MAJOR + 1u, 0, "bitcraze.control");
+  reply_descriptor(&link, 0, 7, BCCAM_UART_APISERVICE_CONTRACT_MAJOR + 1u, 0, "bitcraze.api");
 
   TEST_ASSERT_TRUE(bccam_uart_link_catalog_complete(&link));
-  TEST_ASSERT_FALSE(bccam_uart_link_control_binding(&link, &descriptor));
+  TEST_ASSERT_FALSE(bccam_uart_link_apiservice_binding(&link, &descriptor));
 }
 
 void testOnlyOneAcknowledgedRequestCanBePendingAndEstablishPreemptsIt(void) {
@@ -279,7 +279,7 @@ void testBootNoticeClearsSessionBindingCreditsAndPendingUnits(void) {
   reply_count(&link, 1);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_link_start_service_descriptor(&link, 0));
-  reply_descriptor(&link, 0, 9, BCCAM_UART_CONTROL_CONTRACT_MAJOR, 0, "bitcraze.control");
+  reply_descriptor(&link, 0, 9, BCCAM_UART_APISERVICE_CONTRACT_MAJOR, 0, "bitcraze.api");
   {
     const uint8_t credit[] = { BCCAM_UART_LINK_OP_CREDIT_UPDATE, 0, 9, 1 };
     TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
@@ -295,7 +295,7 @@ void testBootNoticeClearsSessionBindingCreditsAndPendingUnits(void) {
       bccam_uart_link_receive_unit(&link, 1, 0, boot, sizeof(boot)));
   }
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_LINK_INACTIVE, link.state);
-  TEST_ASSERT_FALSE(bccam_uart_link_control_binding(&link, NULL));
+  TEST_ASSERT_FALSE(bccam_uart_link_apiservice_binding(&link, NULL));
   TEST_ASSERT_EQUAL_UINT8(0, bccam_uart_link_get_tx_credit(&link, 9));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_link_take_tx_unit(&link, &version, &service, payload,
@@ -312,7 +312,7 @@ void testNegotiatedMtuAndPerServiceCreditAreEnforced(void) {
   reply_count(&link, 1);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_link_start_service_descriptor(&link, 0));
-  reply_descriptor(&link, 0, 0x44, BCCAM_UART_CONTROL_CONTRACT_MAJOR, 0, "bitcraze.control");
+  reply_descriptor(&link, 0, 0x44, BCCAM_UART_APISERVICE_CONTRACT_MAJOR, 0, "bitcraze.api");
   {
     const uint8_t credit[] = { BCCAM_UART_LINK_OP_CREDIT_UPDATE, 0, 0x44, 1 };
     TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
@@ -801,12 +801,12 @@ void testReestablishmentClearsPendingRxTxCreditAndCatalogState(void) {
   link.seen_ordinals[0] = 1;
   link.seen_handles[0] = 0x80;
   link.observed_credit_handles[0] = 0x80;
-  link.control_binding.valid = true;
-  link.control_binding.descriptor.handle = 7;
-  link.control_binding.tx_credit = 4;
-  link.control_binding.rx_advertised_credit = 1;
-  link.control_binding.rx_pending = true;
-  link.control_binding.rx_payload_len = 1;
+  link.apiservice_binding.valid = true;
+  link.apiservice_binding.descriptor.handle = 7;
+  link.apiservice_binding.tx_credit = 4;
+  link.apiservice_binding.rx_advertised_credit = 1;
+  link.apiservice_binding.rx_pending = true;
+  link.apiservice_binding.rx_payload_len = 1;
   link.tx_pending = true;
   link.tx_payload_len = 1;
   link.pending = BCCAM_UART_PENDING_SERVICE_COUNT;
@@ -816,8 +816,8 @@ void testReestablishmentClearsPendingRxTxCreditAndCatalogState(void) {
     bccam_uart_link_start_establishment(&link));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_LINK_INACTIVE, link.state);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_PENDING_ESTABLISH, link.pending);
-  TEST_ASSERT_FALSE(link.control_binding.rx_pending);
-  TEST_ASSERT_FALSE(link.control_binding.valid);
+  TEST_ASSERT_FALSE(link.apiservice_binding.rx_pending);
+  TEST_ASSERT_FALSE(link.apiservice_binding.valid);
   TEST_ASSERT_FALSE(link.service_count_known);
   TEST_ASSERT_EQUAL_UINT8(0, link.seen_ordinals[0]);
   TEST_ASSERT_EQUAL_UINT8(0, link.seen_handles[0]);

@@ -11,9 +11,9 @@
 #define BCCAM_UART_NORMAL_MAX_PAYLOAD 256u
 #define BCCAM_UART_SERVICE_LINK_MANAGEMENT 0u
 #define BCCAM_UART_SERVICE_CONTRACT_ID_MAX_LEN 24u
-/** Major version of bitcraze.control bound by the Crazyflie. 0 matches the
- * camera deck firmware, see docs/functional-areas/camera-deck-control.md. */
-#define BCCAM_UART_CONTROL_CONTRACT_MAJOR 0u
+/** Major version of bitcraze.api bound by the Crazyflie. 0 matches the
+ * camera deck firmware, see docs/functional-areas/camera-deck-apiservice.md. */
+#define BCCAM_UART_APISERVICE_CONTRACT_MAJOR 0u
 /** Supported major version of the bitcraze.console service contract. */
 #define BCCAM_UART_CONSOLE_CONTRACT_MAJOR 1u
 
@@ -119,7 +119,7 @@ typedef struct bccam_uart_link_endpoint_t {
   uint8_t seen_handles[32];
   uint8_t pending_tx_credit[256];
   uint8_t observed_credit_handles[32];
-  bccam_uart_service_binding_t control_binding;
+  bccam_uart_service_binding_t apiservice_binding;
   /** Compatible Console service and its independent receive slot. */
   bccam_uart_service_binding_t console_binding;
   bool tx_pending;
@@ -210,7 +210,7 @@ int bccam_uart_link_clear_fault(bccam_uart_link_endpoint_t *endpoint);
 int bccam_uart_link_note_tx_failure(bccam_uart_link_endpoint_t *endpoint);
 
 bool bccam_uart_link_catalog_complete(const bccam_uart_link_endpoint_t *endpoint);
-bool bccam_uart_link_control_binding(const bccam_uart_link_endpoint_t *endpoint,
+bool bccam_uart_link_apiservice_binding(const bccam_uart_link_endpoint_t *endpoint,
                                      bccam_uart_service_descriptor_t *descriptor);
 
 /**

@@ -21,10 +21,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * control.c - Control router: endpoint registry and request routing.
+ * apiservice.c - API Service router: endpoint registry and request routing.
  */
 
-#include "control.h"
+#include "apiservice.h"
 
 #include <errno.h>
 #include <stdatomic.h>
@@ -34,27 +34,27 @@
 #include "task.h"
 
 /** Bit 7 of the kind byte: set for target-to-initiator messages. */
-#define CONTROL_KIND_TI_BIT 0x80u
+#define APISERVICE_KIND_TI_BIT 0x80u
 /** First unsolicited kind (NOTIFY and reserved unsolicited kinds). */
-#define CONTROL_KIND_UNSOLICITED_FIRST 0xc0u
+#define APISERVICE_KIND_UNSOLICITED_FIRST 0xc0u
 /** First and last response kind (OK, VALUE, ERROR and reserved responses). */
-#define CONTROL_KIND_RESPONSE_FIRST 0x80u
-#define CONTROL_KIND_RESPONSE_LAST 0xbfu
+#define APISERVICE_KIND_RESPONSE_FIRST 0x80u
+#define APISERVICE_KIND_RESPONSE_LAST 0xbfu
 
 /** Registered endpoints in ID order. */
-static ControlEndpoint *endpointHead;
-static ControlEndpoint *endpointTail;
+static ApiserviceEndpoint *endpointHead;
+static ApiserviceEndpoint *endpointTail;
 /** Can reach 255, one past the highest assignable ID. */
 static uint16_t endpointCount;
 /**
  * True after registration has closed. The release store in
- * controlEndpointFreeze() publishes the list; readers load it with acquire
+ * apiserviceEndpointFreeze() publishes the list; readers load it with acquire
  * and then walk the immutable list without a lock.
  */
 static atomic_bool endpointsFrozen;
 
 /** Registered listeners. Written before the freeze only, like the endpoints. */
-static ControlListener *listenerHead;
+static ApiserviceListener *listenerHead;
 static atomic_uint_least32_t notifyDropped;
 
 /** True for a path of printable ASCII with ':' between non-empty segments. */
@@ -79,7 +79,7 @@ static bool validPath(const char *path, size_t *lengthOut)
       segmentStart = false;
     }
     length++;
-    if (length > CONTROL_ENDPOINT_PATH_MAX_LENGTH) {
+    if (length > APISERVICE_ENDPOINT_PATH_MAX_LENGTH) {
       return false;
     }
   }
@@ -90,7 +90,7 @@ static bool validPath(const char *path, size_t *lengthOut)
   return true;
 }
 
-int controlEndpointRegister(ControlEndpoint *endpoint)
+int apiserviceEndpointRegister(ApiserviceEndpoint *endpoint)
 {
   if (endpoint == NULL) {
     return EINVAL;
@@ -106,12 +106,12 @@ int controlEndpointRegister(ControlEndpoint *endpoint)
   if (atomic_load_explicit(&endpointsFrozen, memory_order_relaxed)) {
     return EBUSY;
   }
-  for (ControlEndpoint *entry = endpointHead; entry != NULL; entry = entry->next) {
+  for (ApiserviceEndpoint *entry = endpointHead; entry != NULL; entry = entry->next) {
     if (entry == endpoint || strcmp(entry->path, endpoint->path) == 0) {
       return EEXIST;
     }
   }
-  if (endpointCount >= CONTROL_ENDPOINT_MAX) {
+  if (endpointCount >= APISERVICE_ENDPOINT_MAX) {
     return ENOSPC;
   }
 
@@ -129,27 +129,27 @@ int controlEndpointRegister(ControlEndpoint *endpoint)
   return 0;
 }
 
-void controlEndpointFreeze(void)
+void apiserviceEndpointFreeze(void)
 {
   atomic_store_explicit(&endpointsFrozen, true, memory_order_release);
 }
 
-bool controlEndpointsAreFrozen(void)
+bool apiserviceEndpointsAreFrozen(void)
 {
   return atomic_load_explicit(&endpointsFrozen, memory_order_acquire);
 }
 
-uint8_t controlEndpointCount(void)
+uint8_t apiserviceEndpointCount(void)
 {
-  return controlEndpointsAreFrozen() ? (uint8_t)endpointCount : 0u;
+  return apiserviceEndpointsAreFrozen() ? (uint8_t)endpointCount : 0u;
 }
 
-ControlEndpoint *controlEndpointById(uint8_t id)
+ApiserviceEndpoint *apiserviceEndpointById(uint8_t id)
 {
-  if (!controlEndpointsAreFrozen()) {
+  if (!apiserviceEndpointsAreFrozen()) {
     return NULL;
   }
-  for (ControlEndpoint *endpoint = endpointHead; endpoint != NULL; endpoint = endpoint->next) {
+  for (ApiserviceEndpoint *endpoint = endpointHead; endpoint != NULL; endpoint = endpoint->next) {
     if (endpoint->id == id) {
       return endpoint;
     }
@@ -157,13 +157,13 @@ ControlEndpoint *controlEndpointById(uint8_t id)
   return NULL;
 }
 
-bool controlEndpointIsReady(const ControlEndpoint *endpoint)
+bool apiserviceEndpointIsReady(const ApiserviceEndpoint *endpoint)
 {
   return endpoint != NULL && endpoint->ops->isReady(endpoint);
 }
 
 /** Take the next free wire ID from nextWireId. False when all are in flight. */
-static bool wireIdTake(ControlEndpoint *endpoint, uint8_t *wireId)
+static bool wireIdTake(ApiserviceEndpoint *endpoint, uint8_t *wireId)
 {
   bool found = false;
   taskENTER_CRITICAL();
@@ -184,19 +184,19 @@ static bool wireIdTake(ControlEndpoint *endpoint, uint8_t *wireId)
   return found;
 }
 
-static void wireIdRelease(ControlEndpoint *endpoint, uint8_t wireId)
+static void wireIdRelease(ApiserviceEndpoint *endpoint, uint8_t wireId)
 {
   taskENTER_CRITICAL();
   endpoint->wireIdsInFlight[wireId >> 5] &= ~(1uL << (wireId & 31u));
   taskEXIT_CRITICAL();
 }
 
-int controlSubmit(ControlEndpoint *endpoint, ControlRequest *request,
+int apiserviceSubmit(ApiserviceEndpoint *endpoint, ApiserviceRequest *request,
                   uint8_t *message, size_t length)
 {
   if (endpoint == NULL || request == NULL || message == NULL ||
       request->complete == NULL || request->response == NULL ||
-      length < 2u || (message[0] & CONTROL_KIND_TI_BIT) != 0u) {
+      length < 2u || (message[0] & APISERVICE_KIND_TI_BIT) != 0u) {
     return EINVAL;
   }
   if (length > endpoint->maxRequest) {
@@ -229,16 +229,16 @@ int controlSubmit(ControlEndpoint *endpoint, ControlRequest *request,
   return 0;
 }
 
-void controlRequestComplete(ControlRequest *request, int status,
+void apiserviceRequestComplete(ApiserviceRequest *request, int status,
                             const uint8_t *response, size_t length)
 {
-  ControlEndpoint *endpoint = request->endpoint;
+  ApiserviceEndpoint *endpoint = request->endpoint;
   const uint8_t wireId = request->wireId;
 
   if (status == 0) {
     if (response == NULL || length < 2u ||
-        response[0] < CONTROL_KIND_RESPONSE_FIRST ||
-        response[0] > CONTROL_KIND_RESPONSE_LAST ||
+        response[0] < APISERVICE_KIND_RESPONSE_FIRST ||
+        response[0] > APISERVICE_KIND_RESPONSE_LAST ||
         response[1] != wireId) {
       status = EPROTO;
     } else if (length > request->responseCapacity) {
@@ -260,7 +260,7 @@ void controlRequestComplete(ControlRequest *request, int status,
   request->complete(request, status, length);
 }
 
-int controlListenerRegister(ControlListener *listener)
+int apiserviceListenerRegister(ApiserviceListener *listener)
 {
   if (listener == NULL || listener->onNotify == NULL) {
     return EINVAL;
@@ -268,7 +268,7 @@ int controlListenerRegister(ControlListener *listener)
   if (atomic_load_explicit(&endpointsFrozen, memory_order_relaxed)) {
     return EBUSY;
   }
-  for (ControlListener *entry = listenerHead; entry != NULL; entry = entry->next) {
+  for (ApiserviceListener *entry = listenerHead; entry != NULL; entry = entry->next) {
     if (entry == listener) {
       return EEXIST;
     }
@@ -278,31 +278,31 @@ int controlListenerRegister(ControlListener *listener)
   return 0;
 }
 
-void controlEndpointNotify(ControlEndpoint *endpoint, const uint8_t *message,
+void apiserviceEndpointNotify(ApiserviceEndpoint *endpoint, const uint8_t *message,
                            size_t length)
 {
   // The listener list is immutable after the freeze, so it is walked without
   // a lock, as the endpoint list.
   if (endpoint == NULL || message == NULL || length < 1u ||
-      message[0] < CONTROL_KIND_UNSOLICITED_FIRST ||
-      !controlEndpointsAreFrozen()) {
+      message[0] < APISERVICE_KIND_UNSOLICITED_FIRST ||
+      !apiserviceEndpointsAreFrozen()) {
     atomic_fetch_add_explicit(&notifyDropped, 1u, memory_order_relaxed);
     return;
   }
-  for (ControlListener *listener = listenerHead; listener != NULL; listener = listener->next) {
+  for (ApiserviceListener *listener = listenerHead; listener != NULL; listener = listener->next) {
     if (listener->endpoint == NULL || listener->endpoint == endpoint) {
       listener->onNotify(listener, endpoint, message, length);
     }
   }
 }
 
-uint32_t controlNotifyDroppedCount(void)
+uint32_t apiserviceNotifyDroppedCount(void)
 {
   return atomic_load_explicit(&notifyDropped, memory_order_relaxed);
 }
 
 #ifdef UNIT_TEST_MODE
-void controlResetForTest(void)
+void apiserviceResetForTest(void)
 {
   endpointHead = NULL;
   endpointTail = NULL;

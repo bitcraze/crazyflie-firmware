@@ -1,7 +1,7 @@
 /**
- * Temporary test user of the Control Service, for testing on hardware.
+ * Temporary test user of the API Service, for testing on hardware.
  *
- * Enabled with CONFIG_DECK_BCCAM_CONTROL_TEST. Set the params in the
+ * Enabled with CONFIG_DECK_BCCAM_APISERVICE_TEST. Set the params in the
  * bcCamCtlT group, then write trigger to submit. Results are printed to the
  * console and exposed in the bcCamCtlT log group.
  */
@@ -10,7 +10,7 @@
 
 #include "log.h"
 #include "param.h"
-#include "syslink2_control_service.h"
+#include "syslink2_apiservice.h"
 
 #define DEBUG_MODULE "CTLTEST"
 #include "debug.h"
@@ -32,7 +32,7 @@ static uint8_t useRaw;
 static uint8_t count = 1u;
 static uint8_t trigger;
 
-/* Results, written in the Control task or the param task. */
+/* Results, written in the API Service task or the param task. */
 static uint8_t nextUserId;
 static uint8_t lastSubmit;
 static uint8_t lastId;
@@ -45,7 +45,7 @@ static uint16_t completions;
 static uint16_t accepted;
 static uint8_t ready;
 
-static int32_t decodeValue(const syslink2_control_value_t *v) {
+static int32_t decodeValue(const syslink2_apiservice_value_t *v) {
   switch (v->type) {
     case 0x01u:
     case 0x10u:
@@ -76,12 +76,12 @@ static uint8_t lenForType(uint8_t type) {
   }
 }
 
-static void onComplete(const syslink2_control_request_t *request,
-                       const syslink2_control_result_t *result) {
+static void onComplete(const syslink2_apiservice_request_t *request,
+                       const syslink2_apiservice_result_t *result) {
   lastId = request->user_request_id;
   lastOutcome = (uint8_t)result->outcome;
   lastType = result->value.type;
-  lastValue = result->outcome == SYSLINK2_CONTROL_OUTCOME_VALUE ?
+  lastValue = result->outcome == SYSLINK2_APISERVICE_OUTCOME_VALUE ?
     decodeValue(&result->value) : 0;
   lastErrorCode = result->error_code;
   lastRawLen = 0u;
@@ -91,7 +91,7 @@ static void onComplete(const syslink2_control_request_t *request,
               (long)lastValue, lastErrorCode);
 }
 
-static void onCompleteRaw(syslink2_control_outcome_t outcome,
+static void onCompleteRaw(syslink2_apiservice_outcome_t outcome,
                           uint8_t userRequestId, const uint8_t *data,
                           uint8_t len) {
   lastId = userRequestId;
@@ -100,12 +100,12 @@ static void onCompleteRaw(syslink2_control_outcome_t outcome,
   lastType = 0u;
   lastValue = 0;
   lastErrorCode = 0u;
-  if (outcome == SYSLINK2_CONTROL_OUTCOME_VALUE && len >= 4u) {
-    syslink2_control_value_t v = { .type = data[2], .len = data[3] };
+  if (outcome == SYSLINK2_APISERVICE_OUTCOME_VALUE && len >= 4u) {
+    syslink2_apiservice_value_t v = { .type = data[2], .len = data[3] };
     memcpy(v.data, &data[4], v.len <= sizeof(v.data) ? v.len : sizeof(v.data));
     lastType = v.type;
     lastValue = decodeValue(&v);
-  } else if (outcome == SYSLINK2_CONTROL_OUTCOME_ERROR && len >= 3u) {
+  } else if (outcome == SYSLINK2_APISERVICE_OUTCOME_ERROR && len >= 3u) {
     lastErrorCode = data[2];
   }
   completions++;
@@ -113,16 +113,16 @@ static void onCompleteRaw(syslink2_control_outcome_t outcome,
               lastOutcome, len, (long)lastValue, lastErrorCode);
 }
 
-static syslink2_control_submit_result_t submitOne(uint8_t userId) {
+static syslink2_apiservice_submit_result_t submitOne(uint8_t userId) {
   const char *path = paths[pathIndex < PATH_COUNT ? pathIndex : 0u];
   const uint8_t pathLen = (uint8_t)strlen(path);
-  syslink2_control_value_t v = { .type = valueType, .len = lenForType(valueType) };
+  syslink2_apiservice_value_t v = { .type = valueType, .len = lenForType(valueType) };
   for (uint8_t i = 0u; i < v.len; i++) {
     v.data[i] = (uint8_t)((uint32_t)value >> (8u * i));
   }
 
   if (useRaw) {
-    uint8_t raw[SYSLINK2_CONTROL_FRAME_MAX_LEN];
+    uint8_t raw[SYSLINK2_APISERVICE_FRAME_MAX_LEN];
     uint8_t len = 0u;
     raw[len++] = operation;
     raw[len++] = userId;
@@ -135,17 +135,17 @@ static syslink2_control_submit_result_t submitOne(uint8_t userId) {
       memcpy(&raw[len], v.data, v.len);
       len = (uint8_t)(len + v.len);
     }
-    return syslink2_control_service_submit_raw(raw, len, onCompleteRaw);
+    return syslink2_apiservice_submit_raw(raw, len, onCompleteRaw);
   }
 
-  syslink2_control_request_t request = {
+  syslink2_apiservice_request_t request = {
     .operation = operation,
     .user_request_id = userId,
     .path_len = pathLen,
     .value = v,
   };
   memcpy(request.path, path, pathLen);
-  return syslink2_control_service_submit(&request, onComplete);
+  return syslink2_apiservice_submit(&request, onComplete);
 }
 
 static void triggerChanged(void) {
@@ -153,12 +153,12 @@ static void triggerChanged(void) {
     return;
   }
   trigger = 0u;
-  ready = syslink2_control_service_is_ready() ? 1u : 0u;
+  ready = syslink2_apiservice_is_ready() ? 1u : 0u;
   for (uint8_t i = 0u; i < count; i++) {
     const uint8_t userId = nextUserId++;
-    const syslink2_control_submit_result_t r = submitOne(userId);
+    const syslink2_apiservice_submit_result_t r = submitOne(userId);
     lastSubmit = (uint8_t)r;
-    if (r == SYSLINK2_CONTROL_SUBMIT_ACCEPTED) {
+    if (r == SYSLINK2_APISERVICE_SUBMIT_ACCEPTED) {
       accepted++;
     }
     DEBUG_PRINT("submit id=%u result=%u ready=%u\n", userId, lastSubmit, ready);
@@ -168,7 +168,7 @@ static void triggerChanged(void) {
 static uint8_t readyLog(uint32_t timestamp, void *data) {
   (void)timestamp;
   (void)data;
-  return syslink2_control_service_is_ready() ? 1u : 0u;
+  return syslink2_apiservice_is_ready() ? 1u : 0u;
 }
 
 static logByFunction_t readyLogDef = { .acquireUInt8 = readyLog, .data = NULL };

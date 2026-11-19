@@ -15,19 +15,19 @@ typedef struct {
 typedef struct {
   bccam_uart_link_state_t link_state;
   bccam_uart_firmware_startup_result_t startup_result;
-  bccam_uart_control_probe_phase_t control_probe_phase;
+  bccam_uart_apiservice_probe_phase_t apiservice_probe_phase;
   bccam_uart_link_counters_t counters;
   uint16_t negotiated_payload;
   uint16_t rx_bytes;
   uint16_t tx_bytes;
   uint16_t tx_flushes;
-  uint16_t control_malformed;
+  uint16_t apiservice_malformed;
   int32_t last_error;
-  uint8_t control_tx_credit;
-  uint8_t control_rx_slots;
-  uint8_t control_schema_module_count;
+  uint8_t apiservice_tx_credit;
+  uint8_t apiservice_rx_slots;
+  uint8_t apiservice_schema_module_count;
   uint8_t advertised_service_count;
-  bool control_probe_done;
+  bool apiservice_probe_done;
 } bccam_firmware_uart_client_observation_t;
 
 void bccam_firmware_uart_client_init(
@@ -56,20 +56,20 @@ bccam_uart_firmware_startup_result_t
 bccam_firmware_uart_client_startup_result(
   const bccam_firmware_uart_client_t *client);
 
-bccam_uart_control_probe_phase_t
-bccam_firmware_uart_client_control_probe_phase(
+bccam_uart_apiservice_probe_phase_t
+bccam_firmware_uart_client_apiservice_probe_phase(
   const bccam_firmware_uart_client_t *client);
 
 void bccam_firmware_uart_client_observe(
   const bccam_firmware_uart_client_t *client,
   bccam_firmware_uart_client_observation_t *observation);
 
-bool bccam_firmware_uart_client_control_descriptor(
+bool bccam_firmware_uart_client_apiservice_descriptor(
   const bccam_firmware_uart_client_t *client,
   bccam_uart_service_descriptor_t *descriptor);
 
-const bccam_uart_control_schema_module_t *
-bccam_firmware_uart_client_control_schema_module(
+const bccam_uart_apiservice_schema_module_t *
+bccam_firmware_uart_client_apiservice_schema_module(
   const bccam_firmware_uart_client_t *client,
   uint8_t index);
 

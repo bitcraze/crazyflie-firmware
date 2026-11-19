@@ -6,7 +6,7 @@
 #include "bccam_uart_frame.h"
 #include "bccam_uart_link.h"
 #include "bccam_uart_rx_collector.h"
-#include "syslink2_control_types.h"
+#include "syslink2_apiservice_types.h"
 
 /* true means the complete packet finished local transmission. false means
  * ambiguous completion and forces fail-stop Link Fault; the packet is never
@@ -15,25 +15,25 @@ typedef bool (*bccam_uart_runtime_send_t)(void *context,
                                           const uint8_t *data,
                                           uint32_t length);
 
-#define BCCAM_UART_CONTROL_MAX_SCHEMA_MODULES 4u
-#define BCCAM_UART_CONTROL_SCHEMA_NAMESPACE_MAX_LEN 24u
-#define BCCAM_UART_CONTROL_SCHEMA_CONTRACT_ID_MAX_LEN 48u
+#define BCCAM_UART_APISERVICE_MAX_SCHEMA_MODULES 4u
+#define BCCAM_UART_APISERVICE_SCHEMA_NAMESPACE_MAX_LEN 24u
+#define BCCAM_UART_APISERVICE_SCHEMA_CONTRACT_ID_MAX_LEN 48u
 
 typedef struct {
-  char namespace[BCCAM_UART_CONTROL_SCHEMA_NAMESPACE_MAX_LEN];
-  char contract_id[BCCAM_UART_CONTROL_SCHEMA_CONTRACT_ID_MAX_LEN];
+  char namespace[BCCAM_UART_APISERVICE_SCHEMA_NAMESPACE_MAX_LEN];
+  char contract_id[BCCAM_UART_APISERVICE_SCHEMA_CONTRACT_ID_MAX_LEN];
   uint8_t major;
   uint8_t minor;
-} bccam_uart_control_schema_module_t;
+} bccam_uart_apiservice_schema_module_t;
 
 typedef enum {
-  BCCAM_UART_CONTROL_PROBE_WAITING_FOR_LINK = 0,
-  BCCAM_UART_CONTROL_PROBE_WAITING_FOR_CONTROL_SERVICE,
-  BCCAM_UART_CONTROL_PROBE_WAITING_FOR_LOCAL_RX_CREDIT,
-  BCCAM_UART_CONTROL_PROBE_WAITING_FOR_TARGET_TX_CREDIT,
-  BCCAM_UART_CONTROL_PROBE_WAITING_FOR_RESPONSE,
-  BCCAM_UART_CONTROL_PROBE_DONE,
-} bccam_uart_control_probe_phase_t;
+  BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_LINK = 0,
+  BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_APISERVICE,
+  BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_LOCAL_RX_CREDIT,
+  BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_TARGET_TX_CREDIT,
+  BCCAM_UART_APISERVICE_PROBE_WAITING_FOR_RESPONSE,
+  BCCAM_UART_APISERVICE_PROBE_DONE,
+} bccam_uart_apiservice_probe_phase_t;
 
 typedef enum {
   BCCAM_UART_FIRMWARE_STARTUP_WAITING = 0,
@@ -43,16 +43,16 @@ typedef enum {
 } bccam_uart_firmware_startup_result_t;
 
 /**
- * Hand-over between the Control task and bcCamUartTask for the Control
- * service, after the probe. The Control task only reads and writes this block,
+ * Hand-over between the API Service task and bcCamUartTask for the API
+ * Service, after the probe. The API Service task only reads and writes this block,
  * under a short critical section; bcCamUartTask moves frames and grants
- * between it and the Link in bccam_uart_runtime_step_control_mailbox() and
- * bccam_uart_runtime_stage_control_rx().
+ * between it and the Link in bccam_uart_runtime_step_apiservice_mailbox() and
+ * bccam_uart_runtime_stage_apiservice_rx().
  */
 typedef struct {
-  /** Control service bound and probe answered, as last published. */
+  /** API Service bound and probe answered, as last published. */
   bool ready;
-  /** Ready went false and the Control task has not yet seen it. */
+  /** Ready went false and the API Service task has not yet seen it. */
   bool ready_lost_unobserved;
   /** bcCamUartTask has left the session (for example while the deck is
    * reset). Ready is not published again until a new session starts.
@@ -62,13 +62,13 @@ typedef struct {
   uint16_t payload_mtu;
   /** Receive credit grants not yet given to the Link. */
   uint8_t grants_pending;
-  /** A frame from the Control task waits to be given to the Link. */
+  /** A frame from the API Service task waits to be given to the Link. */
   bool tx_full;
-  syslink2_control_frame_t tx_frame;
-  /** A received frame waits to be taken by the Control task. */
+  syslink2_apiservice_frame_t tx_frame;
+  /** A received frame waits to be taken by the API Service task. */
   bool rx_full;
-  syslink2_control_frame_t rx_frame;
-} bccam_uart_control_mailbox_t;
+  syslink2_apiservice_frame_t rx_frame;
+} bccam_uart_apiservice_mailbox_t;
 
 typedef struct bccam_uart_runtime_t {
   bccam_uart_link_endpoint_t link;
@@ -79,17 +79,17 @@ typedef struct bccam_uart_runtime_t {
   int last_error;
   bool restart_requested;
   uint8_t next_descriptor_ordinal;
-  bool control_service_bound;
-  uint8_t control_service_id;
-  bool control_rx_credit_opened;
-  bool control_request_sent;
-  bool control_probe_done;
-  bool control_rx_release_pending;
-  uint16_t control_rx_malformed;
-  uint8_t control_schema_module_count;
-  bccam_uart_control_schema_module_t
-    control_schema_modules[BCCAM_UART_CONTROL_MAX_SCHEMA_MODULES];
-  bccam_uart_control_mailbox_t control_mailbox;
+  bool apiservice_bound;
+  uint8_t apiservice_id;
+  bool apiservice_rx_credit_opened;
+  bool apiservice_request_sent;
+  bool apiservice_probe_done;
+  bool apiservice_rx_release_pending;
+  uint16_t apiservice_rx_malformed;
+  uint8_t apiservice_schema_module_count;
+  bccam_uart_apiservice_schema_module_t
+    apiservice_schema_modules[BCCAM_UART_APISERVICE_MAX_SCHEMA_MODULES];
+  bccam_uart_apiservice_mailbox_t apiservice_mailbox;
 } bccam_uart_runtime_t;
 
 void bccam_uart_runtime_init(bccam_uart_runtime_t *runtime);
@@ -141,11 +141,11 @@ int bccam_uart_runtime_pump_tx(bccam_uart_runtime_t *runtime,
                                bccam_uart_runtime_send_t send,
                                void *send_context);
 
-int bccam_uart_runtime_step_control_probe(bccam_uart_runtime_t *runtime);
+int bccam_uart_runtime_step_apiservice_probe(bccam_uart_runtime_t *runtime);
 
-bool bccam_uart_runtime_control_probe_done(const bccam_uart_runtime_t *runtime);
+bool bccam_uart_runtime_apiservice_probe_done(const bccam_uart_runtime_t *runtime);
 
-bool bccam_uart_runtime_control_service_bound(const bccam_uart_runtime_t *runtime);
+bool bccam_uart_runtime_apiservice_bound(const bccam_uart_runtime_t *runtime);
 
 /**
  * Check whether this session discovered a compatible Console service.
@@ -159,7 +159,7 @@ bool bccam_uart_runtime_console_service_bound(const bccam_uart_runtime_t *runtim
 /**
  * Make one receive slot available to the bound Console service.
  *
- * Opening an already advertised slot is idempotent. Console and Control own
+ * Opening an already advertised slot is idempotent. Console and API Service own
  * independent receive staging slots, so either service may make progress
  * while the other is stalled.
  *
@@ -212,43 +212,43 @@ int bccam_uart_runtime_take_console_rx(bccam_uart_runtime_t *runtime,
  */
 int bccam_uart_runtime_release_console_rx(bccam_uart_runtime_t *runtime);
 
-uint8_t bccam_uart_runtime_control_service_id(const bccam_uart_runtime_t *runtime);
+uint8_t bccam_uart_runtime_apiservice_id(const bccam_uart_runtime_t *runtime);
 
-bccam_uart_control_probe_phase_t bccam_uart_runtime_control_probe_phase(
+bccam_uart_apiservice_probe_phase_t bccam_uart_runtime_apiservice_probe_phase(
   const bccam_uart_runtime_t *runtime);
 
 bccam_uart_firmware_startup_result_t bccam_uart_runtime_firmware_startup_result(
   const bccam_uart_runtime_t *runtime);
 
 /**
- * Transmit credit of the Control service, 0 when it is not bound.
+ * Transmit credit of the API Service, 0 when it is not bound.
  *
- * Also called from the Control task. It reads two single-byte fields of the
+ * Also called from the API Service task. It reads two single-byte fields of the
  * Link without a lock, which may be one bcCamUartTask step stale.
  */
-uint8_t bccam_uart_runtime_control_tx_credit(const bccam_uart_runtime_t *runtime);
+uint8_t bccam_uart_runtime_apiservice_tx_credit(const bccam_uart_runtime_t *runtime);
 
 /*
- * Control service interface used by the Control task
- * (syslink2_control_channel). Safe to call from a task other than
+ * API Service interface used by the API Service task
+ * (syslink2_apiservice_channel). Safe to call from a task other than
  * bcCamUartTask; none blocks for longer than a short critical section.
  */
 
 /**
- * True when the Control service is bound and the probe has been answered with
+ * True when the API Service is bound and the probe has been answered with
  * VALUE. After ready has been lost, returns false at least once, also when
  * ready has come back since.
  */
-bool bccam_uart_runtime_control_ready(bccam_uart_runtime_t *runtime);
+bool bccam_uart_runtime_apiservice_ready(bccam_uart_runtime_t *runtime);
 
 /**
  * Grant one receive credit to the deck. Kept pending until bcCamUartTask can
  * give it to the Link. Ignored while not ready.
  */
-void bccam_uart_runtime_grant_control_rx_credit(bccam_uart_runtime_t *runtime);
+void bccam_uart_runtime_grant_apiservice_rx_credit(bccam_uart_runtime_t *runtime);
 
 /**
- * Hand a frame over for sending on the Control service.
+ * Hand a frame over for sending on the API Service.
  *
  * The frame is put in the mailbox and sent by bcCamUartTask on a later step,
  * so the result is not that of bccam_uart_link_send_normal:
@@ -258,18 +258,18 @@ void bccam_uart_runtime_grant_control_rx_credit(bccam_uart_runtime_t *runtime);
  * BCCAM_UART_ERR_PAYLOAD_TOO_LONG when the frame exceeds the Link MTU;
  * BCCAM_UART_ERR_BAD_ARGUMENT for NULL.
  */
-int bccam_uart_runtime_send_control(bccam_uart_runtime_t *runtime,
-                                    const syslink2_control_frame_t *frame);
+int bccam_uart_runtime_send_apiservice(bccam_uart_runtime_t *runtime,
+                                    const syslink2_apiservice_frame_t *frame);
 
 /**
- * Copy a received Control frame out of the mailbox. False when there was
+ * Copy a received API Service frame out of the mailbox. False when there was
  * none; frame must then not be used. Does not grant receive credit.
  */
-bool bccam_uart_runtime_take_control_rx(bccam_uart_runtime_t *runtime,
-                                        syslink2_control_frame_t *frame);
+bool bccam_uart_runtime_take_apiservice_rx(bccam_uart_runtime_t *runtime,
+                                        syslink2_apiservice_frame_t *frame);
 
 /*
- * bcCamUartTask side of the Control mailbox.
+ * bcCamUartTask side of the API Service mailbox.
  */
 
 /**
@@ -277,32 +277,32 @@ bool bccam_uart_runtime_take_control_rx(bccam_uart_runtime_t *runtime,
  * to the Link. Gives at most one unit to the Link per call. Temporary Link
  * results keep the grant or frame pending for a later call.
  */
-int bccam_uart_runtime_step_control_mailbox(bccam_uart_runtime_t *runtime);
+int bccam_uart_runtime_step_apiservice_mailbox(bccam_uart_runtime_t *runtime);
 
 /**
- * End the Control service for the current session at once, for example when
+ * End the API Service for the current session at once, for example when
  * the deck is being reset. Publishes not ready and empties the mailbox; ready
  * is published again only after a new session has been established.
  */
-void bccam_uart_runtime_close_control(bccam_uart_runtime_t *runtime);
+void bccam_uart_runtime_close_apiservice(bccam_uart_runtime_t *runtime);
 
 /**
- * Move a received Control frame from the Link to the mailbox, if the mailbox
+ * Move a received API Service frame from the Link to the mailbox, if the mailbox
  * is empty and the probe is done. Called after every RX event, so that the
  * frame is in the mailbox before a later credit update is processed.
  */
-void bccam_uart_runtime_stage_control_rx(bccam_uart_runtime_t *runtime);
+void bccam_uart_runtime_stage_apiservice_rx(bccam_uart_runtime_t *runtime);
 
-uint8_t bccam_uart_runtime_control_rx_slots(const bccam_uart_runtime_t *runtime);
+uint8_t bccam_uart_runtime_apiservice_rx_slots(const bccam_uart_runtime_t *runtime);
 
-uint8_t bccam_uart_runtime_control_schema_module_count(
+uint8_t bccam_uart_runtime_apiservice_schema_module_count(
   const bccam_uart_runtime_t *runtime);
 
-const bccam_uart_control_schema_module_t *
-bccam_uart_runtime_control_schema_module(const bccam_uart_runtime_t *runtime,
+const bccam_uart_apiservice_schema_module_t *
+bccam_uart_runtime_apiservice_schema_module(const bccam_uart_runtime_t *runtime,
                                          uint8_t index);
 
-uint16_t bccam_uart_runtime_get_control_malformed_count(
+uint16_t bccam_uart_runtime_get_apiservice_malformed_count(
   const bccam_uart_runtime_t *runtime);
 
 bccam_uart_link_state_t bccam_uart_runtime_get_state(const bccam_uart_runtime_t *runtime);

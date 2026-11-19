@@ -139,9 +139,9 @@ void testClientRejectsInvalidRxEvents(void) {
 
 void testSuspendInvalidatesSessionAndBinding(void) {
   client.runtime.link.state = BCCAM_UART_LINK_ACTIVE;
-  client.runtime.link.control_binding.valid = true;
-  client.runtime.link.control_binding.descriptor.handle = 0x91;
+  client.runtime.link.apiservice_binding.valid = true;
+  client.runtime.link.apiservice_binding.descriptor.handle = 0x91;
   bccam_firmware_uart_client_suspend(&client);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_LINK_INACTIVE, client.runtime.link.state);
-  TEST_ASSERT_FALSE(client.runtime.link.control_binding.valid);
+  TEST_ASSERT_FALSE(client.runtime.link.apiservice_binding.valid);
 }

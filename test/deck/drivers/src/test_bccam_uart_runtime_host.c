@@ -77,7 +77,7 @@ static void establish_and_get_count(bccam_uart_runtime_t *runtime,
   };
   feed_management(runtime, establish_reply, sizeof(establish_reply));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_probe(runtime));
+    bccam_uart_runtime_step_apiservice_probe(runtime));
   TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_GET_SERVICE_COUNT,
     flush_operation(runtime, writer, &frame));
   const uint8_t count_reply[] = {
@@ -108,44 +108,44 @@ void testRuntimeEstablishesThenStreamsCatalogOneDescriptorAtATime(void) {
 
   establish_and_get_count(&runtime, &writer, 2);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_probe(&runtime));
+    bccam_uart_runtime_step_apiservice_probe(&runtime));
   TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_GET_SERVICE_DESCRIPTOR,
     flush_operation(&runtime, &writer, &frame));
   TEST_ASSERT_EQUAL_UINT8(0, frame.payload[2]);
   feed_descriptor_for_last_request(&runtime, &frame, 0x33, 1, 0, "vendor.video");
 
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_probe(&runtime));
+    bccam_uart_runtime_step_apiservice_probe(&runtime));
   TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_GET_SERVICE_DESCRIPTOR,
     flush_operation(&runtime, &writer, &frame));
   TEST_ASSERT_EQUAL_UINT8(1, frame.payload[2]);
   feed_descriptor_for_last_request(&runtime, &frame, 0x91,
-                                   BCCAM_UART_CONTROL_CONTRACT_MAJOR, 0, "bitcraze.control");
-  TEST_ASSERT_TRUE(bccam_uart_runtime_control_service_bound(&runtime));
-  TEST_ASSERT_EQUAL_UINT8(0x91, bccam_uart_runtime_control_service_id(&runtime));
+                                   BCCAM_UART_APISERVICE_CONTRACT_MAJOR, 0, "bitcraze.api");
+  TEST_ASSERT_TRUE(bccam_uart_runtime_apiservice_bound(&runtime));
+  TEST_ASSERT_EQUAL_UINT8(0x91, bccam_uart_runtime_apiservice_id(&runtime));
 }
 
-/** Verify Console remains consumable while a compatible Control probe runs. */
-void testConsoleFrameRemainsAvailableWhileControlProbeRuns(void) {
+/** Verify Console remains consumable while a compatible API Service probe runs. */
+void testConsoleFrameRemainsAvailableWhileApiserviceProbeRuns(void) {
   bccam_uart_runtime_t runtime;
   writer_t writer = { .succeed = true };
   bccam_uart_frame_t frame;
 
   establish_and_get_count(&runtime, &writer, 2);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_probe(&runtime));
+    bccam_uart_runtime_step_apiservice_probe(&runtime));
   TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_GET_SERVICE_DESCRIPTOR,
     flush_operation(&runtime, &writer, &frame));
   feed_descriptor_for_last_request(&runtime, &frame, 1,
-                                   BCCAM_UART_CONTROL_CONTRACT_MAJOR, 0, "bitcraze.control");
+                                   BCCAM_UART_APISERVICE_CONTRACT_MAJOR, 0, "bitcraze.api");
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_probe(&runtime));
+    bccam_uart_runtime_step_apiservice_probe(&runtime));
   TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_GET_SERVICE_DESCRIPTOR,
     flush_operation(&runtime, &writer, &frame));
   feed_descriptor_for_last_request(&runtime, &frame, 2, 1, 0,
                                    "bitcraze.console");
   TEST_ASSERT_TRUE(bccam_uart_runtime_console_service_bound(&runtime));
-  TEST_ASSERT_FALSE(bccam_uart_runtime_control_probe_done(&runtime));
+  TEST_ASSERT_FALSE(bccam_uart_runtime_apiservice_probe_done(&runtime));
 
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_runtime_open_console_rx(&runtime));
@@ -161,8 +161,8 @@ void testConsoleFrameRemainsAvailableWhileControlProbeRuns(void) {
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_runtime_on_raw_frame(&runtime, raw, (uint16_t)raw_len));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_probe(&runtime));
-  TEST_ASSERT_FALSE(bccam_uart_runtime_control_probe_done(&runtime));
+    bccam_uart_runtime_step_apiservice_probe(&runtime));
+  TEST_ASSERT_FALSE(bccam_uart_runtime_apiservice_probe_done(&runtime));
 
   uint8_t payload[64];
   uint16_t payload_len = 0u;
@@ -175,27 +175,27 @@ void testConsoleFrameRemainsAvailableWhileControlProbeRuns(void) {
   TEST_ASSERT_EQUAL_MEMORY("deck", payload, 4);
 }
 
-/** Verify incompatible Control metadata does not block Console credit. */
-void testConsoleOpensWhenAdvertisedControlVersionIsIncompatible(void) {
+/** Verify incompatible API Service metadata does not block Console credit. */
+void testConsoleOpensWhenAdvertisedApiserviceVersionIsIncompatible(void) {
   bccam_uart_runtime_t runtime;
   writer_t writer = { .succeed = true };
   bccam_uart_frame_t frame;
 
   establish_and_get_count(&runtime, &writer, 2);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_probe(&runtime));
+    bccam_uart_runtime_step_apiservice_probe(&runtime));
   TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_GET_SERVICE_DESCRIPTOR,
     flush_operation(&runtime, &writer, &frame));
   feed_descriptor_for_last_request(&runtime, &frame, 1,
-                                   BCCAM_UART_CONTROL_CONTRACT_MAJOR + 1u, 0, "bitcraze.control");
+                                   BCCAM_UART_APISERVICE_CONTRACT_MAJOR + 1u, 0, "bitcraze.api");
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_probe(&runtime));
+    bccam_uart_runtime_step_apiservice_probe(&runtime));
   TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_GET_SERVICE_DESCRIPTOR,
     flush_operation(&runtime, &writer, &frame));
   feed_descriptor_for_last_request(&runtime, &frame, 2, 1, 0,
                                    "bitcraze.console");
 
-  TEST_ASSERT_FALSE(bccam_uart_runtime_control_service_bound(&runtime));
+  TEST_ASSERT_FALSE(bccam_uart_runtime_apiservice_bound(&runtime));
   TEST_ASSERT_TRUE(bccam_uart_runtime_console_service_bound(&runtime));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_FIRMWARE_STARTUP_INCOMPATIBLE,
     bccam_uart_runtime_firmware_startup_result(&runtime));
@@ -207,23 +207,23 @@ void testConsoleOpensWhenAdvertisedControlVersionIsIncompatible(void) {
   TEST_ASSERT_EQUAL_UINT8(1, frame.payload[3]);
 }
 
-void testIncompatibleControlStopsCleanlyAfterDiscoveryWithoutServiceBurst(void) {
+void testIncompatibleApiserviceStopsCleanlyAfterDiscoveryWithoutServiceBurst(void) {
   bccam_uart_runtime_t runtime;
   writer_t writer = { .succeed = true };
   bccam_uart_frame_t frame;
 
   establish_and_get_count(&runtime, &writer, 1);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_probe(&runtime));
+    bccam_uart_runtime_step_apiservice_probe(&runtime));
   TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_GET_SERVICE_DESCRIPTOR,
     flush_operation(&runtime, &writer, &frame));
   feed_descriptor_for_last_request(&runtime, &frame, 7,
-                                   BCCAM_UART_CONTROL_CONTRACT_MAJOR + 1u, 0, "bitcraze.control");
+                                   BCCAM_UART_APISERVICE_CONTRACT_MAJOR + 1u, 0, "bitcraze.api");
 
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_FIRMWARE_STARTUP_INCOMPATIBLE,
     bccam_uart_runtime_firmware_startup_result(&runtime));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_probe(&runtime));
+    bccam_uart_runtime_step_apiservice_probe(&runtime));
   writer.length = 0;
   flush(&runtime, &writer);
   TEST_ASSERT_EQUAL_size_t(0, writer.length);
@@ -242,12 +242,12 @@ void testCreditArrivingBeforeDescriptorIsAppliedToDiscoveredBinding(void) {
     feed_management(&runtime, credit, sizeof(credit));
   }
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_probe(&runtime));
+    bccam_uart_runtime_step_apiservice_probe(&runtime));
   TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_GET_SERVICE_DESCRIPTOR,
     flush_operation(&runtime, &writer, &frame));
   feed_descriptor_for_last_request(&runtime, &frame, 0x72,
-                                   BCCAM_UART_CONTROL_CONTRACT_MAJOR, 0, "bitcraze.control");
-  TEST_ASSERT_EQUAL_UINT8(1, bccam_uart_runtime_control_tx_credit(&runtime));
+                                   BCCAM_UART_APISERVICE_CONTRACT_MAJOR, 0, "bitcraze.api");
+  TEST_ASSERT_EQUAL_UINT8(1, bccam_uart_runtime_apiservice_tx_credit(&runtime));
 }
 
 void testEmptyNormalUnitIsTransmittedExactlyOnce(void) {
@@ -259,9 +259,9 @@ void testEmptyNormalUnitIsTransmittedExactlyOnce(void) {
   runtime.link.state = BCCAM_UART_LINK_ACTIVE;
   runtime.link.active_link_version = 1;
   runtime.link.negotiated_payload = 64;
-  runtime.link.control_binding.valid = true;
-  runtime.link.control_binding.descriptor.handle = 0x55;
-  runtime.link.control_binding.tx_credit = 1;
+  runtime.link.apiservice_binding.valid = true;
+  runtime.link.apiservice_binding.descriptor.handle = 0x55;
+  runtime.link.apiservice_binding.tx_credit = 1;
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_link_send_normal(&runtime.link, 0x55, NULL, 0));
   flush(&runtime, &writer);
@@ -274,7 +274,7 @@ void testEmptyNormalUnitIsTransmittedExactlyOnce(void) {
   TEST_ASSERT_EQUAL_UINT(1, writer.calls);
 }
 
-void testEmptyIncomingControlUnitIsMalformedAndRxCreditIsReplenished(void) {
+void testEmptyIncomingApiserviceUnitIsMalformedAndRxCreditIsReplenished(void) {
   bccam_uart_runtime_t runtime;
   writer_t writer = { .succeed = true };
   bccam_uart_frame_t frame;
@@ -290,13 +290,13 @@ void testEmptyIncomingControlUnitIsMalformedAndRxCreditIsReplenished(void) {
   runtime.link.descriptors_received = 1;
   runtime.link.seen_ordinals[0] = 1;
   runtime.next_descriptor_ordinal = 1;
-  runtime.link.control_binding.valid = true;
-  runtime.link.control_binding.descriptor.handle = 0x55;
-  runtime.link.control_binding.rx_advertised_credit = 1;
-  runtime.control_service_bound = true;
-  runtime.control_service_id = 0x55;
-  runtime.control_rx_credit_opened = true;
-  runtime.control_request_sent = true;
+  runtime.link.apiservice_binding.valid = true;
+  runtime.link.apiservice_binding.descriptor.handle = 0x55;
+  runtime.link.apiservice_binding.rx_advertised_credit = 1;
+  runtime.apiservice_bound = true;
+  runtime.apiservice_id = 0x55;
+  runtime.apiservice_rx_credit_opened = true;
+  runtime.apiservice_request_sent = true;
 
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_frame_encode_version(1, 0x55, NULL, 0,
@@ -307,9 +307,9 @@ void testEmptyIncomingControlUnitIsMalformedAndRxCreditIsReplenished(void) {
     bccam_uart_link_get_rx_advertised_credit(&runtime.link, 0x55));
 
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_probe(&runtime));
+    bccam_uart_runtime_step_apiservice_probe(&runtime));
   TEST_ASSERT_EQUAL_UINT16(1,
-    bccam_uart_runtime_get_control_malformed_count(&runtime));
+    bccam_uart_runtime_get_apiservice_malformed_count(&runtime));
   TEST_ASSERT_EQUAL_UINT8(1,
     bccam_uart_link_get_rx_advertised_credit(&runtime.link, 0x55));
   TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_CREDIT_UPDATE,
@@ -319,7 +319,7 @@ void testEmptyIncomingControlUnitIsMalformedAndRxCreditIsReplenished(void) {
 }
 
 /** Verify the completed one-shot probe does not invite unconsumed traffic. */
-void testSuccessfulOneShotControlProbeKeepsReceiveCreditClosed(void) {
+void testSuccessfulOneShotApiserviceProbeKeepsReceiveCreditClosed(void) {
   bccam_uart_runtime_t runtime;
   writer_t writer = { .succeed = true };
   uint8_t raw[BCCAM_UART_FRAME_MAX_ENCODED_SIZE];
@@ -335,13 +335,13 @@ void testSuccessfulOneShotControlProbeKeepsReceiveCreditClosed(void) {
   runtime.link.descriptors_received = 1;
   runtime.link.seen_ordinals[0] = 1;
   runtime.next_descriptor_ordinal = 1;
-  runtime.link.control_binding.valid = true;
-  runtime.link.control_binding.descriptor.handle = 0x55;
-  runtime.link.control_binding.rx_advertised_credit = 1;
-  runtime.control_service_bound = true;
-  runtime.control_service_id = 0x55;
-  runtime.control_rx_credit_opened = true;
-  runtime.control_request_sent = true;
+  runtime.link.apiservice_binding.valid = true;
+  runtime.link.apiservice_binding.descriptor.handle = 0x55;
+  runtime.link.apiservice_binding.rx_advertised_credit = 1;
+  runtime.apiservice_bound = true;
+  runtime.apiservice_id = 0x55;
+  runtime.apiservice_rx_credit_opened = true;
+  runtime.apiservice_request_sent = true;
 
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_frame_encode_version(1, 0x55, response, sizeof(response),
@@ -349,9 +349,9 @@ void testSuccessfulOneShotControlProbeKeepsReceiveCreditClosed(void) {
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_runtime_on_raw_frame(&runtime, raw, (uint16_t)raw_len));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_probe(&runtime));
+    bccam_uart_runtime_step_apiservice_probe(&runtime));
 
-  TEST_ASSERT_TRUE(bccam_uart_runtime_control_probe_done(&runtime));
+  TEST_ASSERT_TRUE(bccam_uart_runtime_apiservice_probe_done(&runtime));
   TEST_ASSERT_EQUAL_UINT8(0,
     bccam_uart_link_get_rx_advertised_credit(&runtime.link, 0x55));
   writer.length = 0;
@@ -448,9 +448,9 @@ void testSynchronousTxFailureIsFailStopAndNeverRetriedWhileActive(void) {
   runtime.link.state = BCCAM_UART_LINK_ACTIVE;
   runtime.link.active_link_version = 1;
   runtime.link.negotiated_payload = 64;
-  runtime.link.control_binding.valid = true;
-  runtime.link.control_binding.descriptor.handle = 7;
-  runtime.link.control_binding.tx_credit = 1;
+  runtime.link.apiservice_binding.valid = true;
+  runtime.link.apiservice_binding.descriptor.handle = 7;
+  runtime.link.apiservice_binding.tx_credit = 1;
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_link_send_normal(&runtime.link, 7, payload, sizeof(payload)));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_LINK_ACTIVE, runtime.link.state);
@@ -470,19 +470,19 @@ void testBootNoticeTriggersFreshEstablishmentAndInvalidatesBinding(void) {
 
   establish_and_get_count(&runtime, &writer, 1);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_probe(&runtime));
+    bccam_uart_runtime_step_apiservice_probe(&runtime));
   (void)flush_operation(&runtime, &writer, &frame);
   feed_descriptor_for_last_request(&runtime, &frame, 0x66,
-                                   BCCAM_UART_CONTROL_CONTRACT_MAJOR, 0, "bitcraze.control");
-  TEST_ASSERT_TRUE(bccam_uart_runtime_control_service_bound(&runtime));
+                                   BCCAM_UART_APISERVICE_CONTRACT_MAJOR, 0, "bitcraze.api");
+  TEST_ASSERT_TRUE(bccam_uart_runtime_apiservice_bound(&runtime));
 
   {
     const uint8_t boot[] = { BCCAM_UART_LINK_OP_BOOT_NOTICE, 0 };
     feed_management(&runtime, boot, sizeof(boot));
   }
-  TEST_ASSERT_FALSE(bccam_uart_runtime_control_service_bound(&runtime));
+  TEST_ASSERT_FALSE(bccam_uart_runtime_apiservice_bound(&runtime));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_probe(&runtime));
+    bccam_uart_runtime_step_apiservice_probe(&runtime));
   TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_ESTABLISH,
     flush_operation(&runtime, &writer, &frame));
 }
@@ -497,9 +497,9 @@ void testCompleteRawPacketWithTrailingByteIsBadLengthAndFaultsActive(void) {
   runtime.link.state = BCCAM_UART_LINK_ACTIVE;
   runtime.link.active_link_version = 1;
   runtime.link.negotiated_payload = 64;
-  runtime.link.control_binding.valid = true;
-  runtime.link.control_binding.descriptor.handle = 7;
-  runtime.link.control_binding.rx_advertised_credit = 1;
+  runtime.link.apiservice_binding.valid = true;
+  runtime.link.apiservice_binding.descriptor.handle = 7;
+  runtime.link.apiservice_binding.rx_advertised_credit = 1;
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_frame_encode_version(1, 7, payload, sizeof(payload),
                                     raw, sizeof(raw), &raw_len));
@@ -508,7 +508,7 @@ void testCompleteRawPacketWithTrailingByteIsBadLengthAndFaultsActive(void) {
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_ERR_BAD_LENGTH,
     bccam_uart_runtime_on_raw_frame(&runtime, raw, (uint16_t)(raw_len + 1u)));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_LINK_FAULT, runtime.link.state);
-  TEST_ASSERT_FALSE(runtime.link.control_binding.rx_pending);
+  TEST_ASSERT_FALSE(runtime.link.apiservice_binding.rx_pending);
 }
 
 void testCorruptActiveUartPacketEntersLinkFault(void) {
@@ -526,11 +526,11 @@ void testCorruptActiveUartPacketEntersLinkFault(void) {
   (void)frame;
 }
 
-/* Control mailbox, between the Control task and bcCamUartTask. */
+/* API Service mailbox, between the API Service task and bcCamUartTask. */
 
 #define MAILBOX_HANDLE 0x55u
 
-/** A runtime whose Control probe has just been answered. */
+/** A runtime whose API Service probe has just been answered. */
 static void probe_done_runtime(bccam_uart_runtime_t *runtime) {
   uint8_t raw[BCCAM_UART_FRAME_MAX_ENCODED_SIZE];
   size_t raw_len = 0;
@@ -547,13 +547,13 @@ static void probe_done_runtime(bccam_uart_runtime_t *runtime) {
   runtime->link.seen_handles[MAILBOX_HANDLE >> 3] =
     (uint8_t)(1u << (MAILBOX_HANDLE & 7u));
   runtime->next_descriptor_ordinal = 1;
-  runtime->link.control_binding.valid = true;
-  runtime->link.control_binding.descriptor.handle = MAILBOX_HANDLE;
-  runtime->link.control_binding.rx_advertised_credit = 1;
-  runtime->control_service_bound = true;
-  runtime->control_service_id = MAILBOX_HANDLE;
-  runtime->control_rx_credit_opened = true;
-  runtime->control_request_sent = true;
+  runtime->link.apiservice_binding.valid = true;
+  runtime->link.apiservice_binding.descriptor.handle = MAILBOX_HANDLE;
+  runtime->link.apiservice_binding.rx_advertised_credit = 1;
+  runtime->apiservice_bound = true;
+  runtime->apiservice_id = MAILBOX_HANDLE;
+  runtime->apiservice_rx_credit_opened = true;
+  runtime->apiservice_request_sent = true;
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_frame_encode_version(1, MAILBOX_HANDLE, response,
                                     sizeof(response), raw, sizeof(raw),
@@ -561,18 +561,18 @@ static void probe_done_runtime(bccam_uart_runtime_t *runtime) {
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_runtime_on_raw_frame(runtime, raw, (uint16_t)raw_len));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_probe(runtime));
-  TEST_ASSERT_TRUE(bccam_uart_runtime_control_probe_done(runtime));
+    bccam_uart_runtime_step_apiservice_probe(runtime));
+  TEST_ASSERT_TRUE(bccam_uart_runtime_apiservice_probe_done(runtime));
 }
 
-static void feed_control_credit(bccam_uart_runtime_t *runtime, uint8_t credit) {
+static void feed_apiservice_credit(bccam_uart_runtime_t *runtime, uint8_t credit) {
   const uint8_t update[] = {
     BCCAM_UART_LINK_OP_CREDIT_UPDATE, 0, MAILBOX_HANDLE, credit
   };
   feed_management(runtime, update, sizeof(update));
 }
 
-static void feed_control_frame(bccam_uart_runtime_t *runtime,
+static void feed_apiservice_frame(bccam_uart_runtime_t *runtime,
                                const uint8_t *payload, uint16_t len) {
   uint8_t raw[BCCAM_UART_FRAME_MAX_ENCODED_SIZE];
   size_t raw_len = 0;
@@ -583,8 +583,8 @@ static void feed_control_frame(bccam_uart_runtime_t *runtime,
     bccam_uart_runtime_on_raw_frame(runtime, raw, (uint16_t)raw_len));
 }
 
-static syslink2_control_frame_t control_frame(const uint8_t *bytes, uint8_t len) {
-  syslink2_control_frame_t frame;
+static syslink2_apiservice_frame_t apiservice_frame(const uint8_t *bytes, uint8_t len) {
+  syslink2_apiservice_frame_t frame;
   memset(&frame, 0, sizeof(frame));
   memcpy(frame.data, bytes, len);
   frame.len = len;
@@ -595,17 +595,17 @@ void testMailboxIsNotReadyUntilPublishedAfterProbe(void) {
   bccam_uart_runtime_t runtime;
   probe_done_runtime(&runtime);
   const uint8_t bytes[] = { 0x01, 1, 1, 'q' };
-  const syslink2_control_frame_t frame = control_frame(bytes, sizeof(bytes));
+  const syslink2_apiservice_frame_t frame = apiservice_frame(bytes, sizeof(bytes));
 
-  TEST_ASSERT_FALSE(bccam_uart_runtime_control_ready(&runtime));
+  TEST_ASSERT_FALSE(bccam_uart_runtime_apiservice_ready(&runtime));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_ERR_NOT_ACTIVE,
-    bccam_uart_runtime_send_control(&runtime, &frame));
-  bccam_uart_runtime_grant_control_rx_credit(&runtime);
-  TEST_ASSERT_EQUAL_UINT8(0, runtime.control_mailbox.grants_pending);
+    bccam_uart_runtime_send_apiservice(&runtime, &frame));
+  bccam_uart_runtime_grant_apiservice_rx_credit(&runtime);
+  TEST_ASSERT_EQUAL_UINT8(0, runtime.apiservice_mailbox.grants_pending);
 
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_mailbox(&runtime));
-  TEST_ASSERT_TRUE(bccam_uart_runtime_control_ready(&runtime));
+    bccam_uart_runtime_step_apiservice_mailbox(&runtime));
+  TEST_ASSERT_TRUE(bccam_uart_runtime_apiservice_ready(&runtime));
 }
 
 void testMailboxGrantIsSentAsCreditUpdate(void) {
@@ -613,16 +613,16 @@ void testMailboxGrantIsSentAsCreditUpdate(void) {
   writer_t writer = { .succeed = true };
   bccam_uart_frame_t frame;
   probe_done_runtime(&runtime);
-  bccam_uart_runtime_step_control_mailbox(&runtime);
+  bccam_uart_runtime_step_apiservice_mailbox(&runtime);
 
-  bccam_uart_runtime_grant_control_rx_credit(&runtime);
+  bccam_uart_runtime_grant_apiservice_rx_credit(&runtime);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_mailbox(&runtime));
+    bccam_uart_runtime_step_apiservice_mailbox(&runtime));
   TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_CREDIT_UPDATE,
     flush_operation(&runtime, &writer, &frame));
   TEST_ASSERT_EQUAL_UINT8(MAILBOX_HANDLE, frame.payload[2]);
   TEST_ASSERT_EQUAL_UINT8(1, frame.payload[3]);
-  TEST_ASSERT_EQUAL_UINT8(0, runtime.control_mailbox.grants_pending);
+  TEST_ASSERT_EQUAL_UINT8(0, runtime.apiservice_mailbox.grants_pending);
 }
 
 void testMailboxGrantStaysPendingWhileLinkSlotIsBusy(void) {
@@ -630,17 +630,17 @@ void testMailboxGrantStaysPendingWhileLinkSlotIsBusy(void) {
   writer_t writer = { .succeed = true };
   bccam_uart_frame_t frame;
   probe_done_runtime(&runtime);
-  bccam_uart_runtime_step_control_mailbox(&runtime);
+  bccam_uart_runtime_step_apiservice_mailbox(&runtime);
 
   runtime.link.tx_pending = true;
-  bccam_uart_runtime_grant_control_rx_credit(&runtime);
+  bccam_uart_runtime_grant_apiservice_rx_credit(&runtime);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_mailbox(&runtime));
-  TEST_ASSERT_EQUAL_UINT8(1, runtime.control_mailbox.grants_pending);
+    bccam_uart_runtime_step_apiservice_mailbox(&runtime));
+  TEST_ASSERT_EQUAL_UINT8(1, runtime.apiservice_mailbox.grants_pending);
   runtime.link.tx_pending = false;
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_mailbox(&runtime));
-  TEST_ASSERT_EQUAL_UINT8(0, runtime.control_mailbox.grants_pending);
+    bccam_uart_runtime_step_apiservice_mailbox(&runtime));
+  TEST_ASSERT_EQUAL_UINT8(0, runtime.apiservice_mailbox.grants_pending);
   TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_CREDIT_UPDATE,
     flush_operation(&runtime, &writer, &frame));
 }
@@ -650,25 +650,25 @@ void testMailboxFrameWaitsForCreditThenIsSent(void) {
   writer_t writer = { .succeed = true };
   bccam_uart_frame_t frame;
   const uint8_t bytes[] = { 0x01, 1, 1, 'q' };
-  const syslink2_control_frame_t request = control_frame(bytes, sizeof(bytes));
+  const syslink2_apiservice_frame_t request = apiservice_frame(bytes, sizeof(bytes));
   probe_done_runtime(&runtime);
-  bccam_uart_runtime_step_control_mailbox(&runtime);
+  bccam_uart_runtime_step_apiservice_mailbox(&runtime);
 
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_send_control(&runtime, &request));
+    bccam_uart_runtime_send_apiservice(&runtime, &request));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_ERR_TRANSACTION_BUSY,
-    bccam_uart_runtime_send_control(&runtime, &request));
+    bccam_uart_runtime_send_apiservice(&runtime, &request));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_mailbox(&runtime));
-  TEST_ASSERT_TRUE(runtime.control_mailbox.tx_full);
+    bccam_uart_runtime_step_apiservice_mailbox(&runtime));
+  TEST_ASSERT_TRUE(runtime.apiservice_mailbox.tx_full);
   TEST_ASSERT_FALSE(runtime.link.tx_pending);
 
-  feed_control_credit(&runtime, 1);
-  TEST_ASSERT_EQUAL_UINT8(1, bccam_uart_runtime_control_tx_credit(&runtime));
+  feed_apiservice_credit(&runtime, 1);
+  TEST_ASSERT_EQUAL_UINT8(1, bccam_uart_runtime_apiservice_tx_credit(&runtime));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_mailbox(&runtime));
-  TEST_ASSERT_FALSE(runtime.control_mailbox.tx_full);
-  TEST_ASSERT_EQUAL_UINT8(0, bccam_uart_runtime_control_tx_credit(&runtime));
+    bccam_uart_runtime_step_apiservice_mailbox(&runtime));
+  TEST_ASSERT_FALSE(runtime.apiservice_mailbox.tx_full);
+  TEST_ASSERT_EQUAL_UINT8(0, bccam_uart_runtime_apiservice_tx_credit(&runtime));
   writer.length = 0;
   flush(&runtime, &writer);
   decode(&writer, &frame);
@@ -679,38 +679,38 @@ void testMailboxFrameWaitsForCreditThenIsSent(void) {
 
 void testMailboxRejectsFrameOverMtu(void) {
   bccam_uart_runtime_t runtime;
-  syslink2_control_frame_t frame;
+  syslink2_apiservice_frame_t frame;
   memset(&frame, 0, sizeof(frame));
   probe_done_runtime(&runtime);
   runtime.link.negotiated_payload = 31;
-  bccam_uart_runtime_step_control_mailbox(&runtime);
+  bccam_uart_runtime_step_apiservice_mailbox(&runtime);
   frame.len = 32;
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_ERR_PAYLOAD_TOO_LONG,
-    bccam_uart_runtime_send_control(&runtime, &frame));
-  frame.len = SYSLINK2_CONTROL_FRAME_MAX_LEN + 1u;
+    bccam_uart_runtime_send_apiservice(&runtime, &frame));
+  frame.len = SYSLINK2_APISERVICE_FRAME_MAX_LEN + 1u;
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_ERR_PAYLOAD_TOO_LONG,
-    bccam_uart_runtime_send_control(&runtime, &frame));
+    bccam_uart_runtime_send_apiservice(&runtime, &frame));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_ERR_BAD_ARGUMENT,
-    bccam_uart_runtime_send_control(&runtime, NULL));
+    bccam_uart_runtime_send_apiservice(&runtime, NULL));
 }
 
 void testMailboxReceivedFrameIsStagedAndTakenOnce(void) {
   bccam_uart_runtime_t runtime;
-  syslink2_control_frame_t frame;
+  syslink2_apiservice_frame_t frame;
   const uint8_t answer[] = { 0x80, 3 };
   probe_done_runtime(&runtime);
-  bccam_uart_runtime_step_control_mailbox(&runtime);
-  bccam_uart_runtime_grant_control_rx_credit(&runtime);
-  bccam_uart_runtime_step_control_mailbox(&runtime);
+  bccam_uart_runtime_step_apiservice_mailbox(&runtime);
+  bccam_uart_runtime_grant_apiservice_rx_credit(&runtime);
+  bccam_uart_runtime_step_apiservice_mailbox(&runtime);
   runtime.link.tx_pending = false;
 
-  TEST_ASSERT_FALSE(bccam_uart_runtime_take_control_rx(&runtime, &frame));
-  feed_control_frame(&runtime, answer, sizeof(answer));
-  bccam_uart_runtime_stage_control_rx(&runtime);
-  TEST_ASSERT_TRUE(bccam_uart_runtime_take_control_rx(&runtime, &frame));
+  TEST_ASSERT_FALSE(bccam_uart_runtime_take_apiservice_rx(&runtime, &frame));
+  feed_apiservice_frame(&runtime, answer, sizeof(answer));
+  bccam_uart_runtime_stage_apiservice_rx(&runtime);
+  TEST_ASSERT_TRUE(bccam_uart_runtime_take_apiservice_rx(&runtime, &frame));
   TEST_ASSERT_EQUAL_UINT8(2, frame.len);
   TEST_ASSERT_EQUAL_MEMORY(answer, frame.data, sizeof(answer));
-  TEST_ASSERT_FALSE(bccam_uart_runtime_take_control_rx(&runtime, &frame));
+  TEST_ASSERT_FALSE(bccam_uart_runtime_take_apiservice_rx(&runtime, &frame));
   /* Taking does not grant: receive credit is used up until a grant. */
   TEST_ASSERT_EQUAL_UINT8(0,
     bccam_uart_link_get_rx_advertised_credit(&runtime.link, MAILBOX_HANDLE));
@@ -718,96 +718,96 @@ void testMailboxReceivedFrameIsStagedAndTakenOnce(void) {
 
 void testMailboxAnswerIsStagedBeforeLaterCreditUpdate(void) {
   bccam_uart_runtime_t runtime;
-  syslink2_control_frame_t frame;
+  syslink2_apiservice_frame_t frame;
   const uint8_t answer[] = { 0x80, 3 };
   probe_done_runtime(&runtime);
-  bccam_uart_runtime_step_control_mailbox(&runtime);
-  bccam_uart_runtime_grant_control_rx_credit(&runtime);
-  bccam_uart_runtime_step_control_mailbox(&runtime);
+  bccam_uart_runtime_step_apiservice_mailbox(&runtime);
+  bccam_uart_runtime_grant_apiservice_rx_credit(&runtime);
+  bccam_uart_runtime_step_apiservice_mailbox(&runtime);
   runtime.link.tx_pending = false;
 
   /* As dispatch_received_frames does after every RX event. */
-  feed_control_frame(&runtime, answer, sizeof(answer));
-  bccam_uart_runtime_stage_control_rx(&runtime);
-  feed_control_credit(&runtime, 1);
-  bccam_uart_runtime_stage_control_rx(&runtime);
-  TEST_ASSERT_EQUAL_UINT8(1, bccam_uart_runtime_control_tx_credit(&runtime));
-  TEST_ASSERT_TRUE(bccam_uart_runtime_take_control_rx(&runtime, &frame));
+  feed_apiservice_frame(&runtime, answer, sizeof(answer));
+  bccam_uart_runtime_stage_apiservice_rx(&runtime);
+  feed_apiservice_credit(&runtime, 1);
+  bccam_uart_runtime_stage_apiservice_rx(&runtime);
+  TEST_ASSERT_EQUAL_UINT8(1, bccam_uart_runtime_apiservice_tx_credit(&runtime));
+  TEST_ASSERT_TRUE(bccam_uart_runtime_take_apiservice_rx(&runtime, &frame));
 }
 
 void testMailboxSessionResetClearsAndReportsReadyLostOnce(void) {
   bccam_uart_runtime_t runtime;
-  syslink2_control_frame_t frame;
+  syslink2_apiservice_frame_t frame;
   const uint8_t bytes[] = { 0x01, 1, 1, 'q' };
-  const syslink2_control_frame_t request = control_frame(bytes, sizeof(bytes));
+  const syslink2_apiservice_frame_t request = apiservice_frame(bytes, sizeof(bytes));
   probe_done_runtime(&runtime);
-  bccam_uart_runtime_step_control_mailbox(&runtime);
-  TEST_ASSERT_TRUE(bccam_uart_runtime_control_ready(&runtime));
-  bccam_uart_runtime_grant_control_rx_credit(&runtime);
+  bccam_uart_runtime_step_apiservice_mailbox(&runtime);
+  TEST_ASSERT_TRUE(bccam_uart_runtime_apiservice_ready(&runtime));
+  bccam_uart_runtime_grant_apiservice_rx_credit(&runtime);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_send_control(&runtime, &request));
-  runtime.control_mailbox.rx_full = true;
+    bccam_uart_runtime_send_apiservice(&runtime, &request));
+  runtime.apiservice_mailbox.rx_full = true;
 
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_runtime_on_firmware_boot(&runtime));
-  TEST_ASSERT_EQUAL_UINT8(0, runtime.control_mailbox.grants_pending);
-  TEST_ASSERT_FALSE(runtime.control_mailbox.tx_full);
-  TEST_ASSERT_FALSE(bccam_uart_runtime_take_control_rx(&runtime, &frame));
-  bccam_uart_runtime_grant_control_rx_credit(&runtime);
-  TEST_ASSERT_EQUAL_UINT8(0, runtime.control_mailbox.grants_pending);
-  TEST_ASSERT_FALSE(bccam_uart_runtime_control_ready(&runtime));
+  TEST_ASSERT_EQUAL_UINT8(0, runtime.apiservice_mailbox.grants_pending);
+  TEST_ASSERT_FALSE(runtime.apiservice_mailbox.tx_full);
+  TEST_ASSERT_FALSE(bccam_uart_runtime_take_apiservice_rx(&runtime, &frame));
+  bccam_uart_runtime_grant_apiservice_rx_credit(&runtime);
+  TEST_ASSERT_EQUAL_UINT8(0, runtime.apiservice_mailbox.grants_pending);
+  TEST_ASSERT_FALSE(bccam_uart_runtime_apiservice_ready(&runtime));
 }
 
 void testMailboxReadyLostIsSeenEvenWhenReadyComesBackFirst(void) {
   bccam_uart_runtime_t runtime;
   probe_done_runtime(&runtime);
-  bccam_uart_runtime_step_control_mailbox(&runtime);
-  TEST_ASSERT_TRUE(bccam_uart_runtime_control_ready(&runtime));
+  bccam_uart_runtime_step_apiservice_mailbox(&runtime);
+  TEST_ASSERT_TRUE(bccam_uart_runtime_apiservice_ready(&runtime));
 
-  /* The session ends and a new one becomes ready before the Control task
+  /* The session ends and a new one becomes ready before the API Service task
    * looks again. */
   probe_done_runtime(&runtime);
-  runtime.control_mailbox.ready_lost_unobserved = false;
-  runtime.control_mailbox.ready = true;
+  runtime.apiservice_mailbox.ready_lost_unobserved = false;
+  runtime.apiservice_mailbox.ready = true;
   bccam_uart_runtime_on_firmware_boot(&runtime);
-  const bccam_uart_control_mailbox_t lost = runtime.control_mailbox;
+  const bccam_uart_apiservice_mailbox_t lost = runtime.apiservice_mailbox;
   probe_done_runtime(&runtime);
-  runtime.control_mailbox.ready_lost_unobserved = lost.ready_lost_unobserved;
-  bccam_uart_runtime_step_control_mailbox(&runtime);
+  runtime.apiservice_mailbox.ready_lost_unobserved = lost.ready_lost_unobserved;
+  bccam_uart_runtime_step_apiservice_mailbox(&runtime);
 
-  TEST_ASSERT_FALSE(bccam_uart_runtime_control_ready(&runtime));
-  TEST_ASSERT_TRUE(bccam_uart_runtime_control_ready(&runtime));
+  TEST_ASSERT_FALSE(bccam_uart_runtime_apiservice_ready(&runtime));
+  TEST_ASSERT_TRUE(bccam_uart_runtime_apiservice_ready(&runtime));
 }
 
 void testMailboxLinkFaultPublishesNotReady(void) {
   bccam_uart_runtime_t runtime;
   probe_done_runtime(&runtime);
-  bccam_uart_runtime_step_control_mailbox(&runtime);
-  TEST_ASSERT_TRUE(bccam_uart_runtime_control_ready(&runtime));
+  bccam_uart_runtime_step_apiservice_mailbox(&runtime);
+  TEST_ASSERT_TRUE(bccam_uart_runtime_apiservice_ready(&runtime));
   runtime.link.state = BCCAM_UART_LINK_FAULT;
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_mailbox(&runtime));
-  TEST_ASSERT_FALSE(bccam_uart_runtime_control_ready(&runtime));
+    bccam_uart_runtime_step_apiservice_mailbox(&runtime));
+  TEST_ASSERT_FALSE(bccam_uart_runtime_apiservice_ready(&runtime));
 }
 
 void testMailboxClosedStaysNotReadyUntilNewSession(void) {
   bccam_uart_runtime_t runtime;
   const uint8_t bytes[] = { 0x01, 1, 1, 'q' };
-  const syslink2_control_frame_t request = control_frame(bytes, sizeof(bytes));
+  const syslink2_apiservice_frame_t request = apiservice_frame(bytes, sizeof(bytes));
   probe_done_runtime(&runtime);
-  bccam_uart_runtime_step_control_mailbox(&runtime);
-  TEST_ASSERT_TRUE(bccam_uart_runtime_control_ready(&runtime));
+  bccam_uart_runtime_step_apiservice_mailbox(&runtime);
+  TEST_ASSERT_TRUE(bccam_uart_runtime_apiservice_ready(&runtime));
 
-  bccam_uart_runtime_close_control(&runtime);
-  TEST_ASSERT_FALSE(bccam_uart_runtime_control_ready(&runtime));
+  bccam_uart_runtime_close_apiservice(&runtime);
+  TEST_ASSERT_FALSE(bccam_uart_runtime_apiservice_ready(&runtime));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_ERR_NOT_ACTIVE,
-    bccam_uart_runtime_send_control(&runtime, &request));
+    bccam_uart_runtime_send_apiservice(&runtime, &request));
   /* The old session still looks ready to the Link. */
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_runtime_step_control_mailbox(&runtime));
-  TEST_ASSERT_FALSE(bccam_uart_runtime_control_ready(&runtime));
+    bccam_uart_runtime_step_apiservice_mailbox(&runtime));
+  TEST_ASSERT_FALSE(bccam_uart_runtime_apiservice_ready(&runtime));
 
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_runtime_on_firmware_boot(&runtime));
-  TEST_ASSERT_FALSE(runtime.control_mailbox.closed);
+  TEST_ASSERT_FALSE(runtime.apiservice_mailbox.closed);
 }

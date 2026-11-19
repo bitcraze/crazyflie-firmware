@@ -39,7 +39,7 @@ static void clear_session(bccam_uart_link_endpoint_t *endpoint) {
   memset(endpoint->pending_tx_credit, 0, sizeof(endpoint->pending_tx_credit));
   memset(endpoint->observed_credit_handles, 0,
          sizeof(endpoint->observed_credit_handles));
-  memset(&endpoint->control_binding, 0, sizeof(endpoint->control_binding));
+  memset(&endpoint->apiservice_binding, 0, sizeof(endpoint->apiservice_binding));
   memset(&endpoint->console_binding, 0, sizeof(endpoint->console_binding));
   endpoint->tx_pending = false;
   endpoint->tx_version = 0u;
@@ -137,9 +137,9 @@ static bool tlvs_valid(const uint8_t *tlvs, uint16_t len) {
   return true;
 }
 
-static bool is_control_contract(const uint8_t *id, uint8_t len) {
-  static const uint8_t control[] = "bitcraze.control";
-  return len == sizeof(control) - 1u && memcmp(id, control, len) == 0;
+static bool is_apiservice_contract(const uint8_t *id, uint8_t len) {
+  static const uint8_t apiservice[] = "bitcraze.api";
+  return len == sizeof(apiservice) - 1u && memcmp(id, apiservice, len) == 0;
 }
 
 /** Return true when an encoded contract ID names bitcraze.console. */
@@ -167,9 +167,9 @@ static bccam_uart_service_binding_t *binding_for_service(
   if (endpoint == NULL) {
     return NULL;
   }
-  if (endpoint->control_binding.valid &&
-      endpoint->control_binding.descriptor.handle == handle) {
-    return &endpoint->control_binding;
+  if (endpoint->apiservice_binding.valid &&
+      endpoint->apiservice_binding.descriptor.handle == handle) {
+    return &endpoint->apiservice_binding;
   }
   if (endpoint->console_binding.valid &&
       endpoint->console_binding.descriptor.handle == handle) {
@@ -185,9 +185,9 @@ static const bccam_uart_service_binding_t *binding_for_service_const(
   if (endpoint == NULL) {
     return NULL;
   }
-  if (endpoint->control_binding.valid &&
-      endpoint->control_binding.descriptor.handle == handle) {
-    return &endpoint->control_binding;
+  if (endpoint->apiservice_binding.valid &&
+      endpoint->apiservice_binding.descriptor.handle == handle) {
+    return &endpoint->apiservice_binding;
   }
   if (endpoint->console_binding.valid &&
       endpoint->console_binding.descriptor.handle == handle) {
@@ -480,7 +480,7 @@ static int handle_service_descriptor(bccam_uart_link_endpoint_t *endpoint,
   }
   const uint8_t ordinal = payload[2];
   const uint8_t handle = payload[3];
-  const bool control_contract = is_control_contract(&payload[7], payload[6]);
+  const bool apiservice_contract = is_apiservice_contract(&payload[7], payload[6]);
   const bool console_contract = is_console_contract(&payload[7], payload[6]);
   if (bit_is_set(endpoint->seen_ordinals, ordinal) ||
       bit_is_set(endpoint->seen_handles, handle)) {
@@ -493,17 +493,17 @@ static int handle_service_descriptor(bccam_uart_link_endpoint_t *endpoint,
       !observed_credit_handles_are_known(endpoint)) {
     return malformed_management(endpoint);
   }
-  if (control_contract) {
-    if (payload[4] == BCCAM_UART_CONTROL_CONTRACT_MAJOR &&
-        !endpoint->control_binding.valid) {
-      endpoint->control_binding.valid = true;
-      endpoint->control_binding.descriptor.handle = handle;
-      endpoint->control_binding.descriptor.major = payload[4];
-      endpoint->control_binding.descriptor.minor = payload[5];
-      endpoint->control_binding.descriptor.contract_id_len = payload[6];
-      memcpy(endpoint->control_binding.descriptor.contract_id,
+  if (apiservice_contract) {
+    if (payload[4] == BCCAM_UART_APISERVICE_CONTRACT_MAJOR &&
+        !endpoint->apiservice_binding.valid) {
+      endpoint->apiservice_binding.valid = true;
+      endpoint->apiservice_binding.descriptor.handle = handle;
+      endpoint->apiservice_binding.descriptor.major = payload[4];
+      endpoint->apiservice_binding.descriptor.minor = payload[5];
+      endpoint->apiservice_binding.descriptor.contract_id_len = payload[6];
+      memcpy(endpoint->apiservice_binding.descriptor.contract_id,
              &payload[7], payload[6]);
-      endpoint->control_binding.tx_credit = endpoint->pending_tx_credit[handle];
+      endpoint->apiservice_binding.tx_credit = endpoint->pending_tx_credit[handle];
       endpoint->pending_tx_credit[handle] = 0u;
     }
   } else if (console_contract &&
@@ -713,8 +713,8 @@ int bccam_uart_link_take_rx(bccam_uart_link_endpoint_t *endpoint,
     return BCCAM_UART_ERR_BAD_ARGUMENT;
   }
   bccam_uart_service_binding_t *binding = NULL;
-  if (endpoint->control_binding.rx_pending) {
-    binding = &endpoint->control_binding;
+  if (endpoint->apiservice_binding.rx_pending) {
+    binding = &endpoint->apiservice_binding;
   } else if (endpoint->console_binding.rx_pending) {
     binding = &endpoint->console_binding;
   }
@@ -759,13 +759,13 @@ bool bccam_uart_link_catalog_complete(const bccam_uart_link_endpoint_t *endpoint
          endpoint->descriptors_received == endpoint->service_count;
 }
 
-bool bccam_uart_link_control_binding(const bccam_uart_link_endpoint_t *endpoint,
+bool bccam_uart_link_apiservice_binding(const bccam_uart_link_endpoint_t *endpoint,
                                      bccam_uart_service_descriptor_t *descriptor) {
-  if (endpoint == NULL || !endpoint->control_binding.valid) {
+  if (endpoint == NULL || !endpoint->apiservice_binding.valid) {
     return false;
   }
   if (descriptor != NULL) {
-    *descriptor = endpoint->control_binding.descriptor;
+    *descriptor = endpoint->apiservice_binding.descriptor;
   }
   return true;
 }
