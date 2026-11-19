@@ -257,7 +257,7 @@ never blocks responses, and a later loss is reported in a later event.
 |--------------|-----|----------|---------|
 | `EAGAIN`     | 11  | 0, 1, 2  | Catalog not frozen yet. Retry shortly. |
 | `ENOENT`     | 2   | 0, 1, 2  | Unknown endpoint ID. |
-| `EINVAL`     | 22  | 0, 1, 2  | Malformed command, a request kind with bit 7 set, or a request the endpoint cannot carry (on the Camera Deck today: `CMD`, and string or bytes values). |
+| `EINVAL`     | 22  | 0, 1, 2  | Malformed command, or a request the endpoint cannot carry. |
 | `ENOSYS`     | 88  | 0, 1     | Unknown or reserved command. |
 | `EBUSY`      | 16  | 2        | This request ID is already outstanding at this endpoint. |
 | `ENOBUFS`    | 105 | 2        | All slots busy, or the endpoint's link has no room. Retry after a response arrives. |

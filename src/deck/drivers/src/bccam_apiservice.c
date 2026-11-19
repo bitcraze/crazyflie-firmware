@@ -135,8 +135,6 @@ static int submit(const ApiserviceEndpoint *ep, ApiserviceRequest *request,
       pending_remove(message[1]);
       return ENOBUFS;
     case SYSLINK2_APISERVICE_SUBMIT_INVALID:
-      // Also CMD, and string or bytes values, outside the link service's
-      // current scope.
       pending_remove(message[1]);
       return EINVAL;
     case SYSLINK2_APISERVICE_SUBMIT_NOT_INITIALIZED:
