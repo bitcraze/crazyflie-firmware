@@ -16,14 +16,11 @@
 
 #define APISERVICE_MAX_GRANTS_PENDING 127u
 
-#define APISERVICE_KIND_GET 0x01u
-#define APISERVICE_KIND_VALUE 0x81u
-#define APISERVICE_TYPE_BYTES 0x21u
 #define APISERVICE_SCHEMA_REQUEST_ID 0u
 
 static const char apiservice_schema_modules_path[] = "meta.schema_modules";
 static const uint8_t apiservice_schema_modules_request[] = {
-  APISERVICE_KIND_GET, APISERVICE_SCHEMA_REQUEST_ID,
+  SYSLINK2_APISERVICE_KIND_GET, APISERVICE_SCHEMA_REQUEST_ID,
   sizeof(apiservice_schema_modules_path) - 1u,
   'm','e','t','a','.','s','c','h','e','m','a','_','m','o','d','u','l','e','s'
 };
@@ -150,9 +147,9 @@ static bool handle_schema_response(bccam_uart_runtime_t *runtime,
                                    const uint8_t *payload,
                                    uint16_t payload_len) {
   if (runtime == NULL || payload == NULL || payload_len < 4u ||
-      payload[0] != APISERVICE_KIND_VALUE ||
+      payload[0] != SYSLINK2_APISERVICE_KIND_VALUE ||
       payload[1] != APISERVICE_SCHEMA_REQUEST_ID ||
-      payload[2] != APISERVICE_TYPE_BYTES ||
+      payload[2] != SYSLINK2_APISERVICE_TYPE_BYTES ||
       payload_len != (uint16_t)(4u + payload[3])) {
     return false;
   }

@@ -17,7 +17,8 @@ In scope, matching `bitcraze.api` version 0.0 on the deck:
 
 - the requests `GET` and `SET`,
 - the responses `OK`, `VALUE` and `ERROR`,
-- the value types `bool`, `u8`, `i8`, `u16`, `i16`, `u32` and `i32`,
+- the value types `bool`, `u8`, `i8`, `u16`, `i16`, `u32`, `i32`, `u64`,
+  `i64`, `string` and `bytes`, with values that fit in one frame,
 - one request outstanding at a time,
 - recognizing unsolicited frames from the deck, such as `NOTIFY`, and passing
   them to the unsolicited handler, or dropping them when none is set, see
@@ -110,7 +111,10 @@ Bodies:
 - `value` is `type:u8`, `len:u8`, `data[len]`. Multi-byte integers are
   little-endian.
 - The value types in scope and their type codes: `bool` 0x01, `u8` 0x10,
-  `i8` 0x11, `u16` 0x12, `i16` 0x13, `u32` 0x14 and `i32` 0x15.
+  `i8` 0x11, `u16` 0x12, `i16` 0x13, `u32` 0x14, `i32` 0x15, `u64` 0x16,
+  `i64` 0x17, `string` 0x20 and `bytes` 0x21.
+- A `string` is UTF-8 without a NUL terminator, `len` bytes, and has no
+  embedded NUL byte. A `bytes` value is `len` opaque bytes.
 - `path` is ASCII, `path_len` bytes, not NUL-terminated.
 - A response shorter than 2 bytes has no `request_id` and is malformed.
 
@@ -345,7 +349,7 @@ classDiagram
         uint8_t len
         uint8_t data[SYSLINK2_APISERVICE_VALUE_MAX_LEN]
     }
-    note for syslink2_apiservice_value_t "SYSLINK2_APISERVICE_VALUE_MAX_LEN = 4"
+    note for syslink2_apiservice_value_t "SYSLINK2_APISERVICE_VALUE_MAX_LEN = 60"
 
     class syslink2_apiservice_frame_class_t {
         <<enumeration>>
@@ -384,12 +388,17 @@ the Link Maximum Transmission Unit (MTU) is 64.
 The other types hold their data inline, sized so that every request and
 response fits in one frame:
 
-- `SYSLINK2_APISERVICE_VALUE_MAX_LEN` is 4, the size of the largest value type in
-  scope, `u32` and `i32`. `len` is the number of valid bytes in `data`.
-- `SYSLINK2_APISERVICE_PATH_MAX_LEN` is 55: a `SET` frame has 2 header bytes,
-  `path_len`, the path and a value of at most 2 + 4 bytes. A request with a
-  longer path cannot be built. `path` is ASCII, `path_len` bytes, not
-  NUL-terminated.
+- `SYSLINK2_APISERVICE_VALUE_MAX_LEN` is 60, the longest value that fits in a
+  `VALUE` frame: 2 header bytes, `type` and `len` before the data. `len` is
+  the number of valid bytes in `data`.
+- `SYSLINK2_APISERVICE_PATH_MAX_LEN` is 55, the longest path of a `SET`
+  with a 4-byte value. A request with a longer path cannot be built. `path`
+  is ASCII, `path_len` bytes, not NUL-terminated.
+- A `SET` frame has 2 header bytes, `path_len`, the path, `type`, `len` and
+  the data, so the path and the value together are limited to 59 bytes. The
+  arrays alone do not ensure that, so the [Request checks](#request-checks)
+  check it for each request. A longer `string` or `bytes` value can be read
+  with `GET` but not written with `SET`.
 - `SYSLINK2_APISERVICE_DETAIL_MAX_LEN` is 60: an `ERROR` frame has 2 header bytes,
   `error_code` and `detail_len` before the detail. `detail` is UTF-8 text,
   `detail_len` bytes, not NUL-terminated.
@@ -895,6 +904,8 @@ the API Service task, by `syslink2_apiservice_request_handling`.
   `syslink2_apiservice_request_t`, including its `value`, and the callback to
   complete it with. The user can reuse or drop its request as soon as
   submit returns.
+- An entry is 128 bytes, most of it the path and value arrays, so the queue
+  takes 512 bytes of RAM.
 - `syslink2_apiservice_request_queue_take` copies the entry out to
   `syslink2_apiservice_request_handling`, which keeps it while the request is
   outstanding. The `request` passed to `on_complete` is that copy, not the
@@ -1162,8 +1173,9 @@ hold:
 - `operation` is `GET` or `SET`.
 - `path_len` is from 1 to `SYSLINK2_APISERVICE_PATH_MAX_LEN`.
 - Every byte of `path` is printable ASCII, 0x20..0x7e.
-- For `SET`, `value` passes the value checks below. For `GET`, `value` is
-  not read.
+- For `SET`, `value` passes the value checks below, and the `SET` frame
+  fits in `SYSLINK2_APISERVICE_FRAME_MAX_LEN`: 5 + `path_len` + `value.len`
+  is at most 64. For `GET`, `value` is not read.
 
 The callback is not part of the request. Submit checks it separately, see
 [syslink2_apiservice_submit](#syslink2_apiservice_submit).
@@ -1171,7 +1183,9 @@ The callback is not part of the request. Submit checks it separately, see
 The checks protect the encoders: a `path_len` over
 `SYSLINK2_APISERVICE_PATH_MAX_LEN` or a `value.len` over
 `SYSLINK2_APISERVICE_VALUE_MAX_LEN` would make them read past the end of the
-array. Every check fails only because of a bug in the user.
+array, and a `SET` frame that does not fit would be written past the end
+of `syslink2_apiservice_frame_t`. Every check fails only because of a bug
+in the user.
 
 ### Raw requests
 
@@ -1249,13 +1263,15 @@ internal function:
 
 - the type is in scope, see [Frame layout](#frame-layout),
 - `len` matches the type: 1 for `bool`, `u8` and `i8`, 2 for `u16` and
-  `i16`, 4 for `u32` and `i32`,
-- a `bool` is 0x00 or 0x01.
+  `i16`, 4 for `u32` and `i32`, 8 for `u64` and `i64`, and from 0 to
+  `SYSLINK2_APISERVICE_VALUE_MAX_LEN` for `string` and `bytes`,
+- a `bool` is 0x00 or 0x01,
+- a `string` has no 0x00 byte.
 
 When all checks pass, `value_valid` is true and the type, length and data
 are copied into `value`. Otherwise `value_valid` is false and `value` is
-not filled in. A type out of scope, such as `u64` or `string`, does not fit
-in `syslink2_apiservice_value_t`.
+not filled in. A type out of scope, such as a future `f32`, has no known
+length and is not copied.
 
 ## syslink2_apiservice_channel
 
@@ -1428,8 +1444,8 @@ Severity rates the effect on the user after mitigation:
 
 - **Failure mode**: the matching answer has a kind that does not fit the
   operation, such as `OK` to a `GET` or `VALUE` to a `SET`, or it is a
-  `VALUE` whose value fails the value checks, such as a type out of scope
-  or a `bool` that is not 0x00 or 0x01.
+  `VALUE` whose value fails the value checks, such as a type out of scope,
+  a `bool` that is not 0x00 or 0x01, or a `string` with a NUL byte.
 - **Cause**: the deck does not follow the protocol, or uses a value type
   out of scope for the path.
 - **Effect if unmitigated**: the user gets a wrong result, or a value that
@@ -1545,8 +1561,9 @@ Severity rates the effect on the user after mitigation:
 
 - **Failure mode**: the user submits a request that fails the
   [Request checks](#request-checks), such as a `path_len` over
-  `SYSLINK2_APISERVICE_PATH_MAX_LEN`, an unknown `operation`, or a `SET` value
-  with a type out of scope or a `len` that does not match the type. Or the
+  `SYSLINK2_APISERVICE_PATH_MAX_LEN`, an unknown `operation`, a `SET` value
+  with a type out of scope or a `len` that does not match the type, or a
+  `SET` whose path and value together do not fit in one frame. Or the
   user submits a raw request that cannot be decoded, see
   [Raw requests](#raw-requests). Or the user passes a NULL callback.
 - **Cause**: a bug in the user, or for a raw request, bad bytes from

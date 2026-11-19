@@ -7,8 +7,18 @@
 #define VALUE_HEADER_LEN 2u
 #define UNSOLICITED_KIND_MIN 0xc0u
 
-/** The length a value of type must have, or 0 when the type is out of scope. */
-static uint8_t value_len_for_type(uint8_t type) {
+#define SET_HEADER_LEN 5u
+
+static bool is_variable_length_type(uint8_t type) {
+  return type == SYSLINK2_APISERVICE_TYPE_STRING ||
+         type == SYSLINK2_APISERVICE_TYPE_BYTES;
+}
+
+/**
+ * The length a fixed-length value of type must have, or 0 when the type is
+ * not a fixed-length type in scope.
+ */
+static uint8_t fixed_value_len_for_type(uint8_t type) {
   switch (type) {
     case SYSLINK2_APISERVICE_TYPE_BOOL:
     case SYSLINK2_APISERVICE_TYPE_U8:
@@ -20,6 +30,9 @@ static uint8_t value_len_for_type(uint8_t type) {
     case SYSLINK2_APISERVICE_TYPE_U32:
     case SYSLINK2_APISERVICE_TYPE_I32:
       return 4u;
+    case SYSLINK2_APISERVICE_TYPE_U64:
+    case SYSLINK2_APISERVICE_TYPE_I64:
+      return 8u;
     default:
       return 0u;
   }
@@ -27,7 +40,17 @@ static uint8_t value_len_for_type(uint8_t type) {
 
 /** The value checks, shared by SET requests and received VALUE frames. */
 static bool value_checks(uint8_t type, uint8_t len, const uint8_t *data) {
-  const uint8_t expected = value_len_for_type(type);
+  if (is_variable_length_type(type)) {
+    if (len > SYSLINK2_APISERVICE_VALUE_MAX_LEN) {
+      return false;
+    }
+    if (type == SYSLINK2_APISERVICE_TYPE_STRING &&
+        memchr(data, 0, len) != NULL) {
+      return false;
+    }
+    return true;
+  }
+  const uint8_t expected = fixed_value_len_for_type(type);
   if (expected == 0u || len != expected) {
     return false;
   }
@@ -56,10 +79,15 @@ bool syslink2_apiservice_codec_request_valid(
       return false;
     }
   }
-  if (request->operation == SYSLINK2_APISERVICE_KIND_SET &&
-      !value_checks(request->value.type, request->value.len,
-                    request->value.data)) {
-    return false;
+  if (request->operation == SYSLINK2_APISERVICE_KIND_SET) {
+    if (!value_checks(request->value.type, request->value.len,
+                      request->value.data)) {
+      return false;
+    }
+    if ((uint16_t)SET_HEADER_LEN + request->path_len + request->value.len >
+        SYSLINK2_APISERVICE_FRAME_MAX_LEN) {
+      return false;
+    }
   }
   return true;
 }

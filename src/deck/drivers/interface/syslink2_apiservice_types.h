@@ -11,9 +11,13 @@
 
 /** Link MTU of the UART camera profile: the largest frame. */
 #define SYSLINK2_APISERVICE_FRAME_MAX_LEN 64u
-/** Largest value in scope, u32 and i32. */
-#define SYSLINK2_APISERVICE_VALUE_MAX_LEN 4u
-/** Longest path that fits a SET frame with the largest value. */
+/**
+ * Longest value that fits a VALUE frame: 2 header bytes, type and len before
+ * the data. A SET frame also holds the path, so a SET is limited further, see
+ * the request checks.
+ */
+#define SYSLINK2_APISERVICE_VALUE_MAX_LEN 60u
+/** Longest path of a SET frame with a 4-byte value. */
 #define SYSLINK2_APISERVICE_PATH_MAX_LEN 55u
 /** Longest detail that fits an ERROR frame. */
 #define SYSLINK2_APISERVICE_DETAIL_MAX_LEN 60u
@@ -33,6 +37,12 @@
 #define SYSLINK2_APISERVICE_TYPE_I16 0x13u
 #define SYSLINK2_APISERVICE_TYPE_U32 0x14u
 #define SYSLINK2_APISERVICE_TYPE_I32 0x15u
+#define SYSLINK2_APISERVICE_TYPE_U64 0x16u
+#define SYSLINK2_APISERVICE_TYPE_I64 0x17u
+/** UTF-8, len bytes, not NUL-terminated, no embedded NUL byte. */
+#define SYSLINK2_APISERVICE_TYPE_STRING 0x20u
+/** len opaque bytes. */
+#define SYSLINK2_APISERVICE_TYPE_BYTES 0x21u
 
 /** One API Service frame, the payload of one UART packet on the API Service. */
 typedef struct {
@@ -40,7 +50,10 @@ typedef struct {
   uint8_t len;
 } syslink2_apiservice_frame_t;
 
-/** A typed value. Multi-byte integers are little-endian in data. */
+/**
+ * A typed value. Multi-byte integers are little-endian in data. len is the
+ * number of valid bytes in data.
+ */
 typedef struct {
   uint8_t type;
   uint8_t len;
