@@ -13,7 +13,7 @@
 #include "syslink2_apiservice_types.h"
 
 /** Timeout of one request, from when it is taken from the queue. */
-#define SYSLINK2_APISERVICE_TIMEOUT_MS 500u
+#define SYSLINK2_APISERVICE_TIMEOUT_MS 1000u
 
 /** Set init values. The deck request ID starts at 1. */
 void syslink2_apiservice_request_handling_init(void);
