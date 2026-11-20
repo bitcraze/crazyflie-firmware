@@ -495,13 +495,41 @@ STATS_CNT_RATE_LOG_ADD(posRt, &positionRate)
 STATS_CNT_RATE_LOG_ADD(estBs0Rt, &estBs0Rate)
 STATS_CNT_RATE_LOG_ADD(estBs1Rt, &estBs1Rate)
 
+/**
+ * @brief Position X [m] from the crossing beam method
+ *
+ * Only updated when lighthouse.method is 0 (crossing beam), see stateEstimate.x
+ * for the estimated position.
+ */
 LOG_ADD_CORE(LOG_FLOAT, x, &positionLog[0])
+/**
+ * @brief Position Y [m] from the crossing beam method
+ *
+ * Only updated when lighthouse.method is 0 (crossing beam), see stateEstimate.y
+ * for the estimated position.
+ */
 LOG_ADD_CORE(LOG_FLOAT, y, &positionLog[1])
+/**
+ * @brief Position Z [m] from the crossing beam method
+ *
+ * Only updated when lighthouse.method is 0 (crossing beam), see stateEstimate.z
+ * for the estimated position.
+ */
 LOG_ADD_CORE(LOG_FLOAT, z, &positionLog[2])
 
 LOG_ADD(LOG_FLOAT, delta, &deltaLog)
 
+/**
+ * @brief Bit field indicating which base stations have valid geometry data
+ *
+ * The lowest bit maps to base station channel 1 and the highest to channel 16.
+ */
 LOG_ADD_CORE(LOG_UINT16, bsGeoVal, &lighthouseCoreState.baseStationGeoValidMap)
+/**
+ * @brief Bit field indicating which base stations have valid calibration data
+ *
+ * The lowest bit maps to base station channel 1 and the highest to channel 16.
+ */
 LOG_ADD_CORE(LOG_UINT16, bsCalVal, &lighthouseCoreState.baseStationCalibValidMap)
 
 LOG_GROUP_STOP(lighthouse)

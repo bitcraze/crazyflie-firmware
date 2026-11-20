@@ -227,6 +227,13 @@ DECK_DRIVER(servo_deck);
 
 PARAM_GROUP_START(deck)
 
+/**
+ * @brief Nonzero if the servo driver is initialized
+ *
+ * Drives one extra servo (in position mode) on top of the motors, its angle is
+ * set with servo.servoAngle. The servo has no deck ID, enable it with
+ * CONFIG_DECK_FORCE="bcServo" and CONFIG_DECK_SERVO=y.
+ */
 PARAM_ADD_CORE(PARAM_UINT8 | PARAM_RONLY, bcServo, &isInit)
 PARAM_GROUP_STOP(deck)
 
