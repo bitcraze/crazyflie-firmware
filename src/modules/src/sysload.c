@@ -43,6 +43,10 @@ static void timerHandler(xTimerHandle timer);
 static bool initialized = false;
 static uint8_t triggerDump = 0;
 
+static StaticTimer_t timerBuffer;
+
+#if (configUSE_TRACE_FACILITY == 1)
+
 typedef struct {
   uint32_t ulRunTimeCounter;
   uint32_t xTaskNumber;
@@ -52,8 +56,7 @@ typedef struct {
 NO_DMA_CCM_SAFE_ZERO_INIT static taskData_t previousSnapshot[TASK_MAX_COUNT];
 static int taskTopIndex = 0;
 static uint32_t previousTotalRunTime = 0;
-
-static StaticTimer_t timerBuffer;
+#endif
 
 void sysLoadInit() {
   ASSERT(!initialized);
@@ -64,7 +67,7 @@ void sysLoadInit() {
   initialized = true;
 }
 
-
+#if (configUSE_TRACE_FACILITY == 1)
 static taskData_t* getPreviousTaskData(uint32_t xTaskNumber) {
   // Try to find the task in the list of tasks
   for (int i = 0; i < taskTopIndex; i++) {
@@ -82,9 +85,11 @@ static taskData_t* getPreviousTaskData(uint32_t xTaskNumber) {
 
   return result;
 }
+#endif
 
 static void timerHandler(xTimerHandle timer) {
   if (triggerDump != 0) {
+#if (configUSE_TRACE_FACILITY == 1)
     uint32_t totalRunTime;
 
     TaskStatus_t taskStats[TASK_MAX_COUNT];
@@ -112,6 +117,9 @@ static void timerHandler(xTimerHandle timer) {
     }
 
     previousTotalRunTime = totalRunTime;
+#else
+    DEBUG_PRINT("Task dump unavailable, CONFIG_FREERTOS_USE_TRACE_FACILITY is disabled\n");
+#endif
 
     triggerDump = 0;
   }
