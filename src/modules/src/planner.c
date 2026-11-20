@@ -39,6 +39,8 @@ implementation of planning state machine
 #include "planner.h"
 #include "arm_math.h"
 #include "debug.h"
+#include "cfassert.h"
+#include "controller.h"
 
 static struct traj_eval plan_eval(struct planner *p, float t);
 
@@ -73,6 +75,11 @@ void plan_init(struct planner *p)
 
 void plan_stop(struct planner *p)
 {
+	if (p->state == TRAJECTORY_STATE_PRECISE_LANDING) {
+#ifdef CRAZYFLIE_FW
+		controllerExitPreciseLand();
+#endif
+	}
 	p->state = TRAJECTORY_STATE_IDLE;
 }
 
@@ -100,6 +107,11 @@ bool plan_is_stopped(struct planner *p)
 
 void plan_disable(struct planner *p)
 {
+	if (p->state == TRAJECTORY_STATE_PRECISE_LANDING) {
+#ifdef CRAZYFLIE_FW
+		controllerExitPreciseLand();
+#endif
+	}
 	p->state = TRAJECTORY_STATE_DISABLED;
 }
 
@@ -111,6 +123,15 @@ bool plan_is_disabled(struct planner *p)
 struct traj_eval plan_current_goal(struct planner *p, float t)
 {
 	switch (p->state) {
+		case TRAJECTORY_STATE_PRECISE_LANDING:
+			if (plan_is_finished(p, t)) {
+#ifdef CRAZYFLIE_FW
+				controllerExitPreciseLand();
+#endif
+				p->state = TRAJECTORY_STATE_IDLE;
+			}
+			return plan_eval(p, t);
+
 		case TRAJECTORY_STATE_LANDING:
 			if (plan_is_finished(p, t)) {
 				p->state = TRAJECTORY_STATE_IDLE;
@@ -168,7 +189,7 @@ int plan_takeoff(struct planner *p, struct vec curr_pos, float curr_yaw, float h
 
 int plan_land(struct planner *p, struct vec curr_pos, float curr_yaw, float hover_height, float hover_yaw, float duration, float t)
 {
-	if (p->state == TRAJECTORY_STATE_LANDING) {
+	if (p->state == TRAJECTORY_STATE_LANDING || p->state == TRAJECTORY_STATE_PRECISE_LANDING) {
 		return 1;
 	}
 
@@ -178,6 +199,74 @@ int plan_land(struct planner *p, struct vec curr_pos, float curr_yaw, float hove
 	p->type = TRAJECTORY_TYPE_PIECEWISE;
 	p->planned_trajectory.t_begin = t;
 	p->trajectory = &p->planned_trajectory;
+	return 0;
+}
+
+int plan_precise_land(struct planner *p, struct vec curr_pos, float curr_yaw, float hover_height, float hover_yaw, float duration, float hover_offset, float hover_duration, float t)
+{
+	if (p->state == TRAJECTORY_STATE_PRECISE_LANDING || p->state == TRAJECTORY_STATE_LANDING) {
+		return 1;
+	}
+
+	// The final descent piece is always 0.1s so hover_duration must leave room for it.
+	if (duration <= hover_duration + 0.1f) {
+		return 1;
+	}
+
+	struct vec hover_pos = curr_pos;
+	struct vec landing_pos = curr_pos;
+	hover_pos.z = hover_height + hover_offset;
+	landing_pos.z = hover_height;
+
+	// compute the shortest possible rotation towards 0
+	hover_yaw = normalize_radians(hover_yaw);
+	curr_yaw = normalize_radians(curr_yaw);
+	float goal_yaw = curr_yaw + shortest_signed_angle_radians(curr_yaw, hover_yaw);
+
+
+	// the precise landing trajectory has three pieces.
+	// 1. go to a position a few cm over the landing point,
+	// 2. hover there for a bit to control out disturbances,
+	// 3. Then go down to the landing point.
+	float durations[3];
+	durations[2] = 0.1f;  // we want the last piece to be short.
+	durations[1] = hover_duration;
+	durations[0] = duration - durations[1] - durations[2];
+	ASSERT(durations[0] > 0.0f);
+
+	struct vec positions[4];
+	positions[0] = curr_pos;
+	positions[1] = hover_pos;
+	positions[2] = hover_pos;
+	positions[3] = landing_pos;
+
+	float yaws[4];
+	yaws[0] = curr_yaw;
+	for (int i = 1; i < 4; i++) {
+		yaws[i] = goal_yaw;
+	}
+
+	struct vec velocities[3];
+	float yaw_rates[3];
+	struct vec accelerations[3];
+	for (int i = 0; i < 3; i++) {
+		velocities[i] = vzero();
+		yaw_rates[i] = 0;
+		accelerations[i] = vzero();
+	}
+
+	plan_7th_order_no_jerk(&p->planned_trajectory, durations, positions, yaws, velocities, yaw_rates, accelerations, 3);
+
+	p->reversed = false;
+	p->state = TRAJECTORY_STATE_PRECISE_LANDING;
+	p->type = TRAJECTORY_TYPE_PIECEWISE;
+	p->planned_trajectory.t_begin = t;
+	p->trajectory = &p->planned_trajectory;
+
+#ifdef CRAZYFLIE_FW
+	controllerEnterPreciseLand();
+#endif
+
 	return 0;
 }
 

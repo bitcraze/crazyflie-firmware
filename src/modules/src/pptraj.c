@@ -446,3 +446,33 @@ void piecewise_plan_7th_order_no_jerk(struct piecewise_traj *pp, float duration,
 	poly7_nojerk(p->p[3], duration, y0, dy0, 0, y1, dy1, 0);
 }
 
+
+static void piecewise_plan_piece_7th_order_no_jerk(struct piecewise_traj *pp, float duration, 
+	struct vec p0, float y0, struct vec v0, float dy0, struct vec a0,
+	struct vec p1, float y1, struct vec v1, float dy1, struct vec a1, 
+	int piece_idx)
+{
+	struct poly4d *p = &pp->pieces[piece_idx];
+	p->duration = duration;
+	poly7_nojerk(p->p[0], duration, p0.x, v0.x, a0.x, p1.x, v1.x, a1.x);
+	poly7_nojerk(p->p[1], duration, p0.y, v0.y, a0.y, p1.y, v1.y, a1.y);
+	poly7_nojerk(p->p[2], duration, p0.z, v0.z, a0.z, p1.z, v1.z, a1.z);
+	poly7_nojerk(p->p[3], duration, y0, dy0, 0, y1, dy1, 0);
+}
+
+
+void plan_7th_order_no_jerk(struct piecewise_traj *pp, float *durations,
+							struct vec *positions, float *yaws,
+							struct vec *velocities, float *yaw_rates,
+							struct vec *accelerations, int num_pieces)
+{
+	pp->n_pieces = num_pieces;
+	pp->timescale = 1.0f;
+	pp->shift = vzero();
+	for (int i = 0; i < num_pieces; ++i) {
+		piecewise_plan_piece_7th_order_no_jerk(pp, durations[i],
+			positions[i], yaws[i], velocities[i], yaw_rates[i], accelerations[i],
+			positions[i+1], yaws[i+1], velocities[i+1], yaw_rates[i+1], accelerations[i+1], i);
+	}
+}
+

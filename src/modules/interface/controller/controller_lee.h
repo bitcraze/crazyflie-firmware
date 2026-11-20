@@ -71,6 +71,10 @@ void controllerLeeFirmware(control_t *control, const setpoint_t *setpoint,
                                          const sensorData_t *sensors,
                                          const state_t *state,
                                          const uint32_t tick);
+
+// Lee does not currently support precise landing; these are no-ops.
+void controllerLeeEnterPreciseLand(void);
+void controllerLeeExitPreciseLand(void);
 #endif // CRAZYFLIE_FW defined
 
 #endif //__CONTROLLER_LEE_H__

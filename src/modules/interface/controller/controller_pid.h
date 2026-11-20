@@ -35,4 +35,7 @@ void controllerPid(control_t *control, const setpoint_t *setpoint,
                                          const state_t *state,
                                          const stabilizerStep_t stabilizerStep);
 
+void controllerPidEnterPreciseLand(void);
+void controllerPidExitPreciseLand(void);
+
 #endif //__CONTROLLER_PID_H__

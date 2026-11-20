@@ -50,6 +50,11 @@ void controller(control_t *control, const setpoint_t *setpoint,
 ControllerType controllerGetType(void);
 const char* controllerGetName();
 
+// Ask the active controller to temporarily switch to its precise-landing gains, and to
+// switch back afterward. No-op if the active controller doesn't implement precise landing.
+void controllerEnterPreciseLand(void);
+void controllerExitPreciseLand(void);
+
 
 #ifdef CONFIG_CONTROLLER_OOT
 void controllerOutOfTreeInit(void);
