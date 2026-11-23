@@ -202,6 +202,47 @@ void testSetThroughRouterAndAdapter(void) {
   TEST_ASSERT_EQUAL_MEMORY(expected, o.buffer, 2);
 }
 
+void testCmdWithArgumentThroughRouterAndAdapter(void) {
+  runtime_ready = true;
+  step();
+  const uint8_t cmd_q[] = {0x03, 9, 1, 'q', 0x10, 1, 80};
+  originator_t o;
+  originator_init(&o, cmd_q, sizeof(cmd_q));
+  TEST_ASSERT_EQUAL(0, apiserviceSubmit(ep, &o.request, o.buffer, sizeof(cmd_q)));
+  step();
+  step();
+  TEST_ASSERT_EQUAL_UINT(1, sends);
+  TEST_ASSERT_EQUAL_UINT(sizeof(cmd_q), sent.len);
+  TEST_ASSERT_EQUAL_UINT8(0x03, sent.data[0]);
+  TEST_ASSERT_EQUAL_MEMORY(&cmd_q[2], &sent.data[2], sizeof(cmd_q) - 2);
+  const uint8_t value[] = {0x81, 0, 0x10, 1, 81};
+  deck_answer(value, sizeof(value));
+  step();
+  TEST_ASSERT_EQUAL(0, o.status);
+  const uint8_t expected[] = {0x81, 9, 0x10, 1, 81};
+  TEST_ASSERT_EQUAL_UINT(sizeof(expected), o.length);
+  TEST_ASSERT_EQUAL_MEMORY(expected, o.buffer, sizeof(expected));
+}
+
+void testCmdWithoutArgumentThroughRouterAndAdapter(void) {
+  runtime_ready = true;
+  step();
+  const uint8_t cmd_q[] = {0x03, 9, 1, 'q'};
+  originator_t o;
+  originator_init(&o, cmd_q, sizeof(cmd_q));
+  TEST_ASSERT_EQUAL(0, apiserviceSubmit(ep, &o.request, o.buffer, sizeof(cmd_q)));
+  step();
+  step();
+  TEST_ASSERT_EQUAL_UINT(sizeof(cmd_q), sent.len);
+  const uint8_t ok[] = {0x80, 0};
+  deck_answer(ok, sizeof(ok));
+  step();
+  TEST_ASSERT_EQUAL(0, o.status);
+  const uint8_t expected[] = {0x80, 9};
+  TEST_ASSERT_EQUAL_UINT(sizeof(expected), o.length);
+  TEST_ASSERT_EQUAL_MEMORY(expected, o.buffer, sizeof(expected));
+}
+
 void testErrorResponseKeepsDetail(void) {
   runtime_ready = true;
   step();
@@ -256,10 +297,10 @@ void testReadyLostIsConnectionResetThenNotConnected(void) {
 void testOutOfScopeRequestIsInvalid(void) {
   runtime_ready = true;
   step();
-  const uint8_t cmd[] = {0x03, 1, 1, 'q'};
+  const uint8_t unknown[] = {0x04, 1, 1, 'q'};
   originator_t o;
-  originator_init(&o, cmd, sizeof(cmd));
-  TEST_ASSERT_EQUAL(EINVAL, apiserviceSubmit(ep, &o.request, o.buffer, sizeof(cmd)));
+  originator_init(&o, unknown, sizeof(unknown));
+  TEST_ASSERT_EQUAL(EINVAL, apiserviceSubmit(ep, &o.request, o.buffer, sizeof(unknown)));
   TEST_ASSERT_EQUAL_UINT8(1, o.buffer[1]);
   TEST_ASSERT_EQUAL_UINT(0, o.calls);
 }

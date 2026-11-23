@@ -39,7 +39,7 @@ void testValidGetAndSetPass(void) {
 }
 
 void testUnknownOperationIsInvalid(void) {
-  syslink2_apiservice_request_t request = make_request(0x03u, "a.b");
+  syslink2_apiservice_request_t request = make_request(0x04u, "a.b");
   TEST_ASSERT_FALSE(syslink2_apiservice_codec_request_valid(&request));
 }
 
@@ -153,6 +153,37 @@ void testGetValueIsNotRead(void) {
   TEST_ASSERT_TRUE(syslink2_apiservice_codec_request_valid(&request));
 }
 
+void testCmdWithoutArgumentDoesNotReadValue(void) {
+  syslink2_apiservice_request_t request = make_request(SYSLINK2_APISERVICE_KIND_CMD, "a.b");
+  request.has_argument = false;
+  request.value.type = 0xffu;
+  request.value.len = 200u;
+  TEST_ASSERT_TRUE(syslink2_apiservice_codec_request_valid(&request));
+}
+
+void testCmdArgumentIsChecked(void) {
+  syslink2_apiservice_request_t request = make_request(SYSLINK2_APISERVICE_KIND_CMD, "a.b");
+  request.has_argument = true;
+  TEST_ASSERT_TRUE(syslink2_apiservice_codec_request_valid(&request));
+  request.value.type = 0x18u; /* out of scope */
+  TEST_ASSERT_FALSE(syslink2_apiservice_codec_request_valid(&request));
+  request.value.type = SYSLINK2_APISERVICE_TYPE_NULL;
+  request.value.len = 1u;
+  TEST_ASSERT_FALSE(syslink2_apiservice_codec_request_valid(&request));
+  request.value.len = 0u;
+  TEST_ASSERT_TRUE(syslink2_apiservice_codec_request_valid(&request));
+}
+
+void testCmdArgumentMustFitInOneFrame(void) {
+  syslink2_apiservice_request_t request = make_request(SYSLINK2_APISERVICE_KIND_CMD, "a");
+  request.has_argument = true;
+  request.value.type = SYSLINK2_APISERVICE_TYPE_BYTES;
+  request.value.len = 58u;
+  TEST_ASSERT_TRUE(syslink2_apiservice_codec_request_valid(&request));
+  request.value.len = 59u;
+  TEST_ASSERT_FALSE(syslink2_apiservice_codec_request_valid(&request));
+}
+
 void testNullRequestIsInvalid(void) {
   TEST_ASSERT_FALSE(syslink2_apiservice_codec_request_valid(NULL));
 }
@@ -178,6 +209,46 @@ void testDecodeRawSet(void) {
   TEST_ASSERT_EQUAL_UINT8(2, request.value.len);
   TEST_ASSERT_EQUAL_UINT8(0x34, request.value.data[0]);
   TEST_ASSERT_EQUAL_UINT8(0x12, request.value.data[1]);
+}
+
+void testDecodeRawCmdWithoutArgument(void) {
+  const uint8_t raw[] = { 0x03, 8, 1, 'q' };
+  syslink2_apiservice_request_t request;
+  TEST_ASSERT_TRUE(syslink2_apiservice_codec_decode_request(raw, sizeof(raw), &request));
+  TEST_ASSERT_EQUAL_UINT8(SYSLINK2_APISERVICE_KIND_CMD, request.operation);
+  TEST_ASSERT_EQUAL_UINT8(8, request.user_request_id);
+  TEST_ASSERT_FALSE(request.has_argument);
+  TEST_ASSERT_TRUE(syslink2_apiservice_codec_request_valid(&request));
+}
+
+void testDecodeRawCmdWithNullArgument(void) {
+  const uint8_t raw[] = { 0x03, 8, 1, 'q', 0x00, 0 };
+  syslink2_apiservice_request_t request;
+  TEST_ASSERT_TRUE(syslink2_apiservice_codec_decode_request(raw, sizeof(raw), &request));
+  TEST_ASSERT_TRUE(request.has_argument);
+  TEST_ASSERT_EQUAL_UINT8(SYSLINK2_APISERVICE_TYPE_NULL, request.value.type);
+  TEST_ASSERT_EQUAL_UINT8(0, request.value.len);
+  TEST_ASSERT_TRUE(syslink2_apiservice_codec_request_valid(&request));
+}
+
+void testDecodeRawCmdWithArgument(void) {
+  const uint8_t raw[] = { 0x03, 8, 1, 'q', 0x12, 2, 0x34, 0x12 };
+  syslink2_apiservice_request_t request;
+  TEST_ASSERT_TRUE(syslink2_apiservice_codec_decode_request(raw, sizeof(raw), &request));
+  TEST_ASSERT_TRUE(request.has_argument);
+  TEST_ASSERT_EQUAL_UINT8(0x12, request.value.type);
+  TEST_ASSERT_EQUAL_UINT8(2, request.value.len);
+  TEST_ASSERT_EQUAL_UINT8(0x34, request.value.data[0]);
+}
+
+void testDecodeRawCmdRejectsBadArgument(void) {
+  syslink2_apiservice_request_t request;
+  const uint8_t partial_header[] = { 0x03, 8, 1, 'q', 0x10 };
+  TEST_ASSERT_FALSE(syslink2_apiservice_codec_decode_request(partial_header, sizeof(partial_header), &request));
+  const uint8_t truncated[] = { 0x03, 8, 1, 'q', 0x12, 2, 0x34 };
+  TEST_ASSERT_FALSE(syslink2_apiservice_codec_decode_request(truncated, sizeof(truncated), &request));
+  const uint8_t two_values[] = { 0x03, 8, 1, 'q', 0x00, 0, 0x00, 0 };
+  TEST_ASSERT_FALSE(syslink2_apiservice_codec_decode_request(two_values, sizeof(two_values), &request));
 }
 
 void testDecodeRawRejectsBadLengths(void) {
@@ -283,6 +354,29 @@ void testEncodeSetLongestBytesFitsFrame(void) {
   TEST_ASSERT_EQUAL_UINT8('v', frame.data[SYSLINK2_APISERVICE_FRAME_MAX_LEN - 1u]);
 }
 
+void testEncodeCmdWithoutArgumentEndsAfterPath(void) {
+  const syslink2_apiservice_frame_t frame = syslink2_apiservice_codec_encode_cmd(6, "q", 1, NULL);
+  const uint8_t expected[] = { 0x03, 6, 1, 'q' };
+  TEST_ASSERT_EQUAL_UINT8(sizeof(expected), frame.len);
+  TEST_ASSERT_EQUAL_MEMORY(expected, frame.data, sizeof(expected));
+}
+
+void testEncodeCmdWithNullArgument(void) {
+  const syslink2_apiservice_value_t argument = { .type = SYSLINK2_APISERVICE_TYPE_NULL, .len = 0 };
+  const syslink2_apiservice_frame_t frame = syslink2_apiservice_codec_encode_cmd(6, "q", 1, &argument);
+  const uint8_t expected[] = { 0x03, 6, 1, 'q', 0x00, 0 };
+  TEST_ASSERT_EQUAL_UINT8(sizeof(expected), frame.len);
+  TEST_ASSERT_EQUAL_MEMORY(expected, frame.data, sizeof(expected));
+}
+
+void testEncodeCmdWithArgument(void) {
+  const syslink2_apiservice_value_t argument = { .type = 0x12, .len = 2, .data = { 0x34, 0x12 } };
+  const syslink2_apiservice_frame_t frame = syslink2_apiservice_codec_encode_cmd(6, "q", 1, &argument);
+  const uint8_t expected[] = { 0x03, 6, 1, 'q', 0x12, 2, 0x34, 0x12 };
+  TEST_ASSERT_EQUAL_UINT8(sizeof(expected), frame.len);
+  TEST_ASSERT_EQUAL_MEMORY(expected, frame.data, sizeof(expected));
+}
+
 /* Received frames */
 
 void testDecodeOk(void) {
@@ -310,6 +404,24 @@ void testDecodeValue(void) {
   TEST_ASSERT_EQUAL_UINT8(0x13, response.value.type);
   TEST_ASSERT_EQUAL_UINT8(2, response.value.len);
   TEST_ASSERT_EQUAL_UINT8(0xfe, response.value.data[0]);
+}
+
+void testDecodeNullValue(void) {
+  const uint8_t bytes[] = { 0x81, 4, 0x00, 0 };
+  syslink2_apiservice_frame_t frame = frame_of(bytes, sizeof(bytes));
+  syslink2_apiservice_response_t response;
+  TEST_ASSERT_EQUAL(SYSLINK2_APISERVICE_FRAME_CLASS_RESPONSE, syslink2_apiservice_codec_decode(&frame, &response));
+  TEST_ASSERT_TRUE(response.value_valid);
+  TEST_ASSERT_EQUAL_UINT8(SYSLINK2_APISERVICE_TYPE_NULL, response.value.type);
+  TEST_ASSERT_EQUAL_UINT8(0, response.value.len);
+}
+
+void testDecodeNullValueWithDataIsInvalidValue(void) {
+  const uint8_t bytes[] = { 0x81, 4, 0x00, 1, 7 };
+  syslink2_apiservice_frame_t frame = frame_of(bytes, sizeof(bytes));
+  syslink2_apiservice_response_t response;
+  TEST_ASSERT_EQUAL(SYSLINK2_APISERVICE_FRAME_CLASS_RESPONSE, syslink2_apiservice_codec_decode(&frame, &response));
+  TEST_ASSERT_FALSE(response.value_valid);
 }
 
 void testDecodeValueOutOfScopeIsResponseWithInvalidValue(void) {

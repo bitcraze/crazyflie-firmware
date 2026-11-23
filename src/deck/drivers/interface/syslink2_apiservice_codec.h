@@ -15,9 +15,9 @@ bool syslink2_apiservice_codec_request_valid(
   const syslink2_apiservice_request_t *request);
 
 /**
- * Decode a raw request, laid out as a GET or SET frame, into request. Returns
- * false when it cannot be decoded; request must then not be used. Does not
- * run the request checks.
+ * Decode a raw request, laid out as a GET, SET or CMD frame, into request.
+ * Returns false when it cannot be decoded; request must then not be used. Does
+ * not run the request checks.
  */
 bool syslink2_apiservice_codec_decode_request(const uint8_t *data, uint8_t len,
                                            syslink2_apiservice_request_t *request);
@@ -31,6 +31,15 @@ syslink2_apiservice_frame_t syslink2_apiservice_codec_encode_get(uint8_t request
 syslink2_apiservice_frame_t syslink2_apiservice_codec_encode_set(
   uint8_t request_id, const char *path, uint8_t path_len,
   const syslink2_apiservice_value_t *value);
+
+/**
+ * Build a CMD frame. argument is NULL for a CMD without an argument, and the
+ * frame then ends after the path. Precondition: path and argument are from a
+ * valid request.
+ */
+syslink2_apiservice_frame_t syslink2_apiservice_codec_encode_cmd(
+  uint8_t request_id, const char *path, uint8_t path_len,
+  const syslink2_apiservice_value_t *argument);
 
 /**
  * Classify a received frame. Fills in response only when the class is

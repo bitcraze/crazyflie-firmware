@@ -30,7 +30,7 @@ syslink2_apiservice_submit_result_t syslink2_apiservice_submit(
   syslink2_apiservice_on_complete_t on_complete);
 
 /**
- * Submit a raw request without blocking, laid out as a GET or SET frame whose
+ * Submit a raw request without blocking, laid out as a GET, SET or CMD frame whose
  * request_id byte holds the user request ID. The bytes are not kept. Every
  * request that gives SYSLINK2_APISERVICE_SUBMIT_ACCEPTED gets exactly one
  * on_complete_raw, with the raw response for OK, VALUE and ERROR. A NULL

@@ -154,6 +154,57 @@ void testSetAnsweredWithOk(void) {
   TEST_ASSERT_EQUAL(SYSLINK2_APISERVICE_OUTCOME_OK, completed_result.outcome);
 }
 
+void testCmdWithoutArgumentAnsweredWithOk(void) {
+  const uint8_t id = take_and_send(SYSLINK2_APISERVICE_KIND_CMD, 8, 0);
+  const uint8_t expected[] = { 0x03, id, 3, 'a', '.', 'b' };
+  TEST_ASSERT_EQUAL_UINT8(sizeof(expected), sent.len);
+  TEST_ASSERT_EQUAL_MEMORY(expected, sent.data, sizeof(expected));
+  const syslink2_apiservice_response_t r = response(SYSLINK2_APISERVICE_KIND_OK, id);
+  step(true, &r, 1);
+  TEST_ASSERT_EQUAL_UINT(1, completions);
+  TEST_ASSERT_EQUAL(SYSLINK2_APISERVICE_OUTCOME_OK, completed_result.outcome);
+}
+
+void testCmdWithArgumentAnsweredWithValue(void) {
+  syslink2_apiservice_queue_entry_t entry;
+  memset(&entry, 0, sizeof(entry));
+  entry.request.operation = SYSLINK2_APISERVICE_KIND_CMD;
+  entry.request.user_request_id = 8u;
+  entry.request.path_len = 1u;
+  entry.request.path[0] = 'q';
+  entry.request.has_argument = true;
+  entry.request.value.type = SYSLINK2_APISERVICE_TYPE_U8;
+  entry.request.value.len = 1u;
+  entry.request.value.data[0] = 42u;
+  entry.on_complete = on_complete;
+  TEST_ASSERT_TRUE(syslink2_apiservice_request_queue_put(&entry));
+  step(true, NULL, 0);
+  step(true, NULL, 0);
+  const uint8_t expected[] = { 0x03, sent.data[1], 1, 'q', 0x10, 1, 42 };
+  TEST_ASSERT_EQUAL_UINT8(sizeof(expected), sent.len);
+  TEST_ASSERT_EQUAL_MEMORY(expected, sent.data, sizeof(expected));
+  const syslink2_apiservice_response_t r = response(SYSLINK2_APISERVICE_KIND_VALUE, sent.data[1]);
+  step(true, &r, 1);
+  TEST_ASSERT_EQUAL(SYSLINK2_APISERVICE_OUTCOME_VALUE, completed_result.outcome);
+  TEST_ASSERT_EQUAL_UINT8(77, completed_result.value.data[0]);
+}
+
+void testCmdAnsweredWithError(void) {
+  const uint8_t id = take_and_send(SYSLINK2_APISERVICE_KIND_CMD, 8, 0);
+  const syslink2_apiservice_response_t r = response(SYSLINK2_APISERVICE_KIND_ERROR, id);
+  step(true, &r, 1);
+  TEST_ASSERT_EQUAL(SYSLINK2_APISERVICE_OUTCOME_ERROR, completed_result.outcome);
+  TEST_ASSERT_EQUAL_UINT8(3, completed_result.error_code);
+}
+
+void testCmdWithInvalidValueIsProtocolError(void) {
+  const uint8_t id = take_and_send(SYSLINK2_APISERVICE_KIND_CMD, 8, 0);
+  syslink2_apiservice_response_t r = response(SYSLINK2_APISERVICE_KIND_VALUE, id);
+  r.value_valid = false;
+  step(true, &r, 1);
+  TEST_ASSERT_EQUAL(SYSLINK2_APISERVICE_OUTCOME_PROTOCOL_ERROR, completed_result.outcome);
+}
+
 void testErrorAnswerGivesErrorCode(void) {
   const uint8_t id = take_and_send(SYSLINK2_APISERVICE_KIND_SET, 8, 0);
   const syslink2_apiservice_response_t r = response(SYSLINK2_APISERVICE_KIND_ERROR, id);

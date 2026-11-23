@@ -7,7 +7,8 @@
 #define VALUE_HEADER_LEN 2u
 #define UNSOLICITED_KIND_MIN 0xc0u
 
-#define SET_HEADER_LEN 5u
+/* kind, request_id, path_len, value type and value len. */
+#define VALUE_REQUEST_HEADER_LEN 5u
 
 static bool is_variable_length_type(uint8_t type) {
   return type == SYSLINK2_APISERVICE_TYPE_STRING ||
@@ -38,8 +39,14 @@ static uint8_t fixed_value_len_for_type(uint8_t type) {
   }
 }
 
-/** The value checks, shared by SET requests and received VALUE frames. */
+/**
+ * The value checks, shared by SET requests, CMD arguments and received VALUE
+ * frames.
+ */
 static bool value_checks(uint8_t type, uint8_t len, const uint8_t *data) {
+  if (type == SYSLINK2_APISERVICE_TYPE_NULL) {
+    return len == 0u;
+  }
   if (is_variable_length_type(type)) {
     if (len > SYSLINK2_APISERVICE_VALUE_MAX_LEN) {
       return false;
@@ -60,13 +67,18 @@ static bool value_checks(uint8_t type, uint8_t len, const uint8_t *data) {
   return true;
 }
 
+static bool is_request_kind(uint8_t kind) {
+  return kind == SYSLINK2_APISERVICE_KIND_GET ||
+         kind == SYSLINK2_APISERVICE_KIND_SET ||
+         kind == SYSLINK2_APISERVICE_KIND_CMD;
+}
+
 bool syslink2_apiservice_codec_request_valid(
   const syslink2_apiservice_request_t *request) {
   if (request == NULL) {
     return false;
   }
-  if (request->operation != SYSLINK2_APISERVICE_KIND_GET &&
-      request->operation != SYSLINK2_APISERVICE_KIND_SET) {
+  if (!is_request_kind(request->operation)) {
     return false;
   }
   if (request->path_len == 0u ||
@@ -79,12 +91,14 @@ bool syslink2_apiservice_codec_request_valid(
       return false;
     }
   }
-  if (request->operation == SYSLINK2_APISERVICE_KIND_SET) {
+  if (request->operation == SYSLINK2_APISERVICE_KIND_SET ||
+      (request->operation == SYSLINK2_APISERVICE_KIND_CMD &&
+       request->has_argument)) {
     if (!value_checks(request->value.type, request->value.len,
                       request->value.data)) {
       return false;
     }
-    if ((uint16_t)SET_HEADER_LEN + request->path_len + request->value.len >
+    if ((uint16_t)VALUE_REQUEST_HEADER_LEN + request->path_len + request->value.len >
         SYSLINK2_APISERVICE_FRAME_MAX_LEN) {
       return false;
     }
@@ -98,7 +112,7 @@ bool syslink2_apiservice_codec_decode_request(const uint8_t *data, uint8_t len,
     return false;
   }
   const uint8_t kind = data[0];
-  if (kind != SYSLINK2_APISERVICE_KIND_GET && kind != SYSLINK2_APISERVICE_KIND_SET) {
+  if (!is_request_kind(kind)) {
     return false;
   }
   const uint8_t path_len = data[2];
@@ -109,11 +123,13 @@ bool syslink2_apiservice_codec_decode_request(const uint8_t *data, uint8_t len,
   uint16_t offset = (uint16_t)(3u + path_len);
   syslink2_apiservice_value_t value;
   memset(&value, 0, sizeof(value));
+  const bool has_argument =
+    kind == SYSLINK2_APISERVICE_KIND_CMD && offset != len;
   if (kind == SYSLINK2_APISERVICE_KIND_GET) {
     if (offset != len) {
       return false;
     }
-  } else {
+  } else if (kind == SYSLINK2_APISERVICE_KIND_SET || has_argument) {
     if (offset + VALUE_HEADER_LEN > len) {
       return false;
     }
@@ -133,6 +149,7 @@ bool syslink2_apiservice_codec_decode_request(const uint8_t *data, uint8_t len,
   request->path_len = path_len;
   memcpy(request->path, &data[3], path_len);
   request->value = value;
+  request->has_argument = has_argument;
   return true;
 }
 
@@ -144,6 +161,14 @@ static uint8_t encode_header(syslink2_apiservice_frame_t *frame, uint8_t kind,
   frame->data[2] = path_len;
   memcpy(&frame->data[3], path, path_len);
   return (uint8_t)(3u + path_len);
+}
+
+static uint8_t encode_value(syslink2_apiservice_frame_t *frame, uint8_t offset,
+                            const syslink2_apiservice_value_t *value) {
+  frame->data[offset++] = value->type;
+  frame->data[offset++] = value->len;
+  memcpy(&frame->data[offset], value->data, value->len);
+  return (uint8_t)(offset + value->len);
 }
 
 syslink2_apiservice_frame_t syslink2_apiservice_codec_encode_get(uint8_t request_id,
@@ -161,12 +186,20 @@ syslink2_apiservice_frame_t syslink2_apiservice_codec_encode_set(
   const syslink2_apiservice_value_t *value) {
   syslink2_apiservice_frame_t frame;
   memset(&frame, 0, sizeof(frame));
-  uint8_t offset = encode_header(&frame, SYSLINK2_APISERVICE_KIND_SET, request_id,
-                                 path, path_len);
-  frame.data[offset++] = value->type;
-  frame.data[offset++] = value->len;
-  memcpy(&frame.data[offset], value->data, value->len);
-  frame.len = (uint8_t)(offset + value->len);
+  const uint8_t offset = encode_header(&frame, SYSLINK2_APISERVICE_KIND_SET,
+                                       request_id, path, path_len);
+  frame.len = encode_value(&frame, offset, value);
+  return frame;
+}
+
+syslink2_apiservice_frame_t syslink2_apiservice_codec_encode_cmd(
+  uint8_t request_id, const char *path, uint8_t path_len,
+  const syslink2_apiservice_value_t *argument) {
+  syslink2_apiservice_frame_t frame;
+  memset(&frame, 0, sizeof(frame));
+  const uint8_t offset = encode_header(&frame, SYSLINK2_APISERVICE_KIND_CMD,
+                                       request_id, path, path_len);
+  frame.len = argument != NULL ? encode_value(&frame, offset, argument) : offset;
   return frame;
 }
 

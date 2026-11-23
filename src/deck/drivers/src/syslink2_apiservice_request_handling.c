@@ -91,6 +91,22 @@ static void step_idle(bool ready, uint32_t now_ticks) {
   state = STATE_WAITING_TO_SEND;
 }
 
+static syslink2_apiservice_frame_t encode_outstanding(void) {
+  const syslink2_apiservice_request_t *request = &outstanding.request;
+  switch (request->operation) {
+    case SYSLINK2_APISERVICE_KIND_SET:
+      return syslink2_apiservice_codec_encode_set(
+        request_id, request->path, request->path_len, &request->value);
+    case SYSLINK2_APISERVICE_KIND_CMD:
+      return syslink2_apiservice_codec_encode_cmd(
+        request_id, request->path, request->path_len,
+        request->has_argument ? &request->value : NULL);
+    default:
+      return syslink2_apiservice_codec_encode_get(request_id, request->path,
+                                                  request->path_len);
+  }
+}
+
 static void step_waiting_to_send(bool ready, uint32_t now_ticks) {
   if (!ready) {
     complete_outstanding(SYSLINK2_APISERVICE_OUTCOME_ABORTED, NULL);
@@ -103,13 +119,7 @@ static void step_waiting_to_send(bool ready, uint32_t now_ticks) {
   if (!syslink2_apiservice_channel_can_send()) {
     return;
   }
-  const syslink2_apiservice_frame_t frame =
-    outstanding.request.operation == SYSLINK2_APISERVICE_KIND_SET ?
-      syslink2_apiservice_codec_encode_set(request_id, outstanding.request.path,
-                                        outstanding.request.path_len,
-                                        &outstanding.request.value) :
-      syslink2_apiservice_codec_encode_get(request_id, outstanding.request.path,
-                                        outstanding.request.path_len);
+  const syslink2_apiservice_frame_t frame = encode_outstanding();
   switch (syslink2_apiservice_channel_send(&frame)) {
     case SYSLINK2_APISERVICE_SEND_SENT:
       state = STATE_WAITING_RESPONSE;
@@ -131,11 +141,12 @@ static bool answer_fits(const syslink2_apiservice_response_t *response) {
   if (response->kind == SYSLINK2_APISERVICE_KIND_ERROR) {
     return true;
   }
-  if (outstanding.request.operation == SYSLINK2_APISERVICE_KIND_GET) {
-    return response->kind == SYSLINK2_APISERVICE_KIND_VALUE &&
-           response->value_valid;
+  const uint8_t operation = outstanding.request.operation;
+  if (response->kind == SYSLINK2_APISERVICE_KIND_VALUE) {
+    return operation != SYSLINK2_APISERVICE_KIND_SET && response->value_valid;
   }
-  return response->kind == SYSLINK2_APISERVICE_KIND_OK;
+  return response->kind == SYSLINK2_APISERVICE_KIND_OK &&
+         operation != SYSLINK2_APISERVICE_KIND_GET;
 }
 
 static syslink2_apiservice_outcome_t outcome_for(

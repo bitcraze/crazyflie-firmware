@@ -13,8 +13,8 @@
 #define SYSLINK2_APISERVICE_FRAME_MAX_LEN 64u
 /**
  * Longest value that fits a VALUE frame: 2 header bytes, type and len before
- * the data. A SET frame also holds the path, so a SET is limited further, see
- * the request checks.
+ * the data. A SET frame, and a CMD frame with an argument, also holds the path,
+ * so these are limited further, see the request checks.
  */
 #define SYSLINK2_APISERVICE_VALUE_MAX_LEN 60u
 /** Longest path of a SET frame with a 4-byte value. */
@@ -25,11 +25,13 @@
 /* Message kinds, the wire `kind` byte. */
 #define SYSLINK2_APISERVICE_KIND_GET 0x01u
 #define SYSLINK2_APISERVICE_KIND_SET 0x02u
+#define SYSLINK2_APISERVICE_KIND_CMD 0x03u
 #define SYSLINK2_APISERVICE_KIND_OK 0x80u
 #define SYSLINK2_APISERVICE_KIND_VALUE 0x81u
 #define SYSLINK2_APISERVICE_KIND_ERROR 0x82u
 
 /* Value type codes in scope. */
+#define SYSLINK2_APISERVICE_TYPE_NULL 0x00u
 #define SYSLINK2_APISERVICE_TYPE_BOOL 0x01u
 #define SYSLINK2_APISERVICE_TYPE_U8 0x10u
 #define SYSLINK2_APISERVICE_TYPE_I8 0x11u
@@ -100,17 +102,22 @@ typedef struct {
   uint8_t error_code;
 } syslink2_apiservice_result_t;
 
-/** A GET or SET request from a user. */
+/** A GET, SET or CMD request from a user. */
 typedef struct {
-  /** SYSLINK2_APISERVICE_KIND_GET or SYSLINK2_APISERVICE_KIND_SET. */
+  /** SYSLINK2_APISERVICE_KIND_GET, _SET or _CMD. */
   uint8_t operation;
   /** Owned by the user. Not read by the API Service. */
   uint8_t user_request_id;
   /** ASCII, path_len bytes, not NUL-terminated. */
   char path[SYSLINK2_APISERVICE_PATH_MAX_LEN];
   uint8_t path_len;
-  /** Read only for SET. */
+  /** Read only for SET, and for CMD with has_argument true. */
   syslink2_apiservice_value_t value;
+  /**
+   * Read only for CMD. True when value is the argument, false when the CMD
+   * has no argument. A separate flag, since type 0x00 is the null type.
+   */
+  bool has_argument;
 } syslink2_apiservice_request_t;
 
 /**
