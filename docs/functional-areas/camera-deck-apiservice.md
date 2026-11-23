@@ -15,16 +15,17 @@ differ, the protocol document is the authority.
 
 In scope, matching `bitcraze.api` version 0.0 on the deck:
 
-- the requests `GET` and `SET`,
+- the requests `GET`, `SET` and `CMD`, where a `CMD` has zero or one
+  argument value,
 - the responses `OK`, `VALUE` and `ERROR`,
-- the value types `bool`, `u8`, `i8`, `u16`, `i16`, `u32`, `i32`, `u64`,
+- the value types `null`, `bool`, `u8`, `i8`, `u16`, `i16`, `u32`, `i32`, `u64`,
   `i64`, `string` and `bytes`, with values that fit in one frame,
 - one request outstanding at a time,
 - recognizing unsolicited frames from the deck, such as `NOTIFY`, and passing
   them to the unsolicited handler, or dropping them when none is set, see
   [Frame classes](#frame-classes).
 
-Out of scope: `CMD`, decoding `NOTIFY`, more than one request in flight,
+Out of scope: decoding `NOTIFY`, more than one request in flight,
 path handles, listing paths and chunking. The probe is also out of scope.
 The runtime runs it before the API Service takes over, see
 [Ready](#ready).
@@ -62,8 +63,8 @@ from the Crazyflie.
   and returns it with the result. For example, a user submits user request
   ID 2, the API Service sends it to the deck as deck request ID 8, the
   deck answers 8, and the user gets the completion for user request ID 2.
-- **Raw request**: a user request given as bytes, laid out as a `GET` or
-  `SET` frame, see [Frame layout](#frame-layout). Its `request_id` byte
+- **Raw request**: a user request given as bytes, laid out as a `GET`,
+  `SET` or `CMD` frame, see [Frame layout](#frame-layout). Its `request_id` byte
   holds the user request ID, not the deck request ID. A raw request is
   submitted with `syslink2_apiservice_submit_raw` and decoded into a
   `syslink2_apiservice_request_t` before it is queued. It completes with
@@ -94,7 +95,7 @@ depends on `kind`:
 
 | Byte | Field | Content |
 |---|---|---|
-| 0 | `kind` | `GET` 0x01, `SET` 0x02, `OK` 0x80, `VALUE` 0x81, `ERROR` 0x82. Bit 7 is set in frames from the deck. |
+| 0 | `kind` | `GET` 0x01, `SET` 0x02, `CMD` 0x03, `OK` 0x80, `VALUE` 0x81, `ERROR` 0x82. Bit 7 is set in frames from the deck. |
 | 1 | `request_id` | The deck request ID. Set by the Crazyflie in the request, copied by the deck into the answer. |
 | 2.. | body | Depends on `kind`, see below. |
 
@@ -104,18 +105,22 @@ Bodies:
 |---|---|
 | `GET` | `path_len:u8`, `path` |
 | `SET` | `path_len:u8`, `path`, `value` |
+| `CMD` | `path_len:u8`, `path`, optional `value` |
 | `OK` | empty |
 | `VALUE` | `value` |
 | `ERROR` | `error_code:u8`, `detail_len:u8`, `detail` |
 
 - `value` is `type:u8`, `len:u8`, `data[len]`. Multi-byte integers are
   little-endian.
-- The value types in scope and their type codes: `bool` 0x01, `u8` 0x10,
+- The value types in scope and their type codes: `null` 0x00, `bool` 0x01, `u8` 0x10,
   `i8` 0x11, `u16` 0x12, `i16` 0x13, `u32` 0x14, `i32` 0x15, `u64` 0x16,
   `i64` 0x17, `string` 0x20 and `bytes` 0x21.
 - A `string` is UTF-8 without a NUL terminator, `len` bytes, and has no
   embedded NUL byte. A `bytes` value is `len` opaque bytes.
 - `path` is ASCII, `path_len` bytes, not NUL-terminated.
+- A `CMD` with no bytes after the path has no argument. A `CMD` followed by
+  the value `00 00` has a `null` argument. These are different requests: the
+  deck compares the argument with the type the command declares.
 - A response shorter than 2 bytes has no `request_id` and is malformed.
 
 ### Frame classes
@@ -138,7 +143,7 @@ interface.
 
 | Layer | Responsibility | Scope |
 |---|---|---|
-| Users, for example camera settings | Decide what to `GET` and `SET` | Out of scope. Only the API they call is defined. |
+| Users, for example camera settings | Decide what to `GET`, `SET` and run with `CMD` | Out of scope. Only the API they call is defined. |
 | API Service | Turns user requests into API Service frames and back. Handles readiness, timeouts and credit. | In scope |
 | Runtime and Common Link | Bytes, frames, session, catalog, Service Binding, credit accounting and the probe | Out of scope. Only the interface the API Service uses is defined. |
 
@@ -211,6 +216,7 @@ classDiagram
         +decode_request
         +encode_get
         +encode_set
+        +encode_cmd
         +encode_response
         +decode
     }
@@ -258,7 +264,7 @@ classDiagram
     syslink2_apiservice --> syslink2_apiservice_codec : request_valid, decode_request, decode
     syslink2_apiservice --> syslink2_apiservice_request_handling : init, step
     syslink2_apiservice_request_handling --> syslink2_apiservice_request_queue : take
-    syslink2_apiservice_request_handling --> syslink2_apiservice_codec : encode_get, encode_set, encode_response
+    syslink2_apiservice_request_handling --> syslink2_apiservice_codec : encode_get, encode_set, encode_cmd, encode_response
     syslink2_apiservice_request_handling --> syslink2_apiservice_channel : can_send, send
     syslink2_apiservice_request_handling --> User : on_complete, on_complete_raw
     syslink2_apiservice_channel --> bccam_uart_runtime : apiservice_ready, grant_apiservice_rx_credit, apiservice_tx_credit, send_apiservice, take_apiservice_rx
@@ -278,11 +284,12 @@ classDiagram
     note for syslink2_apiservice_frame_t "SYSLINK2_APISERVICE_FRAME_MAX_LEN = 64"
 
     class syslink2_apiservice_request_t {
-        uint8_t operation GET or SET
+        uint8_t operation GET, SET or CMD
         uint8_t user_request_id
         char path[SYSLINK2_APISERVICE_PATH_MAX_LEN]
         uint8_t path_len
         syslink2_apiservice_value_t value
+        bool has_argument
     }
     note for syslink2_apiservice_request_t "SYSLINK2_APISERVICE_PATH_MAX_LEN = 55"
 
@@ -394,11 +401,12 @@ response fits in one frame:
 - `SYSLINK2_APISERVICE_PATH_MAX_LEN` is 55, the longest path of a `SET`
   with a 4-byte value. A request with a longer path cannot be built. `path`
   is ASCII, `path_len` bytes, not NUL-terminated.
-- A `SET` frame has 2 header bytes, `path_len`, the path, `type`, `len` and
-  the data, so the path and the value together are limited to 59 bytes. The
-  arrays alone do not ensure that, so the [Request checks](#request-checks)
-  check it for each request. A longer `string` or `bytes` value can be read
-  with `GET` but not written with `SET`.
+- A `SET` frame, and a `CMD` frame with an argument, has 2 header bytes,
+  `path_len`, the path, `type`, `len` and the data, so the path and the value
+  together are limited to 59 bytes. The arrays alone do not ensure that, so
+  the [Request checks](#request-checks) check it for each request. A longer
+  `string` or `bytes` value can be read with `GET` or returned by a `CMD`,
+  but not written with `SET` or passed as a `CMD` argument.
 - `SYSLINK2_APISERVICE_DETAIL_MAX_LEN` is 60: an `ERROR` frame has 2 header bytes,
   `error_code` and `detail_len` before the detail. `detail` is UTF-8 text,
   `detail_len` bytes, not NUL-terminated.
@@ -416,6 +424,10 @@ response fits in one frame:
   say who submitted it or how it completes. The path and value are copied,
   so the user can drop its request when `syslink2_apiservice_submit`
   returns.
+- `syslink2_apiservice_request_t.has_argument` is read only for `CMD`. True
+  means that `value` is the argument and is sent, false means that the `CMD`
+  has no argument and `value` is not read. A separate flag is needed because
+  type 0x00 is the `null` type, so a zeroed `value` cannot mean "no argument".
 - `syslink2_apiservice_on_complete_t` and `syslink2_apiservice_on_complete_raw_t`
   are the two kinds of completion, see [User API](#user-api). The user
   passes one of them to submit. There is no user handle and no context
@@ -434,8 +446,8 @@ response fits in one frame:
   request copy, so `syslink2_apiservice_result_t` does not repeat it. It
   reaches `on_complete_raw` as an argument. It is not the deck request ID,
   which only `syslink2_apiservice_request_handling` knows.
-- `operation` holds the wire `kind` from the protocol, `GET` 0x01 or `SET`
-  0x02, see [Frame layout](#frame-layout). In the same way,
+- `operation` holds the wire `kind` from the protocol, `GET` 0x01, `SET`
+  0x02 or `CMD` 0x03, see [Frame layout](#frame-layout). In the same way,
   `syslink2_apiservice_response_t.kind` holds `OK` 0x80, `VALUE` 0x81 or `ERROR`
   0x82. The constants are defined in `syslink2_apiservice_types.h`.
 
@@ -559,9 +571,11 @@ means `on_complete` or `on_complete_raw`, whichever was passed to submit.
 - The API Service does not check that the type of a `VALUE` is the
   type the user expects for the path. The deck is the authority on the
   type of a path. A user that expects a type checks it itself. The param
-  adapter, for example, compares it with the type of the param. For `SET`,
-  the deck checks the type and answers `ERROR` when it does not match,
-  which gives `SYSLINK2_APISERVICE_OUTCOME_ERROR`.
+  adapter, for example, compares it with the type of the param. For `SET`
+  and `CMD`, the deck checks the type and answers `ERROR` when it does not
+  match, which gives `SYSLINK2_APISERVICE_OUTCOME_ERROR`.
+- The API Service does not know which commands exist or whether a command
+  answers `OK` or `VALUE`. The deck is the authority on both.
 
 The unsolicited handler:
 
@@ -668,9 +682,9 @@ sequenceDiagram
     H->>H: ready, assign request_id, start timer
     CS->>H: step(true, none)
     H->>Ch: can_send(), wait until true
-    H->>H: encode GET or SET (syslink2_apiservice_codec)
+    H->>H: encode GET, SET or CMD (syslink2_apiservice_codec)
     H->>Ch: send(frame)
-    Ch->>D: GET or SET request_id path [value]
+    Ch->>D: GET, SET or CMD request_id path [value]
     Ch-->>H: SYSLINK2_APISERVICE_SEND_SENT
     alt OK
         D->>Ch: OK request_id
@@ -904,8 +918,8 @@ the API Service task, by `syslink2_apiservice_request_handling`.
   `syslink2_apiservice_request_t`, including its `value`, and the callback to
   complete it with. The user can reuse or drop its request as soon as
   submit returns.
-- An entry is 128 bytes, most of it the path and value arrays, so the queue
-  takes 512 bytes of RAM.
+- An entry is 132 bytes on the Crazyflie, most of it the path and value
+  arrays, so the queue takes 528 bytes of RAM.
 - `syslink2_apiservice_request_queue_take` copies the entry out to
   `syslink2_apiservice_request_handling`, which keeps it while the request is
   outstanding. The `request` passed to `on_complete` is that copy, not the
@@ -1116,8 +1130,8 @@ Consequences and design choices:
 - A matching answer completes the request with
   `SYSLINK2_APISERVICE_OUTCOME_PROTOCOL_ERROR` when its kind does not fit the
   operation, or when it is a `VALUE` with `value_valid` false. A `GET` is
-  answered with `VALUE` or `ERROR`, and a `SET` with `OK` or `ERROR`. The
-  deck did answer, so the request completes at once instead of timing out.
+  answered with `VALUE` or `ERROR`, a `SET` with `OK` or `ERROR`, and a `CMD`
+  with `OK`, `VALUE` or `ERROR`. The deck did answer, so the request completes at once instead of timing out.
 - At most one request is taken from the queue per step, also when it
   completes with `SYSLINK2_APISERVICE_OUTCOME_NOT_READY`.
 - A request moves at most one state per step. A request taken in one step
@@ -1150,7 +1164,7 @@ entry:
 
 ## syslink2_apiservice_codec
 
-Validates requests, decodes raw requests, encodes `GET` and `SET`, sorts received frames into
+Validates requests, decodes raw requests, encodes `GET`, `SET` and `CMD`, sorts received frames into
 classes, decodes `OK`, `VALUE` and `ERROR` and validates their bodies, and
 encodes raw responses. Pure functions without state.
 
@@ -1162,6 +1176,7 @@ encodes raw responses. Pure functions without state.
 | `syslink2_apiservice_codec_decode_request(const uint8_t *data, uint8_t len, syslink2_apiservice_request_t *request) bool` | Decodes a raw request into `request`, see [Raw requests](#raw-requests). Returns false when it cannot be decoded, and `request` must not be used. Does not run the request checks. |
 | `syslink2_apiservice_codec_encode_get(uint8_t request_id, const char *path, uint8_t path_len) syslink2_apiservice_frame_t` | Builds a `GET` frame as in [Frame layout](#frame-layout). Precondition: `path` and `path_len` are from a request that passed `syslink2_apiservice_codec_request_valid`. Cannot fail. |
 | `syslink2_apiservice_codec_encode_set(uint8_t request_id, const char *path, uint8_t path_len, const syslink2_apiservice_value_t *value) syslink2_apiservice_frame_t` | Builds a `SET` frame as in [Frame layout](#frame-layout). Precondition: `path`, `path_len` and `value` are from a request that passed `syslink2_apiservice_codec_request_valid`. Cannot fail. |
+| `syslink2_apiservice_codec_encode_cmd(uint8_t request_id, const char *path, uint8_t path_len, const syslink2_apiservice_value_t *argument) syslink2_apiservice_frame_t` | Builds a `CMD` frame as in [Frame layout](#frame-layout). `argument` is NULL for a `CMD` without an argument, and the frame then ends after the path. Precondition: `path`, `path_len` and `argument` are from a request that passed `syslink2_apiservice_codec_request_valid`. Cannot fail. |
 | `syslink2_apiservice_codec_decode(const syslink2_apiservice_frame_t *frame, syslink2_apiservice_response_t *response) syslink2_apiservice_frame_class_t` | Returns the class of the frame, see [Frame classes](#frame-classes). Fills in `response` only when the class is response. Otherwise `response` must not be used. |
 | `syslink2_apiservice_codec_encode_response(uint8_t request_id, const syslink2_apiservice_response_t *response) syslink2_apiservice_frame_t` | Builds an `OK`, `VALUE` or `ERROR` frame as in [Frame layout](#frame-layout), see [Raw responses](#raw-responses). Precondition: `response` was filled in by `syslink2_apiservice_codec_decode`, and `value_valid` is true if it is a `VALUE`. Cannot fail. |
 
@@ -1170,12 +1185,13 @@ encodes raw responses. Pure functions without state.
 `syslink2_apiservice_codec_request_valid` returns true only when all of these
 hold:
 
-- `operation` is `GET` or `SET`.
+- `operation` is `GET`, `SET` or `CMD`.
 - `path_len` is from 1 to `SYSLINK2_APISERVICE_PATH_MAX_LEN`.
 - Every byte of `path` is printable ASCII, 0x20..0x7e.
-- For `SET`, `value` passes the value checks below, and the `SET` frame
-  fits in `SYSLINK2_APISERVICE_FRAME_MAX_LEN`: 5 + `path_len` + `value.len`
-  is at most 64. For `GET`, `value` is not read.
+- For `SET`, and for `CMD` with `has_argument` true, `value` passes the value
+  checks below, and the frame fits in `SYSLINK2_APISERVICE_FRAME_MAX_LEN`:
+  5 + `path_len` + `value.len` is at most 64. For `GET`, and for `CMD` with
+  `has_argument` false, `value` is not read.
 
 The callback is not part of the request. Submit checks it separately, see
 [syslink2_apiservice_submit](#syslink2_apiservice_submit).
@@ -1183,14 +1199,14 @@ The callback is not part of the request. Submit checks it separately, see
 The checks protect the encoders: a `path_len` over
 `SYSLINK2_APISERVICE_PATH_MAX_LEN` or a `value.len` over
 `SYSLINK2_APISERVICE_VALUE_MAX_LEN` would make them read past the end of the
-array, and a `SET` frame that does not fit would be written past the end
+array, and a `SET` or `CMD` frame that does not fit would be written past the end
 of `syslink2_apiservice_frame_t`. Every check fails only because of a bug
 in the user.
 
 ### Raw requests
 
 `syslink2_apiservice_codec_decode_request` reads a raw request laid out as a
-`GET` or `SET` frame, see [Frame layout](#frame-layout), and fills in
+`GET`, `SET` or `CMD` frame, see [Frame layout](#frame-layout), and fills in
 `request`:
 
 | Raw byte | Request field |
@@ -1198,17 +1214,19 @@ in the user.
 | `kind` | `operation` |
 | `request_id` | `user_request_id` |
 | `path_len`, `path` | `path_len`, `path` |
-| `value` (`SET` only) | `value` |
+| `value` (`SET`, and `CMD` with an argument) | `value` |
+| Bytes after the path (`CMD` only) | `has_argument`: true when there are any |
 
 It returns false when any of the following holds. `request` must then not
 be used.
 
 - `data` is NULL, or `len` is shorter than 3 bytes,
-- `kind` is neither `GET` nor `SET`,
+- `kind` is not `GET`, `SET` or `CMD`,
 - `path_len` is over `SYSLINK2_APISERVICE_PATH_MAX_LEN`, or the path does not fit
   in `len`,
 - for `GET`, bytes remain after the path,
-- for `SET`, the value header does not fit, the value `len` is over
+- for `SET`, and for `CMD` with bytes after the path, the value header does
+  not fit, the value `len` is over
   `SYSLINK2_APISERVICE_VALUE_MAX_LEN`, or `data` does not end exactly at the end
   of the raw request.
 
@@ -1258,11 +1276,11 @@ do not make the frame malformed. Instead the codec checks the value with
 the value checks and sets `value_valid`.
 
 The value checks, used both for the value of a received `VALUE` and for the
-value of a `SET` request in [Request checks](#request-checks), in one
+value of a `SET` request or the argument of a `CMD` request in [Request checks](#request-checks), in one
 internal function:
 
 - the type is in scope, see [Frame layout](#frame-layout),
-- `len` matches the type: 1 for `bool`, `u8` and `i8`, 2 for `u16` and
+- `len` matches the type: 0 for `null`, 1 for `bool`, `u8` and `i8`, 2 for `u16` and
   `i16`, 4 for `u32` and `i32`, 8 for `u64` and `i64`, and from 0 to
   `SYSLINK2_APISERVICE_VALUE_MAX_LEN` for `string` and `bytes`,
 - a `bool` is 0x00 or 0x01,
@@ -1404,7 +1422,9 @@ Severity rates the effect on the user after mitigation:
 - **Mitigation**: `syslink2_apiservice_request_handling` detects it with its timer
   and completes the request. Receive credit stays granted.
 - **Severity after mitigation**: Low.
-- **Outcome**: `SYSLINK2_APISERVICE_OUTCOME_TIMEOUT`.
+- **Outcome**: `SYSLINK2_APISERVICE_OUTCOME_TIMEOUT`. For a `CMD`, the
+  command may still have run on the deck, so its outcome is unknown. The
+  API Service does not resend it.
 
 ### Late answer to a request that timed out
 
@@ -1562,8 +1582,9 @@ Severity rates the effect on the user after mitigation:
 - **Failure mode**: the user submits a request that fails the
   [Request checks](#request-checks), such as a `path_len` over
   `SYSLINK2_APISERVICE_PATH_MAX_LEN`, an unknown `operation`, a `SET` value
-  with a type out of scope or a `len` that does not match the type, or a
-  `SET` whose path and value together do not fit in one frame. Or the
+  or `CMD` argument with a type out of scope or a `len` that does not match
+  the type, or a `SET` or `CMD` whose path and value together do not fit in
+  one frame. Or the
   user submits a raw request that cannot be decoded, see
   [Raw requests](#raw-requests). Or the user passes a NULL callback.
 - **Cause**: a bug in the user, or for a raw request, bad bytes from
@@ -1694,7 +1715,7 @@ open.
   tests now use the constant for a compatible major and the constant + 1 for
   an incompatible one. Question: when the protocol reaches 1.0, which side
   changes first?
-- Timeout: `SYSLINK2_APISERVICE_TIMEOUT_MS` is 500 ms, defined in
+- Timeout: `SYSLINK2_APISERVICE_TIMEOUT_MS` is 1000 ms, defined in
   `syslink2_apiservice_request_handling.h`.
 - API Service task: name `bcCamApis`, stack `configMINIMAL_STACK_SIZE * 2`,
   priority `tskIDLE_PRIORITY + 2` (the same as `bcCamUartTask`), defined in
