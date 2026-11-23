@@ -1634,7 +1634,6 @@ Severity rates the effect on the user after mitigation:
 
 ## Open questions
 
-- Timeout: the value is not decided.
 - Runtime interface (these have to be implemented directly in code)
   - Of the five functions, only `bccam_uart_runtime_apiservice_tx_credit`
     exists in `bccam_uart_runtime.h`. `bccam_uart_runtime_apiservice_ready`
@@ -1673,6 +1672,7 @@ Severity rates the effect on the user after mitigation:
 - Version: the scope says `bitcraze.api` version 0.0, the protocol talks
   about v1 error codes and types.
 - Build integration of the new files is not mentioned.
+- syslink2_apiservice includes bccam_uart_runtime - it should be independent of this
 
 ### From the implementation
 
