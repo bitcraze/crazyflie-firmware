@@ -326,14 +326,18 @@ void __attribute__((used)) DMA1_Stream6_IRQHandler(void)
 
 void __attribute__((used)) USART2_IRQHandler(void)
 {
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  const uint32_t status = UART2_TYPE->SR;
+  const bool hasRxData = (status & USART_FLAG_RXNE) != 0;
+  const bool hasError = ((status & USART_FLAG_ORE) != 0) ||
+                        ((status & USART_FLAG_NE) != 0) ||
+                        ((status & USART_FLAG_FE) != 0) ||
+                        ((status & USART_FLAG_PE) != 0);
 
-  uint32_t status = UART2_TYPE->SR;
-  if ((UART2_TYPE->SR & USART_FLAG_RXNE) != 0)
+  if (hasRxData)
   {
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     uint8_t rxData = USART_ReceiveData(UART2_TYPE) & 0x00FF;
-    xStreamBufferSendFromISR(rxStream, &rxData, 1, &xHigherPriorityTaskWoken );
-    portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+    xStreamBufferSendFromISR(rxStream, &rxData, 1, &xHigherPriorityTaskWoken);
   }
 
   if ((UART2_TYPE->SR & USART_FLAG_TXE) != 0)
@@ -347,25 +351,26 @@ void __attribute__((used)) USART2_IRQHandler(void)
 
         txBuffer = 0;
 
-        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-        xEventGroupSetBitsFromISR(isrEvents, TX_DONE, &xHigherPriorityTaskWoken );
-        portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+        xEventGroupSetBitsFromISR(isrEvents, TX_DONE, &xHigherPriorityTaskWoken);
       }
     }
   }
 
-  if ((status & USART_FLAG_ORE) != 0 ||
-      (status & USART_FLAG_NE) != 0 ||
-      (status & USART_FLAG_FE) != 0 ||
-      (status & USART_FLAG_PE) != 0) {
+  if (hasError) {
     /** if we get here, the error is most likely caused by an overrun!
      * - PE (Parity error), FE (Framing error), NE (Noise error), ORE (OverRun error)
      * - and IDLE (Idle line detected) pending bits are cleared by software sequence:
      * - reading USART_SR register followed reading the USART_DR register.
+     * When RXNE was set, the DR read above already completed that sequence;
+     * reading DR again could drop a byte that arrived in between.
      */
-    asm volatile ("" : "=m" (UART2_TYPE->SR) : "r" (UART2_TYPE->SR)); // force non-optimizable reads
-    asm volatile ("" : "=m" (UART2_TYPE->DR) : "r" (UART2_TYPE->DR)); // of these two registers
+    if (!hasRxData) {
+      asm volatile ("" : "=m" (UART2_TYPE->SR) : "r" (UART2_TYPE->SR)); // force non-optimizable reads
+      asm volatile ("" : "=m" (UART2_TYPE->DR) : "r" (UART2_TYPE->DR)); // of these two registers
+    }
 
     hasOverrun = true;
   }
+
+  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
