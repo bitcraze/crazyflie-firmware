@@ -20,6 +20,7 @@ static uint8_t service_init_count;
 static uint8_t delay_count;
 static DeckCtrlGPIOPin direction_pins[2];
 static DeckCtrlGPIOPin write_pins[2];
+static uint32_t write_values[2];
 static bccam_uart_service_state_t service_state;
 static DeckInfo deck_info;
 
@@ -33,8 +34,9 @@ bool deckctrl_gpio_set_direction(DeckInfo *info, DeckCtrlGPIOPin pin,
 
 bool deckctrl_gpio_write(DeckInfo *info, DeckCtrlGPIOPin pin, uint32_t value) {
   (void)info;
-  TEST_ASSERT_EQUAL_UINT32(HIGH, value);
-  write_pins[gpio_write_count++] = pin;
+  write_pins[gpio_write_count] = pin;
+  write_values[gpio_write_count] = value;
+  gpio_write_count++;
   return true;
 }
 
@@ -125,16 +127,20 @@ void testNonGBoardRevisionIsRejectedWithoutHardwareOrProtocolSideEffects(void) {
                         driver_bccam_deck->memoryDef->properties());
 }
 
-void testRevisionGInitializesRevGPowerAndUartSelectMappings(void) {
+void testInitPowersDeckAndSelectsConnectorUart2(void) {
   deck_info.boardRevision = "G";
   driver_bccam_deck->init(&deck_info);
 
   TEST_ASSERT_EQUAL_UINT8(2, gpio_direction_count);
   TEST_ASSERT_EQUAL_UINT8(2, gpio_write_count);
-  TEST_ASSERT_EQUAL_INT(DECKCTRL_GPIO_PIN_12, direction_pins[0]);
-  TEST_ASSERT_EQUAL_INT(DECKCTRL_GPIO_PIN_0, direction_pins[1]);
-  TEST_ASSERT_EQUAL_INT(DECKCTRL_GPIO_PIN_12, write_pins[0]);
-  TEST_ASSERT_EQUAL_INT(DECKCTRL_GPIO_PIN_0, write_pins[1]);
+  // UART_SEL is set before the deck is powered, so the QCC never boots with
+  // it undefined. LOW tells the deck firmware to use connector UART2.
+  TEST_ASSERT_EQUAL_INT(DECKCTRL_GPIO_PIN_0, direction_pins[0]);
+  TEST_ASSERT_EQUAL_INT(DECKCTRL_GPIO_PIN_12, direction_pins[1]);
+  TEST_ASSERT_EQUAL_INT(DECKCTRL_GPIO_PIN_0, write_pins[0]);
+  TEST_ASSERT_EQUAL_INT(DECKCTRL_GPIO_PIN_12, write_pins[1]);
+  TEST_ASSERT_EQUAL_UINT32(LOW, write_values[0]);
+  TEST_ASSERT_EQUAL_UINT32(HIGH, write_values[1]);
   TEST_ASSERT_EQUAL_UINT8(1, delay_count);
   TEST_ASSERT_EQUAL_UINT8(1, service_init_count);
   TEST_ASSERT_EQUAL_UINT8(1, apiservice_init_count);

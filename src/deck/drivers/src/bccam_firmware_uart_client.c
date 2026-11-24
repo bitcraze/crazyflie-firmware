@@ -7,7 +7,7 @@
 #include "task.h"
 
 #if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
-#include "uart1.h"
+#include "uart2.h"
 #endif
 
 #define BCCAM_UART_BAUDRATE       1000000
@@ -145,20 +145,20 @@ static bool tick_has_reached(TickType_t now, TickType_t deadline) {
 }
 
 static void firmware_uart_set_baudrate(uint32_t baudrate) {
-  uart1SetBaudrate(baudrate);
+  uart2SetBaudrate(baudrate);
 }
 
 static bool firmware_uart_send(uint32_t size, const uint8_t *data) {
-  return uart1SendDataWaitComplete(
+  return uart2SendDataWaitComplete(
     size, data, M2T(BCCAM_UART_TX_COMPLETE_TIMEOUT_MS));
 }
 
 static bool firmware_uart_recv(uint8_t *byte, uint32_t timeout_ticks) {
-  return uart1GetDataWithTimeout(byte, timeout_ticks);
+  return uart2GetCharWithTimeout(byte, timeout_ticks);
 }
 
 static void firmware_uart_init(void) {
-  uart1Init(BCCAM_UART_BAUDRATE);
+  uart2Init(BCCAM_UART_BAUDRATE);
 }
 #endif
 

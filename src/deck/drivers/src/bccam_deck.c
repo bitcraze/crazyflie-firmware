@@ -42,7 +42,10 @@
 #include "debug.h"
 
 // Deck controller logical GPIO mapping (STM32 deck-ctrl MCU)
-#define GPIO_UART_SEL DECKCTRL_GPIO_PIN_0  // PA0 - select expansion UART1
+// PA0 - QCC GPIO20. Selects the connector UART the deck firmware uses for the
+// link: LOW (the deck's default) = UART2, HIGH = UART1. The deck samples it
+// once at boot, so it must be stable before the QCC leaves reset.
+#define GPIO_UART_SEL DECKCTRL_GPIO_PIN_0
 #define GPIO_PWR_EN   DECKCTRL_GPIO_PIN_12 // PC15 - power enable
 
 static bool isInit = false;
@@ -333,6 +336,15 @@ static void bcCamDeckInit(DeckInfo *info) {
     return;
   }
 
+  // Run the firmware link on connector UART2. Select it before powering the
+  // deck so the QCC never boots with UART_SEL undefined. This firmware only
+  // drives the link on UART2; UART1 is reserved for flashing through the QCC
+  // ROM bootloader, which does not look at this pin.
+  if (!gpioSetup(info, GPIO_UART_SEL, OUTPUT, LOW)) {
+    DEBUG_PRINT("Failed to select UART2\n");
+    return;
+  }
+
   // Power on the deck
   if (!gpioSetup(info, GPIO_PWR_EN, OUTPUT, HIGH)) {
     DEBUG_PRINT("Failed to enable deck power\n");
@@ -340,12 +352,6 @@ static void bcCamDeckInit(DeckInfo *info) {
   }
 
   vTaskDelay(M2T(50));
-
-  // Select expansion UART1 for the STM32/QCC protocol link.
-  if (!gpioSetup(info, GPIO_UART_SEL, OUTPUT, HIGH)) {
-    DEBUG_PRINT("Failed to enable UART1\n");
-    return;
-  }
 
   bccam_uart_service_init(info);
   syslink2_apiservice_init(bccam_uart_service_runtime());
@@ -380,7 +386,10 @@ static const DeckDriver bccam_deck = {
   .pid = 0x15,
   .name = "bcCam",
 
-  .usedPeriph = DECK_USING_UART1,
+  // UART2 carries the firmware link. UART1 reaches the QCC ROM bootloader; it
+  // is initialized on the first bootloader entry and stays initialized until
+  // the Crazyflie restarts.
+  .usedPeriph = DECK_USING_UART1 | DECK_USING_UART2,
 
   .memoryDef = &bcCamMemoryDef,
 

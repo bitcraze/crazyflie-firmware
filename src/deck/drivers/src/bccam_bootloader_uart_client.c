@@ -216,6 +216,12 @@ static void isp_drain_rx(uint32_t timeout_ms) {
   (void)timeout_ms;
   test_trace_append(BCCAM_BOOTLOADER_UART_CLIENT_TEST_UART_DRAIN);
 #else
+  // UART1 is only initialized on the first bootloader entry. Before that its
+  // RX queue does not exist, so there is nothing to drain.
+  if (!uart1Test()) {
+    return;
+  }
+
   uint8_t dummy;
   const TickType_t end = xTaskGetTickCount() + M2T(timeout_ms);
   while (!tick_has_reached(xTaskGetTickCount(), end)) {

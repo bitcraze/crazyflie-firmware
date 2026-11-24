@@ -16,7 +16,7 @@
 #if !defined(UNIT_TEST) && !defined(UNIT_TEST_MODE)
 #include "static_mem.h"
 #include "system.h"
-#include "uart1.h"
+#include "uart2.h"
 
 #define DEBUG_MODULE "BCCAM"
 #include "debug.h"
@@ -270,12 +270,12 @@ static void bccam_uart_error_from_isr(
 
 static void enable_firmware_rx_callbacks(void) {
   reset_rx_collector_for_firmware_mode();
-  uart1SetCallbacks(bccam_uart_rx_byte_from_isr,
+  uart2SetCallbacks(bccam_uart_rx_byte_from_isr,
                     bccam_uart_error_from_isr);
 }
 
 static void disable_firmware_rx_callbacks(void) {
-  uart1ClearCallbacks();
+  uart2ClearCallbacks();
   rx_collector_context.higher_priority_task_woken = NULL;
 }
 #endif
