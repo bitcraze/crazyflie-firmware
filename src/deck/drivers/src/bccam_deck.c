@@ -328,11 +328,8 @@ static void bcCamDeckInit(DeckInfo *info) {
     return;
   }
 
-  if (info == NULL || info->boardRevision == NULL ||
-      strcmp(info->boardRevision, "G") != 0) {
-    DEBUG_PRINT("Incompatible bcCam deck revision: expected G, got %s\n",
-                (info != NULL && info->boardRevision != NULL) ?
-                  info->boardRevision : "<missing>");
+  if (info == NULL || info->boardRevision == NULL) {
+    DEBUG_PRINT("Missing bcCam deck board revision\n");
     return;
   }
 
