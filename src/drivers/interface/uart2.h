@@ -26,6 +26,8 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdint.h>
+#include "FreeRTOS.h"
 #include "eprintf.h"
 #include "autoconf.h"
 
@@ -55,6 +57,10 @@
 
 #define UART2_RX_QUEUE_LENGTH 128
 
+typedef void (*uart2RxCallback_t)(uint8_t byte,
+                                  BaseType_t *higher_priority_task_woken);
+typedef void (*uart2ErrorCallback_t)(BaseType_t *higher_priority_task_woken);
+
 /**
  * Initialize the UART.
  */
@@ -76,6 +82,16 @@ void uart2SetBaudrate(const uint32_t baudrate);
 bool uart2Test(void);
 
 /**
+ * Route received bytes and receive errors to ISR callbacks instead of the
+ * internal RX stream buffer. Both callbacks run in interrupt context.
+ * Pass NULL to restore the default behavior for that event.
+ */
+void uart2SetCallbacks(uart2RxCallback_t rx_callback,
+                       uart2ErrorCallback_t error_callback);
+
+void uart2ClearCallbacks(void);
+
+/**
  * Sends raw data using a lock. Should be used from
  * exception functions and for debugging when a lot of data
  * should be transfered.
@@ -83,6 +99,20 @@ bool uart2Test(void);
  * @param[in] data  Pointer to data
  */
 void uart2SendData(uint32_t size, uint8_t* data);
+
+/**
+ * Sends all bytes using polling and waits until the final stop bit has left
+ * the USART shift register.
+ *
+ * @param[in] size  Number of bytes to send
+ * @param[in] data  Bytes to send; may be NULL only when size is zero
+ * @param[in] timeoutTicks  Maximum ticks for submission and completion
+ * @return true after complete local transmission, false on invalid submission
+ *         or timeout with potentially partial transmission
+ */
+bool uart2SendDataWaitComplete(uint32_t size,
+                               const uint8_t* data,
+                               uint32_t timeoutTicks);
 
 /**
  * Sends raw data using DMA transfer.

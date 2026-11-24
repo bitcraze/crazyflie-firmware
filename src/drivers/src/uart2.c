@@ -64,6 +64,9 @@ static EventGroupHandle_t isrEvents;
 
 static bool hasOverrun = false;
 
+static uart2RxCallback_t rxCallback;
+static uart2ErrorCallback_t errorCallback;
+
 #ifndef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
 /**
   * Configures the UART DMA. Mainly used for FreeRTOS trace
@@ -192,6 +195,52 @@ void uart2SetBaudrate(const uint32_t baudrate)
 bool uart2Test(void)
 {
   return isInit;
+}
+
+void uart2SetCallbacks(uart2RxCallback_t rx_callback,
+                       uart2ErrorCallback_t error_callback)
+{
+  const uint32_t irqWasEnabled = NVIC_GetEnableIRQ(UART2_IRQ);
+  NVIC_DisableIRQ(UART2_IRQ);
+  rxCallback = rx_callback;
+  errorCallback = error_callback;
+  if (irqWasEnabled != 0) {
+    NVIC_EnableIRQ(UART2_IRQ);
+  }
+}
+
+void uart2ClearCallbacks(void)
+{
+  uart2SetCallbacks(NULL, NULL);
+}
+
+bool uart2SendDataWaitComplete(uint32_t size,
+                               const uint8_t* data,
+                               uint32_t timeoutTicks)
+{
+  if (!isInit || (size > 0 && data == NULL)) {
+    return false;
+  }
+
+  const TickType_t deadline = xTaskGetTickCount() + timeoutTicks;
+  for (uint32_t i = 0; i < size; i++) {
+    while (!(UART2_TYPE->SR & USART_FLAG_TXE)) {
+      if ((int32_t)(xTaskGetTickCount() - deadline) >= 0) {
+        return false;
+      }
+    }
+    UART2_TYPE->DR = (data[i] & 0x00FF);
+  }
+
+  if (size > 0) {
+    while (!(UART2_TYPE->SR & USART_FLAG_TC)) {
+      if ((int32_t)(xTaskGetTickCount() - deadline) >= 0) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 static const int TX_DONE = (1<<0);
@@ -337,7 +386,11 @@ void __attribute__((used)) USART2_IRQHandler(void)
   if (hasRxData)
   {
     uint8_t rxData = USART_ReceiveData(UART2_TYPE) & 0x00FF;
-    xStreamBufferSendFromISR(rxStream, &rxData, 1, &xHigherPriorityTaskWoken);
+    if (rxCallback != NULL) {
+      rxCallback(rxData, &xHigherPriorityTaskWoken);
+    } else {
+      xStreamBufferSendFromISR(rxStream, &rxData, 1, &xHigherPriorityTaskWoken);
+    }
   }
 
   if ((UART2_TYPE->SR & USART_FLAG_TXE) != 0)
@@ -370,6 +423,9 @@ void __attribute__((used)) USART2_IRQHandler(void)
     }
 
     hasOverrun = true;
+    if (errorCallback != NULL) {
+      errorCallback(&xHigherPriorityTaskWoken);
+    }
   }
 
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
