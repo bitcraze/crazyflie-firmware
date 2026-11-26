@@ -146,8 +146,8 @@ void testNotifyFromTheDeckReachesListeners(void) {
 
 void testRegistersDeckPathWithLinkLimits(void) {
   TEST_ASSERT_EQUAL_STRING("deck:bcCam", ep->path);
-  TEST_ASSERT_EQUAL_UINT16(64, ep->maxRequest);
-  TEST_ASSERT_EQUAL_UINT16(64, ep->maxResponse);
+  TEST_ASSERT_EQUAL_UINT16(85, ep->maxRequest);
+  TEST_ASSERT_EQUAL_UINT16(85, ep->maxResponse);
   // Registration is closed after the freeze.
   TEST_ASSERT_EQUAL(EBUSY, bccam_apiservice_init());
 }

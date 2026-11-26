@@ -10,17 +10,17 @@
 #include <stdint.h>
 
 /** Link MTU of the UART camera profile: the largest frame. */
-#define SYSLINK2_APISERVICE_FRAME_MAX_LEN 64u
+#define SYSLINK2_APISERVICE_FRAME_MAX_LEN 85u
 /**
  * Longest value that fits a VALUE frame: 2 header bytes, type and len before
  * the data. A SET frame, and a CMD frame with an argument, also holds the path,
  * so these are limited further, see the request checks.
  */
-#define SYSLINK2_APISERVICE_VALUE_MAX_LEN 60u
+#define SYSLINK2_APISERVICE_VALUE_MAX_LEN 81u
 /** Longest path of a SET frame with a 4-byte value. */
-#define SYSLINK2_APISERVICE_PATH_MAX_LEN 55u
+#define SYSLINK2_APISERVICE_PATH_MAX_LEN 76u
 /** Longest detail that fits an ERROR frame. */
-#define SYSLINK2_APISERVICE_DETAIL_MAX_LEN 60u
+#define SYSLINK2_APISERVICE_DETAIL_MAX_LEN 81u
 
 /* Message kinds, the wire `kind` byte. */
 #define SYSLINK2_APISERVICE_KIND_GET 0x01u

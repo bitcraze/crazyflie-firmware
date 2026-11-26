@@ -11,7 +11,7 @@
  * 269140661b420547dbbf42b463db47d7dfc10e39. */
 static const uint8_t golden_establish_frame[] = {
   0xBC, 0xCD, 0x01, 0x00, 0x06, 0x00,
-  0x01, 0x22, 0x01, 0x01, 0x40, 0x00, 0x68, 0x4B
+  0x01, 0x22, 0x01, 0x01, 0x55, 0x00, 0xEE, 0xB7
 };
 static const uint8_t golden_get_service_count_frame[] = {
   0xBC, 0xCD, 0x01, 0x00, 0x02, 0x00, 0x03, 0x22, 0xAB, 0xF7
@@ -111,7 +111,7 @@ void testEstablishAndCatalogRequestsMatchPinnedGoldenVectors(void) {
   TEST_ASSERT_EQUAL_UINT(sizeof(golden_establish_frame), frame_len);
   TEST_ASSERT_EQUAL_MEMORY(golden_establish_frame, frame, frame_len);
 
-  accept_establishment(&link, 0x22, 64);
+  accept_establishment(&link, 0x22, BCCAM_UART_CAMERA_PROFILE_MTU);
   link.next_transaction_id = 0x22;
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_link_start_service_count(&link));
@@ -305,7 +305,7 @@ void testBootNoticeClearsSessionBindingCreditsAndPendingUnits(void) {
 
 void testNegotiatedMtuAndPerServiceCreditAreEnforced(void) {
   bccam_uart_link_endpoint_t link;
-  uint8_t payload[65] = {0};
+  uint8_t payload[BCCAM_UART_CAMERA_PROFILE_MTU + 1u] = {0};
 
   establish(&link);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK, bccam_uart_link_start_service_count(&link));
@@ -321,7 +321,7 @@ void testNegotiatedMtuAndPerServiceCreditAreEnforced(void) {
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_ERR_PAYLOAD_TOO_LONG,
     bccam_uart_link_send_normal(&link, 0x44, payload, sizeof(payload)));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
-    bccam_uart_link_send_normal(&link, 0x44, payload, 64));
+    bccam_uart_link_send_normal(&link, 0x44, payload, BCCAM_UART_CAMERA_PROFILE_MTU));
   TEST_ASSERT_EQUAL_UINT8(0, bccam_uart_link_get_tx_credit(&link, 0x44));
 }
 
@@ -548,7 +548,7 @@ void testBothDefinedEstablishmentRejectionsLeaveLinkInactive(void) {
   }
 }
 
-void testDefaultCameraProfileRejectsAcceptedMtu63AndAccepts64(void) {
+void testDefaultCameraProfileRejectsAcceptedMtu84AndAccepts85(void) {
   bccam_uart_link_endpoint_t link;
   uint8_t version, service, request[64];
   uint16_t request_len;
@@ -558,12 +558,12 @@ void testDefaultCameraProfileRejectsAcceptedMtu63AndAccepts64(void) {
     bccam_uart_link_start_establishment(&link));
   take_unit(&link, &version, &service, request, &request_len);
   {
-    const uint8_t reply63[] = {
+    const uint8_t reply84[] = {
       BCCAM_UART_LINK_OP_ESTABLISH_REPLY, request[1],
-      BCCAM_UART_ESTABLISH_ACCEPTED, 1, 63, 0
+      BCCAM_UART_ESTABLISH_ACCEPTED, 1, BCCAM_UART_CAMERA_PROFILE_MTU - 1u, 0
     };
     TEST_ASSERT_EQUAL_INT(BCCAM_UART_ERR_MALFORMED_MANAGEMENT,
-      bccam_uart_link_receive_unit(&link, 1, 0, reply63, sizeof(reply63)));
+      bccam_uart_link_receive_unit(&link, 1, 0, reply84, sizeof(reply84)));
   }
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_LINK_INACTIVE, link.state);
 
@@ -571,9 +571,9 @@ void testDefaultCameraProfileRejectsAcceptedMtu63AndAccepts64(void) {
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
     bccam_uart_link_start_establishment(&link));
   take_unit(&link, &version, &service, request, &request_len);
-  accept_establishment(&link, request[1], 64);
+  accept_establishment(&link, request[1], BCCAM_UART_CAMERA_PROFILE_MTU);
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_LINK_ACTIVE, link.state);
-  TEST_ASSERT_EQUAL_UINT16(64, link.negotiated_payload);
+  TEST_ASSERT_EQUAL_UINT16(BCCAM_UART_CAMERA_PROFILE_MTU, link.negotiated_payload);
 }
 
 void testCatalogCountZeroAndMaximumOrdinalHandleBoundaries(void) {

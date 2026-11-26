@@ -281,7 +281,7 @@ classDiagram
         uint8_t data[SYSLINK2_APISERVICE_FRAME_MAX_LEN]
         uint8_t len
     }
-    note for syslink2_apiservice_frame_t "SYSLINK2_APISERVICE_FRAME_MAX_LEN = 64"
+    note for syslink2_apiservice_frame_t "SYSLINK2_APISERVICE_FRAME_MAX_LEN = 85"
 
     class syslink2_apiservice_request_t {
         uint8_t operation GET, SET or CMD
@@ -291,7 +291,7 @@ classDiagram
         syslink2_apiservice_value_t value
         bool has_argument
     }
-    note for syslink2_apiservice_request_t "SYSLINK2_APISERVICE_PATH_MAX_LEN = 55"
+    note for syslink2_apiservice_request_t "SYSLINK2_APISERVICE_PATH_MAX_LEN = 76"
 
     class syslink2_apiservice_queue_entry_t {
         syslink2_apiservice_request_t request
@@ -308,7 +308,7 @@ classDiagram
         char detail[SYSLINK2_APISERVICE_DETAIL_MAX_LEN]
         uint8_t detail_len
     }
-    note for syslink2_apiservice_response_t "SYSLINK2_APISERVICE_DETAIL_MAX_LEN = 60"
+    note for syslink2_apiservice_response_t "SYSLINK2_APISERVICE_DETAIL_MAX_LEN = 81"
 
     class syslink2_apiservice_on_complete_t {
         <<function pointer>>
@@ -356,7 +356,7 @@ classDiagram
         uint8_t len
         uint8_t data[SYSLINK2_APISERVICE_VALUE_MAX_LEN]
     }
-    note for syslink2_apiservice_value_t "SYSLINK2_APISERVICE_VALUE_MAX_LEN = 60"
+    note for syslink2_apiservice_value_t "SYSLINK2_APISERVICE_VALUE_MAX_LEN = 81"
 
     class syslink2_apiservice_frame_class_t {
         <<enumeration>>
@@ -384,7 +384,9 @@ classDiagram
 ```
 
 `syslink2_apiservice_frame_t` holds one frame, including its bytes. Assumption:
-the Link Maximum Transmission Unit (MTU) is 64.
+the Link Maximum Transmission Unit (MTU) is 85, which fits the longest request
+of the camera deck, a `SET` of `wifi.password` with a 63-byte passphrase
+(81 bytes).
 
 - `len` is the number of valid bytes in `data`, from 0 to
   `SYSLINK2_APISERVICE_FRAME_MAX_LEN`. It replaces the UART packet's
@@ -395,19 +397,19 @@ the Link Maximum Transmission Unit (MTU) is 64.
 The other types hold their data inline, sized so that every request and
 response fits in one frame:
 
-- `SYSLINK2_APISERVICE_VALUE_MAX_LEN` is 60, the longest value that fits in a
+- `SYSLINK2_APISERVICE_VALUE_MAX_LEN` is 81, the longest value that fits in a
   `VALUE` frame: 2 header bytes, `type` and `len` before the data. `len` is
   the number of valid bytes in `data`.
-- `SYSLINK2_APISERVICE_PATH_MAX_LEN` is 55, the longest path of a `SET`
+- `SYSLINK2_APISERVICE_PATH_MAX_LEN` is 76, the longest path of a `SET`
   with a 4-byte value. A request with a longer path cannot be built. `path`
   is ASCII, `path_len` bytes, not NUL-terminated.
 - A `SET` frame, and a `CMD` frame with an argument, has 2 header bytes,
   `path_len`, the path, `type`, `len` and the data, so the path and the value
-  together are limited to 59 bytes. The arrays alone do not ensure that, so
+  together are limited to 80 bytes. The arrays alone do not ensure that, so
   the [Request checks](#request-checks) check it for each request. A longer
   `string` or `bytes` value can be read with `GET` or returned by a `CMD`,
   but not written with `SET` or passed as a `CMD` argument.
-- `SYSLINK2_APISERVICE_DETAIL_MAX_LEN` is 60: an `ERROR` frame has 2 header bytes,
+- `SYSLINK2_APISERVICE_DETAIL_MAX_LEN` is 81: an `ERROR` frame has 2 header bytes,
   `error_code` and `detail_len` before the detail. `detail` is UTF-8 text,
   `detail_len` bytes, not NUL-terminated.
 - `syslink2_apiservice_response_t.value` and `value_valid` are valid only when
@@ -1190,7 +1192,7 @@ hold:
 - Every byte of `path` is printable ASCII, 0x20..0x7e.
 - For `SET`, and for `CMD` with `has_argument` true, `value` passes the value
   checks below, and the frame fits in `SYSLINK2_APISERVICE_FRAME_MAX_LEN`:
-  5 + `path_len` + `value.len` is at most 64. For `GET`, and for `CMD` with
+  5 + `path_len` + `value.len` is at most 85. For `GET`, and for `CMD` with
   `has_argument` false, `value` is not read.
 
 The callback is not part of the request. Submit checks it separately, see

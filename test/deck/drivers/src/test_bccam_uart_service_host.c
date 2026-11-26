@@ -109,7 +109,7 @@ static void complete_service_link_establishment(void)
   TEST_ASSERT_EQUAL_UINT8(BCCAM_UART_LINK_OP_ESTABLISH, establish->bytes[6]);
   const uint8_t reply[] = {
     BCCAM_UART_LINK_OP_ESTABLISH_REPLY, establish->bytes[7],
-    BCCAM_UART_ESTABLISH_ACCEPTED, 1, 64, 0
+    BCCAM_UART_ESTABLISH_ACCEPTED, 1, BCCAM_UART_CAMERA_PROFILE_MTU, 0
   };
   service_receive_management(reply, sizeof(reply));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_SERVICE_STATE_FW_ACTIVE,
@@ -461,7 +461,7 @@ void testLateReplyToPreviousEstablishIsIgnored(void) {
   bccam_uart_service_test_handle_rx_event(&uart_error_event);
   const uint8_t late_reply[] = {
     BCCAM_UART_LINK_OP_ESTABLISH_REPLY, last_uart_send()->bytes[7],
-    BCCAM_UART_ESTABLISH_ACCEPTED, 1, 64, 0
+    BCCAM_UART_ESTABLISH_ACCEPTED, 1, BCCAM_UART_CAMERA_PROFILE_MTU, 0
   };
 
   TEST_ASSERT_FALSE(bccam_uart_service_test_update_startup_watchdog(

@@ -78,7 +78,7 @@ Success: [0x00, 0x00, endpoint_id, state (u8),
 `state` is 0 when the endpoint is not ready and 1 when it is ready. Value 2
 (configuring) is reserved. `max_request` and `max_response` are the endpoint's
 own limits on an API Service message. They can be lower than `max_message`: the
-Camera Deck carries 64 bytes. More fields may be appended later.
+Camera Deck carries 85 bytes. More fields may be appended later.
 
 An unknown ID returns `ENOENT`.
 

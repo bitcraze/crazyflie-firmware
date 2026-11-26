@@ -73,7 +73,7 @@ static void establish_and_get_count(bccam_uart_runtime_t *runtime,
     flush_operation(runtime, writer, &frame));
   const uint8_t establish_reply[] = {
     BCCAM_UART_LINK_OP_ESTABLISH_REPLY, frame.payload[1],
-    BCCAM_UART_ESTABLISH_ACCEPTED, 1, 64, 0
+    BCCAM_UART_ESTABLISH_ACCEPTED, 1, BCCAM_UART_CAMERA_PROFILE_MTU, 0
   };
   feed_management(runtime, establish_reply, sizeof(establish_reply));
   TEST_ASSERT_EQUAL_INT(BCCAM_UART_OK,
@@ -258,7 +258,7 @@ void testEmptyNormalUnitIsTransmittedExactlyOnce(void) {
   bccam_uart_runtime_init(&runtime);
   runtime.link.state = BCCAM_UART_LINK_ACTIVE;
   runtime.link.active_link_version = 1;
-  runtime.link.negotiated_payload = 64;
+  runtime.link.negotiated_payload = BCCAM_UART_CAMERA_PROFILE_MTU;
   runtime.link.apiservice_binding.valid = true;
   runtime.link.apiservice_binding.descriptor.handle = 0x55;
   runtime.link.apiservice_binding.tx_credit = 1;
@@ -284,7 +284,7 @@ void testEmptyIncomingApiserviceUnitIsMalformedAndRxCreditIsReplenished(void) {
   bccam_uart_runtime_init(&runtime);
   runtime.link.state = BCCAM_UART_LINK_ACTIVE;
   runtime.link.active_link_version = 1;
-  runtime.link.negotiated_payload = 64;
+  runtime.link.negotiated_payload = BCCAM_UART_CAMERA_PROFILE_MTU;
   runtime.link.service_count_known = true;
   runtime.link.service_count = 1;
   runtime.link.descriptors_received = 1;
@@ -329,7 +329,7 @@ void testSuccessfulOneShotApiserviceProbeKeepsReceiveCreditClosed(void) {
   bccam_uart_runtime_init(&runtime);
   runtime.link.state = BCCAM_UART_LINK_ACTIVE;
   runtime.link.active_link_version = 1;
-  runtime.link.negotiated_payload = 64;
+  runtime.link.negotiated_payload = BCCAM_UART_CAMERA_PROFILE_MTU;
   runtime.link.service_count_known = true;
   runtime.link.service_count = 1;
   runtime.link.descriptors_received = 1;
@@ -447,7 +447,7 @@ void testSynchronousTxFailureIsFailStopAndNeverRetriedWhileActive(void) {
   bccam_uart_runtime_init(&runtime);
   runtime.link.state = BCCAM_UART_LINK_ACTIVE;
   runtime.link.active_link_version = 1;
-  runtime.link.negotiated_payload = 64;
+  runtime.link.negotiated_payload = BCCAM_UART_CAMERA_PROFILE_MTU;
   runtime.link.apiservice_binding.valid = true;
   runtime.link.apiservice_binding.descriptor.handle = 7;
   runtime.link.apiservice_binding.tx_credit = 1;
@@ -496,7 +496,7 @@ void testCompleteRawPacketWithTrailingByteIsBadLengthAndFaultsActive(void) {
   bccam_uart_runtime_init(&runtime);
   runtime.link.state = BCCAM_UART_LINK_ACTIVE;
   runtime.link.active_link_version = 1;
-  runtime.link.negotiated_payload = 64;
+  runtime.link.negotiated_payload = BCCAM_UART_CAMERA_PROFILE_MTU;
   runtime.link.apiservice_binding.valid = true;
   runtime.link.apiservice_binding.descriptor.handle = 7;
   runtime.link.apiservice_binding.rx_advertised_credit = 1;
@@ -539,7 +539,7 @@ static void probe_done_runtime(bccam_uart_runtime_t *runtime) {
   bccam_uart_runtime_init(runtime);
   runtime->link.state = BCCAM_UART_LINK_ACTIVE;
   runtime->link.active_link_version = 1;
-  runtime->link.negotiated_payload = 64;
+  runtime->link.negotiated_payload = BCCAM_UART_CAMERA_PROFILE_MTU;
   runtime->link.service_count_known = true;
   runtime->link.service_count = 1;
   runtime->link.descriptors_received = 1;

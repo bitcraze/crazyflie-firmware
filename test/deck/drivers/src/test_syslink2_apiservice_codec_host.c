@@ -118,22 +118,22 @@ void testSetMustFitInOneFrame(void) {
   memset(request.path, 'x', sizeof(request.path));
   memset(request.value.data, 'v', sizeof(request.value.data));
   request.value.type = SYSLINK2_APISERVICE_TYPE_BYTES;
-  /* 5 + path_len + value.len = 64 */
+  /* 5 + path_len + value.len = SYSLINK2_APISERVICE_FRAME_MAX_LEN */
   request.path_len = 1u;
-  request.value.len = 58u;
+  request.value.len = SYSLINK2_APISERVICE_FRAME_MAX_LEN - 6u;
   TEST_ASSERT_TRUE(syslink2_apiservice_codec_request_valid(&request));
-  request.value.len = 59u;
+  request.value.len = SYSLINK2_APISERVICE_FRAME_MAX_LEN - 5u;
   TEST_ASSERT_FALSE(syslink2_apiservice_codec_request_valid(&request));
   request.path_len = 50u;
-  request.value.len = 9u;
+  request.value.len = SYSLINK2_APISERVICE_FRAME_MAX_LEN - 55u;
   TEST_ASSERT_TRUE(syslink2_apiservice_codec_request_valid(&request));
-  request.value.len = 10u;
+  request.value.len = SYSLINK2_APISERVICE_FRAME_MAX_LEN - 54u;
   TEST_ASSERT_FALSE(syslink2_apiservice_codec_request_valid(&request));
   request.value.type = SYSLINK2_APISERVICE_TYPE_U64;
   request.value.len = 8u;
   request.path_len = SYSLINK2_APISERVICE_PATH_MAX_LEN;
   TEST_ASSERT_FALSE(syslink2_apiservice_codec_request_valid(&request));
-  request.path_len = 51u;
+  request.path_len = SYSLINK2_APISERVICE_FRAME_MAX_LEN - 13u;
   TEST_ASSERT_TRUE(syslink2_apiservice_codec_request_valid(&request));
 }
 
@@ -178,9 +178,9 @@ void testCmdArgumentMustFitInOneFrame(void) {
   syslink2_apiservice_request_t request = make_request(SYSLINK2_APISERVICE_KIND_CMD, "a");
   request.has_argument = true;
   request.value.type = SYSLINK2_APISERVICE_TYPE_BYTES;
-  request.value.len = 58u;
+  request.value.len = SYSLINK2_APISERVICE_FRAME_MAX_LEN - 6u;
   TEST_ASSERT_TRUE(syslink2_apiservice_codec_request_valid(&request));
-  request.value.len = 59u;
+  request.value.len = SYSLINK2_APISERVICE_FRAME_MAX_LEN - 5u;
   TEST_ASSERT_FALSE(syslink2_apiservice_codec_request_valid(&request));
 }
 
@@ -347,7 +347,7 @@ void testEncodeSetString(void) {
 }
 
 void testEncodeSetLongestBytesFitsFrame(void) {
-  syslink2_apiservice_value_t value = { .type = 0x21, .len = 58 };
+  syslink2_apiservice_value_t value = { .type = 0x21, .len = SYSLINK2_APISERVICE_FRAME_MAX_LEN - 6u };
   memset(value.data, 'v', value.len);
   const syslink2_apiservice_frame_t frame = syslink2_apiservice_codec_encode_set(6, "q", 1, &value);
   TEST_ASSERT_EQUAL_UINT8(SYSLINK2_APISERVICE_FRAME_MAX_LEN, frame.len);
