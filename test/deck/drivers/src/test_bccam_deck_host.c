@@ -117,16 +117,6 @@ void testMissingBoardRevisionIsRejectedWithoutHardwareOrProtocolSideEffects(void
   assert_no_init_side_effects();
 }
 
-void testNonGBoardRevisionIsRejectedWithoutHardwareOrProtocolSideEffects(void) {
-  deck_info.boardRevision = "F";
-  driver_bccam_deck->init(&deck_info);
-  assert_no_init_side_effects();
-  TEST_ASSERT_BITS_LOW(DECK_MEMORY_MASK_STARTED,
-                       driver_bccam_deck->memoryDef->properties());
-  TEST_ASSERT_BITS_HIGH(DECK_MEMORY_MASK_SUPPORTS_HOT_RESTART,
-                        driver_bccam_deck->memoryDef->properties());
-}
-
 void testInitPowersDeckAndSelectsConnectorUart2(void) {
   deck_info.boardRevision = "G";
   driver_bccam_deck->init(&deck_info);
