@@ -41,6 +41,7 @@ We added the following:
 #include "log.h"
 #include "position_controller.h"
 #include "controller_mellinger.h"
+#include "power_distribution.h"
 #include "physicalConstants.h"
 #include "platform_defaults.h"
 
@@ -49,7 +50,6 @@ We added the following:
 // to hold the default values
 static controllerMellinger_t g_self = {
   .mass = CF_MASS,
-  .massThrust = 132000,
 
   // XY Position PID
   .kp_xy = 0.4,       // P
@@ -129,6 +129,8 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
   struct vec eR, ew, M;
   float dt;
   float desired_yaw = 0; //rad
+  // The legacy thrust command is the fraction of the platform's max thrust, scaled to UINT16_MAX
+  const float force2pwm = UINT16_MAX / powerDistributionGetMaxThrust();
 
   control->controlMode = controlModeLegacy;
 
@@ -187,7 +189,7 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
     target_thrust.z = self->mass * (setpoint->acceleration.z + GRAVITY_MAGNITUDE) + self->kp_z  * r_error.z + self->kd_z  * v_error.z + self->ki_z  * self->i_error_z;
 
     // Current thrust
-    thrust = self->massThrust * vdot(target_thrust, z_axis);
+    thrust = force2pwm * vdot(target_thrust, z_axis);
 
     // Calculate axis [zB_des]
     self->z_axis_desired = vnormalize(target_thrust);
@@ -242,7 +244,7 @@ void controllerMellinger(controllerMellinger_t* self, control_t *control, const 
     if (setpoint->mode.z == modeDisable) {
       thrust = setpoint->thrust;
     } else {
-      thrust = self->massThrust * vdot(target_thrust, z_axis);
+      thrust = force2pwm * vdot(target_thrust, z_axis);
     }
   }
 
@@ -386,10 +388,6 @@ PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, i_range_z, &g_self.i_range_z)
  * @brief total mass [kg]
  */
 PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, mass, &g_self.mass)
-/**
- * @brief Force to PWM stretch factor
- */
-PARAM_ADD_CORE(PARAM_FLOAT | PARAM_PERSISTENT, massThrust, &g_self.massThrust)
 /**
  * @brief Attitude P-gain (roll and pitch)
  */

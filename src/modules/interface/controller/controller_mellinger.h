@@ -31,7 +31,6 @@
 
 typedef struct {
     float mass;
-    float massThrust;
 
     // XY Position PID
     float kp_xy;      // P

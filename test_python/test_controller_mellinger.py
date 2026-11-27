@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import cffirmware
+import pytest
 
 def test_controller_mellinger():
 
@@ -39,7 +40,9 @@ def test_controller_mellinger():
 
     cffirmware.controllerMellinger(ctrl, control, setpoint,sensors,state,step)
     assert control.controlMode == cffirmware.controlModeLegacy
-    # control.thrust will be at a (tuned) hover-state
+    # control.thrust is the hover force as a fraction of the platform's max thrust
+    hover = ctrl.mass * 9.81 / cffirmware.powerDistributionGetMaxThrust()
+    assert control.thrust == pytest.approx(hover * 65535, rel=1e-5)
     assert control.roll == 0
     assert control.pitch == 0
     assert control.yaw == 0
